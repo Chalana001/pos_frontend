@@ -1,0 +1,38 @@
+export const ORDER_TYPES = {
+  CASH: 'CASH',
+  CREDIT: 'CREDIT',
+};
+
+export const DISCOUNT_TYPES = {
+  NONE: 'NONE',
+  FIXED: 'FIXED',
+  PERCENT: 'PERCENT',
+};
+
+export const EXPENSE_CATEGORIES = {
+  TEA: 'TEA',
+  LUNCH: 'LUNCH',
+  TRANSPORT: 'TRANSPORT',
+  OTHER: 'OTHER',
+};
+
+export const ADJUSTMENT_TYPES = {
+  EXPIRED: 'EXPIRED',
+  DAMAGED: 'DAMAGED',
+  LOST: 'LOST',
+  FOUND: 'FOUND',
+  MANUAL: 'MANUAL',
+};
+
+export const TRANSFER_STATUS = {
+  REQUESTED: 'REQUESTED',
+  RECEIVED: 'RECEIVED',
+  CANCELLED: 'CANCELLED',
+};
+
+export const KEYBOARD_SHORTCUTS = {
+  SEARCH_ITEM: 'F2',
+  SELECT_CUSTOMER: 'F4',
+  CHECKOUT: 'F9',
+  ESCAPE: 'Escape',
+};
