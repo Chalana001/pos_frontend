@@ -92,6 +92,18 @@ const Sidebar = () => {
       path: '/charts',
       permission: 'VIEW_REPORTS',
     },
+    {
+      name: 'Branches',
+      icon: Warehouse,
+      path: '/branches',
+      permission: 'MANAGE_BRANCHES',
+    },
+    {
+      name: 'Users',
+      icon: Users,
+      path: '/users',
+      permission: 'MANAGE_USERS',
+    },
   ];
 
   const visibleItems = menuItems.filter(item => 

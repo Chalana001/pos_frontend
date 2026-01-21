@@ -37,10 +37,10 @@ const Dashboard = () => {
         : user?.branchId;
 
       // ✅ Admin/Manager not selected branch yet -> don't stuck loading
-      if (!branchId) {
-        setKpis(null);
-        return;
-      }
+      // if (!branchId) {
+      //   setKpis(null);
+      //   return;
+      // }
 
       const response = await dashboardAPI.getKPIs(branchId);
       setKpis(response.data);
@@ -61,7 +61,7 @@ const Dashboard = () => {
   }
 
   // ✅ if no branch selected (admin)
-  if (!kpis) {
+  if (selectedBranchId === null || selectedBranchId === undefined) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -86,6 +86,20 @@ const Dashboard = () => {
       </div>
     );
   }
+//   if (!kpis) {
+//   return (
+//     <div className="space-y-6">
+//       <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
+//       <Card>
+//         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+//           <p className="text-sm text-red-800">
+//             ❌ Failed to load dashboard KPIs. Please try again.
+//           </p>
+//         </div>
+//       </Card>
+//     </div>
+//   );
+// }
 
   const stats = [
     {

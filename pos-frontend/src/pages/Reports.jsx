@@ -9,13 +9,14 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Table from '../components/common/Table';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { useBranch } from "../context/BranchContext";
 
 const Reports = () => {
   const { user } = useAuth();
   const [activeReport, setActiveReport] = useState('sales');
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
-  const [selectedBranch, setSelectedBranch] = useState(user.branchId || 1);
+  const { selectedBranchId } = useBranch();
   
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(1)).toISOString().split('T')[0],
@@ -28,7 +29,7 @@ const Reports = () => {
     
     try {
       const params = {
-        branchId: selectedBranch,
+        branchId: selectedBranchId,
         from: new Date(dateRange.from + 'T00:00:00').toISOString(),
         to: new Date(dateRange.to + 'T23:59:59').toISOString(),
       };
@@ -238,7 +239,7 @@ const Reports = () => {
               className="input"
             />
           </div>
-          {canAccessAllBranches(user.role) && (
+          {/* {canAccessAllBranches(user.role) && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Branch
@@ -252,7 +253,7 @@ const Reports = () => {
                 <option value="2">Branch 2</option>
               </select>
             </div>
-          )}
+          )} */}
         </div>
 
         <div className="flex flex-wrap gap-2">

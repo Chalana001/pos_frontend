@@ -18,6 +18,8 @@ import StockAdjustments from '../pages/StockAdjustments';
 import StockTransfers from '../pages/StockTransfers';
 import Reports from '../pages/Reports';
 import Charts from '../pages/Charts';
+import Users from '../pages/Users';
+import Branches from "../pages/Branches";
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -104,6 +106,19 @@ const AppRoutes = () => {
             <Charts />
           </ProtectedRoute>
         } />
+
+        <Route path="branches" element={
+          <ProtectedRoute permission="MANAGE_BRANCHES">
+            <Branches />
+          </ProtectedRoute>
+        } />
+
+        <Route path="users" element={
+          <ProtectedRoute permission="MANAGE_USERS">
+            <Users />
+          </ProtectedRoute>
+        } />
+
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
