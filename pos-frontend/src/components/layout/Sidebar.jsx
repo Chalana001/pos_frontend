@@ -14,6 +14,7 @@ import {
   BarChart3,
   FileText,
   PieChart,
+  Building2,
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -94,7 +95,7 @@ const Sidebar = () => {
     },
     {
       name: 'Branches',
-      icon: Warehouse,
+      icon: Building2,
       path: '/branches',
       permission: 'MANAGE_BRANCHES',
     },

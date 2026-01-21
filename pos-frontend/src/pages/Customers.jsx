@@ -8,20 +8,35 @@ import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import Table from '../components/common/Table';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { useLocation, useNavigate } from "react-router-dom";
 
 const Customers = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     address: '',
     email: '',
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("add") === "1") {
+      setEditingCustomer(null);
+      setFormData({ name: "", phone: "", address: "", email: "" });
+      setShowModal(true);
+      navigate("/customers", { replace: true });
+    }
+  }, [location.search, navigate]);
+
 
   useEffect(() => {
     fetchCustomers();
@@ -81,6 +96,8 @@ const Customers = () => {
     setShowModal(false);
     setEditingCustomer(null);
     setFormData({ name: '', phone: '', address: '', email: '' });
+
+    navigate("/customers", { replace: true });
   };
 
   const filteredCustomers = customers.filter(customer =>
@@ -92,8 +109,8 @@ const Customers = () => {
     { header: 'Name', accessor: 'name' },
     { header: 'Phone', accessor: 'phone' },
     { header: 'Email', accessor: 'email' },
-    { 
-      header: 'Credit Balance', 
+    {
+      header: 'Credit Balance',
       render: (customer) => (
         <span className={customer.creditBalance > 0 ? 'text-red-600 font-semibold' : ''}>
           {formatCurrency(customer.creditBalance || 0)}
@@ -103,9 +120,8 @@ const Customers = () => {
     {
       header: 'Status',
       render: (customer) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          customer.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${customer.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}>
           {customer.active ? 'Active' : 'Inactive'}
         </span>
       )
@@ -169,6 +185,7 @@ const Customers = () => {
         onClose={handleCloseModal}
         title={editingCustomer ? 'Edit Customer' : 'Add New Customer'}
       >
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">

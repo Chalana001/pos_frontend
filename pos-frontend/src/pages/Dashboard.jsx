@@ -5,6 +5,8 @@ import { formatCurrency } from "../utils/formatters";
 import { canAccessAllBranches } from "../utils/permissions";
 import Card from "../components/common/Card";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { useNavigate } from "react-router-dom";
+
 import {
   DollarSign,
   ShoppingCart,
@@ -18,6 +20,7 @@ import {
 import { useBranch } from "../context/BranchContext";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [kpis, setKpis] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -86,20 +89,20 @@ const Dashboard = () => {
       </div>
     );
   }
-//   if (!kpis) {
-//   return (
-//     <div className="space-y-6">
-//       <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
-//       <Card>
-//         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-//           <p className="text-sm text-red-800">
-//             ❌ Failed to load dashboard KPIs. Please try again.
-//           </p>
-//         </div>
-//       </Card>
-//     </div>
-//   );
-// }
+  //   if (!kpis) {
+  //   return (
+  //     <div className="space-y-6">
+  //       <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
+  //       <Card>
+  //         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+  //           <p className="text-sm text-red-800">
+  //             ❌ Failed to load dashboard KPIs. Please try again.
+  //           </p>
+  //         </div>
+  //       </Card>
+  //     </div>
+  //   );
+  // }
 
   const stats = [
     {
@@ -222,19 +225,31 @@ const Dashboard = () => {
 
         <Card title="Quick Actions">
           <div className="grid grid-cols-2 gap-3">
-            <button className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left">
+            <button
+              onClick={() => navigate("/pos")}
+              className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left"
+            >
               <ShoppingCart className="text-blue-600 mb-2" size={24} />
               <p className="font-medium text-slate-800">New Sale</p>
             </button>
-            <button className="p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left">
+            <button
+              onClick={() => navigate("/stock")}
+              className="p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left"
+            >
               <Package className="text-green-600 mb-2" size={24} />
               <p className="font-medium text-slate-800">Stock Adjust</p>
             </button>
-            <button className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-left">
+            <button
+              onClick={() => navigate("/customers?add=1")}
+              className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-left"
+            >
               <Users className="text-purple-600 mb-2" size={24} />
               <p className="font-medium text-slate-800">Add Customer</p>
             </button>
-            <button className="p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors text-left">
+            <button
+              onClick={() => navigate("/reports")}
+              className="p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors text-left"
+            >
               <DollarSign className="text-orange-600 mb-2" size={24} />
               <p className="font-medium text-slate-800">View Reports</p>
             </button>

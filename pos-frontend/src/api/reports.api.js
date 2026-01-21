@@ -10,4 +10,9 @@ export const reportsAPI = {
   creditDue: () => api.get('/reports/credit-due'),
   
   profit: (params) => api.get('/reports/profit', { params }),
+
+  salesTrend: (params) => api.get("/reports/sales-trend", { params }),
+
+  hourlySales: (params) => api.get("/reports/hourly-sales", { params }),
+
 };
