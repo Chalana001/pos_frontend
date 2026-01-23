@@ -3,15 +3,8 @@ import api from "./axios";
 export const itemsAPI = {
   // ✅ old
   getAll: () => api.get("/items"),
-
-  // ✅ NEW: items with stock (branch optional)
-  // Admin:
-  //   - All branches => itemsAPI.getWithStock()
-  //   - Branch selected => itemsAPI.getWithStock({ branchId })
-  // Cashier:
-  //   - always itemsAPI.getWithStock()
-  // (backend will force cashier branch)
   getWithStock: (params = {}) => api.get("/items/with-stock", { params }),
+  createWithStocks: (data) => api.post("/items/create-with-stocks", data),
 
   // ✅ get by barcode (with branch)
   getByBarcode: (barcode, branchId) =>

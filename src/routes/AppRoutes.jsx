@@ -21,6 +21,9 @@ import Charts from '../pages/Charts';
 import Users from '../pages/Users';
 import Branches from "../pages/Branches";
 
+import ItemsPage from "../pages/ItemsPage";
+import ItemFormPage from "../pages/ItemFormPage";
+
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
 
@@ -49,7 +52,17 @@ const AppRoutes = () => {
 
         <Route path="items" element={
           <ProtectedRoute permission="VIEW_ITEMS">
-            <Items />
+            <ItemsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/items/new" element={
+          <ProtectedRoute permission="VIEW_ITEMS">
+            <ItemFormPage mode="create" />
+          </ProtectedRoute>
+        } />
+        <Route path="/items/:id/edit" element={
+          <ProtectedRoute permission="VIEW_ITEMS">
+            <ItemFormPage mode="edit" />
           </ProtectedRoute>
         } />
 
