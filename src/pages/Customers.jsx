@@ -1,42 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
-import { Plus, Edit, Search, Eye } from 'lucide-react';
-import { customersAPI } from '../api/customers.api';
-import { formatCurrency } from '../utils/formatters';
-import Card from '../components/common/Card';
-import Button from '../components/common/Button';
-import Modal from '../components/common/Modal';
-import Table from '../components/common/Table';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
+import { Plus, Edit, Search, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const Customers = () => {
-  const location = useLocation();
+import { customersAPI } from "../api/customers.api";
+import Card from "../components/common/Card";
+import Button from "../components/common/Button";
+import Table from "../components/common/Table";
+import LoadingSpinner from "../components/common/LoadingSpinner";
+import { formatCurrency } from "../utils/formatters";
+
+const CustomersListPage = () => {
   const navigate = useNavigate();
 
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    email: '',
-  });
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("add") === "1") {
-      setEditingCustomer(null);
-      setFormData({ name: "", phone: "", address: "", email: "" });
-      setShowModal(true);
-      navigate("/customers", { replace: true });
-    }
-  }, [location.search, navigate]);
-
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchCustomers();
@@ -45,113 +24,92 @@ const Customers = () => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await customersAPI.getAll();
-      setCustomers(response.data);
-    } catch (error) {
-      toast.error('Failed to fetch customers');
+      const res = await customersAPI.getAll();
+      setCustomers(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      toast.error("Failed to fetch customers");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingCustomer) {
-        await customersAPI.update(editingCustomer.id, formData);
-        toast.success('Customer updated successfully');
-      } else {
-        await customersAPI.create(formData);
-        toast.success('Customer created successfully');
-      }
-      fetchCustomers();
-      handleCloseModal();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Operation failed');
-    }
-  };
-
-  const handleEdit = (customer) => {
-    setEditingCustomer(customer);
-    setFormData({
-      name: customer.name,
-      phone: customer.phone,
-      address: customer.address || '',
-      email: customer.email || '',
-    });
-    setShowModal(true);
-  };
-
-  const handleToggleActive = async (id) => {
-    try {
-      await customersAPI.toggleActive(id);
-      toast.success('Customer status updated');
-      fetchCustomers();
-    } catch (error) {
-      toast.error('Failed to update customer');
-    }
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setEditingCustomer(null);
-    setFormData({ name: '', phone: '', address: '', email: '' });
-
-    navigate("/customers", { replace: true });
-  };
-
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.phone.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCustomers = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return customers.filter((c) =>
+      (c.name ?? "").toLowerCase().includes(q) ||
+      (c.phone ?? "").toLowerCase().includes(q)
+    );
+  }, [customers, searchQuery]);
 
   const columns = [
-    { header: 'Name', accessor: 'name' },
-    { header: 'Phone', accessor: 'phone' },
-    { header: 'Email', accessor: 'email' },
+    { header: "Name", accessor: "name" },
+    { header: "Phone", accessor: "phone" },
+    { header: "Email", accessor: "email" },
     {
-      header: 'Credit Balance',
-      render: (customer) => (
-        <span className={customer.creditBalance > 0 ? 'text-red-600 font-semibold' : ''}>
-          {formatCurrency(customer.creditBalance || 0)}
+      header: "Credit Balance",
+      render: (c) => (
+        <span className={c.creditBalance > 0 ? "text-red-600 font-semibold" : ""}>
+          {formatCurrency(c.creditBalance || 0)}
         </span>
-      )
+      ),
     },
     {
-      header: 'Status',
-      render: (customer) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${customer.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-          {customer.active ? 'Active' : 'Inactive'}
+      header: "Status",
+      render: (c) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            c.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+          }`}
+        >
+          {c.active ? "Active" : "Inactive"}
         </span>
-      )
+      ),
     },
     {
-      header: 'Actions',
-      render: (customer) => (
+      header: "Actions",
+      render: (c) => (
         <div className="flex gap-2">
           <button
-            onClick={() => handleEdit(customer)}
+            onClick={() => navigate(`/customers/${c.id}`)}
+            className="p-1 text-slate-700 hover:text-slate-900"
+            title="View"
+          >
+            <Eye size={18} />
+          </button>
+
+          <button
+            onClick={() => navigate(`/customers/${c.id}/edit`)}
             className="p-1 text-blue-600 hover:text-blue-800"
+            title="Edit"
           >
             <Edit size={18} />
           </button>
+
           <button
-            onClick={() => handleToggleActive(customer.id)}
+            onClick={async () => {
+              try {
+                await customersAPI.toggleActive(c.id);
+                toast.success("Customer status updated");
+                fetchCustomers();
+              } catch {
+                toast.error("Failed to update customer");
+              }
+            }}
             className="p-1 text-slate-600 hover:text-slate-800"
           >
-            {customer.active ? 'Disable' : 'Enable'}
+            {c.active ? "Disable" : "Enable"}
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-800">Customers Management</h1>
-        <Button onClick={() => setShowModal(true)}>
+        <h1 className="text-3xl font-bold text-slate-800">Customers</h1>
+
+        <Button onClick={() => navigate("/customers/new")}>
           <Plus size={20} className="mr-2" />
           Add Customer
         </Button>
@@ -160,7 +118,7 @@ const Customers = () => {
       <Card>
         <div className="mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input
               type="text"
               value={searchQuery}
@@ -179,76 +137,8 @@ const Customers = () => {
           <Table columns={columns} data={filteredCustomers} />
         )}
       </Card>
-
-      <Modal
-        isOpen={showModal}
-        onClose={handleCloseModal}
-        title={editingCustomer ? 'Edit Customer' : 'Add New Customer'}
-      >
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Customer Name *
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="input"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Phone Number *
-            </label>
-            <input
-              type="text"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="input"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="input"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Address
-            </label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="input"
-              rows="3"
-            />
-          </div>
-
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" className="flex-1">
-              {editingCustomer ? 'Update Customer' : 'Create Customer'}
-            </Button>
-            <Button type="button" variant="secondary" onClick={handleCloseModal}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 };
 
-export default Customers;
+export default CustomersListPage;

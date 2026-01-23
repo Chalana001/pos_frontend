@@ -23,6 +23,8 @@ import Branches from "../pages/Branches";
 
 import ItemsPage from "../pages/ItemsPage";
 import ItemFormPage from "../pages/ItemFormPage";
+import CustomerFormPage from "../pages/CustomerFormPage";
+import CustomerViewPage from "../pages/CustomerViewPage";
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -69,6 +71,24 @@ const AppRoutes = () => {
         <Route path="customers" element={
           <ProtectedRoute permission="MANAGE_CUSTOMERS">
             <Customers />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/customers/new" element={
+          <ProtectedRoute permission="MANAGE_CUSTOMERS">
+            <CustomerFormPage mode="create"  />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/customers/:id/edit" element={
+          <ProtectedRoute permission="MANAGE_CUSTOMERS">
+            <CustomerFormPage mode="edit" />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/customers/:id" element={
+          <ProtectedRoute permission="MANAGE_CUSTOMERS">
+            <CustomerViewPage />
           </ProtectedRoute>
         } />
 
