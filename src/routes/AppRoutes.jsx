@@ -8,7 +8,6 @@ import Layout from '../components/layout/Layout';
 import Login from '../pages/Login';
 import Dashboard from '../pages/Dashboard';
 import POS from '../pages/POS';
-import Items from '../pages/Items';
 import Customers from '../pages/Customers';
 import Shifts from '../pages/Shifts';
 import Expenses from '../pages/Expenses';
@@ -23,6 +22,7 @@ import Branches from "../pages/Branches";
 
 import ItemsPage from "../pages/ItemsPage";
 import ItemFormPage from "../pages/ItemFormPage";
+import BulkAddItems from "../pages/BulkAddItems";
 import CustomerFormPage from "../pages/CustomerFormPage";
 import CustomerViewPage from "../pages/CustomerViewPage";
 
@@ -65,6 +65,12 @@ const AppRoutes = () => {
         <Route path="/items/:id/edit" element={
           <ProtectedRoute permission="VIEW_ITEMS">
             <ItemFormPage mode="edit" />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/items/bulk-add" element={
+          <ProtectedRoute permission="VIEW_ITEMS">
+            <BulkAddItems />
           </ProtectedRoute>
         } />
 
@@ -116,13 +122,13 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
-        <Route path="stock-adjustments" element={
+        <Route path="/stock/adjustments" element={
           <ProtectedRoute permission="ADJUST_STOCK">
             <StockAdjustments />
           </ProtectedRoute>
         } />
 
-        <Route path="stock-transfers" element={
+        <Route path="/stock/transfers" element={
           <ProtectedRoute permission="TRANSFER_STOCK">
             <StockTransfers />
           </ProtectedRoute>

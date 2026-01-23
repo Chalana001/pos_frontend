@@ -21,4 +21,5 @@ export const itemsAPI = {
   getById: (id) => api.get(`/items/${id}`),
   create: (data) => api.post("/items", data),
   update: (id, data) => api.put(`/items/${id}`, data),
+  createBulk: (payload) => api.post("/items/bulk", payload),
 };

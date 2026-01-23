@@ -12,7 +12,6 @@ import {
   TrendingDown,
   Warehouse,
   BarChart3,
-  FileText,
   PieChart,
   Building2,
   ChevronDown,
@@ -23,6 +22,8 @@ const Sidebar = () => {
   const { user } = useAuth();
   const location = useLocation();
 
+  const role = user?.role;
+
   // ✅ detect items sub routes
   const isItemsRoute = location.pathname.startsWith("/items");
   const isEditingItem = /^\/items\/\d+\/edit$/.test(location.pathname);
@@ -30,11 +31,17 @@ const Sidebar = () => {
   // ✅ detect customers sub routes
   const isCustomersRoute = location.pathname.startsWith("/customers");
   const isEditingCustomer = /^\/customers\/\d+\/edit$/.test(location.pathname);
-  const isViewingCustomer = /^\/customers\/\d+$/.test(location.pathname); // /customers/:id
+  const isViewingCustomer = /^\/customers\/\d+$/.test(location.pathname);
+
+  // ✅ detect stock sub routes
+  const isStockRoute =
+    location.pathname.startsWith("/stock") ||
+    location.pathname.startsWith("/stocks");
 
   // ✅ dropdown open states
   const [openItems, setOpenItems] = useState(false);
   const [openCustomers, setOpenCustomers] = useState(false);
+  const [openStock, setOpenStock] = useState(false);
 
   // ✅ auto open dropdown when inside those routes
   useEffect(() => {
@@ -45,6 +52,11 @@ const Sidebar = () => {
     if (isCustomersRoute) setOpenCustomers(true);
   }, [isCustomersRoute]);
 
+  useEffect(() => {
+    if (isStockRoute) setOpenStock(true);
+  }, [isStockRoute]);
+
+  // ✅ Menu config
   const menuItems = [
     {
       name: "Dashboard",
@@ -58,8 +70,6 @@ const Sidebar = () => {
       path: "/pos",
       permission: "ACCESS_POS",
     },
-
-    // ✅ Items dropdown
     {
       name: "Items",
       icon: Package,
@@ -67,8 +77,6 @@ const Sidebar = () => {
       permission: "VIEW_ITEMS",
       type: "dropdown-items",
     },
-
-    // ✅ Customers dropdown
     {
       name: "Customers",
       icon: Users,
@@ -76,7 +84,6 @@ const Sidebar = () => {
       permission: "MANAGE_CUSTOMERS",
       type: "dropdown-customers",
     },
-
     {
       name: "Shifts",
       icon: Clock,
@@ -98,20 +105,9 @@ const Sidebar = () => {
     {
       name: "Stock",
       icon: Warehouse,
-      path: "/stock",
+      path: "/stocks",
       permission: "VIEW_STOCK",
-    },
-    {
-      name: "Adjustments",
-      icon: BarChart3,
-      path: "/stock-adjustments",
-      permission: "ADJUST_STOCK",
-    },
-    {
-      name: "Transfers",
-      icon: FileText,
-      path: "/stock-transfers",
-      permission: "TRANSFER_STOCK",
+      type: "dropdown-stock",
     },
     {
       name: "Reports",
@@ -139,23 +135,37 @@ const Sidebar = () => {
     },
   ];
 
-  const visibleItems = menuItems.filter((item) =>
-    hasPermission(user.role, item.permission)
-  );
-
   return (
     <aside className="w-64 bg-slate-900 text-white flex flex-col">
       <div className="p-6 border-b border-slate-800">
         <h1 className="text-2xl font-bold">POS System</h1>
-        <p className="text-sm text-slate-400 mt-1">{user.role}</p>
+        <p className="text-sm text-slate-400 mt-1">{role}</p>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-        {visibleItems.map((item) => {
+        {menuItems.map((item) => {
           const Icon = item.icon;
 
+          // ✅ for normal menu items only (not dropdown parents)
+          if (
+            item.type !== "dropdown-items" &&
+            item.type !== "dropdown-customers" &&
+            item.type !== "dropdown-stock"
+          ) {
+            if (!hasPermission(role, item.permission)) return null;
+          }
+
+          // =========================
           // ✅ Items dropdown
+          // Parent visible if ANY child permission true
+          // =========================
           if (item.type === "dropdown-items") {
+            const canSeeItemsMenu =
+              hasPermission(role, "VIEW_ITEMS") ||
+              hasPermission(role, "MANAGE_ITEMS");
+
+            if (!canSeeItemsMenu) return null;
+
             return (
               <div key={item.path} className="space-y-1">
                 <button
@@ -179,32 +189,51 @@ const Sidebar = () => {
 
                 {openItems && (
                   <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
-                    <NavLink
-                      to="/items"
-                      end
-                      className={({ isActive }) =>
-                        `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                          isActive
-                            ? "bg-slate-800 text-white"
-                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                        }`
-                      }
-                    >
-                      Item List
-                    </NavLink>
+                    {hasPermission(role, "VIEW_ITEMS") && (
+                      <NavLink
+                        to="/items"
+                        end
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Item List
+                      </NavLink>
+                    )}
 
-                    <NavLink
-                      to="/items/new"
-                      className={({ isActive }) =>
-                        `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                          isActive
-                            ? "bg-slate-800 text-white"
-                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                        }`
-                      }
-                    >
-                      Add Item
-                    </NavLink>
+                    {hasPermission(role, "MANAGE_ITEMS") && (
+                      <NavLink
+                        to="/items/new"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Add Item
+                      </NavLink>
+                    )}
+
+                    {hasPermission(role, "MANAGE_ITEMS") && (
+                      <NavLink
+                        to="/items/bulk-add"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Bulk Add Items
+                      </NavLink>
+                    )}
 
                     {isEditingItem && (
                       <div className="block px-3 py-2 rounded-lg text-sm bg-slate-800 text-white">
@@ -217,8 +246,13 @@ const Sidebar = () => {
             );
           }
 
+          // =========================
           // ✅ Customers dropdown
+          // =========================
           if (item.type === "dropdown-customers") {
+            const canSeeCustomersMenu = hasPermission(role, "MANAGE_CUSTOMERS");
+            if (!canSeeCustomersMenu) return null;
+
             return (
               <div key={item.path} className="space-y-1">
                 <button
@@ -242,41 +276,43 @@ const Sidebar = () => {
 
                 {openCustomers && (
                   <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
-                    <NavLink
-                      to="/customers"
-                      end
-                      className={({ isActive }) =>
-                        `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                          isActive
-                            ? "bg-slate-800 text-white"
-                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                        }`
-                      }
-                    >
-                      Customer List
-                    </NavLink>
+                    {hasPermission(role, "MANAGE_CUSTOMERS") && (
+                      <NavLink
+                        to="/customers"
+                        end
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Customer List
+                      </NavLink>
+                    )}
 
-                    <NavLink
-                      to="/customers/new"
-                      className={({ isActive }) =>
-                        `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                          isActive
-                            ? "bg-slate-800 text-white"
-                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                        }`
-                      }
-                    >
-                      Add Customer
-                    </NavLink>
+                    {hasPermission(role, "MANAGE_CUSTOMERS") && (
+                      <NavLink
+                        to="/customers/new"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Add Customer
+                      </NavLink>
+                    )}
 
-                    {/* ✅ only show while viewing profile */}
                     {isViewingCustomer && (
                       <div className="block px-3 py-2 rounded-lg text-sm bg-slate-800 text-white">
                         View Customer
                       </div>
                     )}
 
-                    {/* ✅ only show while editing */}
                     {isEditingCustomer && (
                       <div className="block px-3 py-2 rounded-lg text-sm bg-slate-800 text-white">
                         Edit Customer
@@ -288,7 +324,93 @@ const Sidebar = () => {
             );
           }
 
-          // normal items
+          // =========================
+          // ✅ Stock dropdown
+          // Parent visible if ANY child permission true
+          // =========================
+          if (item.type === "dropdown-stock") {
+            const canSeeStockMenu =
+              hasPermission(role, "VIEW_STOCK") ||
+              hasPermission(role, "ADJUST_STOCK") ||
+              hasPermission(role, "TRANSFER_STOCK");
+
+            if (!canSeeStockMenu) return null;
+
+            return (
+              <div key={item.path} className="space-y-1">
+                <button
+                  onClick={() => setOpenStock((v) => !v)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                    isStockRoute
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={20} />
+                    <span className="font-medium">Stock</span>
+                  </div>
+                  {openStock ? (
+                    <ChevronDown size={18} />
+                  ) : (
+                    <ChevronRight size={18} />
+                  )}
+                </button>
+
+                {openStock && (
+                  <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                    {hasPermission(role, "VIEW_STOCK") && (
+                      <NavLink
+                        to="/stock"
+                        end
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Stock List
+                      </NavLink>
+                    )}
+
+                    {hasPermission(role, "ADJUST_STOCK") && (
+                      <NavLink
+                        to="/stock/adjustments"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Adjustments
+                      </NavLink>
+                    )}
+
+                    {hasPermission(role, "TRANSFER_STOCK") && (
+                      <NavLink
+                        to="/stock/transfers"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Transfers
+                      </NavLink>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // ✅ normal item
           return (
             <NavLink
               key={item.path}
@@ -310,7 +432,7 @@ const Sidebar = () => {
 
       <div className="p-4 border-t border-slate-800">
         <div className="text-xs text-slate-400">
-          Branch: {user.branchId ? `#${user.branchId}` : "All Branches"}
+          Branch: {user?.branchId ? `#${user.branchId}` : "All Branches"}
         </div>
       </div>
     </aside>
