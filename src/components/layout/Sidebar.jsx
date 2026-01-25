@@ -56,6 +56,16 @@ const Sidebar = () => {
     if (isStockRoute) setOpenStock(true);
   }, [isStockRoute]);
 
+  // detect purchase routes
+  const isPurchaseRoute = location.pathname.startsWith("/purchases");
+
+  const [openPurchase, setOpenPurchase] = useState(false);
+
+  useEffect(() => {
+    if (isPurchaseRoute) setOpenPurchase(true);
+  }, [isPurchaseRoute]);
+
+
   // ✅ Menu config
   const menuItems = [
     {
@@ -108,6 +118,13 @@ const Sidebar = () => {
       path: "/stocks",
       permission: "VIEW_STOCK",
       type: "dropdown-stock",
+    },
+    {
+      name: "Purchase",
+      icon: Package,
+      path: "/purchase",
+      permission: "VIEW_PURCHASES",
+      type: "dropdown-purchase",
     },
     {
       name: "Reports",
@@ -170,11 +187,10 @@ const Sidebar = () => {
               <div key={item.path} className="space-y-1">
                 <button
                   onClick={() => setOpenItems((v) => !v)}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                    isItemsRoute
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isItemsRoute
                       ? "bg-blue-600 text-white"
                       : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Icon size={20} />
@@ -194,10 +210,9 @@ const Sidebar = () => {
                         to="/items"
                         end
                         className={({ isActive }) =>
-                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive
-                              ? "bg-slate-800 text-white"
-                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
                           }`
                         }
                       >
@@ -209,10 +224,9 @@ const Sidebar = () => {
                       <NavLink
                         to="/items/new"
                         className={({ isActive }) =>
-                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive
-                              ? "bg-slate-800 text-white"
-                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
                           }`
                         }
                       >
@@ -224,10 +238,9 @@ const Sidebar = () => {
                       <NavLink
                         to="/items/bulk-add"
                         className={({ isActive }) =>
-                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive
-                              ? "bg-slate-800 text-white"
-                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
                           }`
                         }
                       >
@@ -257,11 +270,10 @@ const Sidebar = () => {
               <div key={item.path} className="space-y-1">
                 <button
                   onClick={() => setOpenCustomers((v) => !v)}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                    isCustomersRoute
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isCustomersRoute
                       ? "bg-blue-600 text-white"
                       : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Icon size={20} />
@@ -281,10 +293,9 @@ const Sidebar = () => {
                         to="/customers"
                         end
                         className={({ isActive }) =>
-                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive
-                              ? "bg-slate-800 text-white"
-                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
                           }`
                         }
                       >
@@ -296,10 +307,9 @@ const Sidebar = () => {
                       <NavLink
                         to="/customers/new"
                         className={({ isActive }) =>
-                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive
-                              ? "bg-slate-800 text-white"
-                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
                           }`
                         }
                       >
@@ -340,11 +350,10 @@ const Sidebar = () => {
               <div key={item.path} className="space-y-1">
                 <button
                   onClick={() => setOpenStock((v) => !v)}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                    isStockRoute
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isStockRoute
                       ? "bg-blue-600 text-white"
                       : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Icon size={20} />
@@ -364,10 +373,9 @@ const Sidebar = () => {
                         to="/stock"
                         end
                         className={({ isActive }) =>
-                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive
-                              ? "bg-slate-800 text-white"
-                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
                           }`
                         }
                       >
@@ -379,10 +387,9 @@ const Sidebar = () => {
                       <NavLink
                         to="/stock/adjustments"
                         className={({ isActive }) =>
-                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive
-                              ? "bg-slate-800 text-white"
-                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
                           }`
                         }
                       >
@@ -394,10 +401,9 @@ const Sidebar = () => {
                       <NavLink
                         to="/stock/transfers"
                         className={({ isActive }) =>
-                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive
-                              ? "bg-slate-800 text-white"
-                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
                           }`
                         }
                       >
@@ -409,6 +415,69 @@ const Sidebar = () => {
               </div>
             );
           }
+          // =========================
+          // ✅ Purchase dropdown
+          // Parent visible if ANY child permission true
+          // =========================
+          if (item.type === "dropdown-purchase") {
+            const canSeePurchaseMenu =
+              hasPermission(role, "VIEW_PURCHASES") ||
+              hasPermission(role, "NEW_PURCHASE");
+
+            if (!canSeePurchaseMenu) return null;
+
+            return (
+              <div key={item.path} className="space-y-1">
+                <button
+                  onClick={() => setOpenPurchase((v) => !v)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isPurchaseRoute
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={20} />
+                    <span className="font-medium">Purchase</span>
+                  </div>
+                  {openPurchase ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                </button>
+
+                {openPurchase && (
+                  <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                    {hasPermission(role, "VIEW_PURCHASES") && (
+                      <NavLink
+                        to="/purchase"
+                        end
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Purchase List
+                      </NavLink>
+                    )}
+
+                    {hasPermission(role, "NEW_PURCHASE") && (
+                      <NavLink
+                        to="/purchases"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        New Purchase
+                      </NavLink>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
 
           // ✅ normal item
           return (
@@ -416,10 +485,9 @@ const Sidebar = () => {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                  ? "bg-blue-600 text-white"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
                 }`
               }
             >

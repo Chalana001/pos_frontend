@@ -25,6 +25,7 @@ import ItemFormPage from "../pages/ItemFormPage";
 import BulkAddItems from "../pages/BulkAddItems";
 import CustomerFormPage from "../pages/CustomerFormPage";
 import CustomerViewPage from "../pages/CustomerViewPage";
+import NewPurchase from "../pages/PurchaseFormPage";
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -131,6 +132,18 @@ const AppRoutes = () => {
         <Route path="/stock/transfers" element={
           <ProtectedRoute permission="TRANSFER_STOCK">
             <StockTransfers />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/stock/transfers" element={
+          <ProtectedRoute permission="TRANSFER_STOCK">
+            <StockTransfers />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/purchases" element={
+          <ProtectedRoute permission="NEW_PURCHASE">
+            <NewPurchase />
           </ProtectedRoute>
         } />
 
