@@ -446,7 +446,7 @@ const Sidebar = () => {
                   <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
                     {hasPermission(role, "VIEW_PURCHASES") && (
                       <NavLink
-                        to="/purchase"
+                        to="/purchases"
                         end
                         className={({ isActive }) =>
                           `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
@@ -461,7 +461,7 @@ const Sidebar = () => {
 
                     {hasPermission(role, "NEW_PURCHASE") && (
                       <NavLink
-                        to="/purchases"
+                        to="/purchases/new"
                         className={({ isActive }) =>
                           `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
                             ? "bg-slate-800 text-white"
