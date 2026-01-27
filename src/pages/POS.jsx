@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
-import { Search, User, DollarSign, CreditCard } from "lucide-react";
+import { Search, User, DollarSign, CreditCard, ScanLine, AlertCircle, Trash2, Tag, ChevronRight } from "lucide-react";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { itemsAPI } from "../api/items.api";
 import { ordersAPI } from "../api/orders.api";
@@ -14,7 +14,7 @@ import { ORDER_TYPES, DISCOUNT_TYPES } from "../utils/constants";
 import { useShift } from "../context/ShiftContext";
 
 const POS = () => {
-  const { activeShift } = useShift(); 
+  const { activeShift } = useShift();
   const branchId = activeShift?.branchId;
   const [cartItems, setCartItems] = useState([]);
 
@@ -52,13 +52,11 @@ const POS = () => {
     if (e.key === "Enter" && barcode.trim()) {
       try {
         const code = barcode.trim();
-
         const response = await itemsAPI.getByBarcode(code, branchId);
-
         if (response.data) {
           addToCart(response.data);
           setBarcode("");
-          toast.success("Item added to cart");
+          toast.success("Item added");
         } else {
           toast.error("Item not found");
         }
@@ -69,43 +67,28 @@ const POS = () => {
   };
 
   const addToCart = (item) => {
-    const existingIndex = cartItems.findIndex(
-  (ci) => String(ci.itemId) === String(item.id)
-);
-
+    const existingIndex = cartItems.findIndex((ci) => String(ci.itemId) === String(item.id));
     const stockQty = Number(item.availableQty ?? 0);
-    console.log("Adding to cart:1");
-    console.log("Item:", item);
-    console.log("Stock Qty:", stockQty);
 
     if (existingIndex !== -1) {
-      console.log("Adding to cart:2.1");
       const newItems = [...cartItems];
       const nextQty = newItems[existingIndex].qty + 1;
-      console.log("Adding to cart:2.2");
 
       if (stockQty > 0 && nextQty > stockQty) {
-        console.log("Not enough stock. Available");
-        toast.error(`Not enough stock. Available: ${stockQty}`);
+        toast.error(`Low stock. Available: ${stockQty}`);
         return;
       }
-      console.log("Adding to cart:3");
 
-      // ✅ immutable update
       newItems[existingIndex] = { ...newItems[existingIndex], qty: nextQty };
       setCartItems(newItems);
       return;
     }
 
-    console.log("Adding to cart:4");
     if (stockQty === 0) {
       toast.error("Out of stock");
       return;
     }
 
-    console.log("Adding to cart:5");
-
-    // ✅ functional update (fix stale state overwrite)
     setCartItems((prev) => [
       ...prev,
       {
@@ -123,7 +106,6 @@ const POS = () => {
 
   const updateQuantity = (index, newQty) => {
     if (newQty < 1) return;
-
     const item = cartItems[index];
     const stockQty = Number(item.stockQty ?? 0);
 
@@ -139,7 +121,6 @@ const POS = () => {
 
   const removeItem = (index) => {
     setCartItems(cartItems.filter((_, i) => i !== index));
-    toast.success("Item removed");
   };
 
   const openDiscountModal = (index) => {
@@ -157,60 +138,38 @@ const POS = () => {
       newItems[selectedItemIndex].discountValue = parseFloat(discountValue) || 0;
       setCartItems(newItems);
       setShowDiscountModal(false);
-      toast.success("Discount applied");
+      toast.success("Discount updated");
     }
   };
 
   const calculateTotal = () => {
     let total = 0;
-
     cartItems.forEach((item) => {
       let itemTotal = item.unitPrice * item.qty;
-
       if (item.discountType === DISCOUNT_TYPES.FIXED) {
         itemTotal -= item.discountValue;
       } else if (item.discountType === DISCOUNT_TYPES.PERCENT) {
         itemTotal -= (itemTotal * item.discountValue) / 100;
       }
-
       total += Math.max(0, itemTotal);
     });
-
     return Math.max(0, total - billDiscount);
   };
 
   function handleCheckout() {
-    if (cartItems.length === 0) {
-      toast.error("Cart is empty");
-      return;
-    }
-
-    if (!activeShift || activeShift.status !== "OPEN") {
-      toast.error("No active shift. Please open a shift first.");
-      return;
-    }
-
-    if (orderType === ORDER_TYPES.CREDIT && !customer) {
-      toast.error("Please select a customer for credit orders");
-      return;
-    }
+    if (cartItems.length === 0) return toast.error("Cart is empty");
+    if (!activeShift || activeShift.status !== "OPEN") return toast.error("No active shift.");
+    if (orderType === ORDER_TYPES.CREDIT && !customer) return toast.error("Select customer for credit");
 
     setPaidAmount(calculateTotal());
     setShowPayment(true);
   }
 
   const handlePlaceOrder = async () => {
-
     const total = calculateTotal();
-
-    if (orderType === ORDER_TYPES.CASH && paidAmount < total) {
-      toast.error("Paid amount cannot be less than total");
-      return;
-    }
+    if (orderType === ORDER_TYPES.CASH && paidAmount < total) return toast.error("Insufficient amount");
 
     setLoading(true);
-    console.log("Placing order with data1");
-
     try {
       const orderData = {
         branchId: branchId,
@@ -227,11 +186,9 @@ const POS = () => {
         })),
         note: "",
       };
-      console.log("Placing order with data2", orderData);
 
       const response = await ordersAPI.create(orderData);
-
-      toast.success(`Order ${response.data.invoiceNo} placed successfully!`);
+      toast.success(`Order ${response.data.invoiceNo} success!`);
 
       setCartItems([]);
       setCustomer(null);
@@ -241,150 +198,149 @@ const POS = () => {
 
       setTimeout(() => barcodeInputRef.current?.focus(), 100);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to place order");
+      toast.error(error.response?.data?.message || "Failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="h-full flex gap-6">
-      {/* Left Panel */}
-      <div className="flex-1 flex flex-col gap-4">
-        <div className="card">
-          <h2 className="text-xl font-bold mb-4">Scan or Search Products</h2>
+    <div className="h-[calc(100vh-80px)] bg-slate-50 p-4 flex gap-6 font-sans">
+      
+      {/* --- LEFT PANEL (Controls & Input) --- */}
+      <div className="flex-1 flex flex-col gap-6">
+        
+        {/* 1. Header & Scanner Section */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden">
+           {/* Decorative Background Blob */}
+           <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-50 rounded-full blur-2xl opacity-50 pointer-events-none"></div>
 
-          <div className="flex gap-2 mb-4">
-            <div className="flex-1 relative">
-              <input
-                ref={barcodeInputRef}
-                type="text"
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                onKeyDown={handleBarcodeSearch}
-                placeholder="Scan barcode or type..."
-                className="input text-lg"
-                autoFocus
-              />
-            </div>
-
-            <Button onClick={() => setShowProductSearch(true)} variant="secondary">
-              <Search size={20} />
-              <span className="ml-2">Search (F2)</span>
-            </Button>
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setShowCustomerSelect(true)}
-              variant={customer ? "success" : "secondary"}
-              className="flex-1"
-            >
-              <User size={20} />
-              <span className="ml-2">
-                {customer ? customer.name : "Select Customer (F4)"}
-              </span>
-            </Button>
-
-            {customer && (
-              <Button onClick={() => setCustomer(null)} variant="danger">
-                Clear
-              </Button>
-            )}
-          </div>
-
-          {/* ✅ shift warning */}
-          {(!activeShift || activeShift.status !== "OPEN") && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                ⚠️ No active shift. Please open a shift to place orders.
+           <div className="relative z-10">
+              <h1 className="text-2xl font-bold text-slate-800 mb-1">New Sale</h1>
+              <p className="text-slate-400 text-sm mb-6 flex items-center gap-2">
+                 <span className={`w-2 h-2 rounded-full ${activeShift?.status === "OPEN" ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                 {activeShift?.status === "OPEN" ? "Shift Active" : "Shift Closed"} 
+                 {customer && <span className="text-blue-500 font-medium">• {customer.name}</span>}
               </p>
-            </div>
-          )}
+
+              {/* Barcode Input */}
+              <div className="flex gap-3">
+                <div className="flex-1 relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <ScanLine className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  </div>
+                  <input
+                    ref={barcodeInputRef}
+                    type="text"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                    onKeyDown={handleBarcodeSearch}
+                    className="block w-full pl-11 pr-4 py-4 bg-slate-50 border-0 text-slate-900 rounded-xl ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-lg transition-all shadow-inner"
+                    placeholder="Scan barcode..."
+                    autoFocus
+                  />
+                  <div className="absolute inset-y-0 right-2 flex items-center">
+                     <kbd className="hidden sm:inline-block px-2 py-1 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-500 shadow-sm">Enter</kbd>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => setShowProductSearch(true)}
+                  className="px-6 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium border border-blue-200 transition-colors flex flex-col items-center justify-center min-w-[100px]"
+                >
+                   <Search size={20} className="mb-1"/>
+                   <span className="text-xs">Search (F2)</span>
+                </button>
+              </div>
+           </div>
         </div>
 
-        {/* Order Type */}
-        <div className="card flex-1 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Order Type</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setOrderType(ORDER_TYPES.CASH)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${orderType === ORDER_TYPES.CASH
-                  ? "bg-green-600 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-              >
-                <DollarSign size={18} className="inline mr-1" />
-                Cash
-              </button>
-
-              <button
-                onClick={() => setOrderType(ORDER_TYPES.CREDIT)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${orderType === ORDER_TYPES.CREDIT
-                  ? "bg-orange-600 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-              >
-                <CreditCard size={18} className="inline mr-1" />
-                Credit
-              </button>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Bill Discount (LKR)
-            </label>
-            <input
-              type="number"
-              value={billDiscount}
-              onChange={(e) => setBillDiscount(parseFloat(e.target.value) || 0)}
-              className="input"
-              placeholder="0.00"
-              min="0"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel - Cart */}
-      <div className="w-96 card flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Cart ({cartItems.length})</h2>
-          {cartItems.length > 0 && (
-            <button
-              onClick={() => setCartItems([])}
-              className="text-sm text-red-600 hover:text-red-700"
+        {/* 2. Controls Grid */}
+        <div className="grid grid-cols-2 gap-4 flex-1 content-start">
+            
+            {/* Customer Card */}
+            <button 
+              onClick={() => setShowCustomerSelect(true)}
+              className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${customer ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white border-slate-200 hover:border-blue-300 text-slate-600 hover:shadow-md'}`}
             >
-              Clear All
+               <div className="flex justify-between items-start mb-2">
+                 <User size={24} className={customer ? 'text-blue-200' : 'text-slate-400 group-hover:text-blue-500'} />
+                 <span className="text-xs font-mono opacity-60">F4</span>
+               </div>
+               <div className="font-semibold text-lg truncate">{customer ? customer.name : "Select Customer"}</div>
+               <div className={`text-sm ${customer ? 'text-blue-100' : 'text-slate-400'}`}>
+                  {customer ? customer.phone : "Add to order"}
+               </div>
+               {customer && (
+                 <div onClick={(e) => { e.stopPropagation(); setCustomer(null); }} className="absolute top-2 right-2 p-2 hover:bg-blue-700 rounded-lg cursor-pointer transition-colors">
+                    <Trash2 size={16} className="text-white"/>
+                 </div>
+               )}
             </button>
-          )}
+
+            {/* Discount Card */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                   <Tag size={24} className="text-orange-500" />
+                   <span className="text-xs font-mono text-slate-400">GLOBAL</span>
+                </div>
+                <div>
+                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Bill Discount</label>
+                   <div className="flex items-baseline gap-1 mt-1">
+                      <span className="text-slate-400 font-light">LKR</span>
+                      <input 
+                        type="number" 
+                        value={billDiscount}
+                        onChange={(e) => setBillDiscount(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-transparent text-xl font-bold text-slate-800 focus:outline-none border-b border-transparent focus:border-orange-500 transition-colors p-0"
+                        placeholder="0.00"
+                      />
+                   </div>
+                </div>
+            </div>
+
+            {/* Payment Type Toggle */}
+            <div className="col-span-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex gap-2">
+               <button 
+                 onClick={() => setOrderType(ORDER_TYPES.CASH)}
+                 className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-medium transition-all ${orderType === ORDER_TYPES.CASH ? 'bg-emerald-100 text-emerald-800 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
+               >
+                  <DollarSign size={18} /> Cash
+               </button>
+               <button 
+                 onClick={() => setOrderType(ORDER_TYPES.CREDIT)}
+                 className={`flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-medium transition-all ${orderType === ORDER_TYPES.CREDIT ? 'bg-amber-100 text-amber-800 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
+               >
+                  <CreditCard size={18} /> Credit
+               </button>
+            </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
-          <Cart
-            items={cartItems}
-            onUpdateQty={updateQuantity}
-            onRemoveItem={removeItem}
-            onApplyDiscount={openDiscountModal}
-          />
-        </div>
-
-        <Button
-          onClick={handleCheckout}
-          className="w-full mt-4 py-4 text-lg"
-          disabled={
-            cartItems.length === 0 ||
-            !activeShift ||
-            activeShift.status !== "OPEN"
-          }
-        >
-          Checkout (F9) - {formatCurrency(calculateTotal())}
-        </Button>
+         {/* Warnings */}
+         {(!activeShift || activeShift.status !== "OPEN") && (
+            <div className="mt-auto flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 text-amber-800 rounded-xl">
+               <AlertCircle size={20} />
+               <span className="font-medium">Shift is currently closed. Operations are restricted.</span>
+            </div>
+         )}
       </div>
 
-      {/* Modals */}
+      {/* --- RIGHT PANEL (Cart/Receipt) --- */}
+      <div className="w-[420px] flex flex-col">
+        <Cart
+          items={cartItems}
+          onUpdateQty={updateQuantity}
+          onRemoveItem={removeItem}
+          onApplyDiscount={openDiscountModal}
+          onClear={() => setCartItems([])}
+          total={calculateTotal()}
+          subTotal={cartItems.reduce((acc, item) => acc + (item.unitPrice * item.qty), 0)}
+          onCheckout={handleCheckout}
+          isCheckoutDisabled={cartItems.length === 0 || !activeShift || activeShift.status !== "OPEN"}
+        />
+      </div>
+
+      {/* --- MODALS --- */}
       <ProductSearch
         isOpen={showProductSearch}
         onClose={() => setShowProductSearch(false)}
@@ -392,135 +348,92 @@ const POS = () => {
         branchId={branchId}
       />
 
-
       <CustomerSelect
         isOpen={showCustomerSelect}
         onClose={() => setShowCustomerSelect(false)}
         onSelectCustomer={setCustomer}
       />
 
-      <Modal
-        isOpen={showDiscountModal}
-        onClose={() => setShowDiscountModal(false)}
-        title="Apply Discount"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Discount Type
-            </label>
-            <select
-              value={discountType}
-              onChange={(e) => setDiscountType(e.target.value)}
-              className="input"
-            >
-              <option value={DISCOUNT_TYPES.NONE}>No Discount</option>
-              <option value={DISCOUNT_TYPES.FIXED}>Fixed Amount</option>
-              <option value={DISCOUNT_TYPES.PERCENT}>Percentage</option>
-            </select>
-          </div>
-
-          {discountType !== DISCOUNT_TYPES.NONE && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                {discountType === DISCOUNT_TYPES.PERCENT
-                  ? "Percentage (%)"
-                  : "Amount (LKR)"}
-              </label>
-              <input
-                type="number"
-                value={discountValue}
-                onChange={(e) => setDiscountValue(e.target.value)}
-                className="input"
-                placeholder="0"
-                min="0"
-                max={discountType === DISCOUNT_TYPES.PERCENT ? 100 : undefined}
-              />
+      {/* Discount Modal */}
+      <Modal isOpen={showDiscountModal} onClose={() => setShowDiscountModal(false)} title="Item Discount">
+         <div className="p-4 space-y-6">
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+               {[DISCOUNT_TYPES.NONE, DISCOUNT_TYPES.FIXED, DISCOUNT_TYPES.PERCENT].map((type) => (
+                  <button
+                     key={type}
+                     onClick={() => setDiscountType(type)}
+                     className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${discountType === type ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                     {type === DISCOUNT_TYPES.NONE ? 'None' : type === DISCOUNT_TYPES.FIXED ? 'Amount' : 'Percentage'}
+                  </button>
+               ))}
             </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button onClick={applyDiscount} className="flex-1">
-              Apply
-            </Button>
-            <Button variant="secondary" onClick={() => setShowDiscountModal(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Payment */}
-      <Modal
-        isOpen={showPayment}
-        onClose={() => setShowPayment(false)}
-        title="Confirm Payment"
-      >
-        <div className="space-y-4">
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <div className="flex justify-between mb-2">
-              <span className="text-slate-600">Order Type:</span>
-              <span className="font-semibold">{orderType}</span>
-            </div>
-
-            {customer && (
-              <div className="flex justify-between mb-2">
-                <span className="text-slate-600">Customer:</span>
-                <span className="font-semibold">{customer.name}</span>
-              </div>
+            
+            {discountType !== DISCOUNT_TYPES.NONE && (
+               <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Value</label>
+                  <div className="relative">
+                     <input
+                        type="number"
+                        value={discountValue}
+                        onChange={(e) => setDiscountValue(e.target.value)}
+                        className="w-full text-3xl font-bold text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-xl p-4 focus:border-blue-500 focus:outline-none transition-colors"
+                        autoFocus
+                     />
+                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                        {discountType === DISCOUNT_TYPES.PERCENT ? '%' : 'LKR'}
+                     </span>
+                  </div>
+               </div>
             )}
 
-            <div className="flex justify-between mb-2">
-              <span className="text-slate-600">Items:</span>
-              <span className="font-semibold">{cartItems.length}</span>
+            <div className="flex gap-3 pt-4">
+               <Button variant="secondary" onClick={() => setShowDiscountModal(false)} className="flex-1 py-3">Cancel</Button>
+               <Button onClick={applyDiscount} className="flex-1 py-3 bg-blue-600 hover:bg-blue-700">Apply Discount</Button>
             </div>
+         </div>
+      </Modal>
 
-            <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
-              <span>Total:</span>
-              <span className="text-blue-600">
-                {formatCurrency(calculateTotal())}
-              </span>
+      {/* Payment Modal */}
+      <Modal isOpen={showPayment} onClose={() => setShowPayment(false)} title="Finalize Payment">
+         <div className="p-6">
+            <div className="bg-slate-50 rounded-2xl p-6 mb-6 flex flex-col items-center">
+               <span className="text-slate-500 font-medium mb-1">Total Amount Due</span>
+               <span className="text-4xl font-bold text-slate-900 tracking-tight">{formatCurrency(calculateTotal())}</span>
+               <div className="flex gap-2 mt-4 text-sm">
+                  <span className="px-2 py-1 bg-white border rounded text-slate-500 font-medium">{cartItems.length} Items</span>
+                  <span className="px-2 py-1 bg-white border rounded text-slate-500 font-medium">{orderType}</span>
+               </div>
             </div>
 
             {orderType === ORDER_TYPES.CASH && (
-              <div className="mt-4 space-y-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  Paid Amount (LKR)
-                </label>
-
-                <input
-                  type="number"
-                  value={paidAmount}
-                  onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                  className="input"
-                  min="0"
-                  autoFocus
-                />
-
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Change:</span>
-                  <span className="font-semibold">
-                    {formatCurrency(Math.max(0, paidAmount - calculateTotal()))}
-                  </span>
-                </div>
-              </div>
+               <div className="space-y-4 mb-6">
+                  <div>
+                     <label className="text-sm font-bold text-slate-700 mb-1 block">Cash Received</label>
+                     <input
+                        type="number"
+                        value={paidAmount}
+                        onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                        className="w-full text-2xl font-semibold p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        autoFocus
+                     />
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100">
+                     <span className="font-medium">Change Due:</span>
+                     <span className="text-xl font-bold font-mono">{formatCurrency(Math.max(0, paidAmount - calculateTotal()))}</span>
+                  </div>
+               </div>
             )}
-          </div>
 
-          <div className="flex gap-2">
-            <Button
-              onClick={handlePlaceOrder}
-              className="flex-1"
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Confirm & Print"}
-            </Button>
-            <Button variant="secondary" onClick={() => setShowPayment(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
+            <div className="grid grid-cols-2 gap-4">
+               <Button variant="secondary" onClick={() => setShowPayment(false)} className="py-4">Cancel</Button>
+               <Button onClick={handlePlaceOrder} disabled={loading} className="py-4 bg-emerald-600 hover:bg-emerald-700 text-lg shadow-lg shadow-emerald-200">
+                  {loading ? "Processing..." : "Complete Order"}
+               </Button>
+            </div>
+         </div>
       </Modal>
+
     </div>
   );
 };
