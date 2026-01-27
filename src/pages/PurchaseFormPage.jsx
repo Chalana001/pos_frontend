@@ -83,14 +83,13 @@ const PurchaseFormPage = () => {
       initialInputs[b.id] = {
         cost: item.costPrice || 0,
         sell: item.sellingPrice || 0,
-        qty: "", // Empty by default so user types only where needed
+        qty: "",
         expiry: ""
       };
     });
     setBranchInputs(initialInputs);
   };
 
-  // Helper to update specific branch input
   const handleInputChange = (branchId, field, value) => {
     setBranchInputs(prev => ({
       ...prev,
@@ -101,7 +100,6 @@ const PurchaseFormPage = () => {
     }));
   };
 
-  // Helper: Copy Main Branch prices to all other branches (Optional shortcut)
   const applyPricesToAll = (sourceBranchId) => {
     const source = branchInputs[sourceBranchId];
     const newInputs = { ...branchInputs };
@@ -119,27 +117,24 @@ const PurchaseFormPage = () => {
     toast.success("Prices applied to all branches");
   };
 
-  // --- 3. ADD TO CART (Process Distribution) ---
+  // --- 3. ADD TO CART ---
   const handleAddToList = () => {
     if (!selectedItem) return;
 
     const newRows = [];
 
-    // Loop through inputs and pick only branches where Qty > 0
     Object.entries(branchInputs).forEach(([branchIdStr, data]) => {
       const qty = Number(data.qty);
       if (qty > 0) {
         const branch = branches.find(b => b.id == branchIdStr);
 
         newRows.push({
-          uniqueId: Date.now() + Math.random(), // Unique ID for React key
+          uniqueId: Date.now() + Math.random(),
           itemId: selectedItem.id,
           name: selectedItem.name,
           barcode: selectedItem.barcode,
-
           branchId: Number(branchIdStr),
           branchName: branch?.name || "Unknown",
-
           qty: qty,
           costPrice: Number(data.cost),
           sellingPrice: Number(data.sell),
@@ -155,8 +150,6 @@ const PurchaseFormPage = () => {
     }
 
     setCartItems(prev => [...prev, ...newRows]);
-
-    // Reset Selection
     setSelectedItem(null);
     setBranchInputs({});
   };
@@ -165,48 +158,52 @@ const PurchaseFormPage = () => {
     setCartItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // --- 4. SUBMIT (Group & Send) ---
+  // --- 4. SUBMIT (Updated for New DTO) ✅ ---
   const handleSubmit = async () => {
     if (!supplierId) return toast.error("Please select a Supplier");
     if (cartItems.length === 0) return toast.error("No items in the list");
 
-    // Group items by Branch ID
-    const groupedItems = cartItems.reduce((acc, item) => {
-      if (!acc[item.branchId]) acc[item.branchId] = [];
-      acc[item.branchId].push(item);
-      return acc;
-    }, {});
+    // 1. Group items by Branch ID (Frontend Transformation)
+    const branchesMap = {};
 
-    const promises = [];
+    cartItems.forEach(item => {
+        if (!branchesMap[item.branchId]) {
+            branchesMap[item.branchId] = {
+                branchId: item.branchId,
+                items: []
+            };
+        }
 
-    for (const [branchId, items] of Object.entries(groupedItems)) {
-      const branchTotal = items.reduce((sum, i) => sum + i.lineTotal, 0);
+        branchesMap[item.branchId].items.push({
+            itemId: item.itemId,
+            qty: item.qty,
+            costPrice: item.costPrice,
+            sellingPrice: item.sellingPrice,
+            expiryDate: item.expiryDate // Backend will handle null if sent as null
+        });
+    });
 
-      const payload = {
-        branchId: Number(branchId),
+    // 2. Convert Map to Array for DTO
+    const branchesPayload = Object.values(branchesMap);
+
+    // 3. Construct Final Payload (CreatePurchaseRequest)
+    const payload = {
         supplierId: Number(supplierId),
-        totalAmount: branchTotal,
-        paidAmount: 0,
-        note: invoiceNo ? `Inv: ${invoiceNo}` : "Purchase",
-        items: items.map(item => ({
-          itemId: item.itemId,
-          qty: item.qty,
-          costPrice: item.costPrice,
-          sellingPrice: item.sellingPrice,
-          expiryDate: item.expiryDate
-        }))
-      };
+        invoiceNo: invoiceNo || "PURCHASE", // Default text if empty
+        branches: branchesPayload
+    };
 
-      promises.push(purchasesAPI.create(payload));
-    }
+    console.log("Sending Payload:", payload); // Debugging purpose
 
     try {
-      await Promise.all(promises);
-      toast.success(`Saved successfully for ${Object.keys(groupedItems).length} Branch(es)!`);
-      navigate("/purchases");
+      // 4. Send SINGLE Request
+      await purchasesAPI.create(payload);
+      
+      toast.success("Purchase saved successfully!");
+      navigate("/purchases"); // Redirect to history
     } catch (error) {
       console.error(error);
-      toast.error("Failed to save. Please check details.");
+      toast.error(error.response?.data?.message || "Failed to save purchase.");
     }
   };
 
@@ -234,8 +231,6 @@ const PurchaseFormPage = () => {
                 value={supplierId}
                 onChange={(e) => setSupplierId(e.target.value)}
                 className={`input w-full ${cartItems.length > 0 ? "bg-gray-100 cursor-not-allowed" : ""}`}
-
-                // 👇 Cart එකේ බඩු තියෙනවා නම් Disable කරනවා
                 disabled={cartItems.length > 0}
               >
                 <option value="">Select Supplier</option>
@@ -246,13 +241,12 @@ const PurchaseFormPage = () => {
                 onClick={() => setShowSupplierModal(true)}
                 variant="secondary"
                 className="px-3"
-                disabled={cartItems.length > 0} // Button එකත් Disable කරනවා
+                disabled={cartItems.length > 0}
               >
                 <Plus size={18} />
               </Button>
             </div>
 
-            {/* 👇 පොඩි Alert එකක් පෙන්නනවා බඩු තියෙද්දී */}
             {cartItems.length > 0 && (
               <span className="text-xs text-red-500">
                 To change supplier, please clear the cart first.
@@ -309,7 +303,7 @@ const PurchaseFormPage = () => {
               )}
             </div>
 
-            {/* DISTRIBUTION TABLE (Only shows when item selected) */}
+            {/* DISTRIBUTION TABLE */}
             {selectedItem && (
               <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="p-3 bg-blue-100 rounded-lg mb-3 flex justify-between items-center border border-blue-200">
@@ -323,7 +317,6 @@ const PurchaseFormPage = () => {
                 </div>
 
                 <div className="space-y-1 max-h-[500px] overflow-y-auto pr-1">
-                  {/* Header */}
                   <div className="grid grid-cols-12 gap-1 text-xs font-bold text-slate-500 px-1 mb-1">
                     <div className="col-span-3">Branch</div>
                     <div className="col-span-2 text-center">Cost</div>
@@ -336,12 +329,9 @@ const PurchaseFormPage = () => {
                     const inputs = branchInputs[branch.id] || {};
                     return (
                       <div key={branch.id} className="grid grid-cols-12 gap-1 items-center bg-white p-2 rounded border border-slate-200 shadow-sm mb-2">
-                        {/* Branch Name */}
                         <div className="col-span-3 text-xs font-bold text-slate-700 truncate" title={branch.name}>
                           {branch.name}
                         </div>
-
-                        {/* Cost Price */}
                         <div className="col-span-2">
                           <input
                             type="number"
@@ -351,8 +341,6 @@ const PurchaseFormPage = () => {
                             onChange={(e) => handleInputChange(branch.id, 'cost', e.target.value)}
                           />
                         </div>
-
-                        {/* Sell Price */}
                         <div className="col-span-2">
                           <input
                             type="number"
@@ -362,8 +350,6 @@ const PurchaseFormPage = () => {
                             onChange={(e) => handleInputChange(branch.id, 'sell', e.target.value)}
                           />
                         </div>
-
-                        {/* QTY (Highlight) */}
                         <div className="col-span-2">
                           <input
                             type="number"
@@ -372,12 +358,10 @@ const PurchaseFormPage = () => {
                             value={inputs.qty}
                             onChange={(e) => handleInputChange(branch.id, 'qty', e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleAddToList(); // Press Enter to Add
+                              if (e.key === 'Enter') handleAddToList();
                             }}
                           />
                         </div>
-
-                        {/* Expiry */}
                         <div className="col-span-3 flex gap-1">
                           <input
                             type="date"
@@ -385,7 +369,6 @@ const PurchaseFormPage = () => {
                             value={inputs.expiry}
                             onChange={(e) => handleInputChange(branch.id, 'expiry', e.target.value)}
                           />
-                          {/* Copy Button (First Row Only) */}
                           {idx === 0 && (
                             <button
                               onClick={() => applyPricesToAll(branch.id)}
