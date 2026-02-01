@@ -3,10 +3,10 @@ import { toast } from 'react-hot-toast';
 import { 
   FileText, Download, TrendingUp, 
   PieChart as PieIcon, BarChart3, AlertCircle, DollarSign,
-  Users, Truck
+  Users, Truck, Calendar
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   LineChart, Line, PieChart, Pie, Cell 
 } from 'recharts';
 import jsPDF from 'jspdf';
@@ -27,13 +27,16 @@ const Reports = () => {
   const [activeTab, setActiveTab] = useState('sales'); 
   const [loading, setLoading] = useState(false);
   
-  // Data States
-  const [reportData, setReportData] = useState(null); // List Data (Tables/Charts)
-  const [profitSummary, setProfitSummary] = useState(null); // Net Profit Summary Data
+  // --- Data States ---
+  const [reportData, setReportData] = useState(null);       // General List Data
+  const [profitSummary, setProfitSummary] = useState(null); // Net Profit Summary
+  
+  // 🔥 Updated: Sales Trend State is now an object to hold both data and type
+  const [salesTrend, setSalesTrend] = useState({ data: [], type: 'DAILY' });
 
   const { selectedBranchId } = useBranch();
   
-  // Date State
+  // --- Date State ---
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(1)).toISOString().split('T')[0], // 1st of current month
     to: new Date().toISOString().split('T')[0],
@@ -42,11 +45,36 @@ const Reports = () => {
   // Ref for export
   const reportRef = useRef(null);
 
+  // --- QUICK DATE FILTER ---
+  const setQuickDate = (type) => {
+    const now = new Date();
+    let from = new Date();
+    let to = new Date();
+
+    if (type === 'today') {
+       // from/to is today
+    } else if (type === 'thisMonth') {
+       from = new Date(now.getFullYear(), now.getMonth(), 1); 
+       to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (type === 'lastMonth') {
+       from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+       to = new Date(now.getFullYear(), now.getMonth(), 0);
+    } else if (type === 'thisYear') {
+       from = new Date(now.getFullYear(), 0, 1); 
+       to = new Date(now.getFullYear(), 11, 31); 
+    }
+
+    const formatDate = (d) => d.toISOString().split('T')[0];
+    setDateRange({ from: formatDate(from), to: formatDate(to) });
+    toast.success(`Date filter applied: ${type.replace(/([A-Z])/g, ' $1').trim()}`);
+  };
+
   // --- API CALLS ---
   const generateReport = async (type) => {
     setLoading(true);
     setReportData(null); 
-    setProfitSummary(null); // Clear old summary
+    setProfitSummary(null);
+    setSalesTrend({ data: [], type: 'DAILY' }); 
     
     try {
       const params = {
@@ -58,7 +86,26 @@ const Reports = () => {
       let response;
       switch (type) {
         case 'sales':
+          // 1. Summary Data
           response = await reportsAPI.salesSummary(params);
+          
+          // 2. Trend Data (Chart) with Auto-Switch Logic
+          try {
+             const fromDate = new Date(dateRange.from);
+             const toDate = new Date(dateRange.to);
+             const diffTime = Math.abs(toDate - fromDate);
+             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+             // 🔥 If range > 35 days, use MONTHLY mode
+             const trendType = diffDays > 35 ? 'MONTHLY' : 'DAILY';
+
+             const trendRes = await reportsAPI.salesTrend({ ...params, type: trendType });
+             setSalesTrend({ data: trendRes.data, type: trendType });
+
+          } catch (err) {
+             console.error("Error fetching sales trend", err);
+             setSalesTrend({ data: [], type: 'DAILY' });
+          }
           break;
           
         case 'topSelling':
@@ -66,19 +113,17 @@ const Reports = () => {
           break;
           
         case 'profit':
-          // 1. Get Item List for Table
+          // 1. List Data
           response = await reportsAPI.profit({ ...params, limit: 50 });
-          
-          // 2. 🔥 Get Net Profit Summary (Cards)
+          // 2. Summary Data (Net Profit)
           try {
-            const summaryRes = await reportsAPI.profitSummary(params); // Make sure this API exists!
+            const summaryRes = await reportsAPI.profitSummary(params);
             setProfitSummary(summaryRes.data);
           } catch (err) {
             console.error("Failed to fetch profit summary", err);
-            // Fallback if API fails: Calculate basic gross profit from list
+            // Fallback
             const gross = response.data.reduce((sum, item) => sum + item.profit, 0);
-            const rev = response.data.reduce((sum, item) => sum + item.revenue, 0);
-            setProfitSummary({ grossProfit: gross, totalRevenue: rev, totalExpenses: 0, netProfit: gross });
+            setProfitSummary({ grossProfit: gross, totalExpenses: 0, netProfit: gross });
           }
           break;
           
@@ -116,57 +161,27 @@ const Reports = () => {
     if (!reportRef.current) return;
     const canvas = await html2canvas(reportRef.current, { scale: 2 });
     const imgData = canvas.toDataURL('image/png');
-    
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`report_${activeTab}_${new Date().toISOString().split('T')[0]}.pdf`);
+    pdf.save(`report_${activeTab}_${dateRange.from}.pdf`);
     toast.success("PDF Downloaded!");
   };
 
   const exportChartAsImage = async () => {
     if (!reportRef.current) return;
     const canvas = await html2canvas(reportRef.current);
-    const image = canvas.toDataURL("image/png");
     const link = document.createElement("a");
-    link.href = image;
+    link.href = canvas.toDataURL("image/png");
     link.download = `chart_${activeTab}.png`;
     link.click();
     toast.success("Image Downloaded!");
   };
 
-  // --- RENDER TABS ---
-  const renderTabs = () => (
-    <div className="flex flex-wrap gap-2 mb-6">
-      {[
-        { id: 'sales', label: 'Sales Summary', icon: TrendingUp },
-        { id: 'profit', label: 'Profit Analysis', icon: DollarSign },
-        { id: 'topSelling', label: 'Top Products', icon: BarChart3 },
-        { id: 'topCustomers', label: 'Top Customers', icon: Users },
-        { id: 'topSuppliers', label: 'Top Suppliers', icon: Truck },
-        { id: 'lowStock', label: 'Low Stock', icon: AlertCircle },
-        { id: 'creditDue', label: 'Credit Due', icon: FileText },
-      ].map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => { setActiveTab(tab.id); generateReport(tab.id); }}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all text-sm ${
-            activeTab === tab.id 
-              ? 'bg-blue-600 text-white shadow-md transform scale-105' 
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-100'
-          }`}
-        >
-          <tab.icon size={16} /> {tab.label}
-        </button>
-      ))}
-    </div>
-  );
+  // --- SUB-COMPONENTS ---
 
-  // --- SPECIFIC REPORT VIEWS ---
-
-  const SalesReport = ({ data }) => {
+  const SalesReport = ({ data, trendData }) => {
     const pieData = [
       { name: 'Cash', value: data.cashSales },
       { name: 'Credit', value: data.creditSales },
@@ -180,32 +195,29 @@ const Reports = () => {
             <p className="text-2xl font-bold text-blue-700">{formatCurrency(data.totalSales)}</p>
           </Card>
           <Card className="bg-green-50 border-green-100">
-            <h3 className="text-xs font-bold text-slate-500 uppercase">Cash Sales</h3>
-            <p className="text-2xl font-bold text-green-700">{formatCurrency(data.cashSales)}</p>
+             <h3 className="text-xs font-bold text-slate-500 uppercase">Cash Sales</h3>
+             <p className="text-2xl font-bold text-green-700">{formatCurrency(data.cashSales)}</p>
           </Card>
           <Card className="bg-orange-50 border-orange-100">
-            <h3 className="text-xs font-bold text-slate-500 uppercase">Credit Sales</h3>
-            <p className="text-2xl font-bold text-orange-700">{formatCurrency(data.creditSales)}</p>
+             <h3 className="text-xs font-bold text-slate-500 uppercase">Credit Sales</h3>
+             <p className="text-2xl font-bold text-orange-700">{formatCurrency(data.creditSales)}</p>
           </Card>
           <Card className="bg-purple-50 border-purple-100">
-            <h3 className="text-xs font-bold text-slate-500 uppercase">Total Orders</h3>
-            <p className="text-2xl font-bold text-purple-700">{data.totalOrders}</p>
+             <h3 className="text-xs font-bold text-slate-500 uppercase">Total Orders</h3>
+             <p className="text-2xl font-bold text-purple-700">{data.totalOrders}</p>
           </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card title="Payment Methods">
+          {/* Payment Method Pie Chart */}
+          <Card title="Payment Split">
              <div className="h-[300px] flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={5}
-                      dataKey="value"
+                      data={pieData} cx="50%" cy="50%"
+                      innerRadius={60} outerRadius={100}
+                      paddingAngle={5} dataKey="value"
                     >
                       {pieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={index === 0 ? '#10B981' : '#F59E0B'} />
@@ -218,16 +230,40 @@ const Reports = () => {
              </div>
           </Card>
 
-          <Card title="Sales Overview">
+          {/* 🔥 Sales Trend Area Chart */}
+          <Card title={`Sales Trend (${trendData.type === 'MONTHLY' ? 'Monthly' : 'Daily'})`}>
              <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={pieData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                    <Bar dataKey="value" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={60} />
-                  </BarChart>
+                  <AreaChart data={trendData.data}>
+                    <defs>
+                      <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    
+                    {/* 🔥 Dynamic X-Axis Formatting */}
+                    <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(str) => {
+                            const d = new Date(str);
+                            if (trendData.type === 'MONTHLY') {
+                                return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }); // Jan 26
+                            }
+                            return `${d.getDate()}/${d.getMonth()+1}`; // 01/02
+                        }}
+                        style={{ fontSize: '12px' }}
+                    />
+                    <YAxis style={{ fontSize: '12px' }} />
+                    <Tooltip 
+                        formatter={(value) => formatCurrency(value)}
+                        labelFormatter={(label) => new Date(label).toLocaleDateString(undefined, {
+                            weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+                        })} 
+                    />
+                    <Area type="monotone" dataKey="amount" stroke="#3B82F6" fillOpacity={1} fill="url(#colorSales)" />
+                  </AreaChart>
                 </ResponsiveContainer>
              </div>
           </Card>
@@ -236,67 +272,23 @@ const Reports = () => {
     );
   };
 
-  const TopSellingReport = ({ data }) => (
-    <div className="space-y-6 animate-in fade-in">
-       <Card className="h-[400px]">
-          <h3 className="font-bold text-lg mb-4 text-slate-700">Top 10 Products by Revenue</h3>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              layout="vertical"
-              data={data.slice(0, 10)}
-              margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="itemName" type="category" width={150} tick={{fontSize: 12}} />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Bar dataKey="revenue" fill="#8884d8" radius={[0, 4, 4, 0]}>
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-       </Card>
-
-       <Card title="Detailed Product List">
-         <Table 
-            columns={[
-              { header: '#', render: (_, i) => i + 1 },
-              { header: 'Product', accessor: 'itemName' },
-              { header: 'Qty Sold', accessor: 'qtySold' },
-              { header: 'Revenue', render: (i) => formatCurrency(i.revenue) }
-            ]}
-            data={data}
-         />
-       </Card>
-    </div>
-  );
-
   const ProfitReport = ({ data, summary }) => {
-    // If summary is null (loading or error), default to 0
     const grossProfit = summary?.grossProfit || 0;
     const totalExpenses = summary?.totalExpenses || 0;
     const netProfit = summary?.netProfit || 0;
-    
+
     return (
     <div className="space-y-6 animate-in fade-in">
-       {/* 🔥 Updated: Net Profit Cards */}
+       {/* Net Profit Cards */}
        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-         
-         {/* Gross Profit */}
          <Card className="bg-blue-50 border-blue-100">
            <h3 className="text-xs font-bold text-slate-500 uppercase">Gross Profit</h3>
            <p className="text-2xl font-bold text-blue-700">{formatCurrency(grossProfit)}</p>
          </Card>
-
-         {/* Expenses */}
          <Card className="bg-red-50 border-red-100">
            <h3 className="text-xs font-bold text-slate-500 uppercase">Less: Expenses</h3>
            <p className="text-2xl font-bold text-red-600">- {formatCurrency(totalExpenses)}</p>
          </Card>
-
-         {/* Net Profit */}
          <Card className="bg-emerald-50 border-emerald-100 shadow-sm ring-1 ring-emerald-200">
            <h3 className="text-xs font-bold text-slate-500 uppercase">Net Profit (Final)</h3>
            <p className="text-3xl font-bold text-emerald-700">{formatCurrency(netProfit)}</p>
@@ -325,7 +317,7 @@ const Reports = () => {
               { header: 'Product', accessor: 'itemName' },
               { header: 'Cost', render: (i) => formatCurrency(i.cost) },
               { header: 'Revenue', render: (i) => formatCurrency(i.revenue) },
-              { header: 'Item Profit', render: (i) => <span className="font-bold text-green-600">{formatCurrency(i.profit)}</span> }
+              { header: 'Profit', render: (i) => <span className="font-bold text-green-600">{formatCurrency(i.profit)}</span> }
             ]}
             data={data}
          />
@@ -336,40 +328,76 @@ const Reports = () => {
   // --- MAIN RENDER ---
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Analytics</h1>
-           <p className="text-slate-500">Insights & Performance Reports</p>
+      {/* Header & Filters */}
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+           <div>
+               <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Analytics</h1>
+               <p className="text-slate-500">Insights & Performance Reports</p>
+           </div>
+           
+           {/* Date Picker */}
+           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+               <input 
+                  type="date" value={dateRange.from}
+                  onChange={(e) => setDateRange(prev => ({...prev, from: e.target.value}))}
+                  className="px-3 py-2 rounded-lg text-sm border-none focus:ring-0 text-slate-600 outline-none"
+               />
+               <span className="self-center text-slate-300">to</span>
+               <input 
+                  type="date" value={dateRange.to}
+                  onChange={(e) => setDateRange(prev => ({...prev, to: e.target.value}))}
+                  className="px-3 py-2 rounded-lg text-sm border-none focus:ring-0 text-slate-600 outline-none"
+               />
+               <button 
+                  onClick={() => generateReport(activeTab)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 ml-2 shadow-sm"
+               >
+                  Run Report
+               </button>
+           </div>
         </div>
-        
-        <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
-           <input 
-              type="date" 
-              value={dateRange.from}
-              onChange={(e) => setDateRange(prev => ({...prev, from: e.target.value}))}
-              className="px-3 py-2 rounded-lg text-sm border-none focus:ring-0 text-slate-600 outline-none"
-           />
-           <span className="self-center text-slate-300">to</span>
-           <input 
-              type="date" 
-              value={dateRange.to}
-              onChange={(e) => setDateRange(prev => ({...prev, to: e.target.value}))}
-              className="px-3 py-2 rounded-lg text-sm border-none focus:ring-0 text-slate-600 outline-none"
-           />
-           <button 
-              onClick={() => generateReport(activeTab)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 ml-2 shadow-sm"
-           >
-              Run Report
-           </button>
+
+        {/* Quick Date Filters */}
+        <div className="flex gap-2">
+           {['today', 'thisMonth', 'lastMonth', 'thisYear'].map(type => (
+               <button 
+                 key={type}
+                 onClick={() => setQuickDate(type)}
+                 className="text-xs bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1 rounded-full text-slate-600 font-medium transition-colors"
+               >
+                 {type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+               </button>
+           ))}
         </div>
       </div>
 
       {/* Tabs */}
-      {renderTabs()}
+      <div className="flex flex-wrap gap-2 mb-6 border-b border-slate-200 pb-2">
+        {[
+          { id: 'sales', label: 'Sales Summary', icon: TrendingUp },
+          { id: 'profit', label: 'Profit Analysis', icon: DollarSign },
+          { id: 'topSelling', label: 'Top Products', icon: BarChart3 },
+          { id: 'topCustomers', label: 'Top Customers', icon: Users },
+          { id: 'topSuppliers', label: 'Top Suppliers', icon: Truck },
+          { id: 'lowStock', label: 'Low Stock', icon: AlertCircle },
+          { id: 'creditDue', label: 'Credit Due', icon: FileText },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id); generateReport(tab.id); }}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all text-sm ${
+              activeTab === tab.id 
+                ? 'bg-blue-600 text-white shadow-md' 
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <tab.icon size={16} /> {tab.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Content Area */}
+      {/* Report Content */}
       <div className="min-h-[500px]">
         {loading ? (
           <div className="h-64 flex items-center justify-center">
@@ -379,7 +407,7 @@ const Reports = () => {
            <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
               <PieIcon size={48} className="mx-auto text-slate-300 mb-4" />
               <h3 className="text-lg font-medium text-slate-600">Ready to Analyze</h3>
-              <p className="text-slate-400">Select a report type and click "Run Report" to begin.</p>
+              <p className="text-slate-400">Select a report type and click "Run Report".</p>
            </div>
         ) : (
           <div className="space-y-6">
@@ -393,7 +421,7 @@ const Reports = () => {
                 </Button>
              </div>
 
-             {/* Report Container (Export Target) */}
+             {/* Printable Area */}
              <div ref={reportRef} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
                 <div className="mb-8 border-b border-slate-100 pb-4 flex justify-between items-end">
                    <div>
@@ -407,67 +435,51 @@ const Reports = () => {
                    </div>
                 </div>
 
-                {/* Render Specific Reports */}
-                {activeTab === 'sales' && <SalesReport data={reportData} />}
-                {activeTab === 'topSelling' && <TopSellingReport data={reportData} />}
+                {/* Render Views */}
+                {activeTab === 'sales' && <SalesReport data={reportData} trendData={salesTrend} />}
                 
-                {/* 🔥 Updated Profit Report with Summary Pass-through */}
+                {activeTab === 'topSelling' && (
+                   <div className="space-y-6">
+                      <Card className="h-[400px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart layout="vertical" data={reportData.slice(0, 10)} margin={{ top:5, right:30, left:40, bottom:5 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" />
+                            <YAxis dataKey="itemName" type="category" width={150} tick={{fontSize:12}} />
+                            <Tooltip formatter={(value) => formatCurrency(value)} />
+                            <Bar dataKey="revenue" fill="#8884d8" radius={[0,4,4,0]}>
+                              {reportData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Card>
+                      <Card title="Details"><Table columns={[{header:'#', render:(_,i)=>i+1}, {header:'Item', accessor:'itemName'}, {header:'Qty', accessor:'qtySold'}, {header:'Revenue', render:(i)=>formatCurrency(i.revenue)}]} data={reportData} /></Card>
+                   </div>
+                )}
+                
                 {activeTab === 'profit' && <ProfitReport data={reportData} summary={profitSummary} />}
                 
                 {activeTab === 'topCustomers' && (
-                  <Card title="Most Valuable Customers">
-                    <Table 
-                      columns={[
-                        { header: 'Rank', render: (_, i) => i + 1 },
-                        { header: 'Customer Name', accessor: 'customerName' },
-                        { header: 'Phone', accessor: 'phone' },
-                        { header: 'Total Orders', accessor: 'orderCount' },
-                        { header: 'Total Spent', render: (i) => <span className="font-bold text-blue-600">{formatCurrency(i.totalSpent)}</span> }
-                      ]}
-                      data={reportData}
-                    />
+                  <Card title="Loyal Customers">
+                    <Table columns={[{header:'Rank', render:(_,i)=>i+1}, {header:'Name', accessor:'customerName'}, {header:'Phone', accessor:'phone'}, {header:'Orders', accessor:'orderCount'}, {header:'Spent', render:(i)=><span className="font-bold text-blue-600">{formatCurrency(i.totalSpent)}</span>}]} data={reportData} />
                   </Card>
                 )}
 
                 {activeTab === 'topSuppliers' && (
-                  <Card title="Top Suppliers by Purchase Volume">
-                    <Table 
-                      columns={[
-                        { header: 'Rank', render: (_, i) => i + 1 },
-                        { header: 'Supplier Name', accessor: 'supplierName' },
-                        { header: 'Contact No', accessor: 'contactNo' },
-                        { header: 'Purchases', accessor: 'purchaseCount' },
-                        { header: 'Total Paid', render: (i) => <span className="font-bold text-red-600">{formatCurrency(i.totalPurchased)}</span> }
-                      ]}
-                      data={reportData}
-                    />
+                  <Card title="Top Suppliers">
+                    <Table columns={[{header:'Rank', render:(_,i)=>i+1}, {header:'Name', accessor:'supplierName'}, {header:'Phone', accessor:'contactNo'}, {header:'Purchases', accessor:'purchaseCount'}, {header:'Paid', render:(i)=><span className="font-bold text-red-600">{formatCurrency(i.totalPurchased)}</span>}]} data={reportData} />
                   </Card>
                 )}
 
                 {activeTab === 'creditDue' && (
-                  <Card title="Outstanding Customer Credits">
-                    <Table 
-                      columns={[
-                        { header: 'Customer', accessor: 'customerName' },
-                        { header: 'Phone', render: (i) => i.phone || 'N/A' },
-                        { header: 'Due Amount', render: (i) => <span className="text-red-600 font-bold">{formatCurrency(i.dueAmount)}</span> }
-                      ]}
-                      data={reportData}
-                    />
+                  <Card title="Credit Due List">
+                    <Table columns={[{header:'Customer', accessor:'customerName'}, {header:'Phone', render:(i)=>i.phone||'N/A'}, {header:'Due Amount', render:(i)=><span className="text-red-600 font-bold">{formatCurrency(i.dueAmount)}</span>}]} data={reportData} />
                   </Card>
                 )}
 
                 {activeTab === 'lowStock' && (
-                   <Card title="Critical Stock Alerts">
-                     <Table 
-                       columns={[
-                         { header: 'Item Name', accessor: 'itemName' },
-                         { header: 'Current Stock', render: (i) => <span className="text-red-600 font-bold">{i.quantity}</span> },
-                         { header: 'Reorder Level', accessor: 'reorderLevel' },
-                         { header: 'Status', render: () => <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">LOW</span> }
-                       ]}
-                       data={reportData}
-                     />
+                   <Card title="Low Stock Alerts">
+                     <Table columns={[{header:'Item', accessor:'itemName'}, {header:'Stock', render:(i)=><span className="text-red-600 font-bold">{i.quantity}</span>}, {header:'Reorder Level', accessor:'reorderLevel'}, {header:'Status', render:()=><span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">LOW</span>}]} data={reportData} />
                    </Card>
                 )}
              </div>

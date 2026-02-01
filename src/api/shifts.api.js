@@ -8,7 +8,6 @@ export const shiftsAPI = {
   getMine: () => api.get("/shifts/me"),
   closeMine: (data) => api.post("/shifts/close", data),
 
-  addExpenseMine: (data) => api.post("/shifts/expense", data),
   addCashDropMine: (data) => api.post("/shifts/cashdrop", data),
 
   // =========================
@@ -23,9 +22,6 @@ export const shiftsAPI = {
 
   closeById: (shiftId, data) =>
     api.post(`/shifts/${shiftId}/close`, data),
-
-  expenseById: (shiftId, data) =>
-    api.post(`/shifts/${shiftId}/expense`, data),
 
   cashdropById: (shiftId, data) =>
     api.post(`/shifts/${shiftId}/cashdrop`, data),
