@@ -30,7 +30,7 @@ const BranchSelector = () => {
 
       // ✅ otherwise default to first
       if (list.length > 0) {
-        setSelectedBranchId(String(list[0].id));
+        handleManualChange(String(list[0].id)); // Use the helper to set default
       } else {
         setSelectedBranchId("");
       }
@@ -39,13 +39,27 @@ const BranchSelector = () => {
     }
   };
 
+  // 🔥 THIS IS THE FIX
+  // We create a specific function to handle the change
+  const handleManualChange = (newBranchId) => {
+    // 1. Update the Context (App State)
+    setSelectedBranchId(newBranchId);
+
+    // 2. Force Update Local Storage (Just to be 100% sure it's instant)
+    localStorage.setItem("selectedBranchId", newBranchId);
+
+    // 3. Dispatch Custom Event (This tells POS.jsx to re-run its useEffect)
+    window.dispatchEvent(new Event("branchChanged"));
+  };
+
   return (
     <div className="flex items-center gap-2">
       <Building2 size={20} className="text-slate-600" />
 
       <select
         value={selectedBranchId || ""}
-        onChange={(e) => setSelectedBranchId(e.target.value)}
+        // 🔥 Use the new handler here
+        onChange={(e) => handleManualChange(e.target.value)}
         className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         {branches.map((branch) => (

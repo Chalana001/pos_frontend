@@ -12,19 +12,16 @@ const Stock = () => {
   const { user } = useAuth();
   const { selectedBranchId } = useBranch();
 
-  console
-
   const [stockItems, setStockItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ✅ Fetch stock when branch changes (and ONLY when branch exists)
   useEffect(() => {
-
     const fetchStock = async () => {
       setLoading(true);
       try {
         const response = await stockAPI.getByBranch(selectedBranchId);
+        // Ensure we handle the response structure correctly
         setStockItems(response.data || []);
       } catch (error) {
         toast.error("Failed to fetch stock");
@@ -37,40 +34,40 @@ const Stock = () => {
     fetchStock();
   }, [selectedBranchId]);
 
-  // ✅ Search filter (works with your StockResponse)
+  // ✅ FIX 1: Search using 'itemName' and 'itemId'
   const filteredStock = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return stockItems;
 
     return stockItems.filter((item) => {
       return (
-        item?.name?.toLowerCase().includes(q) ||
-        String(item?.barcode || "").includes(q) ||
-        String(item?.itemId || "").includes(q) ||
-        String(item?.id || "").includes(q)
+        item?.itemName?.toLowerCase().includes(q) || // Changed from name
+        String(item?.barcode || "").toLowerCase().includes(q) ||
+        String(item?.itemId || "").includes(q) // Changed from id
       );
     });
   }, [stockItems, searchQuery]);
 
-  // ✅ low stock rule (since reorderLevel not in response)
+  // ✅ FIX 2: Check 'totalQuantity'
   const lowStockItems = useMemo(() => {
-    return stockItems.filter((item) => (item?.quantity ?? 0) <= 0);
+    return stockItems.filter((item) => (item?.totalQuantity ?? 0) <= 0);
   }, [stockItems]);
 
-  // ✅ total stock value using costPrice
+  // ✅ FIX 3: Calculate using 'totalQuantity'
   const totalValue = useMemo(() => {
     return stockItems.reduce((sum, item) => {
-      const qty = item?.quantity ?? 0;
+      const qty = item?.totalQuantity ?? 0;
       const cost = item?.costPrice ?? 0;
       return sum + qty * cost;
     }, 0);
   }, [stockItems]);
 
-  // ✅ table columns aligned with StockResponse fields
   const columns = useMemo(
     () => [
-      { header: "Stock ID", accessor: "id" },
-      { header: "Item ID", accessor: "itemId" },
+      { 
+        header: "Item ID", 
+        accessor: "itemId" // Changed from id
+      }, 
       {
         header: "Barcode",
         render: (item) => <span>{item.barcode ?? "-"}</span>,
@@ -78,7 +75,8 @@ const Stock = () => {
       {
         header: "Name",
         render: (item) => (
-          <span className="font-medium text-slate-800">{item.name ?? "-"}</span>
+          // ✅ FIX 4: Use itemName
+          <span className="font-medium text-slate-800">{item.itemName ?? "-"}</span>
         ),
       },
       {
@@ -96,7 +94,8 @@ const Stock = () => {
       {
         header: "Quantity",
         render: (item) => {
-          const qty = item.quantity ?? 0;
+          // ✅ FIX 5: Use totalQuantity
+          const qty = item.totalQuantity ?? 0;
           const isLow = qty <= 0;
 
           return (
@@ -116,7 +115,8 @@ const Stock = () => {
       {
         header: "Status",
         render: (item) => {
-          const qty = item.quantity ?? 0;
+          // ✅ FIX 6: Use totalQuantity
+          const qty = item.totalQuantity ?? 0;
 
           return (
             <span
@@ -130,14 +130,6 @@ const Stock = () => {
             </span>
           );
         },
-      },
-      {
-        header: "Updated At",
-        render: (item) => (
-          <span className="text-slate-600">
-            {item.updatedAt ? item.updatedAt.replace("T", " ") : "-"}
-          </span>
-        ),
       },
     ],
     []
@@ -205,7 +197,7 @@ const Stock = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by stock id / item id / name / barcode..."
+              placeholder="Search by name, barcode, or ID..."
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
