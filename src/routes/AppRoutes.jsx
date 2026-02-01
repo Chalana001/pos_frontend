@@ -16,7 +16,6 @@ import Stock from '../pages/Stock';
 import StockAdjustments from '../pages/StockAdjustments';
 import StockTransfers from '../pages/StockTransfers';
 import Reports from '../pages/Reports';
-import Charts from '../pages/Charts';
 import Users from '../pages/Users';
 import Branches from "../pages/Branches";
 
@@ -164,12 +163,6 @@ const AppRoutes = () => {
         <Route path="reports" element={
           <ProtectedRoute permission="VIEW_REPORTS">
             <Reports />
-          </ProtectedRoute>
-        } />
-
-        <Route path="charts" element={
-          <ProtectedRoute permission="VIEW_REPORTS">
-            <Charts />
           </ProtectedRoute>
         } />
 

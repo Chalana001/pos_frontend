@@ -11,7 +11,6 @@ import {
   DollarSign,
   TrendingDown,
   Warehouse,
-  BarChart3,
   PieChart,
   Building2,
   ChevronDown,
@@ -130,12 +129,6 @@ const Sidebar = () => {
       name: "Reports",
       icon: PieChart,
       path: "/reports",
-      permission: "VIEW_REPORTS",
-    },
-    {
-      name: "Charts",
-      icon: BarChart3,
-      path: "/charts",
       permission: "VIEW_REPORTS",
     },
     {
@@ -334,10 +327,6 @@ const Sidebar = () => {
             );
           }
 
-          // =========================
-          // ✅ Stock dropdown
-          // Parent visible if ANY child permission true
-          // =========================
           if (item.type === "dropdown-stock") {
             const canSeeStockMenu =
               hasPermission(role, "VIEW_STOCK") ||
