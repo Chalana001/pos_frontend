@@ -28,4 +28,20 @@ export const shiftsAPI = {
 
   forceCloseByBranch: (branchId, data) =>
     api.post("/shifts/force-close", data, { params: { branchId } }),
+
+  getAll: (filters) => {
+    const params = new URLSearchParams();
+
+    if (filters.branchId) params.append("branchId", filters.branchId);
+    if (filters.cashierId) params.append("cashierId", filters.cashierId);
+    if (filters.status) params.append("status", filters.status);
+
+    if (filters.startDate) {
+      params.append("startDate", `${filters.startDate}T00:00:00`);
+    }
+    if (filters.endDate) {
+      params.append("endDate", `${filters.endDate}T23:59:59`);
+    }
+    return api.get("/shifts/all", { params }); 
+  },
 };

@@ -18,6 +18,7 @@ import StockTransfers from '../pages/StockTransfers';
 import Reports from '../pages/Reports';
 import Users from '../pages/Users';
 import Branches from "../pages/Branches";
+import ShiftHistory from '../pages/ShiftHistory';
 
 import ItemsPage from "../pages/ItemsPage";
 import ItemFormPage from "../pages/ItemFormPage";
@@ -103,6 +104,12 @@ const AppRoutes = () => {
         <Route path="shifts" element={
           <ProtectedRoute permission="MANAGE_SHIFTS">
             <Shifts />
+          </ProtectedRoute>
+        } />
+
+        <Route path="shifts/history" element={
+          <ProtectedRoute permission="MANAGE_SHIFTS_HISTORY">
+            <ShiftHistory />
           </ProtectedRoute>
         } />
 

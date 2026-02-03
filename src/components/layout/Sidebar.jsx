@@ -15,12 +15,12 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
+  History,
 } from "lucide-react";
 
 const Sidebar = () => {
   const { user } = useAuth();
   const location = useLocation();
-
   const role = user?.role;
 
   // ✅ detect items sub routes
@@ -32,6 +32,8 @@ const Sidebar = () => {
   const isEditingCustomer = /^\/customers\/\d+\/edit$/.test(location.pathname);
   const isViewingCustomer = /^\/customers\/\d+$/.test(location.pathname);
 
+  const isShiftsRoute = location.pathname.startsWith("/shifts"); // Shifts route එක check කරනවා
+
   // ✅ detect stock sub routes
   const isStockRoute =
     location.pathname.startsWith("/stock") ||
@@ -40,6 +42,7 @@ const Sidebar = () => {
   // ✅ dropdown open states
   const [openItems, setOpenItems] = useState(false);
   const [openCustomers, setOpenCustomers] = useState(false);
+  const [openShifts, setOpenShifts] = useState(false);
   const [openStock, setOpenStock] = useState(false);
 
   // ✅ auto open dropdown when inside those routes
@@ -50,6 +53,10 @@ const Sidebar = () => {
   useEffect(() => {
     if (isCustomersRoute) setOpenCustomers(true);
   }, [isCustomersRoute]);
+
+  useEffect(() => { 
+    if (isShiftsRoute) setOpenShifts(true);
+   }, [isShiftsRoute]);
 
   useEffect(() => {
     if (isStockRoute) setOpenStock(true);
@@ -93,12 +100,11 @@ const Sidebar = () => {
       permission: "MANAGE_CUSTOMERS",
       type: "dropdown-customers",
     },
-    {
-      name: "Shifts",
-      icon: Clock,
-      path: "/shifts",
-      permission: "MANAGE_SHIFTS",
-    },
+    { name: "Shifts",
+      icon: Clock, 
+      path: "/shifts", 
+      permission: "MANAGE_SHIFTS", 
+      type: "dropdown-shifts" },
     {
       name: "Expenses",
       icon: DollarSign,
@@ -321,6 +327,54 @@ const Sidebar = () => {
                         Edit Customer
                       </div>
                     )}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          //Shifts
+          if (item.type === "dropdown-shifts") {
+            if (!hasPermission(role, "MANAGE_SHIFTS")) return null;
+
+            return (
+              <div key={item.path} className="space-y-1">
+                <button
+                  onClick={() => setOpenShifts((v) => !v)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                    isShiftsRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={20} />
+                    <span className="font-medium">Shifts</span>
+                  </div>
+                  {openShifts ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                </button>
+
+                {openShifts && (
+                  <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                    <NavLink
+                      to="/shifts"
+                      end
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                          isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                        }`
+                      }
+                    >
+                      Active Shift
+                    </NavLink>
+                    <NavLink
+                      to="/shifts/history"
+                      className={({ isActive }) =>
+                        `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                          isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                        }`
+                      }
+                    >
+                      Shift History
+                    </NavLink>
                   </div>
                 )}
               </div>
