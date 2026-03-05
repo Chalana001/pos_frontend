@@ -354,7 +354,7 @@ const Sidebar = () => {
 
                 {openShifts && (
                   <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
-                    <NavLink
+                    {hasPermission(role, "MANAGE_SHIFTS") && (<NavLink
                       to="/shifts"
                       end
                       className={({ isActive }) =>
@@ -364,8 +364,8 @@ const Sidebar = () => {
                       }
                     >
                       Active Shift
-                    </NavLink>
-                    <NavLink
+                    </NavLink>)}
+                    {hasPermission(role, "MANAGE_SHIFTS_HISTORY") && (<NavLink
                       to="/shifts/history"
                       className={({ isActive }) =>
                         `block px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -374,7 +374,7 @@ const Sidebar = () => {
                       }
                     >
                       Shift History
-                    </NavLink>
+                    </NavLink>)}
                   </div>
                 )}
               </div>

@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Clock, User } from "lucide-react"; // User icon එකත් ගත්තා cashier පේන්න
+import { Clock, User } from "lucide-react"; 
 import { shiftsAPI } from "../api/shifts.api";
+import { usersAPI } from "../api/users.api"; 
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { useShift } from "../context/ShiftContext";
@@ -23,12 +24,40 @@ const Shifts = () => {
 
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [selectedShiftToClose, setSelectedShiftToClose] = useState(null); // Admin ට ඕන shift එක තෝරගන්න
+  const [selectedShiftToClose, setSelectedShiftToClose] = useState(null); 
 
   const [openingCash, setOpeningCash] = useState("");
   const [countedCash, setCountedCash] = useState("");
 
-  // Admin නම් array එකක්ද බලනවා, නැත්තම් තනි object එක array එකකට දාගන්නවා ලේසි වෙන්න
+  const [branchUsers, setBranchUsers] = useState([]);
+  const [assignedCashierId, setAssignedCashierId] = useState("");
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const handleOpenClick = async () => {
+    setShowOpenModal(true);
+    
+    if (isAdmin) {
+      if (!selectedBranchId) {
+        toast.error("Please select a branch first");
+        setShowOpenModal(false);
+        return;
+      }
+      
+      setLoadingUsers(true);
+      try {
+        const response = await usersAPI.getUsersByBranch(selectedBranchId);
+        setBranchUsers(response.data || []);
+        
+        // අලුත් වෙනස: Default විදියට 0 යවනවා (Myself)
+        setAssignedCashierId("0"); 
+      } catch (error) {
+        toast.error("Failed to load cashiers");
+      } finally {
+        setLoadingUsers(false);
+      }
+    }
+  };
+
   const shiftsList = useMemo(() => {
     if (!activeShift) return [];
     return Array.isArray(activeShift) ? activeShift : [activeShift];
@@ -49,9 +78,17 @@ const Shifts = () => {
   const handleOpenShift = async (e) => {
     e.preventDefault();
     try {
-      const payload = { openingCash: parseFloat(openingCash), note: "" };
+      const payload = { 
+        openingCash: parseFloat(openingCash), 
+        note: "",
+        // අලුත් වෙනස: String "0" එක Number එකක් විදියට parse කරලා යවනවා
+        ...(isAdmin && { assignedCashierId: parseInt(assignedCashierId) }) 
+      };
+
       if (isAdmin) {
         if (!selectedBranchId) return toast.error("Please select a branch");
+        // ID එක string empty ("") නම් විතරක් error එක පෙන්නනවා (0 ආවොත් පාස් වෙනවා)
+        if (assignedCashierId === "") return toast.error("Please select a cashier");
         await shiftsAPI.openByBranch(selectedBranchId, payload);
       } else {
         await shiftsAPI.openMine(payload);
@@ -61,7 +98,8 @@ const Shifts = () => {
       setOpeningCash("");
       refreshShift();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to open shift");
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to open shift";
+      toast.error(errorMessage);
     }
   };
 
@@ -87,7 +125,8 @@ const Shifts = () => {
       setSelectedShiftToClose(null);
       refreshShift();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to close shift");
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to close shift";
+      toast.error(errorMessage);
     }
   };
 
@@ -104,7 +143,7 @@ const Shifts = () => {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-800">Shift Management</h1>
-        <Button onClick={() => setShowOpenModal(true)} variant="success">
+        <Button onClick={handleOpenClick} variant="success">
           <Clock size={20} className="mr-2" />
           Open New Shift
         </Button>
@@ -181,9 +220,38 @@ const Shifts = () => {
         </div>
       )}
 
-      {/* OPEN SHIFT MODAL - (පරණ විදියමයි) */}
+      {/* OPEN SHIFT MODAL */}
       <Modal isOpen={showOpenModal} onClose={() => setShowOpenModal(false)} title="Open New Shift">
         <form onSubmit={handleOpenShift} className="space-y-4">
+          
+          {/* Admin ට විතරක් පේන Dropdown එක */}
+          {isAdmin && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Select Cashier *</label>
+              {loadingUsers ? (
+                <div className="text-sm text-slate-500 mb-2">Loading cashiers...</div>
+              ) : (
+                <select
+                  value={assignedCashierId}
+                  onChange={(e) => setAssignedCashierId(e.target.value)}
+                  className="input" 
+                  required
+                >
+                  {/* අලුත් වෙනස: මෙතන value එක 0 කියලා දුන්නා */}
+                  <option value="0">Myself ({user?.username})</option>
+                  {branchUsers
+                    .filter(u => u.id !== user?.id)
+                    .map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.username} ({u.role})
+                      </option>
+                    ))
+                  }
+                </select>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Opening Cash Amount *</label>
             <input
@@ -194,11 +262,11 @@ const Shifts = () => {
               className="input"
               placeholder="0.00"
               required
-              autoFocus
+              autoFocus={!isAdmin} 
             />
           </div>
           <div className="flex gap-2">
-            <Button type="submit" className="flex-1">Open Shift</Button>
+            <Button type="submit" className="flex-1" disabled={isAdmin && loadingUsers}>Open Shift</Button>
             <Button type="button" variant="secondary" onClick={() => setShowOpenModal(false)}>Cancel</Button>
           </div>
         </form>

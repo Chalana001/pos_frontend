@@ -16,7 +16,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 const Expenses = () => {
   const { user } = useAuth();
   const { selectedBranchId } = useBranch();
-  const { refreshShift } = useShift(); // Shift totals update කරන්න
+  const { activeShift, refreshShift } = useShift(); 
 
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -58,6 +58,11 @@ const Expenses = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // 🔴 Active Shift එකක් නැත්නම් Expense එකක් දාන්න ඉඩ දෙන්න එපා (Cashier ට)
+    if (!activeShift && user?.role === "CASHIER") {
+      return toast.error("Please open a shift first to record expenses");
+    }
+
     const amount = parseFloat(formData.amount);
     if (!amount || amount <= 0) {
       toast.error("Invalid amount");
@@ -71,16 +76,18 @@ const Expenses = () => {
         description: formData.description.trim(),
       };
 
-      // 🔥 දැන් හැමෝම යන්නේ එකම Endpoint එකකට (Shift තිබුණත් නැතත්)
       await expensesAPI.create(payload);
 
       toast.success("Expense recorded successfully");
       handleCloseModal();
-
-      refreshShift?.(); // Shift එකක් තිබුණොත් ඒකේ Dashboard stats update වෙයි
-      fetchExpenses();  // Table එක refresh කරයි
+      
+      // Dashboard එකේ totals update කරන්න
+      refreshShift?.(); 
+      fetchExpenses(); 
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to record expense");
+      // 🟢 කලින් වගේම .detail එක චෙක් කරනවා
+      const msg = err.response?.data?.detail || err.response?.data?.message || "Failed to record expense";
+      toast.error(msg);
     }
   };
 
@@ -94,7 +101,7 @@ const Expenses = () => {
       header: "Date & Time",
       render: (expense) => formatDateTime(expense.createdAt),
     },
-    { header: "Branch", accessor: "branchName" }, // ✅ Backend එකෙන් එන නම
+    { header: "Branch", accessor: "branchName" },
     {
       header: "Category",
       render: (expense) => (
@@ -110,7 +117,7 @@ const Expenses = () => {
         <span className="font-semibold text-red-600">{formatCurrency(expense.amount)}</span>
       ),
     },
-    { header: "Recorded By", accessor: "cashierName" }, // ✅ Backend එකෙන් එන නම
+    { header: "Recorded By", accessor: "cashierName" },
   ];
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
@@ -125,13 +132,11 @@ const Expenses = () => {
         </Button>
       </div>
 
-      {/* STATS CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Today's Total</h3>
           <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
         </Card>
-        {/* අනෙක් category stats ටික මෙතනට දාන්න... */}
       </div>
 
       <Card>
@@ -140,9 +145,45 @@ const Expenses = () => {
 
       <Modal isOpen={showModal} onClose={handleCloseModal} title="Record Expense">
         <form onSubmit={handleSubmit} className="space-y-4">
-           {/* Form fields: Category, Amount, Description */}
-           {/* ... (කලින් තිබුණ Form එකමයි) ... */}
-           <div className="flex gap-2 pt-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+            <select
+              className="input"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              required
+            >
+              {Object.values(EXPENSE_CATEGORIES).map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              className="input"
+              placeholder="0.00"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+            <textarea
+              className="input min-h-[100px]"
+              placeholder="Enter expense details..."
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="flex gap-2 pt-4">
             <Button type="submit" className="flex-1">Record Expense</Button>
             <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button>
           </div>

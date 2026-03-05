@@ -21,4 +21,6 @@ export const usersAPI = {
   // PUT /users/{userId}/reset-password
   resetPassword: (userId, payload) =>
     api.put(`/users/${userId}/reset-password`, payload),
+
+  getUsersByBranch: (branchId) => api.get(`/users/branch/${branchId}`),
 };
