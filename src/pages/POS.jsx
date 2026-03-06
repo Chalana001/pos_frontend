@@ -284,16 +284,16 @@ const POS = () => {
   });
 
   return (
-    <div className="flex h-full gap-4 bg-slate-100 p-4 font-sans text-slate-800 flex-col">
+    <div className="flex h-full gap-1.5 lg:gap-4 bg-slate-100 p-1.5 lg:p-4 font-sans text-slate-800 flex-col overflow-y-auto lg:overflow-hidden">
       
       {/* UI Message if Shift is Closed */}
       {!isShiftOpenForCurrentBranch && (
-        <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-xl flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-3">
-                <Lock className="text-orange-600" size={20} />
+        <div className="bg-orange-50 border border-orange-200 text-orange-800 px-3 py-2 lg:px-4 lg:py-3 rounded-lg lg:rounded-xl flex items-center justify-between shadow-sm flex-shrink-0">
+            <div className="flex items-center gap-2 lg:gap-3">
+                <Lock className="text-orange-600 w-4 h-4 lg:w-5 lg:h-5" />
                 <div>
-                    <span className="font-bold text-sm block">Read-Only Mode</span>
-                    <span className="text-xs opacity-90">
+                    <span className="font-bold text-xs lg:text-sm block">Read-Only Mode</span>
+                    <span className="text-[10px] lg:text-xs opacity-90 leading-tight">
                         Viewing stock for Branch #{currentBranchId || 'Unknown'}. Open a shift to enable sales.
                     </span>
                 </div>
@@ -301,38 +301,43 @@ const POS = () => {
         </div>
       )}
 
-      <div className="flex flex-1 gap-4 overflow-hidden">
-        {/* 1. CENTER AREA (Products) */}
-        <div className="flex-1 flex flex-col bg-slate-50 rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
-            <header className="px-6 py-5 bg-white border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-bold text-slate-800">New Sale</h1>
-                  <p className="text-slate-400 text-sm">
+      {/* Main Wrapper */}
+      <div className="flex flex-col lg:flex-row flex-1 gap-1.5 lg:gap-4 lg:overflow-hidden lg:h-full">
+        
+        {/* 1. CENTER AREA (Products)
+            🔴 මෙතන තමයි වෙනස කරේ! h-[75vh] වෙනුවට h-[55vh] (හෝ h-[60vh]) දැම්මා. 
+        */}
+        <div className="flex flex-col h-[55vh] flex-shrink-0 lg:h-full lg:flex-1 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
+            
+            <header className="px-2 py-2 lg:px-6 lg:py-5 bg-white border-b border-slate-100 flex flex-row items-center justify-between gap-2 flex-shrink-0">
+                <div className="hidden sm:block lg:block">
+                  <h1 className="text-sm lg:text-xl font-bold text-slate-800">New Sale</h1>
+                  <p className="text-slate-400 text-[10px] lg:text-sm hidden lg:block">
                       {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                   </p>
                 </div>
-                <div className="flex items-center gap-4 w-1/3">
+                <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
                   <div className="relative flex-1">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 lg:w-4 lg:h-4" />
                       <input
                         type="text"
                         placeholder="Search products..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+                        className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs lg:text-sm"
                       />
                   </div>
                 </div>
             </header>
 
-            <div className="px-6 py-4 bg-white border-b border-slate-100">
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            <div className="px-2 py-1.5 lg:px-6 lg:py-4 bg-white border-b border-slate-100 flex-shrink-0">
+                <div className="flex gap-1.5 lg:gap-2 overflow-x-auto scrollbar-hide pb-0.5 lg:pb-0">
                 {categories.map((cat) => (
                     <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-5 py-2 rounded-lg whitespace-nowrap text-sm font-semibold transition-all ${activeCategory === cat
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                    className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-[10px] lg:text-sm font-semibold transition-all ${activeCategory === cat
+                        ? 'bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200'
                         : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                         }`}
                     >
@@ -342,18 +347,17 @@ const POS = () => {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+            <div className="flex-1 overflow-y-auto p-1.5 lg:p-6 bg-slate-50">
                 {filteredItems.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                        <Search size={48} className="mb-4 opacity-30" />
-                        <p className="text-lg font-medium">
-                           {currentBranchId ? "No items found" : "Please select a branch from the top menu"}
+                        <Search className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
+                        <p className="text-sm lg:text-lg font-medium text-center">
+                           {currentBranchId ? "No items found" : "Select a branch"}
                         </p>
                     </div>
                 ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-4 gap-1.5 lg:gap-4">
                 {filteredItems.map((item) => {
-                    // Backend sends 'availableQty' as total sum
                     const stockQty = Number(item.availableQty ?? 0);
                     const isOutOfStock = stockQty <= 0;
                     const isClickable = !isOutOfStock && isShiftOpenForCurrentBranch;
@@ -361,28 +365,27 @@ const POS = () => {
                     return (
                     <div
                         key={item.id}
-                        // ✅ Click logic calls updated addToCart
                         onClick={() => !isOutOfStock && addToCart(item)}
-                        className={`group bg-white rounded-xl p-6 border border-slate-200 transition-all relative flex flex-col items-center text-center 
+                        className={`group bg-white rounded-lg lg:rounded-xl p-2 lg:p-6 border border-slate-200 transition-all relative flex flex-col items-center text-center 
                             ${isClickable 
-                                ? 'hover:shadow-md cursor-pointer' 
+                                ? 'hover:shadow-md cursor-pointer active:scale-95' 
                                 : 'cursor-not-allowed opacity-90'
                             } 
                         `}
                     >
-                        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+                        <div className="absolute top-1 right-1 lg:top-3 lg:right-3 flex flex-col items-end gap-1">
                         {isOutOfStock ? (
-                            <span className="px-2 py-0.5 bg-red-50 text-red-500 text-[10px] font-bold rounded border border-red-100 uppercase">Out</span>
+                            <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-red-50 text-red-500 text-[8px] lg:text-[10px] font-bold rounded border border-red-100 uppercase">Out</span>
                         ) : (
-                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded border border-emerald-100 whitespace-nowrap">{stockQty} In Stock</span>
+                            <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-emerald-50 text-emerald-600 text-[8px] lg:text-[10px] font-bold rounded border border-emerald-100 whitespace-nowrap">{stockQty}</span>
                         )}
                         </div>
                         
-                        <div className="w-20 h-20 rounded-full bg-slate-50 mb-6 flex items-center justify-center mt-2">
-                          <ChefHat size={32} className={isOutOfStock ? "text-slate-200" : "text-slate-300"} />
+                        <div className="w-8 h-8 lg:w-20 lg:h-20 rounded-full bg-slate-50 mb-1 lg:mb-6 flex items-center justify-center mt-3 lg:mt-2">
+                          <ChefHat className={`w-4 h-4 lg:w-8 lg:h-8 ${isOutOfStock ? "text-slate-200" : "text-slate-300"}`} />
                         </div>
-                        <h3 className="font-semibold text-slate-800 text-sm mb-3 line-clamp-2 min-h-[2.5rem]">{item.name}</h3>
-                        <p className="text-blue-600 font-bold text-sm">{formatCurrency(item.sellingPrice)}</p>
+                        <h3 className="font-semibold text-slate-800 text-[9px] lg:text-sm mb-0.5 lg:mb-3 line-clamp-2 min-h-[1.25rem] lg:min-h-[2.5rem] leading-tight">{item.name}</h3>
+                        <p className="text-blue-600 font-bold text-[10px] lg:text-sm">{formatCurrency(item.sellingPrice)}</p>
                     </div>
                     );
                 })}
@@ -392,7 +395,7 @@ const POS = () => {
         </div>
 
         {/* 2. RIGHT PANEL (Cart) */}
-        <div className={`w-[380px] bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col transition-opacity duration-300 ${!isShiftOpenForCurrentBranch ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+        <div className={`w-full lg:w-[380px] flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!isShiftOpenForCurrentBranch ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <Cart
                 items={cartItems}
                 customer={customer}
@@ -411,16 +414,10 @@ const POS = () => {
         </div>
       </div>
 
+      {/* Modals */}
       <CustomerSelect isOpen={showCustomerSelect} onClose={() => setShowCustomerSelect(false)} onSelectCustomer={setCustomer} />
       <CheckoutOverlay isOpen={showPayment} onClose={() => setShowPayment(false)} total={calculateTotal()} orderType={orderType} setOrderType={setOrderType} paidAmount={paidAmount} setPaidAmount={setPaidAmount} onPlaceOrder={handlePlaceOrder} loading={loading} />
-      
-      {/* ✅ BATCH SELECTION MODAL */}
-      <BatchSelectModal 
-          isOpen={showBatchModal}
-          onClose={() => setShowBatchModal(false)}
-          onSelectBatch={handleBatchSelect}
-          item={selectedBatchItem}
-      />
+      <BatchSelectModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} onSelectBatch={handleBatchSelect} item={selectedBatchItem} />
     </div>
   );
 };

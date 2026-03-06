@@ -29,13 +29,18 @@ export const ShiftProvider = ({ children }) => {
         }
 
         const res = await shiftsAPI.getActiveByBranch(selectedBranchId);
-        setActiveShift(res.data);
+        // 🔴 Array එකක් ආවොත් පළවෙනි එක ගන්නවා, නැත්නම් ඒකම ගන්නවා. මුකුත් නැත්නම් null කරනවා.
+        const shiftData = Array.isArray(res.data) ? res.data[0] : res.data;
+        setActiveShift(shiftData || null);
         return;
       }
 
       // ✅ CASHIER: own shift
       const res = await shiftsAPI.getMine();
-      setActiveShift(res.data);
+      // 🔴 Array එකක් ආවොත් පළවෙනි එක ගන්නවා, නැත්නම් ඒකම ගන්නවා. මුකුත් නැත්නම් null කරනවා.
+      const shiftData = Array.isArray(res.data) ? res.data[0] : res.data;
+      setActiveShift(shiftData || null);
+      
     } catch (e) {
       setActiveShift(null);
     } finally {

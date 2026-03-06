@@ -32,9 +32,10 @@ const CashDrops = () => {
     reason: "",
   });
 
-  const hasOpenShift = activeShift?.status === "OPEN";
+  // 🔴 අලුත් වෙනස: Array එකක් ආවත් හරියට අඳුරගන්නවා
+  const currentShift = Array.isArray(activeShift) ? activeShift[0] : activeShift;
+  const hasOpenShift = currentShift?.status === "OPEN" || !!currentShift;
 
-  // ✅ Reload when branch/role changes
   useEffect(() => {
     fetchCashDrops();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -48,9 +49,7 @@ const CashDrops = () => {
       const from = new Date(today.setHours(0, 0, 0, 0)).toISOString();
       const to = new Date(today.setHours(23, 59, 59, 999)).toISOString();
 
-      // ✅ CASHIER always uses own branch
-      const branchId =
-        user?.role === "CASHIER" ? user?.branchId : selectedBranchId;
+      const branchId = user?.role === "CASHIER" ? user?.branchId : selectedBranchId;
 
       if (!branchId) {
         setCashDrops([]);
@@ -90,11 +89,8 @@ const CashDrops = () => {
     try {
       const payload = { amount, reason };
 
-      // ✅ BACKEND MATCH:
-      // CASHIER -> POST /shifts/cashdrop
-      // ADMIN/MANAGER -> POST /shifts/{shiftId}/cashdrop
       if (isAdmin) {
-        await shiftsAPI.cashdropById(activeShift.id, payload);
+        await shiftsAPI.cashdropById(currentShift.id, payload);
       } else {
         await shiftsAPI.addCashDropMine(payload);
       }
@@ -102,7 +98,6 @@ const CashDrops = () => {
       toast.success("Cash drop recorded successfully");
       handleCloseModal();
 
-      // refresh shift totals + list
       refreshShift?.();
       fetchCashDrops();
     } catch (err) {
@@ -134,7 +129,7 @@ const CashDrops = () => {
         </span>
       ),
     },
-    { header: "Recorded By", accessor: "username" },
+    { header: "Recorded By", accessor: "username" }, // Backend එකෙන් එන නම මේකද කියලා ෂුවර් කරගන්න
   ];
 
   return (
@@ -143,7 +138,11 @@ const CashDrops = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-800">Cash Drops</h1>
 
-        <Button onClick={() => setShowModal(true)} disabled={!hasOpenShift}>
+        <Button 
+          onClick={() => setShowModal(true)} 
+          disabled={!hasOpenShift}
+          className={!hasOpenShift ? "opacity-50 cursor-not-allowed" : ""}
+        >
           <Plus size={20} className="mr-2" />
           Record Cash Drop
         </Button>
@@ -152,63 +151,68 @@ const CashDrops = () => {
       {!hasOpenShift && (
         <Card>
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              ⚠️ No active shift. Please open a shift to record cash drops.
+            <p className="text-sm font-medium text-yellow-800">
+              ⚠️ No active shift. Please open a shift to view and record cash drops.
             </p>
           </div>
         </Card>
       )}
 
-      {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-slate-600 mb-2">
-                Today's Total
-              </h3>
-              <p className="text-2xl font-bold text-blue-600">
-                {formatCurrency(totalCashDrops)}
-              </p>
+      {/* 🔴 මේක තමයි අලුත් Wrapper Div එක. Shift එකක් නැත්නම් පල්ලෙහා තියෙන ඔක්කොම අඳුරු වෙලා Click කරන්න බැරි වෙනවා */}
+      <div className={`space-y-6 transition-all duration-300 ${!hasOpenShift ? 'opacity-40 grayscale pointer-events-none select-none' : ''}`}>
+        
+        {/* STATS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-slate-600 mb-2">
+                  Today's Total
+                </h3>
+                <p className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(totalCashDrops)}
+                </p>
+              </div>
+
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <TrendingDown className="text-blue-600" size={24} />
+              </div>
             </div>
+          </Card>
 
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <TrendingDown className="text-blue-600" size={24} />
+          <Card>
+            <h3 className="text-sm font-medium text-slate-600 mb-2">
+              Total Drops
+            </h3>
+            <p className="text-2xl font-bold text-slate-800">
+              {cashDrops.length}
+            </p>
+          </Card>
+
+          <Card>
+            <h3 className="text-sm font-medium text-slate-600 mb-2">
+              Average Drop
+            </h3>
+            <p className="text-2xl font-bold text-slate-800">
+              {formatCurrency(
+                cashDrops.length > 0 ? totalCashDrops / cashDrops.length : 0
+              )}
+            </p>
+          </Card>
+        </div>
+
+        {/* TABLE */}
+        <Card>
+          {loading ? (
+            <div className="py-12">
+              <LoadingSpinner size="lg" text="Loading cash drops..." />
             </div>
-          </div>
+          ) : (
+            <Table columns={columns} data={cashDrops} />
+          )}
         </Card>
 
-        <Card>
-          <h3 className="text-sm font-medium text-slate-600 mb-2">
-            Total Drops
-          </h3>
-          <p className="text-2xl font-bold text-slate-800">
-            {cashDrops.length}
-          </p>
-        </Card>
-
-        <Card>
-          <h3 className="text-sm font-medium text-slate-600 mb-2">
-            Average Drop
-          </h3>
-          <p className="text-2xl font-bold text-slate-800">
-            {formatCurrency(
-              cashDrops.length > 0 ? totalCashDrops / cashDrops.length : 0
-            )}
-          </p>
-        </Card>
       </div>
-
-      {/* TABLE */}
-      <Card>
-        {loading ? (
-          <div className="py-12">
-            <LoadingSpinner size="lg" text="Loading cash drops..." />
-          </div>
-        ) : (
-          <Table columns={columns} data={cashDrops} />
-        )}
-      </Card>
 
       {/* MODAL */}
       <Modal

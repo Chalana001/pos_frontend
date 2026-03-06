@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Plus } from "lucide-react";
 import { expensesAPI } from "../api/expenses.api";
@@ -18,6 +18,12 @@ const Expenses = () => {
   const { selectedBranchId } = useBranch();
   const { activeShift, refreshShift } = useShift(); 
 
+  const isCashier = user?.role === "CASHIER";
+  const isAdminOrManager = user?.role === "ADMIN" || user?.role === "MANAGER";
+
+  // 🔴 අලුත් ලයින් එක: හිස් Array එකක් ආවත් හරියට අඳුරගන්නවා
+  const hasActiveShift = Array.isArray(activeShift) ? activeShift.length > 0 : !!activeShift;
+
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -26,6 +32,7 @@ const Expenses = () => {
     amount: "",
     category: EXPENSE_CATEGORIES.OTHER,
     description: "",
+    isFromDrawer: true, // Default එක true
   });
 
   useEffect(() => {
@@ -39,7 +46,7 @@ const Expenses = () => {
       const from = new Date(today.setHours(0, 0, 0, 0)).toISOString();
       const to = new Date(today.setHours(23, 59, 59, 999)).toISOString();
 
-      const branchId = user?.role === "CASHIER" ? user?.branchId : selectedBranchId;
+      const branchId = isCashier ? user?.branchId : selectedBranchId;
 
       if (!branchId) {
         setExpenses([]);
@@ -58,15 +65,15 @@ const Expenses = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 🔴 Active Shift එකක් නැත්නම් Expense එකක් දාන්න ඉඩ දෙන්න එපා (Cashier ට)
-    if (!activeShift && user?.role === "CASHIER") {
-      return toast.error("Please open a shift first to record expenses");
-    }
-
     const amount = parseFloat(formData.amount);
     if (!amount || amount <= 0) {
       toast.error("Invalid amount");
       return;
+    }
+
+    const branchId = isCashier ? user?.branchId : selectedBranchId;
+    if (!branchId) {
+      return toast.error("Branch ID is missing");
     }
 
     try {
@@ -74,18 +81,22 @@ const Expenses = () => {
         amount,
         category: formData.category,
         description: formData.description.trim(),
+        branchId: branchId,
       };
+
+      // 🔴 Role එක අනුව isFromDrawer එක යවනවා (hasActiveShift පාවිච්චි කරලා)
+      if (isAdminOrManager) {
+        payload.isFromDrawer = hasActiveShift ? formData.isFromDrawer : false;
+      } 
 
       await expensesAPI.create(payload);
 
       toast.success("Expense recorded successfully");
       handleCloseModal();
       
-      // Dashboard එකේ totals update කරන්න
       refreshShift?.(); 
       fetchExpenses(); 
     } catch (err) {
-      // 🟢 කලින් වගේම .detail එක චෙක් කරනවා
       const msg = err.response?.data?.detail || err.response?.data?.message || "Failed to record expense";
       toast.error(msg);
     }
@@ -93,7 +104,7 @@ const Expenses = () => {
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setFormData({ amount: "", category: EXPENSE_CATEGORIES.OTHER, description: "" });
+    setFormData({ amount: "", category: EXPENSE_CATEGORIES.OTHER, description: "", isFromDrawer: true });
   };
 
   const columns = [
@@ -126,25 +137,62 @@ const Expenses = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-800">Expenses</h1>
-        <Button onClick={() => setShowModal(true)}>
+        {/* 🔴 Cashier ට Button එක Disable කරන්නේ අලුත් variable එකෙන් */}
+        <Button 
+          onClick={() => setShowModal(true)}
+          disabled={isCashier && !hasActiveShift}
+          className={isCashier && !hasActiveShift ? "opacity-50 cursor-not-allowed" : ""}
+          title={isCashier && !hasActiveShift ? "You need an open shift to record expenses" : ""}
+        >
           <Plus size={20} className="mr-2" />
           Record Expense
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* 🔴 Cashier ට Active Shift එකක් නැත්නම් Warning Message එකක් පෙන්නමු */}
+      {isCashier && !hasActiveShift && (
         <Card>
-          <h3 className="text-sm font-medium text-slate-600 mb-2">Today's Total</h3>
-          <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm font-medium text-yellow-800">
+              ⚠️ No active shift. Please open a shift to view and record expenses.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* 🔴 මේක තමයි අලුත් Wrapper Div එක. Cashier කෙනෙක්ට Shift එකක් නැත්නම් විතරක් පල්ලෙහා තියෙන ඔක්කොම අඳුරු වෙලා Click කරන්න බැරි වෙනවා */}
+      <div className={`space-y-6 transition-all duration-300 ${isCashier && !hasActiveShift ? 'opacity-40 grayscale pointer-events-none select-none' : ''}`}>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card>
+            <h3 className="text-sm font-medium text-slate-600 mb-2">Today's Total</h3>
+            <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+          </Card>
+        </div>
+
+        <Card>
+          {loading ? <LoadingSpinner size="lg" text="Loading..." /> : <Table columns={columns} data={expenses} />}
         </Card>
       </div>
 
-      <Card>
-        {loading ? <LoadingSpinner size="lg" text="Loading..." /> : <Table columns={columns} data={expenses} />}
-      </Card>
-
       <Modal isOpen={showModal} onClose={handleCloseModal} title="Record Expense">
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* 🔴 Checkbox එක පෙන්නන්නේ අලුත් variable එක true නම් විතරයි */}
+          {isAdminOrManager && hasActiveShift && (
+            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <input
+                type="checkbox"
+                id="isFromDrawer"
+                checked={formData.isFromDrawer}
+                onChange={(e) => setFormData({ ...formData, isFromDrawer: e.target.checked })}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="isFromDrawer" className="text-sm font-medium text-blue-900 cursor-pointer">
+                Take money from the Cash Drawer (Shift)
+              </label>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
             <select
