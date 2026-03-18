@@ -15,8 +15,9 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
-  Menu, // අලුතින් Menu (ඉරි තුන) icon එක ගත්තා
-  X,    // අලුතින් X (Close) icon එක ගත්තා
+  Menu,
+  X,
+  Printer, // 🔴 Barcode එකට Icon එකක් ගත්තා (ඕනෙනම් පාවිච්චි කරන්න පුළුවන්)
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -198,7 +199,6 @@ return (
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {/* ... (ඔයාගේ කලින් තිබ්බ menuItems.map කෑල්ල වෙනසක් නෑ, ඒ විදියටම තියන්න) ... */}
           {menuItems.map((item) => {
             const Icon = item.icon;
 
@@ -283,6 +283,21 @@ return (
                         </NavLink>
                       )}
 
+                      {/* 🔴 මෙන්න අලුතින් එකතු කරපු Barcode Print Page Link එක */}
+                      {hasPermission(role, "VIEW_ITEMS") && (
+                        <NavLink
+                          to="/items/print-barcodes"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          Print Barcodes
+                        </NavLink>
+                      )}
+
                       {isEditingItem && (
                         <div className="block px-3 py-2 rounded-lg text-sm bg-slate-800 text-white">
                           Edit Item
@@ -295,7 +310,7 @@ return (
             }
 
             // =========================
-            // ✅ Customers dropdown
+            // ✅ Customers dropdown (අනිත් ඒවා වෙනසක් නෑ)
             // =========================
             if (item.type === "dropdown-customers") {
               const canSeeCustomersMenu = hasPermission(role, "MANAGE_CUSTOMERS");

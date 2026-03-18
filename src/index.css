@@ -61,3 +61,59 @@
 .scan-effect {
   animation: scan-line 2s ease-in-out infinite;
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-container, .print-container * {
+    visibility: visible;
+  }
+
+  .print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+  }
+
+  /* 40mm x 25mm Thermal Sticker එකට ගැලපෙන සයිස් එක */
+  .barcode-sticker {
+    width: 40mm;
+    height: 25mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    page-break-inside: avoid;
+    overflow: hidden;
+    padding-top: 1mm;
+  }
+
+  .sticker-shop {
+    font-size: 7px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .sticker-name {
+    font-size: 8px;
+    margin-bottom: 1px;
+    white-space: nowrap;
+  }
+
+  .sticker-price {
+    font-size: 10px;
+    font-weight: bold;
+    margin-top: -2px;
+  }
+
+  @page {
+    margin: 0;
+  }
+}

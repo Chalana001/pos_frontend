@@ -28,6 +28,7 @@ import CustomerViewPage from "../pages/CustomerViewPage";
 import NewPurchase from "../pages/PurchaseFormPage";
 import Purchases from "../pages/PurchaseListPage";
 import PurchaseDetailsPage from "../pages/PurchaseDetailsPage";
+import BarcodePrintPage from "../pages/BarcodePrintPage";
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -60,11 +61,13 @@ const AppRoutes = () => {
             <ItemsPage />
           </ProtectedRoute>
         } />
+
         <Route path="/items/new" element={
           <ProtectedRoute permission="VIEW_ITEMS">
             <ItemFormPage mode="create" />
           </ProtectedRoute>
         } />
+
         <Route path="/items/:id/edit" element={
           <ProtectedRoute permission="VIEW_ITEMS">
             <ItemFormPage mode="edit" />
@@ -74,6 +77,12 @@ const AppRoutes = () => {
         <Route path="/items/bulk-add" element={
           <ProtectedRoute permission="VIEW_ITEMS">
             <BulkAddItems />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/items/print-barcodes" element={
+          <ProtectedRoute permission="VIEW_ITEMS">
+            <BarcodePrintPage />
           </ProtectedRoute>
         } />
 
