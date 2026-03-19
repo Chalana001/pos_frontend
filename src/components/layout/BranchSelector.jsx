@@ -8,12 +8,10 @@ const BranchSelector = () => {
   const { user } = useAuth();
   const { branches, setBranches, selectedBranchId, setSelectedBranchId } = useBranch();
 
-  // ✅ Cashier should NOT change branch
   if (user?.role === "CASHIER") return null;
 
   useEffect(() => {
     if (branches.length === 0) fetchBranches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchBranches = async () => {
@@ -23,14 +21,12 @@ const BranchSelector = () => {
 
       setBranches(list);
 
-      // ✅ if current selectedBranchId is valid keep it
       if (selectedBranchId && list.some((b) => String(b.id) === String(selectedBranchId))) {
         return;
       }
 
-      // ✅ otherwise default to first
       if (list.length > 0) {
-        handleManualChange(String(list[0].id)); // Use the helper to set default
+        handleManualChange(String(list[0].id));
       } else {
         setSelectedBranchId("");
       }
@@ -39,16 +35,11 @@ const BranchSelector = () => {
     }
   };
 
-  // 🔥 THIS IS THE FIX
-  // We create a specific function to handle the change
   const handleManualChange = (newBranchId) => {
-    // 1. Update the Context (App State)
     setSelectedBranchId(newBranchId);
 
-    // 2. Force Update Local Storage (Just to be 100% sure it's instant)
     localStorage.setItem("selectedBranchId", newBranchId);
 
-    // 3. Dispatch Custom Event (This tells POS.jsx to re-run its useEffect)
     window.dispatchEvent(new Event("branchChanged"));
   };
 
@@ -58,7 +49,6 @@ const BranchSelector = () => {
 
       <select
         value={selectedBranchId || ""}
-        // 🔥 Use the new handler here
         onChange={(e) => handleManualChange(e.target.value)}
         className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       >

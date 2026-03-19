@@ -45,7 +45,6 @@ const BarcodePrintPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 🔴 Load Button එක එබුවම වැඩ කරන function එක
   const handleLoadRecent = () => {
     if (recentLimit < 1) {
       toast.error("Limit must be at least 1");
@@ -54,14 +53,12 @@ const BarcodePrintPage = () => {
     loadRecentItems(recentLimit);
   };
 
-  // 2. Live API Call: Items Search කිරීම
   const handleSearch = async (e) => {
     const query = e.target.value;
     setSearchQuery(query);
 
     if (query.trim().length > 2) {
       try {
-        // 🔴 පරණ itemsAPI.search() වෙනුවට අලුත් itemsAPI.searchForPrint() එකට කතා කරනවා
         const res = await itemsAPI.searchForPrint(query); 
         setSearchResults(res.data || []);
       } catch (err) {

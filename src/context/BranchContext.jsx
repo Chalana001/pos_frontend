@@ -14,10 +14,18 @@ export const BranchProvider = ({ children }) => {
   }, [user?.role]);
 
   const [branches, setBranches] = useState([ALL_BRANCH]);
-  const [selectedBranchId, setSelectedBranchId] = useState(0);
   const [loadingBranches, setLoadingBranches] = useState(false);
 
-  // ✅ Load branches list
+  // 🔴 1. වෙනස් කරපු තැන: State එක හදද්දිම LocalStorage එකෙන් අගය ගන්නවා.
+  const [selectedBranchId, setSelectedBranchId] = useState(() => {
+    const saved = localStorage.getItem("branchId");
+    if (saved !== null && saved !== "" && saved !== "null" && saved !== "undefined") {
+      return Number(saved);
+    }
+    return 0; // මුකුත් නැත්නම් විතරක් 0 (All Branches) දෙනවා
+  });
+
+  // Load branches from API
   useEffect(() => {
     if (!user) return;
 
@@ -25,19 +33,18 @@ export const BranchProvider = ({ children }) => {
       try {
         setLoadingBranches(true);
 
-        const res = await branchesAPI.getAll(); // GET /branches
+        const res = await branchesAPI.getAll(); 
         const list = Array.isArray(res.data) ? res.data : [];
-
-        // avoid duplicate 0 coming from backend
         const filtered = list.filter((b) => Number(b.id) !== 0);
 
-        // ✅ CASHIER -> only show their own branch
         if (!isAdmin) {
           const myBranchId = Number(user.branchId);
           const onlyMine = filtered.filter((b) => Number(b.id) === myBranchId);
           setBranches(onlyMine);
+          
+          // Cashier කෙනෙක් නම්, එයාගේ branch එකම selectedBranchId එකට දානවා (LocalStorage එක බැලුවේ නෑනේ)
+          setSelectedBranchId(myBranchId);
         } else {
-          // ✅ ADMIN/MANAGER -> show all
           setBranches([ALL_BRANCH, ...filtered]);
         }
       } catch (e) {
@@ -51,31 +58,7 @@ export const BranchProvider = ({ children }) => {
     loadBranches();
   }, [user, isAdmin]);
 
-  // ✅ Set selected branch
-  useEffect(() => {
-    if (!user) return;
-
-    // ✅ CASHIER -> force to user branch (ignore localStorage)
-    if (!isAdmin) {
-      setSelectedBranchId(Number(user.branchId));
-      return;
-    }
-
-    // ✅ ADMIN/MANAGER -> load saved selection from localStorage
-    const saved = localStorage.getItem("branchId");
-    if (
-      saved !== null &&
-      saved !== "" &&
-      saved !== "null" &&
-      saved !== "undefined"
-    ) {
-      setSelectedBranchId(Number(saved));
-    } else {
-      setSelectedBranchId(0); // default All Branches
-    }
-  }, [user, isAdmin]);
-
-  // ✅ Persist selection only for admin/manager
+  // 🔴 2. වෙනස් කරපු තැන: LocalStorage එකට save කරන එක විතරක් තියාගත්තා. අර පරණ useEffect එක අයින් කළා.
   useEffect(() => {
     if (!isAdmin) return;
     localStorage.setItem("branchId", String(selectedBranchId));
@@ -88,8 +71,6 @@ export const BranchProvider = ({ children }) => {
         selectedBranchId,
         loadingBranches,
         isAdmin,
-
-        // ✅ Admin can change branch, Cashier cannot
         setSelectedBranchId: (id) => {
           if (!isAdmin) return;
           setSelectedBranchId(Number(id));

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Clock, User } from "lucide-react"; 
+import { Clock, User, Store } from "lucide-react"; 
 import { shiftsAPI } from "../api/shifts.api";
 import { usersAPI } from "../api/users.api"; 
 import { useAuth } from "../context/AuthContext";
@@ -59,7 +59,8 @@ const Shifts = () => {
 
   const shiftsList = useMemo(() => {
     if (!activeShift) return [];
-    return Array.isArray(activeShift) ? activeShift : [activeShift];
+    const list = Array.isArray(activeShift) ? [...activeShift] : [activeShift];
+    return list.sort((a, b) => new Date(b.openedAt) - new Date(a.openedAt));
   }, [activeShift]);
 
   const hasOpenShift = shiftsList.length > 0;
@@ -163,20 +164,30 @@ const Shifts = () => {
           {shiftsList.map((shift) => (
             <div key={shift.id} className="border-b pb-8 last:border-0">
               
-              {/* Cashier Info */}
+              {/* ✅ 🔴 වෙනස් කරපු Cashier & Branch Info කෑල්ල */}
               {isAdmin && (
-                <div className="flex items-center gap-2 mb-4 bg-blue-50 p-2 rounded-lg w-fit">
-                  <User size={18} className="text-blue-600" />
-                  <span className="font-semibold text-blue-800">
-                    Cashier ID: {shift.cashierUserId}
-                  </span>
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  {/* Cashier Name (ID එක වෙනුවට නම පෙන්නනවා) */}
+                  <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg w-fit border border-blue-100">
+                    <User size={16} className="text-blue-600" />
+                    <span className="font-semibold text-sm text-blue-800">
+                      Cashier: {shift.cashierName || `User ID ${shift.cashierUserId}`}
+                    </span>
+                  </div>
+
+                  {/* Branch Name (All Branches (0) තෝරලා තියෙද්දි විතරක් පෙන්නනවා) */}
+                  {selectedBranchId === 0 && (
+                    <div className="flex items-center gap-2 bg-indigo-50 px-3 py-2 rounded-lg w-fit border border-indigo-100">
+                      <Store size={16} className="text-indigo-600" />
+                      <span className="font-semibold text-sm text-indigo-800">
+                        {shift.branchName || `Branch ${shift.branchId}`}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
               
-              {/* 🔴 මෙතන තමයි වෙනස කරේ! 
-                grid-cols-2 (Mobile වලදී කොටු 2ක්)
-                lg:grid-cols-4 (PC එකේදී එක පේළියට කොටු 4ක්) 
-              */}
+              {/* Cards Grid */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                 
                 {/* 1. Status & Time */}
@@ -204,7 +215,7 @@ const Shifts = () => {
                   </p>
                 </Card>
 
-                {/* 4. Expected Drawer (මෙතන Mobile වලදී Button එකක් තියෙන නිසා පොඩි වෙනසක් කරලා තියෙනවා) */}
+                {/* 4. Expected Drawer */}
                 <Card className="border-blue-200 bg-blue-50/30 flex flex-col justify-center">
                   <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2 lg:gap-0">
                     <div>
@@ -231,7 +242,7 @@ const Shifts = () => {
         </div>
       )}
 
-      {/* Modals ටික ඒ විදියටමයි */}
+      {/* Modals */}
       <Modal isOpen={showOpenModal} onClose={() => setShowOpenModal(false)} title="Open New Shift">
         <form onSubmit={handleOpenShift} className="space-y-4">
           {isAdmin && (
@@ -286,7 +297,8 @@ const Shifts = () => {
           setShowCloseModal(false);
           setSelectedShiftToClose(null);
         }} 
-        title={`Close Shift ${isAdmin ? `(Cashier: ${selectedShiftToClose?.cashierUserId})` : ''}`}
+        // ✅ 🔴 Close Modal එකෙත් නම පෙන්නන්න හැදුවා
+        title={`Close Shift ${isAdmin ? `(Cashier: ${selectedShiftToClose?.cashierName || selectedShiftToClose?.cashierUserId})` : ''}`}
       >
         <form onSubmit={handleCloseShift} className="space-y-4">
           <div className="bg-slate-50 p-4 rounded-lg space-y-2">

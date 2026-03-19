@@ -1,48 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Search, ChefHat, AlertTriangle, Lock } from "lucide-react";
+import { Search, ChefHat, Lock } from "lucide-react";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { itemsAPI } from "../api/items.api";
 import { ordersAPI } from "../api/orders.api";
+import { shiftsAPI } from "../api/shifts.api"; 
 import CustomerSelect from "../components/pos/CustomerSelect";
 import Cart from "../components/pos/Cart";
 import CheckoutOverlay from "../components/pos/CheckoutOverlay";
-import BatchSelectModal from "../components/pos/BatchSelectModal"; // ✅ Import Modal
+import BatchSelectModal from "../components/pos/BatchSelectModal"; 
 import { formatCurrency } from "../utils/formatters";
 import { ORDER_TYPES, DISCOUNT_TYPES } from "../utils/constants";
-import { useShift } from "../context/ShiftContext";
 import { useAuth } from "../context/AuthContext";
+import { useBranch } from "../context/BranchContext"; // ✅ BranchContext එක ගත්තා
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const POS = () => {
-  const { activeShift } = useShift();
   const { user } = useAuth();
+  const { selectedBranchId } = useBranch(); // ✅ Admin තෝරපු Branch එක මෙතනින් ගන්නවා
+  
+  // --- POS Specific States ---
+  const [myShift, setMyShift] = useState(null);
+  const [loadingShift, setLoadingShift] = useState(true);
 
-  // --- 1. BRANCH IDENTIFICATION ---
-  const [selectedBranchId, setSelectedBranchId] = useState(
-    localStorage.getItem("selectedBranchId")
-  );
-
-  useEffect(() => {
-    const handleBranchUpdate = () => {
-        setSelectedBranchId(localStorage.getItem("selectedBranchId"));
-    };
-    window.addEventListener("branchChanged", handleBranchUpdate);
-    window.addEventListener("storage", handleBranchUpdate);
-    return () => {
-        window.removeEventListener("branchChanged", handleBranchUpdate);
-        window.removeEventListener("storage", handleBranchUpdate);
-    };
-  }, []);
-
-  const currentBranchId = user?.branchId || selectedBranchId || activeShift?.branchId;
-
-  // --- 2. VALIDATION ---
-  const isShiftOpenForCurrentBranch = 
-    activeShift && 
-    activeShift.status === "OPEN" && 
-    String(activeShift.branchId) === String(currentBranchId);
-
-  // --- State ---
   const [allItems, setAllItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [cartItems, setCartItems] = useState([]);
@@ -53,8 +33,6 @@ const POS = () => {
   // Modals
   const [showCustomerSelect, setShowCustomerSelect] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  
-  // ✅ NEW: Batch Selection States
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [selectedBatchItem, setSelectedBatchItem] = useState(null);
 
@@ -65,21 +43,67 @@ const POS = () => {
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
 
-  // --- Data Loading ---
-  useEffect(() => {
-    if (currentBranchId) {
-      fetchProducts(currentBranchId);
-    } else {
-       setAllItems([]);
-       setFilteredItems([]);
-    }
-  }, [currentBranchId]);
+  // Admin ද නැද්ද කියලා මෙතනින් චෙක් කරනවා
+  const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
 
-  // Filter Logic (Category Fix Here)
+  // 🔴 1. SHIFT LOADING LOGIC (Admin/Cashier Separation)
+  useEffect(() => {
+    const loadMyShift = async () => {
+      try {
+        setLoadingShift(true);
+        let res;
+
+        if (isAdminUser) {
+          // --- ADMIN නම් ---
+          if (!selectedBranchId || selectedBranchId === 0) {
+            setMyShift(null);
+            setLoadingShift(false);
+            return;
+          }
+          // අලුත්ම Endpoint එකට Branch ID එකත් එක්ක කෝල් කරනවා
+          res = await shiftsAPI.getAdminCurrent(selectedBranchId);
+        } else {
+          // --- CASHIER නම් ---
+          res = await shiftsAPI.getMine();
+        }
+
+        if (res.data && res.data.status === "OPEN") {
+           setMyShift(res.data);
+           fetchProducts(res.data.branchId); 
+        } else {
+           setMyShift(null);
+        }
+      } catch (error) {
+        setMyShift(null);
+        // 404 ආවොත් ඒ කියන්නේ shift එකක් නෑ කියන එක (එතකොට toast ඕනේ නෑ)
+      } finally {
+        setLoadingShift(false);
+      }
+    };
+
+    loadMyShift();
+  }, [isAdminUser, selectedBranchId]); // ✅ මේ දෙක මාරු වෙද්දී ආයේ කෝල් වෙනවා
+
+  // 🔴 2. බඩු ටික ගන්නවා
+  const fetchProducts = async (branchId) => {
+    try {
+      const response = await itemsAPI.search("", branchId);
+      const items = Array.isArray(response.data) ? response.data : [];
+      setAllItems(items);
+      setFilteredItems(items);
+      
+      const uniqueCats = ["All", ...new Set(items.map(i => i.categoryName).filter(Boolean))];
+      setCategories(uniqueCats);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load products");
+    }
+  };
+
+  // --- Filtering ---
   useEffect(() => {
     let result = allItems;
     if (activeCategory !== "All") {
-      // ✅ FIX: categoryName පාවිච්චි කරන්න
       result = result.filter(item => item.categoryName === activeCategory);
     }
     if (searchQuery.trim()) {
@@ -92,58 +116,30 @@ const POS = () => {
     setFilteredItems(result);
   }, [activeCategory, searchQuery, allItems]);
 
-  const fetchProducts = async (branchId) => {
-    try {
-      const response = await itemsAPI.search("", branchId);
-      const items = Array.isArray(response.data) ? response.data : [];
-      setAllItems(items);
-      setFilteredItems(items);
-      
-      // ✅ FIX: categoryName වලින් Unique Categories ගන්න
-      const uniqueCats = ["All", ...new Set(items.map(i => i.categoryName).filter(Boolean))];
-      setCategories(uniqueCats);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to load products");
-    }
-  };
-
-  // --- ADD TO CART (UPDATED LOGIC) ---
+  // --- ADD TO CART ---
   const addToCart = (item) => {
-    if (!isShiftOpenForCurrentBranch) {
-        toast.error("Please open a shift for this branch to make sales!");
+    if (!myShift) {
+        toast.error("Please open a shift first!");
         return;
     }
 
-    // A. Check for Multiple Batches
-    // Item එකට Batches 1 කට වඩා තියෙනවා නම් Modal එක Open කරන්න
     if (item.batches && item.batches.length > 1) {
         setSelectedBatchItem(item);
         setShowBatchModal(true);
         return;
     }
 
-    // B. Single Batch / No Batch
-    // Batch 1ක් තියෙනවා නම් ඒක ගන්න, නැත්නම් Default Item Price එක ගන්න
-    let targetBatch = null;
-    if (item.batches && item.batches.length > 0) {
-        targetBatch = item.batches[0]; // First batch (FIFO)
-    }
-
-    // කෙලින්ම Cart එකට යවන්න (Modal ඕන නෑ)
+    let targetBatch = item.batches && item.batches.length > 0 ? item.batches[0] : null;
     processAddToCart(item, targetBatch ? targetBatch.price : item.sellingPrice, 1, targetBatch);
   };
 
-  // --- Handle Batch Selection form Modal ---
   const handleBatchSelect = (batch) => {
       processAddToCart(selectedBatchItem, batch.price, 1, batch);
       setShowBatchModal(false);
       setSelectedBatchItem(null);
   };
 
-  // --- Process Add To Cart (Internal) ---
   const processAddToCart = (item, price, qty, batchData = null) => {
-    // 1. Batch ID & Stock Check
     const batchId = batchData ? batchData.batchId : (item.batches?.[0]?.batchId || null);
     const stockQty = batchData ? batchData.qty : (item.availableQty || 0);
 
@@ -152,7 +148,6 @@ const POS = () => {
         return;
     }
 
-    // 2. Add or Update Cart
     const existingIndex = cartItems.findIndex(
         (ci) => String(ci.itemId) === String(item.id) && String(ci.batchId) === String(batchId)
     );
@@ -171,15 +166,15 @@ const POS = () => {
         ...prev,
         {
           itemId: item.id,
-          batchId: batchId, // ✅ Important: Backend එකට යවන්න ඕන
+          batchId: batchId, 
           name: item.name,
           barcode: item.barcode,
-          unitPrice: Number(price), // ✅ Selected Batch Price
+          unitPrice: Number(price), 
           qty: 1,
           discountType: DISCOUNT_TYPES.NONE,
           discountValue: 0,
           stockQty,
-          image: item.imageUrl // Note: JSON uses imageUrl, code used image
+          image: item.imageUrl
         },
       ]);
     }
@@ -224,9 +219,8 @@ const POS = () => {
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return toast.error("Cart is empty");
-    if (!isShiftOpenForCurrentBranch) {
-        return toast.error("No active shift. Cannot checkout.");
-    }
+    if (!myShift) return toast.error("No active shift. Cannot checkout.");
+    
     setPaidAmount(calculateTotal());
     setShowPayment(true);
   };
@@ -239,14 +233,14 @@ const POS = () => {
     setLoading(true);
     try {
       const orderData = {
-        branchId: currentBranchId, 
+        branchId: myShift.branchId, 
         orderType,
         customerId: orderType === ORDER_TYPES.CREDIT ? customer?.id : null,
         billDiscount,
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
         items: cartItems.map((item) => ({
           itemId: item.itemId,
-          batchId: item.batchId, // ✅ Send Batch ID to Backend
+          batchId: item.batchId, 
           qty: item.qty,
           unitPrice: item.unitPrice,
           discountType: item.discountType,
@@ -258,9 +252,7 @@ const POS = () => {
       const response = await ordersAPI.create(orderData);
       toast.success(`Order ${response.data.invoiceNo} success!`);
 
-      if (currentBranchId) {
-        await fetchProducts(currentBranchId); 
-      }
+      await fetchProducts(myShift.branchId); 
 
       setCartItems([]);
       setCustomer(null);
@@ -283,18 +275,24 @@ const POS = () => {
     if (showPayment && !loading) handlePlaceOrder();
   });
 
+  if (loadingShift) {
+     return <div className="h-full flex items-center justify-center"><LoadingSpinner text="Checking your shift..." /></div>;
+  }
+
   return (
     <div className="flex h-full gap-1.5 lg:gap-4 bg-slate-100 p-1.5 lg:p-4 font-sans text-slate-800 flex-col overflow-y-auto lg:overflow-hidden">
       
-      {/* UI Message if Shift is Closed */}
-      {!isShiftOpenForCurrentBranch && (
+      {/* 🔴 Warning Message */}
+      {!myShift && (
         <div className="bg-orange-50 border border-orange-200 text-orange-800 px-3 py-2 lg:px-4 lg:py-3 rounded-lg lg:rounded-xl flex items-center justify-between shadow-sm flex-shrink-0">
             <div className="flex items-center gap-2 lg:gap-3">
                 <Lock className="text-orange-600 w-4 h-4 lg:w-5 lg:h-5" />
                 <div>
-                    <span className="font-bold text-xs lg:text-sm block">Read-Only Mode</span>
+                    <span className="font-bold text-xs lg:text-sm block">Shift Closed</span>
                     <span className="text-[10px] lg:text-xs opacity-90 leading-tight">
-                        Viewing stock for Branch #{currentBranchId || 'Unknown'}. Open a shift to enable sales.
+                        {isAdminUser 
+                          ? `You don't have an open shift for the selected branch. Please open a shift for yourself first.`
+                          : `You don't have an active shift. Please go to Shift Management and open a shift to start selling.`}
                     </span>
                 </div>
             </div>
@@ -304,17 +302,14 @@ const POS = () => {
       {/* Main Wrapper */}
       <div className="flex flex-col lg:flex-row flex-1 gap-1.5 lg:gap-4 lg:overflow-hidden lg:h-full">
         
-        {/* 1. CENTER AREA (Products)
-            🔴 මෙතන තමයි වෙනස කරේ! h-[75vh] වෙනුවට h-[55vh] (හෝ h-[60vh]) දැම්මා. 
-        */}
+        {/* 1. CENTER AREA (Products) */}
         <div className="flex flex-col h-[55vh] flex-shrink-0 lg:h-full lg:flex-1 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
             
             <header className="px-2 py-2 lg:px-6 lg:py-5 bg-white border-b border-slate-100 flex flex-row items-center justify-between gap-2 flex-shrink-0">
                 <div className="hidden sm:block lg:block">
-                  <h1 className="text-sm lg:text-xl font-bold text-slate-800">New Sale</h1>
-                  <p className="text-slate-400 text-[10px] lg:text-sm hidden lg:block">
-                      {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </p>
+                  <h1 className="text-sm lg:text-xl font-bold text-slate-800">
+                      New Sale {myShift ? `(Branch: ${myShift.branchName || myShift.branchId})` : ''}
+                  </h1>
                 </div>
                 <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
                   <div className="relative flex-1">
@@ -324,7 +319,8 @@ const POS = () => {
                         placeholder="Search products..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs lg:text-sm"
+                        disabled={!myShift} 
+                        className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs lg:text-sm disabled:opacity-50"
                       />
                   </div>
                 </div>
@@ -336,9 +332,10 @@ const POS = () => {
                     <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
+                    disabled={!myShift}
                     className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-[10px] lg:text-sm font-semibold transition-all ${activeCategory === cat
                         ? 'bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200'
-                        : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        : 'bg-slate-50 text-slate-500 hover:bg-slate-100 disabled:opacity-50'
                         }`}
                     >
                     {cat}
@@ -348,26 +345,28 @@ const POS = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-1.5 lg:p-6 bg-slate-50">
-                {filteredItems.length === 0 ? (
+                {!myShift ? (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                        <Lock className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
+                        <p className="text-sm lg:text-lg font-medium text-center">Open a shift to view items</p>
+                    </div>
+                ) : filteredItems.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400">
                         <Search className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
-                        <p className="text-sm lg:text-lg font-medium text-center">
-                           {currentBranchId ? "No items found" : "Select a branch"}
-                        </p>
+                        <p className="text-sm lg:text-lg font-medium text-center">No items found</p>
                     </div>
                 ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-4 gap-1.5 lg:gap-4">
                 {filteredItems.map((item) => {
                     const stockQty = Number(item.availableQty ?? 0);
                     const isOutOfStock = stockQty <= 0;
-                    const isClickable = !isOutOfStock && isShiftOpenForCurrentBranch;
 
                     return (
                     <div
                         key={item.id}
                         onClick={() => !isOutOfStock && addToCart(item)}
                         className={`group bg-white rounded-lg lg:rounded-xl p-2 lg:p-6 border border-slate-200 transition-all relative flex flex-col items-center text-center 
-                            ${isClickable 
+                            ${!isOutOfStock 
                                 ? 'hover:shadow-md cursor-pointer active:scale-95' 
                                 : 'cursor-not-allowed opacity-90'
                             } 
@@ -395,7 +394,7 @@ const POS = () => {
         </div>
 
         {/* 2. RIGHT PANEL (Cart) */}
-        <div className={`w-full lg:w-[380px] flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!isShiftOpenForCurrentBranch ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+        <div className={`w-full lg:w-[380px] flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!myShift ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <Cart
                 items={cartItems}
                 customer={customer}

@@ -18,35 +18,39 @@ export const ShiftProvider = ({ children }) => {
   );
 
   const refreshShift = useCallback(async () => {
+    // 🔴 1. වෙනස: User සහ Role එක එනකම් අනිවාර්යයෙන්ම ඉන්නවා. 
+    // (මේකෙන් තමයි /shifts/me 500 Error එක එන එක 100% ක් නවතින්නේ)
+    if (!user || !user.role) {
+      setLoadingShift(false);
+      return;
+    }
+
     try {
       setLoadingShift(true);
 
       // ✅ ADMIN/MANAGER: selected branch shift
       if (isAdmin) {
-        if (!selectedBranchId) {
+        if (selectedBranchId === null || selectedBranchId === undefined) {
           setActiveShift(null);
           return;
         }
 
+        // 0 වුණත්, වෙන Branch එකක් වුණත් අදාළ කෝල් එක යනවා
         const res = await shiftsAPI.getActiveByBranch(selectedBranchId);
-        // 🔴 Array එකක් ආවොත් පළවෙනි එක ගන්නවා, නැත්නම් ඒකම ගන්නවා. මුකුත් නැත්නම් null කරනවා.
-        const shiftData = Array.isArray(res.data) ? res.data[0] : res.data;
-        setActiveShift(shiftData || null);
+        setActiveShift(res.data || null);
         return;
       }
 
       // ✅ CASHIER: own shift
       const res = await shiftsAPI.getMine();
-      // 🔴 Array එකක් ආවොත් පළවෙනි එක ගන්නවා, නැත්නම් ඒකම ගන්නවා. මුකුත් නැත්නම් null කරනවා.
-      const shiftData = Array.isArray(res.data) ? res.data[0] : res.data;
-      setActiveShift(shiftData || null);
+      setActiveShift(res.data || null);
       
     } catch (e) {
       setActiveShift(null);
     } finally {
       setLoadingShift(false);
     }
-  }, [isAdmin, selectedBranchId]);
+  }, [isAdmin, selectedBranchId, user]);
 
   useEffect(() => {
     refreshShift();
