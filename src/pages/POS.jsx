@@ -19,7 +19,6 @@ const POS = () => {
   const { user } = useAuth();
   const { selectedBranchId } = useBranch(); // ✅ Admin තෝරපු Branch එක මෙතනින් ගන්නවා
   
-  // --- POS Specific States ---
   const [myShift, setMyShift] = useState(null);
   const [loadingShift, setLoadingShift] = useState(true);
 
@@ -235,7 +234,7 @@ const POS = () => {
       const orderData = {
         branchId: myShift.branchId, 
         orderType,
-        customerId: orderType === ORDER_TYPES.CREDIT ? customer?.id : null,
+        customerId: customer ? customer.id : null,
         billDiscount,
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
         items: cartItems.map((item) => ({

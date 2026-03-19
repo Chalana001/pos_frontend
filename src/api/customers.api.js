@@ -27,5 +27,6 @@ export const customersAPI = {
   // ✅ Orders
   getOrders: (customerId, params = {}) =>
     api.get(`/customers/${customerId}/orders`, { params }),
-  
+
+  recordPayment: (id, data) => api.post(`/customers/${id}/payments`, data),
 };

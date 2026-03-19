@@ -12,26 +12,26 @@ const CustomerOrdersTab = ({ customerId }) => {
 
   useEffect(() => {
     fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentType]);
 
   const fetchOrders = async () => {
-    setLoading(true);
-    try {
-      const params = { page: 0, size: 20 };
-      if (paymentType !== "ALL") params.paymentType = paymentType;
+  setLoading(true);
+  try {
+    const params = { 
+        page: 0, 
+        size: 20, 
+        orderType: paymentType
+    };
 
-      const res = await customersAPI.getOrders(customerId, params);
-
-      // assume backend returns list or {items}
-      const data = res.data?.items ?? res.data;
-      setOrders(Array.isArray(data) ? data : []);
-    } catch (e) {
-      toast.error("Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const res = await customersAPI.getOrders(customerId, params);
+    const data = res.data?.items || [];
+    setOrders(data);
+  } catch (e) {
+    toast.error("Failed to load orders");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="space-y-4">
@@ -75,38 +75,48 @@ const CustomerOrdersTab = ({ customerId }) => {
                   <th className="text-center px-4 py-3">Type</th>
                 </tr>
               </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id} className="border-b last:border-0 hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-800">
-                      {o.invoiceNo || `#${o.id}`}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {o.createdAt ? new Date(o.createdAt).toLocaleString() : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {formatCurrency(o.total || 0)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {formatCurrency(o.paid || 0)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      {formatCurrency(o.balance || 0)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          o.paymentType === "CREDIT"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {o.paymentType || "—"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+              {/* Table Body එක මෙතනින් පටන් ගන්නවා */}
+<tbody>
+  {orders.map((o) => (
+    // මෙන්න මේක තමයි Table Row එක (tr)
+    <tr key={o.id} className="border-b last:border-0 hover:bg-slate-50">
+      
+      <td className="px-4 py-3 font-medium text-slate-800">
+        {o.invoiceNo || `#${o.id}`}
+      </td>
+
+      <td className="px-4 py-3 text-slate-600">
+        {o.createdAt ? new Date(o.createdAt).toLocaleString() : "—"}
+      </td>
+
+      <td className="px-4 py-3 text-right">
+        {/* මම මේ නම් ටික Backend එකෙන් එන විදිහට වෙනස් කළා */}
+        {formatCurrency(o.grandTotal || 0)} 
+      </td>
+
+      <td className="px-4 py-3 text-right">
+        {formatCurrency(o.paidAmount || 0)} 
+      </td>
+
+      <td className="px-4 py-3 text-right font-semibold">
+        {formatCurrency(o.dueAmount || 0)} 
+      </td>
+
+      <td className="px-4 py-3 text-center">
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            o.orderType === "CREDIT"
+              ? "bg-red-100 text-red-800"
+              : "bg-green-100 text-green-800"
+          }`}
+        >
+          {o.orderType || "—"}
+        </span>
+      </td>
+
+    </tr>
+  ))}
+</tbody>
             </table>
           </div>
         )}

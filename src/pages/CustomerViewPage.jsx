@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
+import Modal from "../components/common/Modal"; // 👈 Modal එක import කරගන්න
 
 import { customersAPI } from "../api/customers.api";
 import { formatCurrency } from "../utils/formatters";
@@ -19,6 +20,11 @@ const CustomerViewPage = () => {
   const [loading, setLoading] = useState(false);
   const [customer, setCustomer] = useState(null);
 
+  // Payment States 👈 අලුතින් එකතු කරපු ඒවා
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
   // caching tabs
   const [openedTabs, setOpenedTabs] = useState({
     orders: false,
@@ -33,7 +39,6 @@ const CustomerViewPage = () => {
   const fetchCustomer = async () => {
     setLoading(true);
     try {
-      // ✅ ONLY profile call
       const res = await customersAPI.getById(id);
       setCustomer(res.data);
     } catch {
@@ -49,10 +54,42 @@ const CustomerViewPage = () => {
     setOpenedTabs((prev) => ({ ...prev, [t]: true }));
   };
 
-  // mark default tab opened
   useEffect(() => {
     setOpenedTabs((prev) => ({ ...prev, orders: true }));
   }, []);
+
+  // 👈 Payment එක handle කරන Function එක
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    const amount = parseFloat(paymentAmount);
+
+    if (!amount || amount <= 0) {
+      return toast.error("Please enter a valid amount");
+    }
+    if (amount > customer.dueAmount) {
+      return toast.error("Amount cannot exceed the total due amount");
+    }
+
+    setPaymentLoading(true);
+    try {
+      // payment method එක "CASH" විදිහට hardcode කරලා යවනවා (ඕන නම් dropdown එකක් දාන්නත් පුළුවන්)
+      await customersAPI.recordPayment(id, { amount, paymentMethod: "CASH" });
+      
+      toast.success("Payment recorded successfully!");
+      setShowPaymentModal(false);
+      setPaymentAmount("");
+      
+      // ✅ Payment එක success වුණාම customer data ටික ආයේ අරන් due amount එක අප්ඩේට් කරනවා
+      fetchCustomer(); 
+      
+      // පොඩි trick එකක්: orders tab එකේ තියෙන data ටිකත් refresh වෙන්න ඕනෙ නම් 
+      // ඔයාට orders tab එක re-mount කරන්න පුළුවන්, නැත්නම් page එක reload කරන්න පුළුවන්
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Payment failed");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -127,16 +164,31 @@ const CustomerViewPage = () => {
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  
+                  {/* Due Amount Box (මෙතන තමයි Pay Now button එක දාන්නේ) */}
                   <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="text-xs text-slate-500">Due Amount</div>
-                    <div
-                      className={`text-xl font-bold mt-1 ${
-                        (customer?.dueAmount || 0) > 0
-                          ? "text-red-600"
-                          : "text-slate-800"
-                      }`}
-                    >
-                      {formatCurrency(customer?.dueAmount || 0)}
+                    <div className="flex items-center justify-between mt-1">
+                      <div
+                        className={`text-xl font-bold ${
+                          (customer?.dueAmount || 0) > 0
+                            ? "text-red-600"
+                            : "text-slate-800"
+                        }`}
+                      >
+                        {formatCurrency(customer?.dueAmount || 0)}
+                      </div>
+                      
+                      {/* ණය තියෙනවා නම් විතරක් Pay Now Button එක පෙන්නන්න */}
+                      {(customer?.dueAmount || 0) > 0 && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => setShowPaymentModal(true)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                        >
+                          Pay Now
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -190,6 +242,63 @@ const CustomerViewPage = () => {
           </div>
         )}
       </Card>
+
+      {/* 👈 Payment Modal එක */}
+      <Modal 
+        isOpen={showPaymentModal} 
+        onClose={() => setShowPaymentModal(false)} 
+        title="Settle Due Amount"
+      >
+        <form onSubmit={handlePaymentSubmit} className="p-6 space-y-4">
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center mb-4">
+            <span className="text-sm text-slate-600 font-medium">Total Due Amount</span>
+            <span className="text-lg font-bold text-red-600">
+              {formatCurrency(customer?.dueAmount || 0)}
+            </span>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-1">
+              Payment Amount
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">
+                Rs.
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                min="1"
+                max={customer?.dueAmount}
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-semibold"
+                placeholder="0.00"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setShowPaymentModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={paymentLoading}
+            >
+              {paymentLoading ? "Processing..." : "Confirm Payment"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
     </div>
   );
 };

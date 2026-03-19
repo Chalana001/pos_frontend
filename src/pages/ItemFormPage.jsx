@@ -197,8 +197,8 @@ const ItemFormPage = ({ mode }) => {
     Create/Edit Submit (Items)
   ------------------------------ */
   const submitItem = async () => {
-    if (!formData.name.trim() || !formData.barcode.trim() || !formData.subCategoryId) {
-      toast.error("Please fill required fields (Name, Barcode, Sub Category)");
+    if (!formData.name.trim() || !formData.subCategoryId) {
+      toast.error("Please fill required fields (Name, Sub Category)");
       setSecGeneral(true);
       return;
     }
