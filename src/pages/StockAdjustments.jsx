@@ -4,6 +4,7 @@ import { Plus, Search } from 'lucide-react';
 import api from '../api/axios';
 import { itemsAPI } from '../api/items.api';
 import { useAuth } from '../context/AuthContext';
+import { useBranch } from '../context/BranchContext'; // ✅ අලුතින් එකතු කළා
 import { formatDateTime } from '../utils/formatters';
 import { ADJUSTMENT_TYPES } from '../utils/constants';
 import Card from '../components/common/Card';
@@ -14,6 +15,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const StockAdjustments = () => {
   const { user } = useAuth();
+  const { selectedBranchId } = useBranch(); // ✅ Header එකෙන් එන Branch ID එක මෙතනින් ගන්නවා
+
   const [adjustments, setAdjustments] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,15 +29,19 @@ const StockAdjustments = () => {
     reason: '',
   });
 
+  // ✅ Branch එක මාරු වෙනකොට auto data refresh වෙන්න selectedBranchId එක දැම්මා
   useEffect(() => {
     fetchAdjustments();
     fetchItems();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   const fetchAdjustments = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/stock-adjustments/branch/${user.branchId}`);
+      // ✅ selectedBranchId එක null නම් 0 විදිහට යවනවා
+      const currentBranchId = selectedBranchId || 0; 
+      const response = await api.get(`/stock-adjustments/branch/${currentBranchId}`);
       setAdjustments(response.data);
     } catch (error) {
       toast.error('Failed to fetch adjustments');
@@ -45,7 +52,8 @@ const StockAdjustments = () => {
 
   const fetchItems = async () => {
     try {
-      const response = await itemsAPI.getAll();
+      // (Optional: මෙතනත් ඕනේ නම් Branch එකට අදාල items විතරක් ගන්න හදන්න පුළුවන්)
+      const response = await itemsAPI.getAll(); 
       setItems(response.data);
     } catch (error) {
       console.error('Failed to fetch items');
@@ -55,9 +63,12 @@ const StockAdjustments = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // ✅ අලුත් Adjustment එකක් දාද්දිත් තෝරලා තියෙන Branch එකටම සේව් කරනවා (All Branches නම් 0 යනවා)
+      const currentBranchId = selectedBranchId || 0;
+
       await api.post('/stock-adjustments', {
         ...formData,
-        branchId: user.branchId,
+        branchId: currentBranchId, 
         itemId: parseInt(formData.itemId),
         qty: parseInt(formData.qty),
       });
@@ -111,6 +122,8 @@ const StockAdjustments = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-800">Stock Adjustments</h1>
+        
+        {/* All Branches (0) තෝරලා තියෙද්දී Adjustment එකක් දාන්න බැරි වෙන්න ඕනේ නම් මේ බට්න් එක disable කරන්න පුළුවන්. දැනට මම සාමාන්‍ය විදිහටම තිබ්බා. */}
         <Button onClick={() => setShowModal(true)}>
           <Plus size={20} className="mr-2" />
           New Adjustment

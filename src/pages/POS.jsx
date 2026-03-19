@@ -84,10 +84,35 @@ const POS = () => {
   }, [isAdminUser, selectedBranchId]); // ✅ මේ දෙක මාරු වෙද්දී ආයේ කෝල් වෙනවා
 
   // 🔴 2. බඩු ටික ගන්නවා
+  // const fetchProducts = async (branchId) => {
+  //   try {
+  //     const response = await itemsAPI.search("", branchId);
+  //     const items = Array.isArray(response.data) ? response.data : [];
+  //     setAllItems(items);
+  //     setFilteredItems(items);
+      
+  //     const uniqueCats = ["All", ...new Set(items.map(i => i.categoryName).filter(Boolean))];
+  //     setCategories(uniqueCats);
+  //   } catch (error) {
+  //     console.error(error);
+  //     toast.error("Failed to load products");
+  //   }
+  // };
+
+  // 🔴 2. බඩු ටික ගන්නවා
+  // 🔴 2. බඩු ටික ගන්නවා
   const fetchProducts = async (branchId) => {
     try {
       const response = await itemsAPI.search("", branchId);
-      const items = Array.isArray(response.data) ? response.data : [];
+      let items = Array.isArray(response.data) ? response.data : [];
+      items = items.filter(item => {
+        // මේ Branch එකේ Batches තියෙනවා නම් ගන්නවා
+        if (item.batches && item.batches.length > 0) return true;
+        if (item.availableQty !== undefined && item.availableQty !== null) return true;
+
+        return false;
+      });
+
       setAllItems(items);
       setFilteredItems(items);
       
