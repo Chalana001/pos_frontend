@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
 import { Search, ChefHat, Lock } from "lucide-react";
 import { useKeyboard } from "../hooks/useKeyboard";
@@ -12,12 +12,14 @@ import BatchSelectModal from "../components/pos/BatchSelectModal";
 import { formatCurrency } from "../utils/formatters";
 import { ORDER_TYPES, DISCOUNT_TYPES } from "../utils/constants";
 import { useAuth } from "../context/AuthContext";
-import { useBranch } from "../context/BranchContext"; // ✅ BranchContext එක ගත්තා
+import { useBranch } from "../context/BranchContext"; 
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
 
 const POS = () => {
   const { user } = useAuth();
   const { selectedBranchId } = useBranch(); // ✅ Admin තෝරපු Branch එක මෙතනින් ගන්නවා
+  const printRef = useRef();
   
   const [myShift, setMyShift] = useState(null);
   const [loadingShift, setLoadingShift] = useState(true);
@@ -74,39 +76,20 @@ const POS = () => {
         }
       } catch (error) {
         setMyShift(null);
-        // 404 ආවොත් ඒ කියන්නේ shift එකක් නෑ කියන එක (එතකොට toast ඕනේ නෑ)
+
       } finally {
         setLoadingShift(false);
       }
     };
 
     loadMyShift();
-  }, [isAdminUser, selectedBranchId]); // ✅ මේ දෙක මාරු වෙද්දී ආයේ කෝල් වෙනවා
+  }, [isAdminUser, selectedBranchId]); 
 
-  // 🔴 2. බඩු ටික ගන්නවා
-  // const fetchProducts = async (branchId) => {
-  //   try {
-  //     const response = await itemsAPI.search("", branchId);
-  //     const items = Array.isArray(response.data) ? response.data : [];
-  //     setAllItems(items);
-  //     setFilteredItems(items);
-      
-  //     const uniqueCats = ["All", ...new Set(items.map(i => i.categoryName).filter(Boolean))];
-  //     setCategories(uniqueCats);
-  //   } catch (error) {
-  //     console.error(error);
-  //     toast.error("Failed to load products");
-  //   }
-  // };
-
-  // 🔴 2. බඩු ටික ගන්නවා
-  // 🔴 2. බඩු ටික ගන්නවා
   const fetchProducts = async (branchId) => {
     try {
       const response = await itemsAPI.search("", branchId);
       let items = Array.isArray(response.data) ? response.data : [];
       items = items.filter(item => {
-        // මේ Branch එකේ Batches තියෙනවා නම් ගන්නවා
         if (item.batches && item.batches.length > 0) return true;
         if (item.availableQty !== undefined && item.availableQty !== null) return true;
 
@@ -124,7 +107,6 @@ const POS = () => {
     }
   };
 
-  // --- Filtering ---
   useEffect(() => {
     let result = allItems;
     if (activeCategory !== "All") {
@@ -140,7 +122,6 @@ const POS = () => {
     setFilteredItems(result);
   }, [activeCategory, searchQuery, allItems]);
 
-  // --- ADD TO CART ---
   const addToCart = (item) => {
     if (!myShift) {
         toast.error("Please open a shift first!");
@@ -251,6 +232,9 @@ const POS = () => {
 
   const handlePlaceOrder = async () => {
     const total = calculateTotal();
+    // Bill එකේ පෙන්නන්න Subtotal එක ගණනය කරනවා
+    const subTotal = cartItems.reduce((acc, item) => acc + (item.unitPrice * item.qty), 0);
+
     if (orderType === ORDER_TYPES.CASH && paidAmount < total) return toast.error("Insufficient amount");
     if (orderType === ORDER_TYPES.CREDIT && !customer) return toast.error("Select customer for credit");
 
@@ -275,6 +259,22 @@ const POS = () => {
       
       const response = await ordersAPI.create(orderData);
       toast.success(`Order ${response.data.invoiceNo} success!`);
+
+      if (printRef.current) {
+         const host = window.location.hostname;
+         const storeName = host.includes('.') ? host.split('.')[0].toUpperCase() : "POS SYSTEM";
+
+         const printData = {
+             invoiceNo: response.data.invoiceNo,
+             subTotal: subTotal,
+             billDiscount: billDiscount,
+             netTotal: total,
+             paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : total,
+             orderType: orderType
+         };
+         
+         printRef.current.printOrder(printData, cartItems, storeName, myShift, customer);
+      }
 
       await fetchProducts(myShift.branchId); 
 
@@ -416,8 +416,6 @@ const POS = () => {
                 )}
             </div>
         </div>
-
-        {/* 2. RIGHT PANEL (Cart) */}
         <div className={`w-full lg:w-[380px] flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!myShift ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <Cart
                 items={cartItems}
@@ -441,6 +439,7 @@ const POS = () => {
       <CustomerSelect isOpen={showCustomerSelect} onClose={() => setShowCustomerSelect(false)} onSelectCustomer={setCustomer} />
       <CheckoutOverlay isOpen={showPayment} onClose={() => setShowPayment(false)} total={calculateTotal()} orderType={orderType} setOrderType={setOrderType} paidAmount={paidAmount} setPaidAmount={setPaidAmount} onPlaceOrder={handlePlaceOrder} loading={loading} />
       <BatchSelectModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} onSelectBatch={handleBatchSelect} item={selectedBatchItem} />
+      <ReceiptPrinter ref={printRef} />
     </div>
   );
 };

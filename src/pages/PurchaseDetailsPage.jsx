@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { purchasesAPI } from "../api/purchases.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
+import PurchaseA4Print from "../components/purchase/PurchaseA4Print"; // 👈 අලුත් A4 Printer Component එක
 import { 
   ArrowLeft, Printer, Calendar, FileText, 
   Truck, ChevronDown, ChevronUp, MapPin, Package 
@@ -15,8 +16,10 @@ const PurchaseDetailsPage = () => {
   const [purchase, setPurchase] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Expand වෙලා තියෙන GRN IDs තියාගන්න Array එකක්
   const [expandedGrnIds, setExpandedGrnIds] = useState([]);
+
+  // 🖨️ A4 Print එකට Ref එක
+  const printRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -34,12 +37,11 @@ const PurchaseDetailsPage = () => {
     }
   };
 
-  // Expand / Collapse Function
   const toggleGrn = (grnId) => {
     if (expandedGrnIds.includes(grnId)) {
-      setExpandedGrnIds(prev => prev.filter(id => id !== grnId)); // වහනවා
+      setExpandedGrnIds(prev => prev.filter(id => id !== grnId)); 
     } else {
-      setExpandedGrnIds(prev => [...prev, grnId]); // අරිනවා
+      setExpandedGrnIds(prev => [...prev, grnId]); 
     }
   };
 
@@ -49,13 +51,21 @@ const PurchaseDetailsPage = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20">
       
+      {/* 🖨️ Hidden A4 Printer Component */}
+      <PurchaseA4Print ref={printRef} />
+
       {/* --- TOP BAR --- */}
       <div className="flex justify-between items-center print:hidden">
         <Button variant="secondary" onClick={() => navigate("/purchases")}>
           <ArrowLeft size={18} className="mr-2" /> Back to History
         </Button>
-        <Button className="bg-slate-800 text-white" onClick={() => window.print()}>
-          <Printer size={18} className="mr-2" /> Print Summary
+        
+        {/* 🔥 Print Button එක Print Component එකට Connect කළා */}
+        <Button 
+            className="bg-slate-800 text-white" 
+            onClick={() => printRef.current?.printDocument(purchase)}
+        >
+          <Printer size={18} className="mr-2" /> Print / PDF (A4)
         </Button>
       </div>
 
@@ -91,7 +101,7 @@ const PurchaseDetailsPage = () => {
             <div className="bg-slate-100 p-3 rounded-lg inline-block min-w-[200px]">
                 <div className="text-xs text-slate-500 uppercase font-bold">Grand Total</div>
                 <div className="text-2xl font-bold text-slate-800">
-                    {purchase.grandTotal.toLocaleString()} <span className="text-sm text-slate-500">LKR</span>
+                    {purchase.grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})} <span className="text-sm text-slate-500">LKR</span>
                 </div>
             </div>
           </div>
@@ -137,7 +147,7 @@ const PurchaseDetailsPage = () => {
                             <div className="text-right">
                                 <div className="text-xs text-slate-400 uppercase font-semibold">Sub Total</div>
                                 <div className="font-bold text-slate-800 text-lg">
-                                    {grn.totalAmount.toLocaleString()}
+                                    {grn.totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
                                 </div>
                             </div>
                             <div className="text-slate-400">
@@ -188,13 +198,6 @@ const PurchaseDetailsPage = () => {
                                                 </tr>
                                             ))}
                                         </tbody>
-                                        {/* Optional: Sub Total Row for items check */}
-                                        {/* <tfoot className="bg-slate-50 border-t">
-                                            <tr>
-                                                <td colSpan="6" className="p-2 text-right text-xs font-bold text-slate-400 uppercase">Items Total</td>
-                                                <td className="p-2 pr-6 text-right font-bold text-slate-600">{grn.totalAmount.toLocaleString()}</td>
-                                            </tr>
-                                        </tfoot> */}
                                     </table>
                                 </div>
                              )}
