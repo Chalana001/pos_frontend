@@ -1,3 +1,5 @@
+// src/utils/permissions.js
+
 export const ROLES = {
   ADMIN: 'ADMIN',
   MANAGER: 'MANAGER',
@@ -5,44 +7,41 @@ export const ROLES = {
 };
 
 export const PERMISSIONS = {
-  // POS
+  // --- Dashboard & Reports ---
+  VIEW_DASHBOARD: [ROLES.MANAGER, ROLES.ADMIN],
+  VIEW_REPORTS: [ROLES.MANAGER, ROLES.ADMIN],
+
+  // --- POS & Sales ---
   ACCESS_POS: [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN],
+  VIEW_SALES: [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN], // අලුතින් එකතු කළා
+  CANCEL_ORDERS: [ROLES.MANAGER, ROLES.ADMIN],
   
-  // Customers
+  // --- Customers ---
   MANAGE_CUSTOMERS: [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN],
   
-  // Items
-  MANAGE_ITEMS: [ROLES.MANAGER, ROLES.ADMIN],
+  // --- Items ---
   VIEW_ITEMS: [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN],
+  MANAGE_ITEMS: [ROLES.MANAGER, ROLES.ADMIN], // Create, Edit, Delete
   
-  // Stock
+  // --- Stock ---
   VIEW_STOCK: [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN],
   ADJUST_STOCK: [ROLES.MANAGER, ROLES.ADMIN],
   TRANSFER_STOCK: [ROLES.MANAGER, ROLES.ADMIN],
 
-   // Purchases
+  // --- Purchases ---
   VIEW_PURCHASES: [ROLES.MANAGER, ROLES.ADMIN],
   NEW_PURCHASE: [ROLES.MANAGER, ROLES.ADMIN],
   
-  // Reports
-  VIEW_REPORTS: [ROLES.MANAGER, ROLES.ADMIN],
-  VIEW_DASHBOARD: [ROLES.MANAGER, ROLES.ADMIN],
-  
-  // Shifts
+  // --- Shifts ---
   MANAGE_SHIFTS: [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN],
   MANAGE_SHIFTS_HISTORY: [ROLES.MANAGER, ROLES.ADMIN],
   
-  // Expenses & Cash Drops
+  // --- Expenses & Cash Drops ---
   RECORD_EXPENSES: [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN],
   
-  // Branches
+  // --- Administration ---
   MANAGE_BRANCHES: [ROLES.ADMIN],
-  
-  // Users
   MANAGE_USERS: [ROLES.ADMIN],
-  
-  // Cancel Orders
-  CANCEL_ORDERS: [ROLES.MANAGER, ROLES.ADMIN],
 };
 
 export const hasPermission = (userRole, permission) => {

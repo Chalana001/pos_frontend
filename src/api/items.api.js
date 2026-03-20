@@ -1,8 +1,10 @@
 import api from "./axios";
 
 export const itemsAPI = {
-  getAll: () => api.get("/items"),
+
   getWithStock: (params = {}) => api.get("/items/with-stock", { params }),
+  getAll: (params = {}) => api.get("/items", { params }),
+
   createWithStocks: (data) => api.post("/items/create-with-stocks", data),
 
   getByBarcode: (barcode, branchId) =>

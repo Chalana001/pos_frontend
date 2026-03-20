@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Search, Package, AlertTriangle, Settings2, ArrowRightLeft } from "lucide-react"; // ✅ ArrowRightLeft එකතු කළා
+import { Search, Package, AlertTriangle, Settings2, ArrowRightLeft } from "lucide-react"; 
 
 import { stockAPI } from "../api/stock.api";
 import { itemsAPI } from "../api/items.api"; 
@@ -21,19 +21,20 @@ const Stock = () => {
   const { user } = useAuth();
   const { selectedBranchId } = useBranch();
 
-  // --- Main Stock Data ---
   const [stockItems, setStockItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [branches, setBranches] = useState([]); // ✅ Branches ලිස්ට් එක තියාගන්න
+  const [branches, setBranches] = useState([]); 
 
-  // --- Common Modal States ---
+  const [page, setPage] = useState(0);
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemBatches, setItemBatches] = useState([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- Adjustment States ---
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustFormData, setAdjustFormData] = useState({
     batchId: '',
@@ -42,7 +43,6 @@ const Stock = () => {
     reason: '',
   });
 
-  // --- Transfer States ---
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferFormData, setTransferFormData] = useState({
     batchId: '',
@@ -51,11 +51,10 @@ const Stock = () => {
     notes: '',
   });
 
-  // --- Fetch Branches on Mount ---
   useEffect(() => {
     const fetchBranches = async () => {
       try {
-        const res = await api.get('/branches'); // ඔයාගේ branches ගන්න API endpoint එක
+        const res = await api.get('/branches');
         setBranches(res.data || []);
       } catch (error) {
         toast.error("Failed to load branches");
@@ -64,12 +63,19 @@ const Stock = () => {
     fetchBranches();
   }, []);
 
-  // --- Fetch Main Stock Table Data ---
   const fetchStock = async () => {
     setLoading(true);
     try {
-      const response = await stockAPI.getByBranch(selectedBranchId);
-      setStockItems(response.data || []);
+      const currentBranchId = selectedBranchId || 0;
+      const response = await stockAPI.getByBranch(currentBranchId, {
+        search: searchQuery,
+        page: page,
+        size: pageSize
+      });
+      
+      const itemsArray = response.data.content ? response.data.content : (Array.isArray(response.data) ? response.data : []);
+      setStockItems(itemsArray);
+      setTotalPages(response.data.totalPages || 0);
     } catch (error) {
       toast.error("Failed to fetch stock");
       setStockItems([]);
@@ -79,23 +85,18 @@ const Stock = () => {
   };
 
   useEffect(() => {
-    fetchStock();
+    const timer = setTimeout(() => {
+      fetchStock();
+    }, 500);
+
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranchId]);
+  }, [selectedBranchId, searchQuery, page]);
 
-  // --- Calculations & Filters ---
-  const filteredStock = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return stockItems;
-
-    return stockItems.filter((item) => {
-      return (
-        item?.itemName?.toLowerCase().includes(q) ||
-        String(item?.barcode || "").toLowerCase().includes(q) ||
-        String(item?.itemId || "").includes(q)
-      );
-    });
-  }, [stockItems, searchQuery]);
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
+    setPage(0);
+  };
 
   const lowStockItems = useMemo(() => {
     return stockItems.filter((item) => (item?.totalQuantity ?? 0) <= 0);
@@ -109,8 +110,6 @@ const Stock = () => {
     }, 0);
   }, [stockItems]);
 
-  // --- Common Helper: Load Batches ---
-  // --- Common Helper: Load Batches ---
   const loadItemBatches = async (item, setFormState) => {
     setSelectedItem(item);
     setLoadingBatches(true);
@@ -119,14 +118,9 @@ const Stock = () => {
     try {
       const currentBranchId = selectedBranchId || 0;
       
-      // ✅ itemsAPI.getById වෙනුවට itemsAPI.search එක පාවිච්චි කරනවා
-      // මේකට Branch ID එක යවන නිසා Backend එකෙන්ම Batches ටික ලස්සනට පෙරලා එවනවා
       const response = await itemsAPI.search(item.itemName, currentBranchId);
       
-      // Search result එකෙන් අපිට ඕන Item එක හරියටම හොයාගන්නවා
       const matchedItem = response.data?.find(i => i.id === item.itemId);
-      
-      // Backend එකෙන් දැනටමත් Filter කරලා එවපු නිසා, Frontend එකෙන් ආයේ Filter කරන්න ඕනේ නෑ!
       const branchBatches = matchedItem?.batches || [];
       
       setItemBatches(branchBatches);
@@ -141,7 +135,7 @@ const Stock = () => {
       setLoadingBatches(false);
     }
   };
-  // --- Adjustment Handlers ---
+
   const handleOpenAdjust = async (item) => {
     setAdjustFormData({ batchId: '', type: ADJUSTMENT_TYPES.MANUAL, qty: '', reason: '' });
     setShowAdjustModal(true);
@@ -173,14 +167,12 @@ const Stock = () => {
     }
   };
 
-  // --- Transfer Handlers ---
   const handleOpenTransfer = async (item) => {
     setTransferFormData({ batchId: '', toBranchId: '', qty: '', notes: '' });
     setShowTransferModal(true);
     await loadItemBatches(item, setTransferFormData);
   };
 
-  // --- Transfer Handlers ---
   const handleTransferSubmit = async (e) => {
     e.preventDefault();
     if(!transferFormData.batchId) return toast.error("Please select a batch");
@@ -190,11 +182,10 @@ const Stock = () => {
     try {
       const currentBranchId = selectedBranchId || 0;
       
-      // ✅ Backend එක බලාපොරොත්තු වෙන හරියටම ගැලපෙන JSON Payload එක හදනවා
       const payload = {
         fromBranchId: currentBranchId,
         toBranchId: parseInt(transferFormData.toBranchId),
-        note: transferFormData.notes, // Frontend eke thiyenne 'notes', eka 'note' kiyala yawanawa
+        note: transferFormData.notes, 
         items: [
           {
             itemId: selectedItem.itemId,
@@ -216,7 +207,6 @@ const Stock = () => {
     }
   };
 
-  // --- Table Columns ---
   const columns = useMemo(
     () => [
       { header: "Item ID", accessor: "itemId" },
@@ -248,7 +238,6 @@ const Stock = () => {
           );
         },
       },
-      // ✅ Actions: Adjust and Transfer Buttons
       {
         header: "Actions",
         render: (item) => (
@@ -266,7 +255,7 @@ const Stock = () => {
               size="sm" 
               onClick={() => handleOpenTransfer(item)}
               className="flex items-center gap-1 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 border-none"
-              disabled={(item.totalQuantity ?? 0) <= 0} // Qty 0 නම් යවන්න බෑනේ
+              disabled={(item.totalQuantity ?? 0) <= 0} 
             >
               <ArrowRightLeft size={16} /> Transfer
             </Button>
@@ -284,12 +273,11 @@ const Stock = () => {
         <h1 className="text-3xl font-bold text-slate-800">Stock Inventory</h1>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-slate-600 mb-2">Total Items</h3>
+              <h3 className="text-sm font-medium text-slate-600 mb-2">Total Items (Current Page)</h3>
               <p className="text-2xl font-bold text-slate-800">{stockItems.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -301,7 +289,7 @@ const Stock = () => {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-slate-600 mb-2">Out of Stock Items</h3>
+              <h3 className="text-sm font-medium text-slate-600 mb-2">Out of Stock (Current Page)</h3>
               <p className="text-2xl font-bold text-red-600">{lowStockItems.length}</p>
             </div>
             <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
@@ -311,22 +299,21 @@ const Stock = () => {
         </Card>
 
         <Card>
-          <h3 className="text-sm font-medium text-slate-600 mb-2">Total Stock Value</h3>
+          <h3 className="text-sm font-medium text-slate-600 mb-2">Stock Value (Current Page)</h3>
           <p className="text-2xl font-bold text-green-600">LKR {Number(totalValue).toFixed(2)}</p>
         </Card>
       </div>
 
-      {/* Table + Search */}
-      <Card>
-        <div className="mb-4">
-          <div className="relative">
+      <Card className="p-0 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+          <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearch}
               placeholder="Search by name, barcode, or ID..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all shadow-sm"
             />
           </div>
         </div>
@@ -336,13 +323,34 @@ const Stock = () => {
             <LoadingSpinner size="lg" text="Loading stock..." />
           </div>
         ) : (
-          <Table columns={columns} data={filteredStock} />
+          <Table columns={columns} data={stockItems} />
         )}
+
+        <div className="flex justify-between items-center p-4 bg-slate-50 border-t">
+          <span className="text-sm text-slate-500">
+             Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
+          </span>
+          <div className="flex gap-2">
+            <Button 
+                disabled={page === 0 || loading} 
+                onClick={() => setPage(page - 1)} 
+                variant="secondary" 
+                className="px-3 py-1 text-sm"
+            >
+                Prev
+            </Button>
+            <Button 
+                disabled={page >= totalPages - 1 || loading} 
+                onClick={() => setPage(page + 1)} 
+                variant="secondary" 
+                className="px-3 py-1 text-sm"
+            >
+                Next
+            </Button>
+          </div>
+        </div>
       </Card>
 
-      {/* ========================================================= */}
-      {/* 1. ADJUST STOCK MODAL */}
-      {/* ========================================================= */}
       <Modal
         isOpen={showAdjustModal}
         onClose={() => setShowAdjustModal(false)}
@@ -353,7 +361,6 @@ const Stock = () => {
             <div className="py-8"><LoadingSpinner text="Loading batches..." /></div>
           ) : (
             <>
-              {/* Batch Select */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Batch *</label>
                 {itemBatches.length === 1 ? (
@@ -380,7 +387,6 @@ const Stock = () => {
                 )}
               </div>
 
-              {/* Adjustment Details */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Adjustment Type *</label>
                 <select
@@ -428,9 +434,6 @@ const Stock = () => {
         </form>
       </Modal>
 
-      {/* ========================================================= */}
-      {/* 2. TRANSFER STOCK MODAL */}
-      {/* ========================================================= */}
       <Modal
         isOpen={showTransferModal}
         onClose={() => setShowTransferModal(false)}
@@ -441,7 +444,6 @@ const Stock = () => {
             <div className="py-8"><LoadingSpinner text="Loading batches..." /></div>
           ) : (
             <>
-              {/* Batch Select */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">From Batch *</label>
                 {itemBatches.length === 1 ? (
@@ -468,7 +470,6 @@ const Stock = () => {
                 )}
               </div>
 
-              {/* Destination Branch Select */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">To Branch *</label>
                 <select
@@ -479,7 +480,7 @@ const Stock = () => {
                 >
                   <option value="">-- Select Destination Branch --</option>
                   {branches
-                    .filter(b => String(b.id) !== String(selectedBranchId || 0)) // තමන්ගේම Branch එකට යවන්න බැරි වෙන්න ෆිල්ටර් කළා
+                    .filter(b => String(b.id) !== String(selectedBranchId || 0)) 
                     .map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}
@@ -488,7 +489,6 @@ const Stock = () => {
                 </select>
               </div>
 
-              {/* Quantity */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Quantity to Transfer *</label>
                 <input
@@ -502,7 +502,6 @@ const Stock = () => {
                 />
               </div>
 
-              {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Notes (Optional)</label>
                 <textarea

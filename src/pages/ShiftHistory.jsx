@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { RefreshCcw, User, Calendar, Tag } from "lucide-react";
 import { shiftsAPI } from "../api/shifts.api";
 import { useAuth } from "../context/AuthContext";
-import { useBranch } from "../context/BranchContext"; // ✅ BranchContext එක ගත්තා
+import { useBranch } from "../context/BranchContext"; 
 import { formatCurrency, formatDateTime } from "../utils/formatters";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
@@ -10,13 +10,16 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const ShiftHistory = () => {
   const { user } = useAuth();
-  const { selectedBranchId } = useBranch(); // ✅ Global branch selector එකෙන් අගය ගන්නවා
+  const { selectedBranchId } = useBranch();
   const isAdmin = user?.role === "ADMIN" || user?.role === "MANAGER";
 
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters State
+  const [page, setPage] = useState(0);
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
@@ -27,20 +30,24 @@ const ShiftHistory = () => {
   const fetchShifts = useCallback(async () => {
     setLoading(true);
     try {
-      // ✅ Global branchId එක filters සමඟ එකතු කරනවා
       const queryFilters = {
         ...filters,
-        branchId: selectedBranchId, 
+        branchId: selectedBranchId,
+        page,
+        size: pageSize
       };
       
       const response = await shiftsAPI.getAll(queryFilters);
-      setShifts(response.data);
+      const itemsArray = response.data.content ? response.data.content : (Array.isArray(response.data) ? response.data : []);
+      
+      setShifts(itemsArray);
+      setTotalPages(response.data.totalPages || 0);
     } catch (error) {
       console.error("Failed to fetch shifts:", error);
     } finally {
       setLoading(false);
     }
-  }, [filters, selectedBranchId]); // ✅ branchId වෙනස් වන විටත් fetch වෙනවා
+  }, [filters, selectedBranchId, page, pageSize]);
 
   useEffect(() => {
     fetchShifts();
@@ -49,6 +56,7 @@ const ShiftHistory = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
+    setPage(0);
   };
 
   return (
@@ -65,7 +73,6 @@ const ShiftHistory = () => {
         </Button>
       </div>
 
-      {/* FILTERS CARD */}
       <Card className="bg-white border-slate-200 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1">
@@ -104,7 +111,6 @@ const ShiftHistory = () => {
         </div>
       </Card>
 
-      {/* TABLE */}
       {loading ? (
         <LoadingSpinner text="Fetching detailed records..." />
       ) : (
@@ -167,6 +173,30 @@ const ShiftHistory = () => {
               <p className="text-slate-400">No shift records found for the selected criteria.</p>
             </div>
           )}
+          
+          <div className="flex justify-between items-center p-4 bg-slate-50 border-t">
+            <span className="text-sm text-slate-500">
+              Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
+            </span>
+            <div className="flex gap-2">
+              <Button 
+                disabled={page === 0 || loading} 
+                onClick={() => setPage(page - 1)} 
+                variant="secondary" 
+                className="px-3 py-1 text-sm"
+              >
+                Prev
+              </Button>
+              <Button 
+                disabled={page >= totalPages - 1 || loading} 
+                onClick={() => setPage(page + 1)} 
+                variant="secondary" 
+                className="px-3 py-1 text-sm"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

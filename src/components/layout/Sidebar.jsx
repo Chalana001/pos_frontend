@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Menu,
   X,
-  Printer, // 🔴 Barcode එකට Icon එකක් ගත්තා (ඕනෙනම් පාවිච්චි කරන්න පුළුවන්)
+  CreditCard, // 🔴 Sales වලට අලුත් Icon එකක් ගත්තා
+  // Printer,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -28,31 +29,32 @@ const Sidebar = () => {
   // 🔴 Mobile Menu State
   const [isOpen, setIsOpen] = useState(false);
 
-  // ✅ detect items sub routes
+  // ✅ detect sub routes
   const isItemsRoute = location.pathname.startsWith("/items");
   const isEditingItem = /^\/items\/\d+\/edit$/.test(location.pathname);
 
-  // ✅ detect customers sub routes
   const isCustomersRoute = location.pathname.startsWith("/customers");
   const isEditingCustomer = /^\/customers\/\d+\/edit$/.test(location.pathname);
   const isViewingCustomer = /^\/customers\/\d+$/.test(location.pathname);
 
   const isShiftsRoute = location.pathname.startsWith("/shifts");
 
-  // ✅ detect stock sub routes
   const isStockRoute =
     location.pathname.startsWith("/stock") ||
     location.pathname.startsWith("/stocks");
+
+  const isPurchaseRoute = location.pathname.startsWith("/purchases");
+
+  // 🟢 අලුතින් එකතු කළ Sales Route Detection
+  const isSalesRoute = location.pathname.startsWith("/sales");
 
   // ✅ dropdown open states
   const [openItems, setOpenItems] = useState(false);
   const [openCustomers, setOpenCustomers] = useState(false);
   const [openShifts, setOpenShifts] = useState(false);
   const [openStock, setOpenStock] = useState(false);
-
-  // detect purchase routes
-  const isPurchaseRoute = location.pathname.startsWith("/purchases");
   const [openPurchase, setOpenPurchase] = useState(false);
+  const [openSales, setOpenSales] = useState(false); // 🟢 Sales dropdown state
 
   // ✅ auto open dropdown when inside those routes
   useEffect(() => {
@@ -75,6 +77,11 @@ const Sidebar = () => {
     if (isPurchaseRoute) setOpenPurchase(true);
   }, [isPurchaseRoute]);
 
+  // 🟢 Auto open Sales Dropdown
+  useEffect(() => {
+    if (isSalesRoute) setOpenSales(true);
+  }, [isSalesRoute]);
+
   // 🔴 Mobile එකේදී වෙනත් පිටුවකට ගියාම Sidebar එක Auto Close වෙන්න
   useEffect(() => {
     setIsOpen(false);
@@ -93,6 +100,14 @@ const Sidebar = () => {
       icon: ShoppingCart,
       path: "/pos",
       permission: "ACCESS_POS",
+    },
+    // 🟢 අලුතින් එකතු කළ Sales Menu එක (POS එකට යටින්)
+    {
+      name: "Sales",
+      icon: CreditCard,
+      path: "/sales",
+      permission: "VIEW_SALES", // ගැලපෙන permission එකක් දෙන්න
+      type: "dropdown-sales",
     },
     {
       name: "Items",
@@ -163,7 +178,6 @@ const Sidebar = () => {
 
 return (
     <>
-      {/* 🔴 xl:hidden දැම්මා - ලොකුම Screen එක එනකම් මේ ඉරි තුන පේනවා */}
       <button
         onClick={() => setIsOpen(true)}
         className="xl:hidden fixed top-4 left-4 z-40 p-2 bg-slate-900 text-white rounded-lg shadow-lg hover:bg-slate-800 transition-colors"
@@ -171,7 +185,6 @@ return (
         <Menu size={24} />
       </button>
 
-      {/* 🔴 xl:hidden දැම්මා */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 xl:hidden transition-opacity"
@@ -179,7 +192,6 @@ return (
         />
       )}
 
-      {/* 🔴 fixed xl:static දැම්මා - Tablet වලදීත් Fixed විදියට (උඩින්) එන්නේ */}
       <aside
         className={`fixed xl:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out 
         ${isOpen ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0`}
@@ -189,7 +201,6 @@ return (
             <h1 className="text-2xl font-bold">POS System</h1>
             <p className="text-sm text-slate-400 mt-1">{role}</p>
           </div>
-          {/* 🔴 xl:hidden දැම්මා - Close Button එක */}
           <button
             onClick={() => setIsOpen(false)}
             className="xl:hidden p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
@@ -207,9 +218,57 @@ return (
               item.type !== "dropdown-customers" &&
               item.type !== "dropdown-stock" &&
               item.type !== "dropdown-shifts" &&
-              item.type !== "dropdown-purchase"
+              item.type !== "dropdown-purchase" &&
+              item.type !== "dropdown-sales" // 🟢
             ) {
               if (!hasPermission(role, item.permission)) return null;
+            }
+
+            // =========================
+            // 🟢 Sales Dropdown 
+            // =========================
+            if (item.type === "dropdown-sales") {
+              const canSeeSalesMenu = hasPermission(role, "VIEW_SALES"); // Permission එක check කරන්න
+
+              if (!canSeeSalesMenu) return null;
+
+              return (
+                <div key={item.path} className="space-y-1">
+                  <button
+                    onClick={() => setOpenSales((v) => !v)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                      isSalesRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon size={20} />
+                      <span className="font-medium">Sales</span>
+                    </div>
+                    {openSales ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  </button>
+
+                  {openSales && (
+                    <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                      {hasPermission(role, "VIEW_SALES") && (
+                        <NavLink
+                          to="/sales"
+                          end
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          Sales History
+                        </NavLink>
+                      )}
+                      
+                      {/* ඔබට Sales Return වගේ වෙනත් ලින්ක් තියෙනවා නම් මෙතනින් එකතු කරන්න පුළුවන් */}
+                      
+                    </div>
+                  )}
+                </div>
+              );
             }
 
             // =========================
@@ -283,7 +342,6 @@ return (
                         </NavLink>
                       )}
 
-                      {/* 🔴 මෙන්න අලුතින් එකතු කරපු Barcode Print Page Link එක */}
                       {hasPermission(role, "VIEW_ITEMS") && (
                         <NavLink
                           to="/items/print-barcodes"
@@ -310,7 +368,7 @@ return (
             }
 
             // =========================
-            // ✅ Customers dropdown (අනිත් ඒවා වෙනසක් නෑ)
+            // ✅ Customers dropdown 
             // =========================
             if (item.type === "dropdown-customers") {
               const canSeeCustomersMenu = hasPermission(role, "MANAGE_CUSTOMERS");

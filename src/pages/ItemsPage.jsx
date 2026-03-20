@@ -4,13 +4,12 @@ import { Plus, Edit, Search, Tag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { itemsAPI } from "../api/items.api";
 import { useAuth } from "../context/AuthContext";
-import { hasPermission, canAccessAllBranches } from "../utils/permissions";
+import { hasPermission } from "../utils/permissions";
 import { formatCurrency } from "../utils/formatters";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import { useBranch } from "../context/BranchContext";
 
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -22,42 +21,47 @@ const ItemsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const { selectedBranchId } = useBranch();
-  const canSelectBranch = canAccessAllBranches(user.role);
-
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
-    fetchItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranchId, user?.role]);
+    const timer = setTimeout(() => {
+      fetchItems();
+    }, 500); 
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, page]);
 
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const params = {};
-      if (canSelectBranch && selectedBranchId) params.branchId = Number(selectedBranchId);
-      const res = await itemsAPI.getWithStock(params);
-      setItems(Array.isArray(res.data) ? res.data : []);
-    } catch {
+      const res = await itemsAPI.getAll({
+        search: searchQuery,
+        page: page,
+        size: pageSize
+      });
+      
+      const itemsArray = res.data.content ? res.data.content : (Array.isArray(res.data) ? res.data : []);
+      
+      setItems(itemsArray);
+      setTotalPages(res.data.totalPages || 0);
+      
+    } catch (error) {
+      console.error("Fetch items error:", error);
       toast.error("Failed to fetch items");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Search Logic Updated
-  const filteredItems = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return items.filter((it) =>
-      (it.name ?? "").toLowerCase().includes(q) ||
-      (it.barcode ?? "").toLowerCase().includes(q) ||
-      (it.categoryName ?? "").toLowerCase().includes(q) || // New
-      (it.subCategoryName ?? "").toLowerCase().includes(q) // New
-    );
-  }, [items, searchQuery]);
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
+    setPage(0);
+  };
 
   const columns = useMemo(() => [
     { 
@@ -74,14 +78,12 @@ const ItemsPage = () => {
       header: "Category", 
       render: (item) => (
         <div className="flex flex-col">
-           {/* Main Category */}
            <div className="flex items-center gap-1">
               <Tag size={14} className="text-blue-500" />
               <span className="font-medium text-slate-700 text-sm">
                   {item.categoryName || "Uncategorized"}
               </span>
            </div>
-           {/* Sub Category */}
            {item.subCategoryName && (
                <span className="text-xs text-slate-400 ml-5 border-l-2 border-slate-200 pl-2 mt-0.5">
                   {item.subCategoryName}
@@ -157,7 +159,7 @@ const ItemsPage = () => {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearch}
               placeholder="Search by name, barcode, category..."
               className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all shadow-sm"
             />
@@ -169,8 +171,32 @@ const ItemsPage = () => {
             <LoadingSpinner size="lg" text="Loading items..." />
           </div>
         ) : (
-          <Table columns={columns} data={filteredItems} />
+          <Table columns={columns} data={items} /> 
         )}
+
+        <div className="flex justify-between items-center p-4 bg-slate-50 border-t">
+          <span className="text-sm text-slate-500">
+             Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
+          </span>
+          <div className="flex gap-2">
+            <Button 
+                disabled={page === 0 || loading} 
+                onClick={() => setPage(page - 1)} 
+                variant="secondary" 
+                className="px-3 py-1 text-sm"
+            >
+                Prev
+            </Button>
+            <Button 
+                disabled={page >= totalPages - 1 || loading} 
+                onClick={() => setPage(page + 1)} 
+                variant="secondary" 
+                className="px-3 py-1 text-sm"
+            >
+                Next
+            </Button>
+          </div>
+        </div>
       </Card>
     </div>
   );
