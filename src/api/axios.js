@@ -5,7 +5,7 @@ import { getToken, clearAuth } from '../utils/auth';
 const currentHost = window.location.hostname; 
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || `http://${currentHost}:8080`,
+  baseURL: import.meta.env.VITE_API_URL ,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -17,6 +17,16 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // 🚀 මෙන්න මේ කෑල්ල තමයි අනිවාර්යයෙන්ම ඕනේ! (Tenant ID එක යවනවා)
+    const hostname = window.location.hostname; // උදා: demo-test.chalanawijesingha.xyz
+    const tenantId = hostname.split('.')[0];   // උදා: demo-test
+    
+    // localhost වගේ ඒවා නැතුව ඇත්තම subdomain එකක් ආවොත් විතරක් Header එක දානවා
+    if (tenantId && tenantId !== 'www' && tenantId !== 'localhost' && tenantId !== '127') {
+      config.headers['X-Tenant-ID'] = tenantId;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
