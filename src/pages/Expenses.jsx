@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Plus } from "lucide-react";
+import { Plus, Calendar } from "lucide-react"; // 🚀 Calendar එක Import කළා
 import { expensesAPI } from "../api/expenses.api";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
@@ -21,42 +21,52 @@ const Expenses = () => {
   const isCashier = user?.role === "CASHIER";
   const isAdminOrManager = user?.role === "ADMIN" || user?.role === "MANAGER";
 
-  // 🔴 අලුත් ලයින් එක: හිස් Array එකක් ආවත් හරියට අඳුරගන්නවා
   const hasActiveShift = Array.isArray(activeShift) ? activeShift.length > 0 : !!activeShift;
 
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
+  // 🚀 Date Filter State (මුලින්ම අද දවස තෝරලා තියෙන්නේ)
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+
   const [formData, setFormData] = useState({
     amount: "",
     category: EXPENSE_CATEGORIES.OTHER,
     description: "",
-    isFromDrawer: true, // Default එක true
+    isFromDrawer: true,
   });
 
+  // 🚀 Date එක වෙනස් වෙද්දිත් ඔටෝ ලෝඩ් වෙන්න Dependency එකට Dates දැම්මා
   useEffect(() => {
     fetchExpenses();
-  }, [selectedBranchId, user?.role]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId, user?.role, startDate, endDate]);
 
   const fetchExpenses = async () => {
     setLoading(true);
     try {
-      const today = new Date();
-      const from = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-      const to = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+      // 🚀 400 Bad Request එක නවත්තන Timezone-safe Date Formatting එක
+      const fromDate = new Date(startDate);
+      fromDate.setHours(0, 0, 0, 0);
+      const from = new Date(fromDate.getTime() - (fromDate.getTimezoneOffset() * 60000)).toISOString().split('.')[0];
+
+      const toDate = new Date(endDate);
+      toDate.setHours(23, 59, 59, 999);
+      const to = new Date(toDate.getTime() - (toDate.getTimezoneOffset() * 60000)).toISOString().split('.')[0];
 
       const branchId = isCashier ? user?.branchId : selectedBranchId;
+      const queryBranchId = branchId || 0;
 
-      if (!branchId) {
-        setExpenses([]);
-        return;
-      }
-
-      const response = await expensesAPI.getAll({ branchId, from, to });
-      setExpenses(Array.isArray(response.data) ? response.data : []);
+      const response = await expensesAPI.getAll({ branchId: queryBranchId, from, to });
+      
+      // 🚀 Array එකක් හෝ Page එකක් ආවත් හරියට අල්ලගන්නවා
+      const dataList = response.data?.content || response.data || [];
+      setExpenses(Array.isArray(dataList) ? dataList : []);
     } catch (err) {
       toast.error("Failed to fetch expenses");
+      setExpenses([]);
     } finally {
       setLoading(false);
     }
@@ -84,7 +94,6 @@ const Expenses = () => {
         branchId: branchId,
       };
 
-      // 🔴 Role එක අනුව isFromDrawer එක යවනවා (hasActiveShift පාවිච්චි කරලා)
       if (isAdminOrManager) {
         payload.isFromDrawer = hasActiveShift ? formData.isFromDrawer : false;
       } 
@@ -135,21 +144,44 @@ const Expenses = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      
+      {/* 🚀 HEADER with Date Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-slate-800">Expenses</h1>
-        {/* 🔴 Cashier ට Button එක Disable කරන්නේ අලුත් variable එකෙන් */}
-        <Button 
-          onClick={() => setShowModal(true)}
-          disabled={isCashier && !hasActiveShift}
-          className={isCashier && !hasActiveShift ? "opacity-50 cursor-not-allowed" : ""}
-          title={isCashier && !hasActiveShift ? "You need an open shift to record expenses" : ""}
-        >
-          <Plus size={20} className="mr-2" />
-          Record Expense
-        </Button>
+        
+        <div className="flex items-center gap-4">
+          {/* 🚀 Date Filter UI */}
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+            <Calendar size={18} className="text-slate-400" />
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                className="text-sm border-none bg-transparent focus:ring-0 text-slate-700 cursor-pointer outline-none"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <span className="text-slate-400 text-sm">to</span>
+              <input
+                type="date"
+                className="text-sm border-none bg-transparent focus:ring-0 text-slate-700 cursor-pointer outline-none"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <Button 
+            onClick={() => setShowModal(true)}
+            disabled={isCashier && !hasActiveShift}
+            className={isCashier && !hasActiveShift ? "opacity-50 cursor-not-allowed" : ""}
+            title={isCashier && !hasActiveShift ? "You need an open shift to record expenses" : ""}
+          >
+            <Plus size={20} className="mr-2" />
+            Record Expense
+          </Button>
+        </div>
       </div>
 
-      {/* 🔴 Cashier ට Active Shift එකක් නැත්නම් Warning Message එකක් පෙන්නමු */}
       {isCashier && !hasActiveShift && (
         <Card>
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -160,7 +192,6 @@ const Expenses = () => {
         </Card>
       )}
 
-      {/* 🔴 මේක තමයි අලුත් Wrapper Div එක. Cashier කෙනෙක්ට Shift එකක් නැත්නම් විතරක් පල්ලෙහා තියෙන ඔක්කොම අඳුරු වෙලා Click කරන්න බැරි වෙනවා */}
       <div className={`space-y-6 transition-all duration-300 ${isCashier && !hasActiveShift ? 'opacity-40 grayscale pointer-events-none select-none' : ''}`}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
@@ -177,7 +208,6 @@ const Expenses = () => {
       <Modal isOpen={showModal} onClose={handleCloseModal} title="Record Expense">
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* 🔴 Checkbox එක පෙන්නන්නේ අලුත් variable එක true නම් විතරයි */}
           {isAdminOrManager && hasActiveShift && (
             <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
               <input
@@ -212,7 +242,7 @@ const Expenses = () => {
             <input
               type="number"
               step="0.01"
-              className="input"
+              className="input w-full"
               placeholder="0.00"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
@@ -223,7 +253,7 @@ const Expenses = () => {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
             <textarea
-              className="input min-h-[100px]"
+              className="input w-full min-h-[100px]"
               placeholder="Enter expense details..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}

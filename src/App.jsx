@@ -1,9 +1,10 @@
-import { Toaster } from 'react-hot-toast'; // 1. Meka import karanna
+import { Toaster } from 'react-hot-toast';
+import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from "./routes/AppRoutes";
 
 export default function App() {
   return (
-    <>
+    <BrowserRouter>
       <AppRoutes />
       <Toaster 
         position="top-right" 
@@ -14,6 +15,6 @@ export default function App() {
           },
         }}
       />
-    </>
+    </BrowserRouter>
   );
 }

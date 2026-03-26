@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
-import { Plus, TrendingDown } from "lucide-react";
+import { Plus, TrendingDown, Calendar } from "lucide-react"; // 🚀 Calendar icon එක ගත්තා
 import { cashDropsAPI } from "../api/cashDrops.api";
 import { shiftsAPI } from "../api/shifts.api";
 import { useAuth } from "../context/AuthContext";
@@ -27,39 +27,53 @@ const CashDrops = () => {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
+  // 🚀 Date Filter State (මුලින්ම අද දවස තෝරලා තියෙන්නේ)
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+
   const [formData, setFormData] = useState({
     amount: "",
     reason: "",
   });
 
-  // 🔴 අලුත් වෙනස: Array එකක් ආවත් හරියට අඳුරගන්නවා
   const currentShift = Array.isArray(activeShift) ? activeShift[0] : activeShift;
   const hasOpenShift = currentShift?.status === "OPEN" || !!currentShift;
 
+  // 🚀 Date එක වෙනස් වෙද්දිත් ඔටෝ ඩේටා ලෝඩ් වෙන්න Dependency එකට Dates දැම්මා
   useEffect(() => {
     fetchCashDrops();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranchId, user?.role]);
+  }, [selectedBranchId, user?.role, startDate, endDate]); 
 
   const fetchCashDrops = async () => {
     setLoading(true);
 
     try {
-      const today = new Date();
-      const from = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-      const to = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+      // 🚀 තෝරපු දවස් දෙකට අදාළව හරියටම Time එක සෙට් කරනවා
+      const fromDate = new Date(startDate);
+      fromDate.setHours(0, 0, 0, 0);
+      const from = fromDate.toISOString();
 
+      const toDate = new Date(endDate);
+      toDate.setHours(23, 59, 59, 999);
+      const to = toDate.toISOString();
+
+      // Role එක අනුව Branch ID එක ගන්නවා (Admin නම් Context එකෙන්, Cashier නම් එයාගේම එක)
       const branchId = user?.role === "CASHIER" ? user?.branchId : selectedBranchId;
 
-      if (!branchId) {
-        setCashDrops([]);
-        return;
-      }
+      // branchId එකක් නැත්නම් (e.g. Admin All branches තෝරලා තියෙනවා නම්) 0 විදිහට යවමු 
+      // එතකොට Backend එකේ Query එකේ IS NULL කොටසෙන් ඔක්කොම එනවා.
+      const queryBranchId = branchId || 0; 
 
-      const response = await cashDropsAPI.getAll({ branchId, from, to });
-      setCashDrops(Array.isArray(response.data) ? response.data : []);
+      const response = await cashDropsAPI.getAll({ branchId: queryBranchId, from, to });
+      
+      // 🔴 අලුත් වෙනස: Spring Boot Pagination වලින් එන නිසා data.content ගන්න ඕනේ
+      const dataList = response.data?.content || response.data || [];
+      setCashDrops(Array.isArray(dataList) ? dataList : []);
+
     } catch (err) {
       toast.error("Failed to fetch cash drops");
+      setCashDrops([]);
     } finally {
       setLoading(false);
     }
@@ -92,7 +106,7 @@ const CashDrops = () => {
       if (isAdmin) {
         await shiftsAPI.cashdropById(currentShift.id, payload);
       } else {
-        await shiftsAPI.addCashDropMine(payload);
+        await shiftsAPI.addCashDropMine(payload); // මේක Cashier ගේ එක
       }
 
       toast.success("Cash drop recorded successfully");
@@ -129,23 +143,46 @@ const CashDrops = () => {
         </span>
       ),
     },
-    { header: "Recorded By", accessor: "username" }, // Backend එකෙන් එන නම මේකද කියලා ෂුවර් කරගන්න
+    { header: "Recorded By", accessor: "cashierName" }, // 🚀 Backend DTO එකේ cashierName කියලා එව්ව නිසා මේක හැදුවා
   ];
 
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-slate-800">Cash Drops</h1>
 
-        <Button 
-          onClick={() => setShowModal(true)} 
-          disabled={!hasOpenShift}
-          className={!hasOpenShift ? "opacity-50 cursor-not-allowed" : ""}
-        >
-          <Plus size={20} className="mr-2" />
-          Record Cash Drop
-        </Button>
+        <div className="flex items-center gap-4">
+          {/* 🚀 Date Filter UI කෑල්ල */}
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+            <Calendar size={18} className="text-slate-400" />
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                className="text-sm border-none bg-transparent focus:ring-0 text-slate-700 cursor-pointer outline-none"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <span className="text-slate-400 text-sm">to</span>
+              <input
+                type="date"
+                className="text-sm border-none bg-transparent focus:ring-0 text-slate-700 cursor-pointer outline-none"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Record Button */}
+          <Button 
+            onClick={() => setShowModal(true)} 
+            disabled={!hasOpenShift}
+            className={!hasOpenShift ? "opacity-50 cursor-not-allowed" : ""}
+          >
+            <Plus size={20} className="mr-2" />
+            Record Drop
+          </Button>
+        </div>
       </div>
 
       {!hasOpenShift && (
@@ -158,8 +195,8 @@ const CashDrops = () => {
         </Card>
       )}
 
-      {/* 🔴 මේක තමයි අලුත් Wrapper Div එක. Shift එකක් නැත්නම් පල්ලෙහා තියෙන ඔක්කොම අඳුරු වෙලා Click කරන්න බැරි වෙනවා */}
-      <div className={`space-y-6 transition-all duration-300 ${!hasOpenShift ? 'opacity-40 grayscale pointer-events-none select-none' : ''}`}>
+      {/* Wrapper Div */}
+      <div className={`space-y-6 transition-all duration-300 ${!hasOpenShift && user?.role === 'CASHIER' ? 'opacity-40 grayscale pointer-events-none select-none' : ''}`}>
         
         {/* STATS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -167,13 +204,12 @@ const CashDrops = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-slate-600 mb-2">
-                  Today's Total
+                  Total Drop Amount
                 </h3>
                 <p className="text-2xl font-bold text-blue-600">
                   {formatCurrency(totalCashDrops)}
                 </p>
               </div>
-
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <TrendingDown className="text-blue-600" size={24} />
               </div>
@@ -182,7 +218,7 @@ const CashDrops = () => {
 
           <Card>
             <h3 className="text-sm font-medium text-slate-600 mb-2">
-              Total Drops
+              Number of Drops
             </h3>
             <p className="text-2xl font-bold text-slate-800">
               {cashDrops.length}
@@ -221,6 +257,7 @@ const CashDrops = () => {
         title="Record Cash Drop"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form fields same as before... */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Amount *
@@ -232,14 +269,11 @@ const CashDrops = () => {
               onChange={(e) =>
                 setFormData({ ...formData, amount: e.target.value })
               }
-              className="input"
+              className="input w-full"
               placeholder="0.00"
               required
               autoFocus
             />
-            <p className="text-xs text-slate-500 mt-1">
-              Amount of cash being removed from the drawer
-            </p>
           </div>
 
           <div>
@@ -251,7 +285,7 @@ const CashDrops = () => {
               onChange={(e) =>
                 setFormData({ ...formData, reason: e.target.value })
               }
-              className="input"
+              className="input w-full"
               rows="3"
               placeholder="e.g., Safe deposit, Bank deposit, etc."
               required

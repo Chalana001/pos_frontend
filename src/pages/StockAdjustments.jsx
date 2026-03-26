@@ -52,11 +52,22 @@ const StockAdjustments = () => {
 
   const fetchItems = async () => {
     try {
-      // (Optional: මෙතනත් ඕනේ නම් Branch එකට අදාල items විතරක් ගන්න හදන්න පුළුවන්)
-      const response = await itemsAPI.getAll(); 
-      setItems(response.data);
+      const response = await itemsAPI.getAll();
+      
+      // 🚀 API එකෙන් එන්නේ කෙලින්ම Array එකක්ද, නැත්නම් 'content' / 'data' ඇතුළෙද තියෙන්නේ කියලා බලනවා
+      if (Array.isArray(response.data)) {
+        setItems(response.data);
+      } else if (response.data && Array.isArray(response.data.content)) {
+        setItems(response.data.content); // Spring Boot Pagination වල එන විදිහ
+      } else if (response.data && Array.isArray(response.data.items)) {
+        setItems(response.data.items);
+      } else {
+        console.error('API response is not an array:', response.data);
+        setItems([]); // මොනවා හරි අවුලක් ගියොත් හිස් Array එකක් දානවා (App එක කඩෙන්නේ නෑ)
+      }
     } catch (error) {
       console.error('Failed to fetch items');
+      setItems([]); // Error එකක් ආවත් App එක කඩෙන්නේ නැති වෙන්න
     }
   };
 

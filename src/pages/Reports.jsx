@@ -20,39 +20,33 @@ import Table from '../components/common/Table';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { useBranch } from "../context/BranchContext";
 
-// Chart Colors
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState('sales'); 
   const [loading, setLoading] = useState(false);
   
-  // --- Data States ---
-  const [reportData, setReportData] = useState(null);       // General List Data
-  const [profitSummary, setProfitSummary] = useState(null); // Net Profit Summary
-  
-  // 🔥 Updated: Sales Trend State is now an object to hold both data and type
+  const [reportData, setReportData] = useState(null);       
+  const [profitSummary, setProfitSummary] = useState(null); 
   const [salesTrend, setSalesTrend] = useState({ data: [], type: 'DAILY' });
 
   const { selectedBranchId } = useBranch();
   
-  // --- Date State ---
+  // 🚀 Default Dates (YYYY-MM-DD)
   const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(1)).toISOString().split('T')[0], // 1st of current month
+    from: new Date(new Date().setDate(1)).toISOString().split('T')[0], 
     to: new Date().toISOString().split('T')[0],
   });
 
-  // Ref for export
   const reportRef = useRef(null);
 
-  // --- QUICK DATE FILTER ---
   const setQuickDate = (type) => {
     const now = new Date();
     let from = new Date();
     let to = new Date();
 
     if (type === 'today') {
-       // from/to is today
+       // already today
     } else if (type === 'thisMonth') {
        from = new Date(now.getFullYear(), now.getMonth(), 1); 
        to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -64,12 +58,15 @@ const Reports = () => {
        to = new Date(now.getFullYear(), 11, 31); 
     }
 
-    const formatDate = (d) => d.toISOString().split('T')[0];
+    const formatDate = (d) => {
+      // ලංකාවේ Timezone එකට ගළපලා YYYY-MM-DD ගන්නවා
+      return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    };
+    
     setDateRange({ from: formatDate(from), to: formatDate(to) });
     toast.success(`Date filter applied: ${type.replace(/([A-Z])/g, ' $1').trim()}`);
   };
 
-  // --- API CALLS ---
   const generateReport = async (type) => {
     setLoading(true);
     setReportData(null); 
@@ -77,31 +74,28 @@ const Reports = () => {
     setSalesTrend({ data: [], type: 'DAILY' }); 
     
     try {
+      // 🚀 API එක ඉල්ලන විදිහටම YYYY-MM-DD යවනවා. 
+      // branchId එක 0 හෝ null නම් යවන්නේ නෑ (API එකේ optional නිසා)
       const params = {
-        branchId: selectedBranchId,
-        from: new Date(dateRange.from + 'T00:00:00').toISOString(),
-        to: new Date(dateRange.to + 'T23:59:59').toISOString(),
+        from: dateRange.from,
+        to: dateRange.to,
+        ...(selectedBranchId && selectedBranchId !== 0 && { branchId: selectedBranchId })
       };
 
       let response;
       switch (type) {
         case 'sales':
-          // 1. Summary Data
           response = await reportsAPI.salesSummary(params);
           
-          // 2. Trend Data (Chart) with Auto-Switch Logic
           try {
              const fromDate = new Date(dateRange.from);
              const toDate = new Date(dateRange.to);
              const diffTime = Math.abs(toDate - fromDate);
              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-             // 🔥 If range > 35 days, use MONTHLY mode
              const trendType = diffDays > 35 ? 'MONTHLY' : 'DAILY';
 
              const trendRes = await reportsAPI.salesTrend({ ...params, type: trendType });
              setSalesTrend({ data: trendRes.data, type: trendType });
-
           } catch (err) {
              console.error("Error fetching sales trend", err);
              setSalesTrend({ data: [], type: 'DAILY' });
@@ -113,15 +107,12 @@ const Reports = () => {
           break;
           
         case 'profit':
-          // 1. List Data
           response = await reportsAPI.profit({ ...params, limit: 50 });
-          // 2. Summary Data (Net Profit)
           try {
             const summaryRes = await reportsAPI.profitSummary(params);
             setProfitSummary(summaryRes.data);
           } catch (err) {
             console.error("Failed to fetch profit summary", err);
-            // Fallback
             const gross = response.data.reduce((sum, item) => sum + item.profit, 0);
             setProfitSummary({ grossProfit: gross, totalExpenses: 0, netProfit: gross });
           }
@@ -136,10 +127,12 @@ const Reports = () => {
           break;
           
         case 'lowStock':
-          response = await reportsAPI.lowStock(selectedBranchId);
+          // API එකට යවන්නේ branchId විතරයි
+          response = await reportsAPI.lowStock(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
           break;
           
         case 'creditDue':
+          // API එකට parameters නෑ
           response = await reportsAPI.creditDue();
           break;
           
@@ -156,7 +149,6 @@ const Reports = () => {
     }
   };
 
-  // --- EXPORT FUNCTIONS ---
   const exportToPDF = async () => {
     if (!reportRef.current) return;
     const canvas = await html2canvas(reportRef.current, { scale: 2 });
@@ -178,8 +170,6 @@ const Reports = () => {
     link.click();
     toast.success("Image Downloaded!");
   };
-
-  // --- SUB-COMPONENTS ---
 
   const SalesReport = ({ data, trendData }) => {
     const pieData = [
@@ -209,7 +199,6 @@ const Reports = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Payment Method Pie Chart */}
           <Card title="Payment Split">
              <div className="h-[300px] flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
@@ -230,7 +219,6 @@ const Reports = () => {
              </div>
           </Card>
 
-          {/* 🔥 Sales Trend Area Chart */}
           <Card title={`Sales Trend (${trendData.type === 'MONTHLY' ? 'Monthly' : 'Daily'})`}>
              <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -243,15 +231,14 @@ const Reports = () => {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     
-                    {/* 🔥 Dynamic X-Axis Formatting */}
                     <XAxis 
                         dataKey="date" 
                         tickFormatter={(str) => {
                             const d = new Date(str);
                             if (trendData.type === 'MONTHLY') {
-                                return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }); // Jan 26
+                                return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
                             }
-                            return `${d.getDate()}/${d.getMonth()+1}`; // 01/02
+                            return `${d.getDate()}/${d.getMonth()+1}`;
                         }}
                         style={{ fontSize: '12px' }}
                     />
@@ -262,7 +249,8 @@ const Reports = () => {
                             weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
                         })} 
                     />
-                    <Area type="monotone" dataKey="amount" stroke="#3B82F6" fillOpacity={1} fill="url(#colorSales)" />
+                    {/* 🚀 API එකෙන් එන්නේ sales නිසා dataKey="sales" කළා */}
+                    <Area type="monotone" dataKey="sales" stroke="#3B82F6" fillOpacity={1} fill="url(#colorSales)" />
                   </AreaChart>
                 </ResponsiveContainer>
              </div>
@@ -279,7 +267,6 @@ const Reports = () => {
 
     return (
     <div className="space-y-6 animate-in fade-in">
-       {/* Net Profit Cards */}
        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
          <Card className="bg-blue-50 border-blue-100">
            <h3 className="text-xs font-bold text-slate-500 uppercase">Gross Profit</h3>
@@ -315,6 +302,7 @@ const Reports = () => {
          <Table 
             columns={[
               { header: 'Product', accessor: 'itemName' },
+              { header: 'Qty Sold', accessor: 'qtySold' },
               { header: 'Cost', render: (i) => formatCurrency(i.cost) },
               { header: 'Revenue', render: (i) => formatCurrency(i.revenue) },
               { header: 'Profit', render: (i) => <span className="font-bold text-green-600">{formatCurrency(i.profit)}</span> }
@@ -325,10 +313,8 @@ const Reports = () => {
     </div>
   )};
 
-  // --- MAIN RENDER ---
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4">
-      {/* Header & Filters */}
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center">
            <div>
@@ -336,7 +322,6 @@ const Reports = () => {
                <p className="text-slate-500">Insights & Performance Reports</p>
            </div>
            
-           {/* Date Picker */}
            <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
                <input 
                   type="date" value={dateRange.from}
@@ -353,12 +338,11 @@ const Reports = () => {
                   onClick={() => generateReport(activeTab)}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 ml-2 shadow-sm"
                >
-                  Run Report
+                 Run Report
                </button>
            </div>
         </div>
 
-        {/* Quick Date Filters */}
         <div className="flex gap-2">
            {['today', 'thisMonth', 'lastMonth', 'thisYear'].map(type => (
                <button 
@@ -372,7 +356,6 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-6 border-b border-slate-200 pb-2">
         {[
           { id: 'sales', label: 'Sales Summary', icon: TrendingUp },
@@ -397,7 +380,6 @@ const Reports = () => {
         ))}
       </div>
 
-      {/* Report Content */}
       <div className="min-h-[500px]">
         {loading ? (
           <div className="h-64 flex items-center justify-center">
@@ -411,7 +393,6 @@ const Reports = () => {
            </div>
         ) : (
           <div className="space-y-6">
-             {/* Action Buttons */}
              <div className="flex justify-end gap-2 mb-4">
                 <Button variant="outline" size="sm" onClick={exportChartAsImage}>
                    <PieIcon size={16} className="mr-2" /> Save Chart
@@ -421,13 +402,12 @@ const Reports = () => {
                 </Button>
              </div>
 
-             {/* Printable Area */}
              <div ref={reportRef} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
                 <div className="mb-8 border-b border-slate-100 pb-4 flex justify-between items-end">
                    <div>
                       <h2 className="text-2xl font-bold text-slate-800 capitalize">{activeTab.replace(/([A-Z])/g, ' $1').trim()} Report</h2>
                       <p className="text-sm text-slate-500 mt-1">
-                        Period: {new Date(dateRange.from).toLocaleDateString()} — {new Date(dateRange.to).toLocaleDateString()}
+                        Period: {dateRange.from} — {dateRange.to}
                       </p>
                    </div>
                    <div className="text-right">
@@ -435,7 +415,6 @@ const Reports = () => {
                    </div>
                 </div>
 
-                {/* Render Views */}
                 {activeTab === 'sales' && <SalesReport data={reportData} trendData={salesTrend} />}
                 
                 {activeTab === 'topSelling' && (
@@ -453,7 +432,17 @@ const Reports = () => {
                           </BarChart>
                         </ResponsiveContainer>
                       </Card>
-                      <Card title="Details"><Table columns={[{header:'#', render:(_,i)=>i+1}, {header:'Item', accessor:'itemName'}, {header:'Qty', accessor:'qtySold'}, {header:'Revenue', render:(i)=>formatCurrency(i.revenue)}]} data={reportData} /></Card>
+                      <Card title="Details">
+                         <Table 
+                            columns={[
+                               {header:'#', render:(_,i)=>i+1}, 
+                               {header:'Item', accessor:'itemName'}, 
+                               {header:'Qty Sold', accessor:'qtySold'}, 
+                               {header:'Revenue', render:(i)=>formatCurrency(i.revenue)}
+                            ]} 
+                            data={reportData} 
+                         />
+                      </Card>
                    </div>
                 )}
                 
@@ -473,13 +462,23 @@ const Reports = () => {
 
                 {activeTab === 'creditDue' && (
                   <Card title="Credit Due List">
-                    <Table columns={[{header:'Customer', accessor:'customerName'}, {header:'Phone', render:(i)=>i.phone||'N/A'}, {header:'Due Amount', render:(i)=><span className="text-red-600 font-bold">{formatCurrency(i.dueAmount)}</span>}]} data={reportData} />
+                    {/* 🚀 API එකෙන් phone එවන්නේ නැති නිසා Table එකෙන් අයින් කළා */}
+                    <Table columns={[
+                        {header:'Customer', accessor:'customerName'}, 
+                        {header:'Due Amount', render:(i)=><span className="text-red-600 font-bold">{formatCurrency(i.dueAmount)}</span>}
+                    ]} data={reportData} />
                   </Card>
                 )}
 
                 {activeTab === 'lowStock' && (
                    <Card title="Low Stock Alerts">
-                     <Table columns={[{header:'Item', accessor:'itemName'}, {header:'Stock', render:(i)=><span className="text-red-600 font-bold">{i.quantity}</span>}, {header:'Reorder Level', accessor:'reorderLevel'}, {header:'Status', render:()=><span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">LOW</span>}]} data={reportData} />
+                     {/* 🚀 API එකෙන් එවන totalQty දැම්මා */}
+                     <Table columns={[
+                         {header:'Item', accessor:'itemName'}, 
+                         {header:'Stock', render:(i)=><span className="text-red-600 font-bold">{i.totalQty}</span>}, 
+                         {header:'Reorder Level', accessor:'reorderLevel'}, 
+                         {header:'Status', render:()=><span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">LOW</span>}
+                     ]} data={reportData} />
                    </Card>
                 )}
              </div>
