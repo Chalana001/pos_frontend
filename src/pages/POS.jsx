@@ -18,8 +18,11 @@ import ReceiptPrinter from "../components/pos/ReceiptPrinter";
 
 const POS = () => {
   const { user } = useAuth();
-  const { selectedBranchId } = useBranch(); // ✅ Admin තෝරපු Branch එක මෙතනින් ගන්නවා
+  const { selectedBranchId } = useBranch(); 
   const printRef = useRef();
+  
+  // 🚀 අලුත් Ref එක Search Box එක Auto Focus කරන්න
+  const searchInputRef = useRef(null);
   
   const [myShift, setMyShift] = useState(null);
   const [loadingShift, setLoadingShift] = useState(true);
@@ -44,10 +47,15 @@ const POS = () => {
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
 
-  // Admin ද නැද්ද කියලා මෙතනින් චෙක් කරනවා
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
 
-  // 🔴 1. SHIFT LOADING LOGIC (Admin/Cashier Separation)
+  // 🚀 පේජ් එක ලෝඩ් වෙද්දිම Search Box එක Focus කරනවා
+  useEffect(() => {
+    if (searchInputRef.current && !loadingShift && myShift) {
+      searchInputRef.current.focus();
+    }
+  }, [loadingShift, myShift]);
+
   useEffect(() => {
     const loadMyShift = async () => {
       try {
@@ -55,16 +63,13 @@ const POS = () => {
         let res;
 
         if (isAdminUser) {
-          // --- ADMIN නම් ---
           if (!selectedBranchId || selectedBranchId === 0) {
             setMyShift(null);
             setLoadingShift(false);
             return;
           }
-          // අලුත්ම Endpoint එකට Branch ID එකත් එක්ක කෝල් කරනවා
           res = await shiftsAPI.getAdminCurrent(selectedBranchId);
         } else {
-          // --- CASHIER නම් ---
           res = await shiftsAPI.getMine();
         }
 
@@ -76,7 +81,6 @@ const POS = () => {
         }
       } catch (error) {
         setMyShift(null);
-
       } finally {
         setLoadingShift(false);
       }
@@ -92,7 +96,6 @@ const POS = () => {
       items = items.filter(item => {
         if (item.batches && item.batches.length > 0) return true;
         if (item.availableQty !== undefined && item.availableQty !== null) return true;
-
         return false;
       });
 
@@ -150,6 +153,8 @@ const POS = () => {
 
     if (stockQty < qty) {
         toast.error(`Insufficient stock! Available: ${stockQty}`);
+        // 🚀 Stock නැතත් Focus එක තියාගන්නවා
+        if (searchInputRef.current) searchInputRef.current.focus();
         return;
     }
 
@@ -162,6 +167,7 @@ const POS = () => {
       const nextQty = newItems[existingIndex].qty + qty;
       if (nextQty > stockQty) {
         toast.error(`Low stock. Available: ${stockQty}`);
+        if (searchInputRef.current) searchInputRef.current.focus();
         return;
       }
       newItems[existingIndex] = { ...newItems[existingIndex], qty: nextQty };
@@ -183,6 +189,43 @@ const POS = () => {
         },
       ]);
     }
+
+    // 🚀 අයිටම් එක ඇඩ් වුණාම අනිවාර්යයෙන්ම සර්ච් එක හිස් කරලා Focus කරනවා
+    setSearchQuery("");
+    if (searchInputRef.current) {
+        searchInputRef.current.focus();
+    }
+  };
+
+  // 🚀 Enter එබුවම Barcode/Name එකෙන් අයිටම් එක හොයලා ඇඩ් කරන Function එක
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+        e.preventDefault(); // Default submit වෙන එක නවත්තන්න
+
+        if (!searchQuery.trim() || filteredItems.length === 0) {
+             toast.error("Item not found!");
+             setSearchQuery("");
+             return;
+        }
+
+        // හරියටම Barcode එකට මැච් වෙන එකක් තියෙනවද බලනවා (Exact Match)
+        const exactMatch = filteredItems.find(
+            item => item.barcode?.toLowerCase() === searchQuery.toLowerCase()
+        );
+
+        // Barcode එකට Match වුණේ නැත්නම්, Filter වෙලා තියෙන ලිස්ට් එකේ පළවෙනි එක ගන්නවා
+        const itemToAdd = exactMatch || filteredItems[0];
+
+        if (itemToAdd) {
+             const stockQty = Number(itemToAdd.availableQty ?? 0);
+             if (stockQty <= 0) {
+                 toast.error("Item is Out of Stock!");
+                 setSearchQuery("");
+                 return;
+             }
+             addToCart(itemToAdd);
+        }
+    }
   };
 
   const updateQuantity = (index, newQty) => {
@@ -195,10 +238,14 @@ const POS = () => {
     const newItems = [...cartItems];
     newItems[index].qty = newQty;
     setCartItems(newItems);
+    
+    // Quantity මාරු කළාමත් Focus එක ආපහු ගන්නවා
+    if (searchInputRef.current) searchInputRef.current.focus();
   };
 
   const removeItem = (index) => {
     setCartItems(cartItems.filter((_, i) => i !== index));
+    if (searchInputRef.current) searchInputRef.current.focus();
   };
 
   const handleInlineDiscount = (index, type, value) => {
@@ -232,7 +279,6 @@ const POS = () => {
 
   const handlePlaceOrder = async () => {
     const total = calculateTotal();
-    // Bill එකේ පෙන්නන්න Subtotal එක ගණනය කරනවා
     const subTotal = cartItems.reduce((acc, item) => acc + (item.unitPrice * item.qty), 0);
 
     if (orderType === ORDER_TYPES.CASH && paidAmount < total) return toast.error("Insufficient amount");
@@ -283,6 +329,11 @@ const POS = () => {
       setOrderType(ORDER_TYPES.CASH);
       setBillDiscount(0);
       setShowPayment(false);
+      
+      // 🚀 ඔර්ඩර් එක ඉවර වුණාමත් ආයෙත් Focus කරනවා
+      if (searchInputRef.current) {
+          searchInputRef.current.focus();
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed");
     } finally {
@@ -295,6 +346,8 @@ const POS = () => {
   useKeyboard("F9", handleCheckout);
   useKeyboard("F1", () => showPayment && setOrderType(ORDER_TYPES.CASH));
   useKeyboard("F2", () => showPayment && setOrderType(ORDER_TYPES.CREDIT));
+  
+  // Enter shortcut එක checkout overlay එකේදී විතරක් වැඩ කරන්න හැදුවා
   useKeyboard("Enter", () => {
     if (showPayment && !loading) handlePlaceOrder();
   });
@@ -306,7 +359,6 @@ const POS = () => {
   return (
     <div className="flex h-full gap-1.5 lg:gap-4 bg-slate-100 p-1.5 lg:p-4 font-sans text-slate-800 flex-col overflow-y-auto lg:overflow-hidden">
       
-      {/* 🔴 Warning Message */}
       {!myShift && (
         <div className="bg-orange-50 border border-orange-200 text-orange-800 px-3 py-2 lg:px-4 lg:py-3 rounded-lg lg:rounded-xl flex items-center justify-between shadow-sm flex-shrink-0">
             <div className="flex items-center gap-2 lg:gap-3">
@@ -323,10 +375,8 @@ const POS = () => {
         </div>
       )}
 
-      {/* Main Wrapper */}
       <div className="flex flex-col lg:flex-row flex-1 gap-1.5 lg:gap-4 lg:overflow-hidden lg:h-full">
         
-        {/* 1. CENTER AREA (Products) */}
         <div className="flex flex-col h-[55vh] flex-shrink-0 lg:h-full lg:flex-1 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
             
             <header className="px-2 py-2 lg:px-6 lg:py-5 bg-white border-b border-slate-100 flex flex-row items-center justify-between gap-2 flex-shrink-0">
@@ -339,10 +389,12 @@ const POS = () => {
                   <div className="relative flex-1">
                       <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 lg:w-4 lg:h-4" />
                       <input
+                        ref={searchInputRef} // 🚀 Ref එක මෙතනට දුන්නා
                         type="text"
-                        placeholder="Search products..."
+                        placeholder="Search barcode or name... (Enter to add)"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={handleSearchKeyDown} // 🚀 Enter Key Event එක ඇල්ලුවා
                         disabled={!myShift} 
                         className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs lg:text-sm disabled:opacity-50"
                       />
@@ -435,10 +487,9 @@ const POS = () => {
         </div>
       </div>
 
-      {/* Modals */}
-      <CustomerSelect isOpen={showCustomerSelect} onClose={() => setShowCustomerSelect(false)} onSelectCustomer={setCustomer} />
-      <CheckoutOverlay isOpen={showPayment} onClose={() => setShowPayment(false)} total={calculateTotal()} orderType={orderType} setOrderType={setOrderType} paidAmount={paidAmount} setPaidAmount={setPaidAmount} onPlaceOrder={handlePlaceOrder} loading={loading} />
-      <BatchSelectModal isOpen={showBatchModal} onClose={() => setShowBatchModal(false)} onSelectBatch={handleBatchSelect} item={selectedBatchItem} />
+      <CustomerSelect isOpen={showCustomerSelect} onClose={() => { setShowCustomerSelect(false); if(searchInputRef.current) searchInputRef.current.focus(); }} onSelectCustomer={setCustomer} />
+      <CheckoutOverlay isOpen={showPayment} onClose={() => { setShowPayment(false); if(searchInputRef.current) searchInputRef.current.focus(); }} total={calculateTotal()} orderType={orderType} setOrderType={setOrderType} paidAmount={paidAmount} setPaidAmount={setPaidAmount} onPlaceOrder={handlePlaceOrder} loading={loading} />
+      <BatchSelectModal isOpen={showBatchModal} onClose={() => { setShowBatchModal(false); if(searchInputRef.current) searchInputRef.current.focus(); }} onSelectBatch={handleBatchSelect} item={selectedBatchItem} />
       <ReceiptPrinter ref={printRef} />
     </div>
   );

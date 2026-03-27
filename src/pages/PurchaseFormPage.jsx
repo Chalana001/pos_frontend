@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
@@ -12,6 +12,10 @@ import { toast } from "react-hot-toast";
 
 const PurchaseFormPage = () => {
   const navigate = useNavigate();
+
+  // 🚀 Refs
+  const searchInputRef = useRef(null);
+  const firstQtyInputRef = useRef(null); // 🚀 පළවෙනි Qty Input එක අල්ලන්න
 
   // --- HEADER DATA ---
   const [branches, setBranches] = useState([]);
@@ -28,7 +32,6 @@ const PurchaseFormPage = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // This object holds inputs for each branch: { branchId: { cost, sell, qty, expiry } }
   const [branchInputs, setBranchInputs] = useState({});
 
   // --- CART STATE ---
@@ -36,6 +39,9 @@ const PurchaseFormPage = () => {
 
   useEffect(() => {
     loadInitialData();
+    if (searchInputRef.current) {
+        searchInputRef.current.focus();
+    }
   }, []);
 
   const loadInitialData = async () => {
@@ -64,10 +70,31 @@ const PurchaseFormPage = () => {
       return;
     }
     try {
-      const res = await itemsAPI.search(q);
+      const res = await itemsAPI.search(q); 
       setSearchResults(res.data || []);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        if (!search.trim() || searchResults.length === 0) {
+            toast.error("Item not found!");
+            setSearch("");
+            return;
+        }
+
+        const exactMatch = searchResults.find(
+            item => item.barcode?.toLowerCase() === search.toLowerCase()
+        );
+
+        const itemToSelect = exactMatch || searchResults[0];
+
+        if (itemToSelect) {
+            selectItem(itemToSelect);
+        }
     }
   };
 
@@ -77,7 +104,6 @@ const PurchaseFormPage = () => {
     setSearch("");
     setSearchResults([]);
 
-    // Initialize inputs for all branches with Item's default prices
     const initialInputs = {};
     branches.forEach(b => {
       initialInputs[b.id] = {
@@ -88,6 +114,13 @@ const PurchaseFormPage = () => {
       };
     });
     setBranchInputs(initialInputs);
+
+    // 🚀 අයිටම් එක සිලෙක්ට් වුණ ගමන් පොඩි වෙලාවක් දීලා Qty Input එක Focus කරනවා
+    setTimeout(() => {
+      if (firstQtyInputRef.current) {
+        firstQtyInputRef.current.focus();
+      }
+    }, 100);
   };
 
   const handleInputChange = (branchId, field, value) => {
@@ -152,18 +185,25 @@ const PurchaseFormPage = () => {
     setCartItems(prev => [...prev, ...newRows]);
     setSelectedItem(null);
     setBranchInputs({});
+    
+    // 🚀 Cart එකට දැම්මට පස්සේ ආයෙත් Search Box එක Focus කරනවා (ඊළඟ එක ස්කෑන් කරන්න ලේසි වෙන්න)
+    if (searchInputRef.current) {
+        searchInputRef.current.focus();
+    }
   };
 
   const handleRemoveItem = (index) => {
     setCartItems((prev) => prev.filter((_, i) => i !== index));
+    if (searchInputRef.current) {
+        searchInputRef.current.focus();
+    }
   };
 
-  // --- 4. SUBMIT (Updated for New DTO) ✅ ---
+  // --- 4. SUBMIT ---
   const handleSubmit = async () => {
     if (!supplierId) return toast.error("Please select a Supplier");
     if (cartItems.length === 0) return toast.error("No items in the list");
 
-    // 1. Group items by Branch ID (Frontend Transformation)
     const branchesMap = {};
 
     cartItems.forEach(item => {
@@ -179,28 +219,22 @@ const PurchaseFormPage = () => {
             qty: item.qty,
             costPrice: item.costPrice,
             sellingPrice: item.sellingPrice,
-            expiryDate: item.expiryDate // Backend will handle null if sent as null
+            expiryDate: item.expiryDate 
         });
     });
 
-    // 2. Convert Map to Array for DTO
     const branchesPayload = Object.values(branchesMap);
 
-    // 3. Construct Final Payload (CreatePurchaseRequest)
     const payload = {
         supplierId: Number(supplierId),
-        invoiceNo: invoiceNo || "PURCHASE", // Default text if empty
+        invoiceNo: invoiceNo || "PURCHASE",
         branches: branchesPayload
     };
 
-    console.log("Sending Payload:", payload); // Debugging purpose
-
     try {
-      // 4. Send SINGLE Request
       await purchasesAPI.create(payload);
-      
       toast.success("Purchase saved successfully!");
-      navigate("/purchases"); // Redirect to history
+      navigate("/purchases"); 
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Failed to save purchase.");
@@ -211,7 +245,6 @@ const PurchaseFormPage = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      {/* Header Title */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-800">New Purchase</h1>
         <div className="text-right">
@@ -220,10 +253,8 @@ const PurchaseFormPage = () => {
         </div>
       </div>
 
-      {/* --- INVOICE DETAILS --- */}
       <Card className="p-5 border-t-4 border-t-blue-600">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Supplier Select */}
           <div>
             <label className="label-text">Supplier</label>
             <div className="flex gap-2">
@@ -236,29 +267,15 @@ const PurchaseFormPage = () => {
                 <option value="">Select Supplier</option>
                 {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
-
-              <Button
-                onClick={() => setShowSupplierModal(true)}
-                variant="secondary"
-                className="px-3"
-                disabled={cartItems.length > 0}
-              >
+              <Button onClick={() => setShowSupplierModal(true)} variant="secondary" className="px-3" disabled={cartItems.length > 0}>
                 <Plus size={18} />
               </Button>
             </div>
-
-            {cartItems.length > 0 && (
-              <span className="text-xs text-red-500">
-                To change supplier, please clear the cart first.
-              </span>
-            )}
           </div>
-          {/* Invoice No */}
           <div>
             <label className="label-text">Invoice No</label>
             <input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="input w-full" placeholder="Ex: INV-999" />
           </div>
-          {/* Date */}
           <div>
             <label className="label-text">Date</label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input w-full" />
@@ -268,17 +285,17 @@ const PurchaseFormPage = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-        {/* --- LEFT SIDE: ITEM SELECTION & DISTRIBUTION --- */}
         <div className="xl:col-span-1 space-y-4">
           <Card className="p-4 bg-slate-50 border border-blue-200 shadow-sm">
             <h3 className="font-bold text-lg text-slate-700 mb-3">1. Select Item</h3>
 
-            {/* Search Input */}
             <div className="relative mb-4">
               <input
+                ref={searchInputRef} 
                 placeholder="Scan barcode or type name..."
                 value={search}
                 onChange={(e) => searchItems(e.target.value)}
+                onKeyDown={handleSearchKeyDown} 
                 className="input w-full border-blue-300 focus:ring-blue-500"
                 autoFocus
               />
@@ -303,7 +320,6 @@ const PurchaseFormPage = () => {
               )}
             </div>
 
-            {/* DISTRIBUTION TABLE */}
             {selectedItem && (
               <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="p-3 bg-blue-100 rounded-lg mb-3 flex justify-between items-center border border-blue-200">
@@ -311,8 +327,8 @@ const PurchaseFormPage = () => {
                     <div className="font-bold text-blue-900">{selectedItem.name}</div>
                     <div className="text-xs text-blue-600">{selectedItem.barcode}</div>
                   </div>
-                  <button onClick={() => setSelectedItem(null)} className="text-xs text-red-500 font-medium hover:underline">
-                    Change Item
+                  <button onClick={() => { setSelectedItem(null); if(searchInputRef.current) searchInputRef.current.focus(); }} className="text-xs text-red-500 font-medium hover:underline">
+                    Cancel Item
                   </button>
                 </div>
 
@@ -352,6 +368,7 @@ const PurchaseFormPage = () => {
                         </div>
                         <div className="col-span-2">
                           <input
+                            ref={idx === 0 ? firstQtyInputRef : null} // 🚀 පළවෙනි Qty Input එකට Ref එක දුන්නා
                             type="number"
                             className={`input h-8 text-xs p-1 text-center font-bold ${inputs.qty > 0 ? 'border-green-500 bg-green-50' : ''}`}
                             placeholder="Qty"
@@ -370,11 +387,7 @@ const PurchaseFormPage = () => {
                             onChange={(e) => handleInputChange(branch.id, 'expiry', e.target.value)}
                           />
                           {idx === 0 && (
-                            <button
-                              onClick={() => applyPricesToAll(branch.id)}
-                              className="text-blue-500 hover:text-blue-700"
-                              title="Copy prices to all branches"
-                            >
+                            <button onClick={() => applyPricesToAll(branch.id)} className="text-blue-500 hover:text-blue-700" title="Copy prices to all branches">
                               <Copy size={12} />
                             </button>
                           )}
@@ -385,14 +398,13 @@ const PurchaseFormPage = () => {
                 </div>
 
                 <Button onClick={handleAddToList} className="w-full mt-3 bg-blue-600 hover:bg-blue-700 shadow-md">
-                  <Plus size={18} className="mr-1" /> Add All to List
+                  <Plus size={18} className="mr-1" /> Add to List (Enter)
                 </Button>
               </div>
             )}
           </Card>
         </div>
 
-        {/* --- RIGHT SIDE: CART TABLE --- */}
         <div className="xl:col-span-2 space-y-4">
           <Card className="p-0 overflow-hidden min-h-[400px]">
             <div className="p-3 bg-slate-100 border-b font-semibold text-slate-600">
@@ -462,7 +474,7 @@ const PurchaseFormPage = () => {
 
       <SupplierQuickAddModal
         isOpen={showSupplierModal}
-        onClose={() => setShowSupplierModal(false)}
+        onClose={() => { setShowSupplierModal(false); if(searchInputRef.current) searchInputRef.current.focus(); }}
         onCreated={handleSupplierCreated}
       />
     </div>
