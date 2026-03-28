@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { salesAPI } from "../api/sales.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
-import { useBranch } from "../context/BranchContext"; // 🔴 Branch Context එක import කළා
+import { useBranch } from "../context/BranchContext"; 
 import { Search, ChevronRight, ShoppingCart } from "lucide-react";
 
 const SalesListPage = () => {
   const navigate = useNavigate();
-  const { selectedBranchId } = useBranch(); // 🔴 තෝරාගත් Branch ID එක ගන්නවා
+  const { selectedBranchId } = useBranch(); 
   
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -19,17 +19,16 @@ const SalesListPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [page, search, selectedBranchId]); // 🔴 branchId එක වෙනස් වුනත් Data ආයෙත් ගන්නවා
+  }, [page, search, selectedBranchId]); 
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 🔴 API call එකට branchId එකත් යවනවා (0 නම් නොයවා ඉන්නත් පුළුවන්, ඒත් යවන එක හොඳයි)
       const res = await salesAPI.list({
         search: search,
         page: page,
         size: pageSize,
-        branchId: selectedBranchId > 0 ? selectedBranchId : null // 0 නම් null යවනවා (All branches)
+        branchId: selectedBranchId > 0 ? selectedBranchId : null 
       });
       setData(res.data.content || []); 
       setTotalPages(res.data.totalPages);
@@ -46,13 +45,13 @@ const SalesListPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto pb-10 px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Sales History</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Sales History</h1>
           <p className="text-slate-500 text-sm">Manage Customer Invoices & Transactions</p>
         </div>
-        <Button onClick={() => navigate("/pos")} className="bg-blue-600">
+        <Button onClick={() => navigate("/pos")} className="bg-blue-600 w-full sm:w-auto flex justify-center">
           <ShoppingCart size={18} className="mr-2" /> Open POS
         </Button>
       </div>
@@ -63,22 +62,22 @@ const SalesListPage = () => {
           <input
             type="text"
             placeholder="Search by Invoice No or Customer..."
-            className="input pl-10 w-full border border-slate-300 rounded-md p-2"
+            className="input pl-10 w-full border border-slate-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={search}
             onChange={handleSearch} 
           />
         </div>
       </Card>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+      <Card className="p-0 overflow-hidden border border-slate-200">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-sm text-left whitespace-nowrap">
             <thead className="bg-slate-100 text-slate-600 uppercase font-semibold border-b">
               <tr>
                 <th className="p-4">Date</th>
                 <th className="p-4">Invoice No</th>
                 <th className="p-4">Customer</th>
-                <th className="p-4 text-center">Status</th> {/* 🔴 Status Column එක */}
+                <th className="p-4 text-center">Status</th>
                 <th className="p-4 text-center">Payment</th>
                 <th className="p-4 text-right">Grand Total</th>
                 <th className="p-4 w-10"></th>
@@ -93,7 +92,7 @@ const SalesListPage = () => {
                 data.map((sale) => (
                   <tr 
                     key={sale.id} 
-                    className={`hover:bg-blue-50 cursor-pointer transition-colors ${sale.status === 'CANCELED' ? 'opacity-60 bg-red-50/20' : ''}`} // 🔴 Cancel වුණු ඒවා පොඩ්ඩක් වෙනස් කරලා පෙන්වනවා
+                    className={`hover:bg-blue-50 cursor-pointer transition-colors ${sale.status === 'CANCELED' ? 'opacity-60 bg-red-50/20' : ''}`}
                     onClick={() => navigate(`/sales/${sale.invoiceNo}`)} 
                   >
                     <td className="p-4 text-slate-600">
@@ -105,8 +104,6 @@ const SalesListPage = () => {
                     <td className="p-4 font-medium text-slate-700">
                       {sale.customerName || "Walk-in Customer"}
                     </td>
-                    
-                    {/* 🔴 Status Badge */}
                     <td className="p-4 text-center">
                        <span className={`px-2 py-1 rounded text-xs font-bold border ${
                            sale.status === 'CANCELED' 
@@ -116,17 +113,16 @@ const SalesListPage = () => {
                            {sale.status || 'COMPLETED'}
                        </span>
                     </td>
-
                     <td className="p-4 text-center">
                        <span className="px-2 py-1 rounded text-xs font-semibold bg-slate-100 text-slate-700">
                            {sale.orderType || 'CASH'}
                        </span>
                     </td>
-                    <td className="p-4 text-right font-bold text-slate-800 text-lg">
+                    <td className="p-4 text-right font-bold text-slate-800 text-base sm:text-lg">
                       {sale.grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="p-4 text-slate-400">
-                        <ChevronRight size={18}/>
+                    <td className="p-4 text-slate-400 text-right">
+                        <ChevronRight size={18} className="inline-block"/>
                     </td>
                   </tr>
                 ))
@@ -136,11 +132,11 @@ const SalesListPage = () => {
         </div>
         
         {/* Pagination Controls Here */}
-        <div className="flex justify-between items-center p-4 bg-slate-50 border-t">
+        <div className="flex flex-col sm:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
               <span className="text-sm text-slate-500">Page {page + 1} of {totalPages === 0 ? 1 : totalPages}</span>
               <div className="flex gap-2">
-                  <Button disabled={page === 0} onClick={() => setPage(page - 1)} variant="secondary" className="px-3 py-1 text-sm">Prev</Button>
-                  <Button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} variant="secondary" className="px-3 py-1 text-sm">Next</Button>
+                  <Button disabled={page === 0} onClick={(e) => { e.stopPropagation(); setPage(page - 1); }} variant="secondary" className="px-3 py-1 text-sm">Prev</Button>
+                  <Button disabled={page >= totalPages - 1} onClick={(e) => { e.stopPropagation(); setPage(page + 1); }} variant="secondary" className="px-3 py-1 text-sm">Next</Button>
               </div>
         </div>
       </Card>

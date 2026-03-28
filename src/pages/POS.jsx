@@ -21,7 +21,6 @@ const POS = () => {
   const { selectedBranchId } = useBranch(); 
   const printRef = useRef();
   
-  // 🚀 අලුත් Ref එක Search Box එක Auto Focus කරන්න
   const searchInputRef = useRef(null);
   
   const [myShift, setMyShift] = useState(null);
@@ -34,13 +33,11 @@ const POS = () => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [categories, setCategories] = useState(["All"]);
   
-  // Modals
   const [showCustomerSelect, setShowCustomerSelect] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [selectedBatchItem, setSelectedBatchItem] = useState(null);
 
-  // Transaction Data
   const [customer, setCustomer] = useState(null);
   const [orderType, setOrderType] = useState(ORDER_TYPES.CASH);
   const [billDiscount, setBillDiscount] = useState(0);
@@ -49,7 +46,6 @@ const POS = () => {
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
 
-  // 🚀 පේජ් එක ලෝඩ් වෙද්දිම Search Box එක Focus කරනවා
   useEffect(() => {
     if (searchInputRef.current && !loadingShift && myShift) {
       searchInputRef.current.focus();
@@ -153,7 +149,6 @@ const POS = () => {
 
     if (stockQty < qty) {
         toast.error(`Insufficient stock! Available: ${stockQty}`);
-        // 🚀 Stock නැතත් Focus එක තියාගන්නවා
         if (searchInputRef.current) searchInputRef.current.focus();
         return;
     }
@@ -190,17 +185,15 @@ const POS = () => {
       ]);
     }
 
-    // 🚀 අයිටම් එක ඇඩ් වුණාම අනිවාර්යයෙන්ම සර්ච් එක හිස් කරලා Focus කරනවා
     setSearchQuery("");
     if (searchInputRef.current) {
         searchInputRef.current.focus();
     }
   };
 
-  // 🚀 Enter එබුවම Barcode/Name එකෙන් අයිටම් එක හොයලා ඇඩ් කරන Function එක
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
-        e.preventDefault(); // Default submit වෙන එක නවත්තන්න
+        e.preventDefault();
 
         if (!searchQuery.trim() || filteredItems.length === 0) {
              toast.error("Item not found!");
@@ -208,12 +201,10 @@ const POS = () => {
              return;
         }
 
-        // හරියටම Barcode එකට මැච් වෙන එකක් තියෙනවද බලනවා (Exact Match)
         const exactMatch = filteredItems.find(
             item => item.barcode?.toLowerCase() === searchQuery.toLowerCase()
         );
 
-        // Barcode එකට Match වුණේ නැත්නම්, Filter වෙලා තියෙන ලිස්ට් එකේ පළවෙනි එක ගන්නවා
         const itemToAdd = exactMatch || filteredItems[0];
 
         if (itemToAdd) {
@@ -239,7 +230,6 @@ const POS = () => {
     newItems[index].qty = newQty;
     setCartItems(newItems);
     
-    // Quantity මාරු කළාමත් Focus එක ආපහු ගන්නවා
     if (searchInputRef.current) searchInputRef.current.focus();
   };
 
@@ -330,7 +320,6 @@ const POS = () => {
       setBillDiscount(0);
       setShowPayment(false);
       
-      // 🚀 ඔර්ඩර් එක ඉවර වුණාමත් ආයෙත් Focus කරනවා
       if (searchInputRef.current) {
           searchInputRef.current.focus();
       }
@@ -341,13 +330,11 @@ const POS = () => {
     }
   };
 
-  // Keyboard Shortcuts
   useKeyboard("F4", () => setShowCustomerSelect(true));
   useKeyboard("F9", handleCheckout);
   useKeyboard("F1", () => showPayment && setOrderType(ORDER_TYPES.CASH));
   useKeyboard("F2", () => showPayment && setOrderType(ORDER_TYPES.CREDIT));
   
-  // Enter shortcut එක checkout overlay එකේදී විතරක් වැඩ කරන්න හැදුවා
   useKeyboard("Enter", () => {
     if (showPayment && !loading) handlePlaceOrder();
   });
@@ -389,12 +376,12 @@ const POS = () => {
                   <div className="relative flex-1">
                       <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 lg:w-4 lg:h-4" />
                       <input
-                        ref={searchInputRef} // 🚀 Ref එක මෙතනට දුන්නා
+                        ref={searchInputRef}
                         type="text"
-                        placeholder="Search barcode or name... (Enter to add)"
+                        placeholder="Search barcode or name"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={handleSearchKeyDown} // 🚀 Enter Key Event එක ඇල්ලුවා
+                        onKeyDown={handleSearchKeyDown}
                         disabled={!myShift} 
                         className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs lg:text-sm disabled:opacity-50"
                       />

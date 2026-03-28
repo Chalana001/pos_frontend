@@ -37,20 +37,18 @@ const BranchSelector = () => {
 
   const handleManualChange = (newBranchId) => {
     setSelectedBranchId(newBranchId);
-
     localStorage.setItem("selectedBranchId", newBranchId);
-
     window.dispatchEvent(new Event("branchChanged"));
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Building2 size={20} className="text-slate-600" />
+    <div className="flex items-center gap-2 ml-14 xl:ml-0">
+      <Building2 size={20} className="text-slate-600 hidden sm:block" />
 
       <select
         value={selectedBranchId || ""}
         onChange={(e) => handleManualChange(e.target.value)}
-        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
       >
         {branches.map((branch) => (
           <option key={branch.id} value={String(branch.id)}>
