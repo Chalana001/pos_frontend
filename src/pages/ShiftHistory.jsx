@@ -7,6 +7,7 @@ import { formatCurrency, formatDateTime } from "../utils/formatters";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import CustomSelect from "../components/common/CustomSelect"; // 🟢 Custom Select එක Import කළා
 
 const ShiftHistory = () => {
   const { user } = useAuth();
@@ -26,6 +27,13 @@ const ShiftHistory = () => {
     cashierId: !isAdmin ? user?.id : "", 
     status: "",
   });
+
+  // 🟢 Custom Select එකට ඕන කරන Options Array එක
+  const statusOptions = [
+    { id: "", name: "All Statuses" },
+    { id: "OPEN", name: "Open" },
+    { id: "CLOSED", name: "Closed" }
+  ];
 
   const fetchShifts = useCallback(async () => {
     setLoading(true);
@@ -102,11 +110,16 @@ const ShiftHistory = () => {
             <label className="text-xs font-bold text-slate-500 flex items-center gap-1 uppercase">
               <Tag size={14} /> Status
             </label>
-            <select name="status" value={filters.status} onChange={handleInputChange} className="input w-full">
-              <option value="">All Statuses</option>
-              <option value="OPEN">Open</option>
-              <option value="CLOSED">Closed</option>
-            </select>
+            {/* 🟢 Custom Select එක පාවිච්චි කරලා තියෙන විදිහ */}
+            <CustomSelect
+              value={filters.status}
+              onChange={(val) => {
+                setFilters((prev) => ({ ...prev, status: val }));
+                setPage(0);
+              }}
+              options={statusOptions}
+              placeholder="All Statuses"
+            />
           </div>
         </div>
       </Card>

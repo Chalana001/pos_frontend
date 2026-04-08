@@ -1,18 +1,21 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { salesAPI } from "../api/sales.api"; // 👈 API import එක (orders වලට point වෙනවා)
+import { salesAPI } from "../api/sales.api"; 
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
-import ReceiptPrinter from "../components/pos/ReceiptPrinter"; // 👈 ඔබේ Print Component එකට අදාළ නිවැරදි Path එක දෙන්න
+import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
+import { useAuth } from "../context/AuthContext"; // 👈 අලුතින් Import කරගත්තා
 import { 
   ArrowLeft, Printer, Calendar, User, 
   CreditCard, Package, Ban 
 } from "lucide-react";
 
 const SalesDetailsPage = () => {
-  const { id } = useParams(); // මෙතන id කියන්නේ Invoice No එක
+  const { id } = useParams(); 
   const navigate = useNavigate();
   
+  const { user } = useAuth(); // 👈 user object එක ගත්තා
+
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isCanceling, setIsCanceling] = useState(false);
@@ -57,7 +60,9 @@ const SalesDetailsPage = () => {
       lineTotal: item.lineTotal 
     }));
 
-    const storeName = "Super Mart"; 
+    // 👇 මෙතන Hardcode කරපු නම වෙනුවට user object එකෙන් නම ගන්නවා
+    const storeName = user?.shopName || "POS SYSTEM"; 
+    
     const shiftData = {
       branchName: sale.branchId ? `Branch #${sale.branchId}` : "Main Branch",
       cashierName: sale.cashierUserId ? `Cashier #${sale.cashierUserId}` : "Cashier"
@@ -79,12 +84,10 @@ const SalesDetailsPage = () => {
 
     try {
       setIsCanceling(true);
-      // API එකට Cancel Request එක යවනවා
       await salesAPI.cancel(sale.invoiceNo, { reason: reason });
       
       alert("Order canceled successfully! Stock has been reversed.");
       
-      // Page එක අලුත් Status එකත් එක්ක Refresh කරනවා
       loadData(); 
     } catch (error) {
       console.error("Failed to cancel order", error);
@@ -113,7 +116,7 @@ const SalesDetailsPage = () => {
         </Button>
         
         <div className="flex gap-3">
-            {/* 🔴 Cancel Button (Canceled නැත්නම් විතරක් පෙන්වන්න) */}
+            {/* 🔴 Cancel Button */}
             {!isCanceled && (
                 <Button 
                     className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors" 
@@ -128,7 +131,7 @@ const SalesDetailsPage = () => {
             <Button 
                 className="bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50" 
                 onClick={handlePrint} 
-                disabled={isCanceled} // Canceled Orders Print කරන එක නතර කරලා තියෙන්නේ
+                disabled={isCanceled} 
             >
                 <Printer size={18} className="mr-2" /> Print Receipt
             </Button>

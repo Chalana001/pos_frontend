@@ -3,6 +3,7 @@ import { Building2 } from "lucide-react";
 import api from "../../api/axios";
 import { useBranch } from "../../context/BranchContext";
 import { useAuth } from "../../context/AuthContext";
+import CustomSelect from "../common/CustomSelect"; // 🟢 Custom Select එක Import කළා (Path එක ඔයාගේ ෆෝල්ඩර් විදිහට හදාගන්න)
 
 const BranchSelector = () => {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ const BranchSelector = () => {
 
   useEffect(() => {
     if (branches.length === 0) fetchBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchBranches = async () => {
@@ -42,20 +44,18 @@ const BranchSelector = () => {
   };
 
   return (
-    <div className="flex items-center gap-2 ml-14 xl:ml-0">
-      <Building2 size={20} className="text-slate-600 hidden sm:block" />
+    <div className="relative flex items-center gap-2 ml-14 xl:ml-0">
+      <Building2 size={20} className="text-slate-500 hidden sm:block shrink-0" />
 
-      <select
-        value={selectedBranchId || ""}
-        onChange={(e) => handleManualChange(e.target.value)}
-        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-      >
-        {branches.map((branch) => (
-          <option key={branch.id} value={String(branch.id)}>
-            {branch.name}
-          </option>
-        ))}
-      </select>
+      {/* 🟢 Custom Select එක පාවිච්චි කළා (පළල w-40 විදිහට දුන්නා) */}
+      <div className="w-40 z-50">
+        <CustomSelect
+          value={selectedBranchId}
+          onChange={handleManualChange}
+          options={branches}
+          placeholder="Select Branch"
+        />
+      </div>
     </div>
   );
 };

@@ -19,9 +19,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const response = await authAPI.login(credentials);
-    const { token, username, role, branchId } = response.data;
     
-    const userData = { username, role, branchId };
+    const { token, username, role, branchId, shopName } = response.data; 
+    
+    const userData = { username, role, branchId, shopName }; 
+    
     setToken(token);
     setUser(userData);
     setUserState(userData);

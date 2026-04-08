@@ -5,91 +5,79 @@ const ReceiptPrinter = forwardRef((props, ref) => {
   const printFrameRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
-    // 👈 මෙතනට customerData එකතු කළා
+    // paperSize parameter එක අයින් කළා, දැන් ඒක auto
     printOrder: (orderData, cartItems, storeName, shiftData, customerData) => {
       const frame = printFrameRef.current;
       if (!frame) return;
 
       const doc = frame.contentWindow.document;
       doc.open();
-      
+
+      // 🔥 සම්පූර්ණ CSS එක vw (Viewport Width) වලට හැදුවා
       const receiptHTML = `
         <!DOCTYPE html>
         <html>
         <head>
           <style>
-            /* 🔥 Height එක Auto හැදෙන්න size එක අයින් කරලා margin 0 දුන්නා */
-            @page { margin: 0; }
+            /* කොළේ Size එක Browser එකෙන් තෝරන එක ගන්නවා. Margin එකක් පොඩියට තියනවා */
+            @page { size: auto; margin: 4mm; }
+            
             html, body {
               margin: 0;
               padding: 0;
+              background-color: #ffffff;
             }
+            
             body { 
               font-family: 'Courier New', Courier, monospace; 
-              width: 80mm; /* 80mm පළල */
-              margin: 0 auto; 
-              padding: 4mm 5mm; 
-              font-size: 12px; 
-              line-height: 1.2;
+              width: 100%; 
+              box-sizing: border-box;
+              /* මෙන්න මේ vw අගයන් නිසා තමයි ඕනම size එකකට auto හැදෙන්නේ */
+              font-size: 3.5vw; 
+              line-height: 1.4;
               color: #000;
-              position: relative;
+              padding: 2vw;
             }
+            
             .text-center { text-align: center; }
             .text-right { text-align: right; }
             .text-left { text-align: left; }
             .font-bold { font-weight: bold; }
             
-            /* Watermark එක මැදට වෙන්න */
-            .watermark {
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%) rotate(-30deg);
-              font-size: 60px;
-              font-weight: 900;
-              color: rgba(0, 0, 0, 0.08); 
-              z-index: -1;
-              letter-spacing: 5px;
-              pointer-events: none;
-            }
-
-            .header h1 { font-size: 18px; margin: 0 0 5px 0; text-transform: uppercase; }
-            .header p { margin: 0 0 3px 0; font-size: 11px; }
-            .divider { border-bottom: 1px dashed #000; margin: 5px 0; }
+            .header h1 { font-size: 6vw; margin: 0 0 1vw 0; font-weight: 900; }
+            .header p { margin: 0 0 0.5vw 0; font-size: 3vw; }
+            .divider { border-bottom: 0.4vw dashed #000; margin: 3vw 0; }
             
-            table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-            th { border-bottom: 1px dashed #000; padding-bottom: 3px; font-size: 11px; }
-            td { padding: 4px 0; vertical-align: top; font-size: 12px; }
-            .item-name { max-width: 40mm; word-wrap: break-word; font-weight: bold;}
+            table { width: 100%; border-collapse: collapse; margin-top: 2vw; }
+            th { border-bottom: 0.4vw dashed #000; padding-bottom: 2vw; font-size: 3.2vw; text-transform: uppercase; }
+            td { padding: 2vw 0; vertical-align: top; }
+            .item-name { max-width: 60%; word-wrap: break-word; font-weight: bold; }
             
-            .totals { margin-top: 5px; }
-            .totals table { width: 100%; }
-            .totals td { padding: 2px 0; }
-            .net-total { font-size: 16px; font-weight: bold; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 5px 0 !important; }
+            .totals { margin-top: 4vw; width: 100%; display: flex; justify-content: flex-end; }
+            .totals-table { width: 90%; } 
+            .totals-table td { padding: 1.5vw 0; }
+            .net-total { font-size: 4.5vw; font-weight: bold; border-top: 0.4vw dashed #000; border-bottom: 0.4vw dashed #000; padding: 2.5vw 0 !important; }
             
-            .footer { margin-top: 15px; font-size: 11px; }
+            .footer { margin-top: 6vw; font-size: 3vw; }
             
             .brand-footer {
-               margin-top: 15px;
-               padding-top: 5px;
-               border-top: 1px solid #000;
+               margin-top: 8vw;
+               padding-top: 3vw;
+               border-top: 0.3vw solid #000;
                text-align: center;
-               padding-bottom: 10px; /* යටින් පොඩි ඉඩක් */
+               padding-bottom: 3vw; 
             }
-            .brand-footer .brand-name { font-size: 13px; font-weight: bold; letter-spacing: 1px; }
-            .brand-footer .brand-sub { font-size: 9px; margin-top: 2px; }
+            .brand-footer .brand-name { font-size: 3.5vw; font-weight: bold; letter-spacing: 0.2vw; }
+            .brand-footer .brand-sub { font-size: 2.5vw; margin-top: 1vw; }
           </style>
         </head>
         <body>
-          <div class="watermark">CHALA</div>
-
           <div class="header text-center">
-            <h1>${storeName || 'Super Mart'}</h1>
+            <h1>${storeName || 'Store Name Not Provided'}</h1>
             <p>Branch: ${shiftData?.branchName || 'Main Branch'}</p>
             <p>Invoice: <b>${orderData.invoiceNo}</b></p>
             <p>Date: ${new Date().toLocaleString()}</p>
             <p>Cashier: ${shiftData?.cashierName || 'Cashier'}</p>
-            <!-- 🔥 Customer Name එක තියෙනවා නම් පෙන්වනවා -->
             ${customerData ? `<p>Customer: <b>${customerData.name}</b></p>` : ''}
           </div>
           
@@ -113,7 +101,7 @@ const ReceiptPrinter = forwardRef((props, ref) => {
                   <tr>
                     <td class="item-name text-left">
                       ${item.name} <br/>
-                      <span style="font-size: 10px; font-weight: normal;">@ ${formatCurrency(item.unitPrice)}</span>
+                      <span style="font-size: 2.5vw; font-weight: normal;">@ ${formatCurrency(item.unitPrice)}</span>
                     </td>
                     <td class="text-center">${item.qty}</td>
                     <td class="text-right">${formatCurrency(Math.max(0, itemTotal))}</td>
@@ -126,7 +114,7 @@ const ReceiptPrinter = forwardRef((props, ref) => {
           <div class="divider"></div>
 
           <div class="totals">
-            <table>
+            <table class="totals-table">
               <tr>
                 <td>Sub Total</td>
                 <td class="text-right">${formatCurrency(orderData.subTotal)}</td>
@@ -142,7 +130,7 @@ const ReceiptPrinter = forwardRef((props, ref) => {
                 <td class="text-right net-total">${formatCurrency(orderData.netTotal)}</td>
               </tr>
               
-              <tr><td colspan="2" style="height: 5px;"></td></tr>
+              <tr><td colspan="2" style="height: 2vw;"></td></tr>
               
               <tr>
                 <td>Paid (${orderData.orderType})</td>
@@ -163,7 +151,7 @@ const ReceiptPrinter = forwardRef((props, ref) => {
 
           <div class="brand-footer">
              <div class="brand-name">⚙️ SOFTWARE BY CHALA</div>
-             <div class="brand-sub">Smart Retail Solutions</div>
+             <div class="brand-sub">Smart Retail Solutions | 📞 0704589764</div>
           </div>
         </body>
         </html>
@@ -182,7 +170,7 @@ const ReceiptPrinter = forwardRef((props, ref) => {
   return (
     <iframe
       ref={printFrameRef}
-      style={{ display: 'none' }}
+      style={{ position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: 'none', visibility: 'hidden' }}
       title="Receipt Printer"
     />
   );

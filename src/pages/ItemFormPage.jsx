@@ -4,7 +4,8 @@ import { toast } from "react-hot-toast";
 
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
-import Modal from "../components/common/Modal"; // 🟢 Modal component eka import kala
+import Modal from "../components/common/Modal"; 
+import CustomSelect from "../components/common/CustomSelect"; // 🟢 අලුත් Custom Select එක Import කළා
 
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api";
@@ -60,7 +61,7 @@ const ItemFormPage = ({ mode }) => {
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
 
-  // 🟢 Modal States
+  // Modal States
   const [showCatModal, setShowCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [savingCat, setSavingCat] = useState(false);
@@ -140,15 +141,12 @@ const ItemFormPage = ({ mode }) => {
     load();
   }, [mode, id, navigate]);
 
-  /* -----------------------------
-    Category & Sub-Category Handlers (Modals)
-  ------------------------------ */
   const handleCategoryChange = (catId) => {
     setFormData((prev) => ({ ...prev, categoryId: catId, subCategoryId: "" }));
     loadSubCategories(catId);
   };
 
-  // 🟢 Create Category Submit
+  // Create Category Submit
   const submitNewCategory = async () => {
     if (!newCatName.trim()) return toast.error("Category name is required");
     
@@ -157,9 +155,8 @@ const ItemFormPage = ({ mode }) => {
       const res = await categoriesAPI.create({ name: newCatName.trim() });
       toast.success("Category created!");
       await loadCategories();
-      handleCategoryChange(res.data.id); // Auto select new category
+      handleCategoryChange(res.data.id); 
       
-      // Close modal and reset
       setShowCatModal(false);
       setNewCatName("");
     } catch (e) {
@@ -169,7 +166,7 @@ const ItemFormPage = ({ mode }) => {
     }
   };
 
-  // 🟢 Create Sub-Category Submit
+  // Create Sub-Category Submit
   const submitNewSubCategory = async () => {
     if (!newSubCatName.trim()) return toast.error("Sub-category name is required");
     
@@ -181,9 +178,8 @@ const ItemFormPage = ({ mode }) => {
       });
       toast.success("Sub-category created!");
       await loadSubCategories(formData.categoryId);
-      setFormData((prev) => ({ ...prev, subCategoryId: res.data.id })); // Auto select
+      setFormData((prev) => ({ ...prev, subCategoryId: res.data.id })); 
       
-      // Close modal and reset
       setShowSubCatModal(false);
       setNewSubCatName("");
     } catch (e) {
@@ -259,7 +255,6 @@ const ItemFormPage = ({ mode }) => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* LEFT COLUMN: Product Image */}
             <div className="lg:col-span-1">
-              {/* Image Section code remains exactly the same... */}
               <div className="rounded-xl border border-slate-200 bg-white overflow-hidden h-full">
                 <div className="px-5 py-4 bg-slate-50 border-b">
                   <h3 className="font-semibold text-slate-800 flex items-center gap-2">
@@ -279,7 +274,7 @@ const ItemFormPage = ({ mode }) => {
                         setFormData({ ...formData, imageUrl: e.target.value });
                         setImgError(false);
                       }}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="https://..."
                     />
                   </div>
@@ -318,7 +313,7 @@ const ItemFormPage = ({ mode }) => {
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -328,50 +323,42 @@ const ItemFormPage = ({ mode }) => {
                       type="text"
                       value={formData.barcode}
                       onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
-                  {/* 🟢 Category Dropdown with Custom Modal Trigger */}
-                  <div>
+                  {/* 🟢 Custom Category Dropdown */}
+                  <div className="relative z-20"> {/* z-index added for dropdown overlapping */}
                     <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
                     <div className="flex gap-2">
-                      <select
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                      <CustomSelect
                         value={formData.categoryId}
-                        onChange={(e) => handleCategoryChange(e.target.value)}
-                      >
-                        <option value="">Select Category</option>
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                      <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="px-3">
+                        onChange={handleCategoryChange}
+                        options={categories}
+                        placeholder="Select Category"
+                      />
+                      <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="px-3 shrink-0">
                         <Plus size={18} />
                       </Button>
                     </div>
                   </div>
 
-                  {/* 🟢 Sub Category Dropdown with Custom Modal Trigger */}
-                  <div>
+                  {/* 🟢 Custom Sub Category Dropdown */}
+                  <div className="relative z-10"> {/* z-index lower than category */}
                     <label className="block text-sm font-medium text-slate-700 mb-1">Sub Category *</label>
                     <div className="flex gap-2">
-                      <select
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                      <CustomSelect
                         value={formData.subCategoryId}
-                        onChange={(e) => setFormData({ ...formData, subCategoryId: e.target.value })}
+                        onChange={(val) => setFormData({ ...formData, subCategoryId: val })}
+                        options={subCategories}
+                        placeholder="Select Sub Category"
                         disabled={!formData.categoryId}
-                      >
-                        <option value="">Select Sub Category</option>
-                        {subCategories.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
+                      />
                       <Button
                         type="button"
                         variant="secondary"
                         onClick={() => setShowSubCatModal(true)}
-                        className="px-3"
+                        className="px-3 shrink-0"
                         disabled={!formData.categoryId}
                       >
                         <Plus size={18} />
@@ -385,7 +372,7 @@ const ItemFormPage = ({ mode }) => {
                       type="number" min="0" step="0.01"
                       value={formData.costPrice}
                       onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -395,7 +382,7 @@ const ItemFormPage = ({ mode }) => {
                       type="number" min="0" step="0.01"
                       value={formData.sellingPrice}
                       onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
@@ -405,7 +392,7 @@ const ItemFormPage = ({ mode }) => {
                       type="number" min="0"
                       value={formData.reorderLevel}
                       onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -419,7 +406,7 @@ const ItemFormPage = ({ mode }) => {
                       type="text"
                       value={labelInput}
                       onChange={(e) => setLabelInput(e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 flex-1"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Add label"
                     />
                     <Button type="button" onClick={addLabel}>

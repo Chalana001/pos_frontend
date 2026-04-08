@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
-import Modal from "../components/common/Modal"; // 🟢 Modal import
+import Modal from "../components/common/Modal"; 
+import CustomSelect from "../components/common/CustomSelect"; // 🟢 Custom Select එක Import කළා
 import AccordionSection from "../components/items/BulkItemForm";
 import { itemsAPI } from "../api/items.api";
-import { categoriesAPI } from "../api/categories.api"; // 🟢 Category API import
+import { categoriesAPI } from "../api/categories.api"; 
 import { Plus } from "lucide-react";
 
 const uuid = () =>
@@ -23,7 +24,7 @@ const emptyDraft = () => ({
   imageUrl: "",
   name: "",
   barcode: "",
-  categoryId: "", // 🟢 Added categoryId
+  categoryId: "", 
   subCategoryId: "",
   costPrice: "",
   sellingPrice: "",
@@ -39,11 +40,11 @@ export default function BulkAddItems() {
   const [openImage, setOpenImage] = useState(true);
   const [openGeneral, setOpenGeneral] = useState(true);
 
-  // 🟢 Categories & SubCategories State
+  // Categories & SubCategories State
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
 
-  // 🟢 Modal States
+  // Modal States
   const [showCatModal, setShowCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [savingCat, setSavingCat] = useState(false);
@@ -98,7 +99,7 @@ export default function BulkAddItems() {
       const res = await categoriesAPI.create({ name: newCatName.trim() });
       toast.success("Category created!");
       await loadCategories();
-      handleCategoryChange(res.data.id); // Auto select new category
+      handleCategoryChange(res.data.id); 
       
       setShowCatModal(false);
       setNewCatName("");
@@ -121,7 +122,7 @@ export default function BulkAddItems() {
       });
       toast.success("Sub-category created!");
       await loadSubCategories(draft.categoryId);
-      updateDraft("subCategoryId", res.data.id); // Auto select
+      updateDraft("subCategoryId", res.data.id); 
       
       setShowSubCatModal(false);
       setNewSubCatName("");
@@ -183,7 +184,7 @@ export default function BulkAddItems() {
       tempId: uuid(),
       name: draft.name.trim(),
       barcode: draft.barcode.trim(),
-      categoryId: draft.categoryId, // Kept in cart to help editRow
+      categoryId: draft.categoryId, 
       subCategoryId: Number(draft.subCategoryId),
       imageUrl: draft.imageUrl?.trim() || "",
       costPrice: num(draft.costPrice),
@@ -194,7 +195,6 @@ export default function BulkAddItems() {
 
     setCart((prev) => [...prev, newItem]);
     
-    // reset draft completely
     setDraft(emptyDraft());
     setSubCategories([]); 
     toast.success("Added to list");
@@ -374,46 +374,42 @@ export default function BulkAddItems() {
                   />
                 </div>
 
-                {/* 🟢 Category Dropdown */}
-                <div className="space-y-2 col-span-2">
+                {/* 🟢 Custom Category Dropdown */}
+                <div className="space-y-2 col-span-2 relative z-20">
                   <label className="text-sm font-medium">Category *</label>
                   <div className="flex gap-2">
-                    <select
-                      className="w-full border rounded-lg px-3 py-2 bg-white"
-                      value={draft.categoryId}
-                      onChange={(e) => handleCategoryChange(e.target.value)}
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                    <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="px-3">
+                    <div className="flex-1">
+                      <CustomSelect
+                        value={draft.categoryId}
+                        onChange={handleCategoryChange}
+                        options={categories}
+                        placeholder="Select Category"
+                      />
+                    </div>
+                    <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="px-3 shrink-0">
                       <Plus size={18} />
                     </Button>
                   </div>
                 </div>
 
-                {/* 🟢 Sub Category Dropdown */}
-                <div className="space-y-2 col-span-2">
+                {/* 🟢 Custom Sub Category Dropdown */}
+                <div className="space-y-2 col-span-2 relative z-10">
                   <label className="text-sm font-medium">Sub Category *</label>
                   <div className="flex gap-2">
-                    <select
-                      className="w-full border rounded-lg px-3 py-2 bg-white"
-                      value={draft.subCategoryId}
-                      onChange={(e) => updateDraft("subCategoryId", e.target.value)}
-                      disabled={!draft.categoryId}
-                    >
-                      <option value="">Select Sub Category</option>
-                      {subCategories.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
+                    <div className="flex-1">
+                      <CustomSelect
+                        value={draft.subCategoryId}
+                        onChange={(val) => updateDraft("subCategoryId", val)}
+                        options={subCategories}
+                        placeholder="Select Sub Category"
+                        disabled={!draft.categoryId}
+                      />
+                    </div>
                     <Button 
                       type="button" 
                       variant="secondary" 
                       onClick={() => setShowSubCatModal(true)} 
-                      className="px-3"
+                      className="px-3 shrink-0"
                       disabled={!draft.categoryId}
                     >
                       <Plus size={18} />

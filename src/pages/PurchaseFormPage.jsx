@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import SupplierQuickAddModal from "../components/purchase/SupplierQuickAddModal";
+import CustomSelect from "../components/common/CustomSelect"; // 🟢 Custom Select එක Import කළා
 import { suppliersAPI } from "../api/suppliers.api";
 import { itemsAPI } from "../api/items.api";
 import { branchesAPI } from "../api/branches.api";
@@ -15,7 +16,7 @@ const PurchaseFormPage = () => {
 
   // 🚀 Refs
   const searchInputRef = useRef(null);
-  const firstQtyInputRef = useRef(null); // 🚀 පළවෙනි Qty Input එක අල්ලන්න
+  const firstQtyInputRef = useRef(null); 
 
   // --- HEADER DATA ---
   const [branches, setBranches] = useState([]);
@@ -115,7 +116,6 @@ const PurchaseFormPage = () => {
     });
     setBranchInputs(initialInputs);
 
-    // 🚀 අයිටම් එක සිලෙක්ට් වුණ ගමන් පොඩි වෙලාවක් දීලා Qty Input එක Focus කරනවා
     setTimeout(() => {
       if (firstQtyInputRef.current) {
         firstQtyInputRef.current.focus();
@@ -186,7 +186,6 @@ const PurchaseFormPage = () => {
     setSelectedItem(null);
     setBranchInputs({});
     
-    // 🚀 Cart එකට දැම්මට පස්සේ ආයෙත් Search Box එක Focus කරනවා (ඊළඟ එක ස්කෑන් කරන්න ලේසි වෙන්න)
     if (searchInputRef.current) {
         searchInputRef.current.focus();
     }
@@ -255,23 +254,30 @@ const PurchaseFormPage = () => {
 
       <Card className="p-5 border-t-4 border-t-blue-600">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
+          {/* 🟢 Supplier Custom Select */}
+          <div className="relative z-50">
             <label className="label-text">Supplier</label>
             <div className="flex gap-2">
-              <select
-                value={supplierId}
-                onChange={(e) => setSupplierId(e.target.value)}
-                className={`input w-full ${cartItems.length > 0 ? "bg-gray-100 cursor-not-allowed" : ""}`}
+              <div className="flex-1">
+                <CustomSelect
+                  value={supplierId}
+                  onChange={setSupplierId}
+                  options={suppliers}
+                  placeholder="Select Supplier"
+                  disabled={cartItems.length > 0}
+                />
+              </div>
+              <Button 
+                onClick={() => setShowSupplierModal(true)} 
+                variant="secondary" 
+                className="px-3 shrink-0" 
                 disabled={cartItems.length > 0}
               >
-                <option value="">Select Supplier</option>
-                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-              <Button onClick={() => setShowSupplierModal(true)} variant="secondary" className="px-3" disabled={cartItems.length > 0}>
                 <Plus size={18} />
               </Button>
             </div>
           </div>
+          
           <div>
             <label className="label-text">Invoice No</label>
             <input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="input w-full" placeholder="Ex: INV-999" />
@@ -368,7 +374,7 @@ const PurchaseFormPage = () => {
                         </div>
                         <div className="col-span-2">
                           <input
-                            ref={idx === 0 ? firstQtyInputRef : null} // 🚀 පළවෙනි Qty Input එකට Ref එක දුන්නා
+                            ref={idx === 0 ? firstQtyInputRef : null} 
                             type="number"
                             className={`input h-8 text-xs p-1 text-center font-bold ${inputs.qty > 0 ? 'border-green-500 bg-green-50' : ''}`}
                             placeholder="Qty"

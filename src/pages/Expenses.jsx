@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Plus, Calendar } from "lucide-react"; // 🚀 Calendar එක Import කළා
+import { Plus, Calendar } from "lucide-react"; 
 import { expensesAPI } from "../api/expenses.api";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
@@ -12,6 +12,7 @@ import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import CustomSelect from "../components/common/CustomSelect"; // 🟢 CustomSelect එක Import කළා
 
 const Expenses = () => {
   const { user } = useAuth();
@@ -27,7 +28,6 @@ const Expenses = () => {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  // 🚀 Date Filter State (මුලින්ම අද දවස තෝරලා තියෙන්නේ)
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
@@ -38,7 +38,12 @@ const Expenses = () => {
     isFromDrawer: true,
   });
 
-  // 🚀 Date එක වෙනස් වෙද්දිත් ඔටෝ ලෝඩ් වෙන්න Dependency එකට Dates දැම්මා
+  // 🟢 CustomSelect එකට ඕන කරන Options Array එක හදාගන්නවා
+  const categoryOptions = Object.values(EXPENSE_CATEGORIES).map((cat) => ({
+    id: cat,
+    name: cat,
+  }));
+
   useEffect(() => {
     fetchExpenses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -47,7 +52,6 @@ const Expenses = () => {
   const fetchExpenses = async () => {
     setLoading(true);
     try {
-      // 🚀 400 Bad Request එක නවත්තන Timezone-safe Date Formatting එක
       const fromDate = new Date(startDate);
       fromDate.setHours(0, 0, 0, 0);
       const from = new Date(fromDate.getTime() - (fromDate.getTimezoneOffset() * 60000)).toISOString().split('.')[0];
@@ -61,7 +65,6 @@ const Expenses = () => {
 
       const response = await expensesAPI.getAll({ branchId: queryBranchId, from, to });
       
-      // 🚀 Array එකක් හෝ Page එකක් ආවත් හරියට අල්ලගන්නවා
       const dataList = response.data?.content || response.data || [];
       setExpenses(Array.isArray(dataList) ? dataList : []);
     } catch (err) {
@@ -145,12 +148,10 @@ const Expenses = () => {
   return (
     <div className="space-y-6">
       
-      {/* 🚀 HEADER with Date Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-slate-800">Expenses</h1>
         
         <div className="flex items-center gap-4">
-          {/* 🚀 Date Filter UI */}
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
             <Calendar size={18} className="text-slate-400" />
             <div className="flex items-center gap-2">
@@ -223,18 +224,15 @@ const Expenses = () => {
             </div>
           )}
 
-          <div>
+          {/* 🟢 CustomSelect එක පාවිච්චි කළා */}
+          <div className="relative z-10">
             <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-            <select
-              className="input"
+            <CustomSelect
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              required
-            >
-              {Object.values(EXPENSE_CATEGORIES).map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+              onChange={(val) => setFormData({ ...formData, category: val })}
+              options={categoryOptions}
+              placeholder="Select Category"
+            />
           </div>
 
           <div>
@@ -242,7 +240,7 @@ const Expenses = () => {
             <input
               type="number"
               step="0.01"
-              className="input w-full"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="0.00"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
@@ -253,7 +251,7 @@ const Expenses = () => {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
             <textarea
-              className="input w-full min-h-[100px]"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter expense details..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}

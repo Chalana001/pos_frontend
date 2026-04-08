@@ -297,8 +297,7 @@ const POS = () => {
       toast.success(`Order ${response.data.invoiceNo} success!`);
 
       if (printRef.current) {
-         const host = window.location.hostname;
-         const storeName = host.includes('.') ? host.split('.')[0].toUpperCase() : "POS SYSTEM";
+         const storeName = user?.shopName || "POS SYSTEM";
 
          const printData = {
              invoiceNo: response.data.invoiceNo,
