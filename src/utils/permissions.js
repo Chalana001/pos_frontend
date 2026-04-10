@@ -49,5 +49,5 @@ export const hasPermission = (userRole, permission) => {
 };
 
 export const canAccessAllBranches = (userRole) => {
-  return userRole === ROLES.ADMIN;
+  return userRole === ROLES.ADMIN;  // 🔴 ADMIN එකමයි (MANAGER එක කෙලින් කළා)
 };

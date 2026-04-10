@@ -48,7 +48,11 @@ const SalesDetailsPage = () => {
       billDiscount: sale.billDiscount,
       netTotal: sale.grandTotal, 
       paidAmount: sale.paidAmount,
-      orderType: sale.orderType || 'CASH'
+      orderType: sale.orderType || 'CASH',
+      // 🔴 HISTORICAL ORDER: Backend snapshot එකෙන් branch data  
+      branchName: sale.branchName,
+      branchAddress: sale.branchAddress,
+      branchPhone: sale.branchPhone
     };
 
     const cartItems = sale.items.map(item => ({
@@ -63,9 +67,9 @@ const SalesDetailsPage = () => {
     // 👇 මෙතන Hardcode කරපු නම වෙනුවට user object එකෙන් නම ගන්නවා
     const storeName = user?.shopName || "POS SYSTEM"; 
     
+    // ⚠️ HISTORICAL PRINT: shiftData හැම විටම null/empty නිසා ReceiptPrinter එක orderData fields එක use කරනවා
     const shiftData = {
-      branchName: sale.branchId ? `Branch #${sale.branchId}` : "Main Branch",
-      cashierName: sale.cashierUserId ? `Cashier #${sale.cashierUserId}` : "Cashier"
+      cashierName: sale.cashierName || sale.cashierUserId ? `Cashier #${sale.cashierUserId}` : "Cashier"
     };
 
     const customerData = sale.customerId ? { name: sale.customerName } : null;

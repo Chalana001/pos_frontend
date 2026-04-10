@@ -9,7 +9,8 @@ const BranchSelector = () => {
   const { user } = useAuth();
   const { branches, setBranches, selectedBranchId, setSelectedBranchId } = useBranch();
 
-  if (user?.role === "CASHIER") return null;
+  // 🔴 ADMIN එකමයි dropdown දෙක (CASHIER/MANAGER dropdown නෑ)
+  if (user?.role !== "ADMIN") return null;
 
   useEffect(() => {
     if (branches.length === 0) fetchBranches();

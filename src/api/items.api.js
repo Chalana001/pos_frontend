@@ -1,7 +1,6 @@
 import api from "./axios";
 
 export const itemsAPI = {
-
   getWithStock: (params = {}) => api.get("/items/with-stock", { params }),
   getAll: (params = {}) => api.get("/items", { params }),
 
@@ -9,12 +8,12 @@ export const itemsAPI = {
 
   getByBarcode: (barcode, branchId) =>
     api.get(`/items/barcode/${barcode}`, {
-      params: branchId ? { branchId } : {},
+      params: (branchId !== undefined && branchId !== null) ? { branchId } : {},
     }),
 
   search: (name, branchId) =>
     api.get("/items/search", {
-      params: branchId ? { name, branchId } : { name },
+      params: (branchId !== undefined && branchId !== null) ? { name, branchId } : { name },
     }),
   
   searchForPrint: (query) => api.get("/items/search-print", { params: { query } }),
