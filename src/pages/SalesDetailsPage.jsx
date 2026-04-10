@@ -4,21 +4,26 @@ import { salesAPI } from "../api/sales.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
-import { useAuth } from "../context/AuthContext"; // 👈 අලුතින් Import කරගත්තා
+import { useAuth } from "../context/AuthContext"; 
 import { 
   ArrowLeft, Printer, Calendar, User, 
   CreditCard, Package, Ban 
 } from "lucide-react";
+import { toast } from "react-hot-toast"; // 🟢 Toast එක Import කළා
 
 const SalesDetailsPage = () => {
   const { id } = useParams(); 
   const navigate = useNavigate();
   
-  const { user } = useAuth(); // 👈 user object එක ගත්තා
+  const { user } = useAuth(); 
 
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isCanceling, setIsCanceling] = useState(false);
+
+  // 🟢 Modal එකට අදාළ States 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   const printRef = useRef(null);
 
@@ -33,6 +38,7 @@ const SalesDetailsPage = () => {
       setSale(res.data);
     } catch (error) {
       console.error("Failed to load Sale details", error);
+      toast.error("Failed to load sale details");
     } finally {
       setLoading(false);
     }
@@ -49,7 +55,6 @@ const SalesDetailsPage = () => {
       netTotal: sale.grandTotal, 
       paidAmount: sale.paidAmount,
       orderType: sale.orderType || 'CASH',
-      // 🔴 HISTORICAL ORDER: Backend snapshot එකෙන් branch data  
       branchName: sale.branchName,
       branchAddress: sale.branchAddress,
       branchPhone: sale.branchPhone
@@ -64,10 +69,8 @@ const SalesDetailsPage = () => {
       lineTotal: item.lineTotal 
     }));
 
-    // 👇 මෙතන Hardcode කරපු නම වෙනුවට user object එකෙන් නම ගන්නවා
     const storeName = user?.shopName || "POS SYSTEM"; 
     
-    // ⚠️ HISTORICAL PRINT: shiftData හැම විටම null/empty නිසා ReceiptPrinter එක orderData fields එක use කරනවා
     const shiftData = {
       cashierName: sale.cashierName || sale.cashierUserId ? `Cashier #${sale.cashierUserId}` : "Cashier"
     };
@@ -77,30 +80,33 @@ const SalesDetailsPage = () => {
     printRef.current.printOrder(orderData, cartItems, storeName, shiftData, customerData);
   };
 
-  // 🚫 Cancel Order Function
-  const handleCancelOrder = async () => {
-    const reason = window.prompt("Are you sure you want to cancel this order?\n\nPlease enter a reason:");
-    
-    if (!reason || reason.trim() === "") {
-        if(reason !== null) alert("Cancel reason is required!");
-        return; 
+  // 🟢 1. Open Modal
+  const handleCancelClick = () => {
+    setCancelReason(""); 
+    setShowCancelModal(true);
+  };
+
+  // 🟢 2. Execute Cancel (Modal එකෙන් Confirm කරාම)
+  const executeCancelSale = async () => {
+    if (!cancelReason.trim()) {
+      toast.error("Cancel reason is required!");
+      return; 
     }
 
     try {
       setIsCanceling(true);
-      await salesAPI.cancel(sale.invoiceNo, { reason: reason });
+      await salesAPI.cancel(sale.invoiceNo, { reason: cancelReason });
       
-      alert("Order canceled successfully! Stock has been reversed.");
-      
-      loadData(); 
+      toast.success("Order canceled successfully! Stock has been reversed.");
+      setShowCancelModal(false); // Modal එක වහනවා
+      loadData(); // Data අලුත් කරනවා
     } catch (error) {
       console.error("Failed to cancel order", error);
-      alert(error.response?.data?.message || "Failed to cancel the order.");
+      toast.error(error.response?.data?.message || "Failed to cancel the order.");
     } finally {
       setIsCanceling(false);
     }
   };
-
 
   if (loading) return <div className="p-10 text-center text-slate-500">Loading details...</div>;
   if (!sale) return <div className="p-10 text-center text-red-500">Sale record not found!</div>;
@@ -120,20 +126,20 @@ const SalesDetailsPage = () => {
         </Button>
         
         <div className="flex gap-3">
-            {/* 🔴 Cancel Button */}
+            {/* 🟢 Cancel Button (Updated Design) */}
             {!isCanceled && (
                 <Button 
-                    className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors" 
-                    onClick={handleCancelOrder}
+                    className="bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm" 
+                    onClick={handleCancelClick}
                     disabled={isCanceling}
                 >
-                    <Ban size={18} className="mr-2" /> 
+                    <Ban size={18} className="mr-2 text-slate-500" /> 
                     {isCanceling ? "Canceling..." : "Cancel Order"}
                 </Button>
             )}
 
             <Button 
-                className="bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50" 
+                className="bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-50 shadow-sm" 
                 onClick={handlePrint} 
                 disabled={isCanceled} 
             >
@@ -143,19 +149,19 @@ const SalesDetailsPage = () => {
       </div>
 
       {/* --- MAIN INVOICE HEADER --- */}
-      <Card className={`p-6 border-t-4 shadow-md transition-all ${isCanceled ? 'border-t-red-500 bg-red-50/30' : 'border-t-green-500'}`}>
+      <Card className={`p-6 border-t-4 shadow-md transition-all ${isCanceled ? 'border-t-slate-400 bg-slate-50' : 'border-t-green-500'}`}>
         <div className="flex flex-col md:flex-row justify-between gap-6">
           
           {/* Left: Invoice Info */}
           <div>
             <div className="flex items-center gap-3 mb-1">
-                <h1 className={`text-2xl font-bold ${isCanceled ? 'text-red-700 line-through opacity-70' : 'text-slate-800'}`}>
+                <h1 className={`text-2xl font-bold ${isCanceled ? 'text-slate-500 line-through opacity-70' : 'text-slate-800'}`}>
                     {sale.invoiceNo}
                 </h1>
                 
                 {/* 🏷️ Status Badge */}
                 {isCanceled ? (
-                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-200 text-slate-700 border border-slate-300">
                         CANCELED
                     </span>
                 ) : (
@@ -175,10 +181,10 @@ const SalesDetailsPage = () => {
                Payment: <span className="font-semibold text-slate-700">{sale.orderType || 'CASH'}</span>
             </div>
             
-            {/* 🔴 Cancel වුනා නම් හේතුව පෙන්වනවා */}
+            {/* 🔴 Cancel Reason display update */}
             {isCanceled && sale.cancelReason && (
-                <div className="mt-3 text-sm text-red-600 bg-red-100/50 p-2 rounded border border-red-100 inline-block">
-                    <b>Reason:</b> {sale.cancelReason}
+                <div className="mt-4 text-sm text-slate-700 bg-slate-100 p-3 rounded-lg border border-slate-200 inline-block">
+                    <b>Cancel Reason:</b> {sale.cancelReason}
                 </div>
             )}
           </div>
@@ -195,7 +201,7 @@ const SalesDetailsPage = () => {
                 </div>
             </div>
             
-            <div className={`p-3 rounded-lg inline-block min-w-[200px] ${isCanceled ? 'bg-slate-200' : 'bg-slate-100'}`}>
+            <div className={`p-3 rounded-lg inline-block min-w-[200px] ${isCanceled ? 'bg-slate-100 opacity-80' : 'bg-slate-100'}`}>
                 <div className="text-xs text-slate-500 uppercase font-bold">Grand Total</div>
                 <div className={`text-2xl font-bold ${isCanceled ? 'text-slate-500 line-through' : 'text-green-600'}`}>
                     {sale.grandTotal?.toLocaleString(undefined, {minimumFractionDigits: 2})} <span className="text-sm text-slate-500">LKR</span>
@@ -214,7 +220,7 @@ const SalesDetailsPage = () => {
       </div>
 
       {/* --- ITEMS TABLE --- */}
-      <Card className={`p-0 overflow-hidden shadow-sm ${isCanceled ? 'opacity-70 grayscale-[50%]' : ''}`}>
+      <Card className={`p-0 overflow-hidden shadow-sm ${isCanceled ? 'opacity-70 grayscale-[30%]' : ''}`}>
         {!sale.items || sale.items.length === 0 ? (
             <div className="p-8 text-center text-slate-400">
                 <Package size={32} className="mx-auto mb-2 opacity-50"/>
@@ -262,6 +268,53 @@ const SalesDetailsPage = () => {
         )}
       </Card>
       
+      {/* --- 🟢 BEAUTIFUL CANCEL MODAL (BLUE & SLATE THEME) --- */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4 animate-in zoom-in-95 duration-200">
+            
+            <div className="flex items-center gap-3 mb-3 text-blue-600">
+              <div className="p-2 bg-blue-50 rounded-full">
+                <Ban size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800">Cancel Order</h3>
+            </div>
+            
+            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
+              Are you sure you want to cancel this order? This action will reverse the stock. Please provide a reason below.
+            </p>
+            
+            <textarea
+              className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none mb-6 text-sm bg-slate-50 text-slate-700 placeholder:text-slate-400 transition-all"
+              rows="3"
+              placeholder="Type cancellation reason here..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              autoFocus
+            />
+            
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowCancelModal(false)}
+                disabled={isCanceling}
+                className="hover:bg-slate-100"
+              >
+                Go Back
+              </Button>
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200 transition-all" 
+                onClick={executeCancelSale}
+                disabled={isCanceling}
+              >
+                {isCanceling ? "Processing..." : "Confirm Cancel"}
+              </Button>
+            </div>
+            
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

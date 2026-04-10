@@ -76,6 +76,7 @@ const PurchaseListPage = () => {
                 <th className="p-4">Date</th>
                 <th className="p-4">Invoice No</th>
                 <th className="p-4">Supplier</th>
+                <th className="p-4 text-center">Status</th> {/* 🟢 අලුතින් Status column එක දැම්මා */}
                 <th className="p-4 text-right">Grand Total</th>
                 <th className="p-4 text-center">GRNs</th>
                 <th className="p-4 w-10"></th>
@@ -83,38 +84,59 @@ const PurchaseListPage = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan="6" className="p-6 text-center text-slate-500">Loading...</td></tr>
+                <tr><td colSpan="7" className="p-6 text-center text-slate-500">Loading...</td></tr>
               ) : data.length === 0 ? (
-                <tr><td colSpan="6" className="p-6 text-center text-slate-500">No records found.</td></tr>
+                <tr><td colSpan="7" className="p-6 text-center text-slate-500">No records found.</td></tr>
               ) : (
-                data.map((purchase) => (
-                  <tr 
-                    key={purchase.purchaseId} 
-                    className="hover:bg-blue-50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/purchases/${purchase.purchaseId}`)} // Navigate to Details
-                  >
-                    <td className="p-4 text-slate-600">
-                      {new Date(purchase.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="p-4 font-bold text-blue-600">
-                      {purchase.invoiceNo}
-                    </td>
-                    <td className="p-4 font-medium text-slate-700">
-                      {purchase.supplierName}
-                    </td>
-                    <td className="p-4 text-right font-bold text-slate-800 text-lg">
-                      {purchase.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="p-4 text-center">
-                       <span className="bg-slate-100 border px-2 py-1 rounded text-xs font-semibold text-slate-500">
-                           View Details
-                       </span>
-                    </td>
-                    <td className="p-4 text-slate-400">
-                        <ChevronRight size={18}/>
-                    </td>
-                  </tr>
-                ))
+                data.map((purchase) => {
+                  
+                  // 🟢 Status එක Check කරනවා
+                  const isCanceled = purchase.status === 'CANCELED';
+
+                  return (
+                    <tr 
+                      key={purchase.purchaseId} 
+                      // 🔴 Cancel කරපු එකක් නම් Row එකේ පාට වෙනස් කරනවා
+                      className={`cursor-pointer transition-colors ${isCanceled ? 'bg-red-50/30 hover:bg-red-50/50' : 'hover:bg-blue-50'}`}
+                      onClick={() => navigate(`/purchases/${purchase.purchaseId}`)}
+                    >
+                      <td className={`p-4 ${isCanceled ? 'text-slate-400' : 'text-slate-600'}`}>
+                        {new Date(purchase.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className={`p-4 font-bold ${isCanceled ? 'text-red-400 line-through' : 'text-blue-600'}`}>
+                        {purchase.invoiceNo}
+                      </td>
+                      <td className={`p-4 font-medium ${isCanceled ? 'text-slate-400' : 'text-slate-700'}`}>
+                        {purchase.supplierName}
+                      </td>
+                      
+                      {/* 🟢 Status Badge එක */}
+                      <td className="p-4 text-center">
+                        {isCanceled ? (
+                          <span className="px-2 py-1 text-[10px] uppercase tracking-wider font-bold rounded-full bg-red-100 text-red-700 border border-red-200">
+                            Canceled
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 text-[10px] uppercase tracking-wider font-bold rounded-full bg-green-100 text-green-700 border border-green-200">
+                            Completed
+                          </span>
+                        )}
+                      </td>
+
+                      <td className={`p-4 text-right font-bold text-lg ${isCanceled ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                        {purchase.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="p-4 text-center">
+                         <span className={`border px-2 py-1 rounded text-xs font-semibold ${isCanceled ? 'bg-transparent text-slate-400 border-slate-200' : 'bg-slate-100 text-slate-500'}`}>
+                             View Details
+                         </span>
+                      </td>
+                      <td className="p-4 text-slate-400">
+                          <ChevronRight size={18}/>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -123,6 +145,9 @@ const PurchaseListPage = () => {
         {/* Pagination Controls Here (Same as before) */}
         <div className="flex justify-between items-center p-4 bg-slate-50 border-t">
              {/* ... Pagination Buttons ... */}
+             <div className="text-sm text-slate-500">
+               Page {page + 1} of {totalPages === 0 ? 1 : totalPages} | Total: {totalElements}
+             </div>
         </div>
       </Card>
     </div>

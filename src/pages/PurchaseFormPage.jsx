@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import SupplierQuickAddModal from "../components/purchase/SupplierQuickAddModal";
-import CustomSelect from "../components/common/CustomSelect"; // 🟢 Custom Select එක Import කළා
+import CustomSelect from "../components/common/CustomSelect"; 
 import { suppliersAPI } from "../api/suppliers.api";
 import { itemsAPI } from "../api/items.api";
 import { branchesAPI } from "../api/branches.api";
@@ -76,7 +76,6 @@ const PurchaseFormPage = () => {
     }
     try {
       let branchIdForSearch;
-      console.log("User Role:", user?.role, "Selected Branch ID:", selectedBranchId)
       if (user?.role === "ADMIN" || user?.role === "MANAGER") {
         branchIdForSearch = selectedBranchId;
       } else {
@@ -238,7 +237,8 @@ const PurchaseFormPage = () => {
 
     const payload = {
         supplierId: Number(supplierId),
-        invoiceNo: invoiceNo || "PURCHASE",
+        // 🟢 වෙනස් කරපු තැන: invoiceNo හිස් නම් null යවනවා 
+        invoiceNo: invoiceNo ? invoiceNo : null, 
         branches: branchesPayload
     };
 
