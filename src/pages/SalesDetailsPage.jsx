@@ -10,6 +10,8 @@ import {
   CreditCard, Package, Ban 
 } from "lucide-react";
 import { toast } from "react-hot-toast"; // 🟢 Toast එක Import කළා
+import { hasPermission } from "../utils/permissions";
+import { hasPlanFeature } from "../utils/subscriptionFeatures";
 
 const SalesDetailsPage = () => {
   const { id } = useParams(); 
@@ -112,6 +114,9 @@ const SalesDetailsPage = () => {
   if (!sale) return <div className="p-10 text-center text-red-500">Sale record not found!</div>;
 
   const isCanceled = sale.status === 'CANCELED';
+  const canCancelOrder =
+    hasPermission(user?.role, "CANCEL_ORDERS") &&
+    hasPlanFeature(user?.planName, "ORDER_CANCEL");
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20">
@@ -127,7 +132,7 @@ const SalesDetailsPage = () => {
         
         <div className="flex gap-3">
             {/* 🟢 Cancel Button (Updated Design) */}
-            {!isCanceled && (
+            {!isCanceled && canCancelOrder && (
                 <Button 
                     className="bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm" 
                     onClick={handleCancelClick}

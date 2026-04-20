@@ -69,8 +69,8 @@ const AppRoutes = () => {
         <Route path="items" element={<ProtectedRoute permission="VIEW_ITEMS"><ItemsPage /></ProtectedRoute>} />
         <Route path="items/new" element={<ProtectedRoute permission="MANAGE_ITEMS"><ItemFormPage mode="create" /></ProtectedRoute>} />
         <Route path="items/:id/edit" element={<ProtectedRoute permission="MANAGE_ITEMS"><ItemFormPage mode="edit" /></ProtectedRoute>} />
-        <Route path="items/bulk-add" element={<ProtectedRoute permission="MANAGE_ITEMS"><BulkAddItems /></ProtectedRoute>} />
-        <Route path="items/print-barcodes" element={<ProtectedRoute permission="VIEW_ITEMS"><BarcodePrintPage /></ProtectedRoute>} />
+        <Route path="items/bulk-add" element={<ProtectedRoute permission="MANAGE_ITEMS" feature="BULK_ITEMS"><BulkAddItems /></ProtectedRoute>} />
+        <Route path="items/print-barcodes" element={<ProtectedRoute permission="VIEW_ITEMS" feature="BARCODE_PRINT"><BarcodePrintPage /></ProtectedRoute>} />
         
         <Route path="customers" element={<ProtectedRoute permission="MANAGE_CUSTOMERS"><Customers /></ProtectedRoute>} />
         <Route path="customers/new" element={<ProtectedRoute permission="MANAGE_CUSTOMERS"><CustomerFormPage mode="create" /></ProtectedRoute>} />
@@ -78,22 +78,22 @@ const AppRoutes = () => {
         <Route path="customers/:id" element={<ProtectedRoute permission="MANAGE_CUSTOMERS"><CustomerViewPage /></ProtectedRoute>} />
         
         <Route path="shifts" element={<ProtectedRoute permission="MANAGE_SHIFTS"><Shifts /></ProtectedRoute>} />
-        <Route path="shifts/history" element={<ProtectedRoute permission="MANAGE_SHIFTS_HISTORY"><ShiftHistory /></ProtectedRoute>} />
+        <Route path="shifts/history" element={<ProtectedRoute permission="MANAGE_SHIFTS_HISTORY" feature="SHIFT_HISTORY"><ShiftHistory /></ProtectedRoute>} />
         
-        <Route path="expenses" element={<ProtectedRoute permission="RECORD_EXPENSES"><Expenses /></ProtectedRoute>} />
-        <Route path="cash-drops" element={<ProtectedRoute permission="RECORD_EXPENSES"><CashDrops /></ProtectedRoute>} />
+        <Route path="expenses" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS"><Expenses /></ProtectedRoute>} />
+        <Route path="cash-drops" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS"><CashDrops /></ProtectedRoute>} />
         
         <Route path="stock" element={<ProtectedRoute permission="VIEW_STOCK"><Stock /></ProtectedRoute>} />
         <Route path="stock/adjustments" element={<ProtectedRoute permission="ADJUST_STOCK"><StockAdjustments /></ProtectedRoute>} />
-        <Route path="stock/transfers" element={<ProtectedRoute permission="TRANSFER_STOCK"><StockTransfers /></ProtectedRoute>} />
+        <Route path="stock/transfers" element={<ProtectedRoute permission="TRANSFER_STOCK" feature="STOCK_TRANSFERS"><StockTransfers /></ProtectedRoute>} />
         
-        <Route path="purchases" element={<ProtectedRoute permission="VIEW_PURCHASES"><Purchases /></ProtectedRoute>} />
-        <Route path="purchases/new" element={<ProtectedRoute permission="NEW_PURCHASE"><NewPurchase /></ProtectedRoute>} />
-        <Route path="purchases/:id" element={<ProtectedRoute permission="VIEW_PURCHASES"><PurchaseDetailsPage /></ProtectedRoute>} />
-        
-        <Route path="reports" element={<ProtectedRoute permission="VIEW_REPORTS"><Reports /></ProtectedRoute>} />
+        <Route path="purchases" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES"><Purchases /></ProtectedRoute>} />
+        <Route path="purchases/new" element={<ProtectedRoute permission="NEW_PURCHASE" feature="PURCHASES"><NewPurchase /></ProtectedRoute>} />
+        <Route path="purchases/:id" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES"><PurchaseDetailsPage /></ProtectedRoute>} />
+
+        <Route path="reports" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS"><Reports /></ProtectedRoute>} />
         <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES"><Branches /></ProtectedRoute>} />
-        <Route path="users" element={<ProtectedRoute permission="MANAGE_USERS"><Users /></ProtectedRoute>} />
+        <Route path="users" element={<ProtectedRoute permission="MANAGE_USERS" feature="USER_MANAGEMENT"><Users /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { hasPermission } from "../../utils/permissions";
+import { hasPlanFeature } from "../../utils/subscriptionFeatures";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -25,6 +26,7 @@ const Sidebar = () => {
   const { user } = useAuth();
   const location = useLocation();
   const role = user?.role;
+  const canUseFeature = (feature) => hasPlanFeature(user?.planName, feature);
 
   // 🔴 Mobile Menu State
   const [isOpen, setIsOpen] = useState(false);
@@ -222,6 +224,10 @@ return (
               item.type !== "dropdown-sales" // 🟢
             ) {
               if (!hasPermission(role, item.permission)) return null;
+              if (item.path === "/reports" && !canUseFeature("ADVANCED_REPORTS")) return null;
+              if (item.path === "/expenses" && !canUseFeature("FINANCIALS")) return null;
+              if (item.path === "/cash-drops" && !canUseFeature("FINANCIALS")) return null;
+              if (item.path === "/users" && !canUseFeature("USER_MANAGEMENT")) return null;
             }
 
             // =========================
@@ -328,7 +334,7 @@ return (
                         </NavLink>
                       )}
 
-                      {hasPermission(role, "MANAGE_ITEMS") && (
+                      {hasPermission(role, "MANAGE_ITEMS") && canUseFeature("BULK_ITEMS") && (
                         <NavLink
                           to="/items/bulk-add"
                           className={({ isActive }) =>
@@ -342,7 +348,7 @@ return (
                         </NavLink>
                       )}
 
-                      {hasPermission(role, "VIEW_ITEMS") && (
+                      {hasPermission(role, "VIEW_ITEMS") && canUseFeature("BARCODE_PRINT") && (
                         <NavLink
                           to="/items/print-barcodes"
                           className={({ isActive }) =>
@@ -472,7 +478,7 @@ return (
                       >
                         Active Shift
                       </NavLink>)}
-                      {hasPermission(role, "MANAGE_SHIFTS_HISTORY") && (<NavLink
+                      {hasPermission(role, "MANAGE_SHIFTS_HISTORY") && canUseFeature("SHIFT_HISTORY") && (<NavLink
                         to="/shifts/history"
                         className={({ isActive }) =>
                           `block px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -546,7 +552,7 @@ return (
                         </NavLink>
                       )}
 
-                      {hasPermission(role, "TRANSFER_STOCK") && (
+                      {hasPermission(role, "TRANSFER_STOCK") && canUseFeature("STOCK_TRANSFERS") && (
                         <NavLink
                           to="/stock/transfers"
                           className={({ isActive }) =>
@@ -569,6 +575,7 @@ return (
             // ✅ Purchase dropdown
             // =========================
             if (item.type === "dropdown-purchase") {
+              if (!canUseFeature("PURCHASES")) return null;
               const canSeePurchaseMenu =
                 hasPermission(role, "VIEW_PURCHASES") ||
                 hasPermission(role, "NEW_PURCHASE");
