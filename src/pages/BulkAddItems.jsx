@@ -29,6 +29,8 @@ const emptyDraft = () => ({
   costPrice: "",
   sellingPrice: "",
   reorderLevel: "",
+  weightItem: false,
+  defaultUnit: "PCS",
 });
 
 export default function BulkAddItems() {
@@ -190,6 +192,8 @@ export default function BulkAddItems() {
       costPrice: num(draft.costPrice),
       sellingPrice: num(draft.sellingPrice),
       reorderLevel: num(draft.reorderLevel) ?? 0,
+      weightItem: draft.weightItem,
+      defaultUnit: draft.weightItem ? draft.defaultUnit : "PCS",
       active: true,
     };
 

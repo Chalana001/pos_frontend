@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Search, Package, AlertTriangle, Settings2, ArrowRightLeft } from "lucide-react"; 
+import { Search, Package, AlertTriangle, Settings2, ArrowRightLeft } from "lucide-react";
 
 import { stockAPI } from "../api/stock.api";
-import { itemsAPI } from "../api/items.api"; 
-import api from '../api/axios'; 
+import { itemsAPI } from "../api/items.api";
+import api from '../api/axios';
 
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
@@ -24,7 +24,7 @@ const Stock = () => {
   const [stockItems, setStockItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [branches, setBranches] = useState([]); 
+  const [branches, setBranches] = useState([]);
 
   const [page, setPage] = useState(0);
   const [pageSize] = useState(10);
@@ -35,11 +35,13 @@ const Stock = () => {
   const [loadingBatches, setLoadingBatches] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ✅ Add qtyUnit to adjustFormData
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustFormData, setAdjustFormData] = useState({
     batchId: '',
     type: ADJUSTMENT_TYPES.MANUAL,
     qty: '',
+    qtyUnit: 'KG', 
     reason: '',
   });
 
@@ -48,6 +50,7 @@ const Stock = () => {
     batchId: '',
     toBranchId: '',
     qty: '',
+    qtyUnit: 'KG',
     notes: '',
   });
 
@@ -72,7 +75,7 @@ const Stock = () => {
         page: page,
         size: pageSize
       });
-      
+
       const itemsArray = response.data.content ? response.data.content : (Array.isArray(response.data) ? response.data : []);
       setStockItems(itemsArray);
       setTotalPages(response.data.totalPages || 0);
@@ -104,7 +107,7 @@ const Stock = () => {
 
   const totalValue = useMemo(() => {
     return stockItems.reduce((sum, item) => {
-      const qty = item?.totalQuantity ?? 0;
+      const qty = item?.displayQuantity !== undefined ? item.displayQuantity : (item?.totalQuantity ?? 0);
       const cost = item?.costPrice ?? 0;
       return sum + qty * cost;
     }, 0);
@@ -117,14 +120,13 @@ const Stock = () => {
 
     try {
       const currentBranchId = selectedBranchId || 0;
-      
       const response = await itemsAPI.search(item.itemName, currentBranchId);
-      
+
       const matchedItem = response.data?.find(i => i.id === item.itemId);
       const branchBatches = matchedItem?.batches || [];
-      
+
       setItemBatches(branchBatches);
-      
+
       if (branchBatches.length === 1) {
         setFormState(prev => ({ ...prev, batchId: String(branchBatches[0].batchId) }));
       }
@@ -137,29 +139,33 @@ const Stock = () => {
   };
 
   const handleOpenAdjust = async (item) => {
-    setAdjustFormData({ batchId: '', type: ADJUSTMENT_TYPES.MANUAL, qty: '', reason: '' });
+    setAdjustFormData({ batchId: '', type: ADJUSTMENT_TYPES.MANUAL, qty: '', qtyUnit: 'KG', reason: '' });
     setShowAdjustModal(true);
     await loadItemBatches(item, setAdjustFormData);
   };
 
+  // ✅ Updated submit logic for weight items
   const handleAdjustSubmit = async (e) => {
     e.preventDefault();
-    if(!adjustFormData.batchId) return toast.error("Please select a batch");
+    if (!adjustFormData.batchId) return toast.error("Please select a batch");
 
     setIsSubmitting(true);
     try {
       const currentBranchId = selectedBranchId || 0;
+      const isWeightItem = selectedItem?.weightItem || false;
+
       await api.post('/stock-adjustments', {
         ...adjustFormData,
         branchId: currentBranchId,
         itemId: selectedItem.itemId,
         batchId: parseInt(adjustFormData.batchId),
-        qty: parseInt(adjustFormData.qty),
+        qty: isWeightItem ? parseFloat(adjustFormData.qty) : parseInt(adjustFormData.qty),
+        qtyUnit: isWeightItem ? adjustFormData.qtyUnit : undefined,
       });
 
       toast.success('Stock adjusted successfully');
       setShowAdjustModal(false);
-      fetchStock(); 
+      fetchStock();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Adjustment failed');
     } finally {
@@ -168,29 +174,31 @@ const Stock = () => {
   };
 
   const handleOpenTransfer = async (item) => {
-    setTransferFormData({ batchId: '', toBranchId: '', qty: '', notes: '' });
+    setTransferFormData({ batchId: '', toBranchId: '', qty: '', qtyUnit: 'KG', notes: '' });
     setShowTransferModal(true);
     await loadItemBatches(item, setTransferFormData);
   };
 
   const handleTransferSubmit = async (e) => {
     e.preventDefault();
-    if(!transferFormData.batchId) return toast.error("Please select a batch");
-    if(!transferFormData.toBranchId) return toast.error("Please select destination branch");
+    if (!transferFormData.batchId) return toast.error("Please select a batch");
+    if (!transferFormData.toBranchId) return toast.error("Please select destination branch");
 
     setIsSubmitting(true);
     try {
       const currentBranchId = selectedBranchId || 0;
-      
+      const isWeightItem = selectedItem?.weightItem || false;
+
       const payload = {
         fromBranchId: currentBranchId,
         toBranchId: parseInt(transferFormData.toBranchId),
-        note: transferFormData.notes, 
+        note: transferFormData.notes,
         items: [
           {
             itemId: selectedItem.itemId,
             batchId: parseInt(transferFormData.batchId),
-            qty: parseInt(transferFormData.qty)
+            qty: isWeightItem ? parseFloat(transferFormData.qty) : parseInt(transferFormData.qty),
+            qtyUnit: isWeightItem ? transferFormData.qtyUnit : undefined,
           }
         ]
       };
@@ -199,7 +207,7 @@ const Stock = () => {
 
       toast.success('Stock transferred successfully');
       setShowTransferModal(false);
-      fetchStock(); 
+      fetchStock();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Transfer failed');
     } finally {
@@ -217,11 +225,17 @@ const Stock = () => {
       {
         header: "Quantity",
         render: (item) => {
-          const qty = item.totalQuantity ?? 0;
-          const isLow = qty <= 0;
+          // ✅ displayQuantity එක තියෙනවා නම් ඒක ගන්නවා, නැත්නම් totalQuantity ගන්නවා
+          const displayQty = item.displayQuantity !== undefined ? item.displayQuantity : (item.totalQuantity ?? 0);
+          
+          // ✅ අගට Unit එක එකතු කරනවා (ex: " KG", " PCS")
+          const unit = item.defaultUnit ? ` ${item.defaultUnit}` : "";
+          
+          const isLow = (item.totalQuantity ?? 0) <= 0;
+          
           return (
             <span className={`font-semibold ${isLow ? "text-red-600" : "text-slate-800"}`}>
-              {qty}
+              {displayQty}{unit}
               {isLow && <AlertTriangle size={14} className="inline ml-1 text-red-500" />}
             </span>
           );
@@ -242,20 +256,20 @@ const Stock = () => {
         header: "Actions",
         render: (item) => (
           <div className="flex items-center gap-2">
-            <Button 
-              variant="secondary" 
-              size="sm" 
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => handleOpenAdjust(item)}
               className="flex items-center gap-1 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border-none"
             >
               <Settings2 size={16} /> Adjust
             </Button>
-            <Button 
-              variant="secondary" 
-              size="sm" 
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => handleOpenTransfer(item)}
               className="flex items-center gap-1 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 border-none"
-              disabled={(item.totalQuantity ?? 0) <= 0} 
+              disabled={(item.totalQuantity ?? 0) <= 0}
             >
               <ArrowRightLeft size={16} /> Transfer
             </Button>
@@ -263,7 +277,6 @@ const Stock = () => {
         ),
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedBranchId]
   );
 
@@ -328,24 +341,24 @@ const Stock = () => {
 
         <div className="flex justify-between items-center p-4 bg-slate-50 border-t">
           <span className="text-sm text-slate-500">
-             Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
+            Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
           </span>
           <div className="flex gap-2">
-            <Button 
-                disabled={page === 0 || loading} 
-                onClick={() => setPage(page - 1)} 
-                variant="secondary" 
-                className="px-3 py-1 text-sm"
+            <Button
+              disabled={page === 0 || loading}
+              onClick={() => setPage(page - 1)}
+              variant="secondary"
+              className="px-3 py-1 text-sm"
             >
-                Prev
+              Prev
             </Button>
-            <Button 
-                disabled={page >= totalPages - 1 || loading} 
-                onClick={() => setPage(page + 1)} 
-                variant="secondary" 
-                className="px-3 py-1 text-sm"
+            <Button
+              disabled={page >= totalPages - 1 || loading}
+              onClick={() => setPage(page + 1)}
+              variant="secondary"
+              className="px-3 py-1 text-sm"
             >
-                Next
+              Next
             </Button>
           </div>
         </div>
@@ -402,16 +415,30 @@ const Stock = () => {
                 </select>
               </div>
 
+              {/* ✅ Updated Quantity Input for Weight Items */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Quantity *</label>
-                <input
-                  type="number"
-                  value={adjustFormData.qty}
-                  onChange={(e) => setAdjustFormData({ ...adjustFormData, qty: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                  placeholder="e.g., -5 to remove, +5 to add"
-                  required
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    step={selectedItem?.weightItem ? "0.1" : "1"}
+                    value={adjustFormData.qty}
+                    onChange={(e) => setAdjustFormData({ ...adjustFormData, qty: e.target.value })}
+                    className="flex-1 p-2 border border-slate-300 rounded-lg w-full"
+                    placeholder="e.g., -5 to remove, +5 to add"
+                    required
+                  />
+                  {selectedItem?.weightItem && (
+                    <select
+                      value={adjustFormData.qtyUnit}
+                      onChange={(e) => setAdjustFormData({ ...adjustFormData, qtyUnit: e.target.value })}
+                      className="p-2 border border-slate-300 rounded-lg min-w-max"
+                    >
+                      <option value="G">Grams (G)</option>
+                      <option value="KG">Kilograms (KG)</option>
+                    </select>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -480,26 +507,39 @@ const Stock = () => {
                 >
                   <option value="">-- Select Destination Branch --</option>
                   {branches
-                    .filter(b => String(b.id) !== String(selectedBranchId || 0)) 
+                    .filter(b => String(b.id) !== String(selectedBranchId || 0))
                     .map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}
                       </option>
-                  ))}
+                    ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Quantity to Transfer *</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={transferFormData.qty}
-                  onChange={(e) => setTransferFormData({ ...transferFormData, qty: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                  placeholder="e.g., 5"
-                  required
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0.1"
+                    step={selectedItem?.weightItem ? "0.1" : "1"}
+                    value={transferFormData.qty}
+                    onChange={(e) => setTransferFormData({ ...transferFormData, qty: e.target.value })}
+                    className="flex-1 p-2 border border-slate-300 rounded-lg"
+                    placeholder="e.g., 5"
+                    required
+                  />
+                  {selectedItem?.weightItem && (
+                    <select
+                      value={transferFormData.qtyUnit}
+                      onChange={(e) => setTransferFormData({ ...transferFormData, qtyUnit: e.target.value })}
+                      className="p-2 border border-slate-300 rounded-lg min-w-max"
+                    >
+                      <option value="G">Grams (G)</option>
+                      <option value="KG">Kilograms (KG)</option>
+                    </select>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -514,9 +554,9 @@ const Stock = () => {
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button 
-                  type="submit" 
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white" 
+                <Button
+                  type="submit"
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                   disabled={isSubmitting || itemBatches.length === 0}
                 >
                   {isSubmitting ? "Processing..." : "Transfer Stock"}

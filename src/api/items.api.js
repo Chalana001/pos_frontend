@@ -15,7 +15,12 @@ export const itemsAPI = {
     api.get("/items/search", {
       params: (branchId !== undefined && branchId !== null) ? { name, branchId } : { name },
     }),
-  
+
+  searchForPos: (name, branchId) =>
+    api.get("/items/searchForPos", {
+      params: (branchId !== undefined && branchId !== null) ? { name, branchId } : { name },
+    }),
+
   searchForPrint: (query) => api.get("/items/search-print", { params: { query } }),
 
   getById: (id) => api.get(`/items/${id}`),

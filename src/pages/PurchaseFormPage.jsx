@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import SupplierQuickAddModal from "../components/purchase/SupplierQuickAddModal";
-import CustomSelect from "../components/common/CustomSelect"; 
+import CustomSelect from "../components/common/CustomSelect";
 import { suppliersAPI } from "../api/suppliers.api";
 import { itemsAPI } from "../api/items.api";
 import { branchesAPI } from "../api/branches.api";
@@ -20,7 +20,7 @@ const PurchaseFormPage = () => {
 
   // 🚀 Refs
   const searchInputRef = useRef(null);
-  const firstQtyInputRef = useRef(null); 
+  const firstQtyInputRef = useRef(null);
 
   // --- HEADER DATA ---
   const [branches, setBranches] = useState([]);
@@ -45,7 +45,7 @@ const PurchaseFormPage = () => {
   useEffect(() => {
     loadInitialData();
     if (searchInputRef.current) {
-        searchInputRef.current.focus();
+      searchInputRef.current.focus();
     }
   }, []);
 
@@ -82,7 +82,7 @@ const PurchaseFormPage = () => {
         branchIdForSearch = user?.branchId;
       }
 
-      const res = await itemsAPI.search(q, branchIdForSearch); 
+      const res = await itemsAPI.search(q, branchIdForSearch);
       setSearchResults(res.data || []);
     } catch (e) {
       console.error(e);
@@ -91,22 +91,22 @@ const PurchaseFormPage = () => {
 
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
-        e.preventDefault();
-        if (!search.trim() || searchResults.length === 0) {
-            toast.error("Item not found!");
-            setSearch("");
-            return;
-        }
+      e.preventDefault();
+      if (!search.trim() || searchResults.length === 0) {
+        toast.error("Item not found!");
+        setSearch("");
+        return;
+      }
 
-        const exactMatch = searchResults.find(
-            item => item.barcode?.toLowerCase() === search.toLowerCase()
-        );
+      const exactMatch = searchResults.find(
+        item => item.barcode?.toLowerCase() === search.toLowerCase()
+      );
 
-        const itemToSelect = exactMatch || searchResults[0];
+      const itemToSelect = exactMatch || searchResults[0];
 
-        if (itemToSelect) {
-            selectItem(itemToSelect);
-        }
+      if (itemToSelect) {
+        selectItem(itemToSelect);
+      }
     }
   };
 
@@ -122,6 +122,7 @@ const PurchaseFormPage = () => {
         cost: item.costPrice || 0,
         sell: item.sellingPrice || 0,
         qty: "",
+        qtyUnit: item.defaultUnit || "PCS",
         expiry: ""
       };
     });
@@ -168,7 +169,9 @@ const PurchaseFormPage = () => {
     const newRows = [];
 
     Object.entries(branchInputs).forEach(([branchIdStr, data]) => {
-      const qty = Number(data.qty);
+      const isWeightItem = selectedItem.weightItem || false;
+      const qty = isWeightItem ? parseFloat(data.qty) : Number(data.qty);
+
       if (qty > 0) {
         const branch = branches.find(b => b.id == branchIdStr);
 
@@ -180,6 +183,8 @@ const PurchaseFormPage = () => {
           branchId: Number(branchIdStr),
           branchName: branch?.name || "Unknown",
           qty: qty,
+          qtyUnit: isWeightItem ? data.qtyUnit : undefined,
+          weightItem: selectedItem.weightItem,
           costPrice: Number(data.cost),
           sellingPrice: Number(data.sell),
           expiryDate: data.expiry || null,
@@ -196,16 +201,16 @@ const PurchaseFormPage = () => {
     setCartItems(prev => [...prev, ...newRows]);
     setSelectedItem(null);
     setBranchInputs({});
-    
+
     if (searchInputRef.current) {
-        searchInputRef.current.focus();
+      searchInputRef.current.focus();
     }
   };
 
   const handleRemoveItem = (index) => {
     setCartItems((prev) => prev.filter((_, i) => i !== index));
     if (searchInputRef.current) {
-        searchInputRef.current.focus();
+      searchInputRef.current.focus();
     }
   };
 
@@ -217,35 +222,36 @@ const PurchaseFormPage = () => {
     const branchesMap = {};
 
     cartItems.forEach(item => {
-        if (!branchesMap[item.branchId]) {
-            branchesMap[item.branchId] = {
-                branchId: item.branchId,
-                items: []
-            };
-        }
+      if (!branchesMap[item.branchId]) {
+        branchesMap[item.branchId] = {
+          branchId: item.branchId,
+          items: []
+        };
+      }
 
-        branchesMap[item.branchId].items.push({
-            itemId: item.itemId,
-            qty: item.qty,
-            costPrice: item.costPrice,
-            sellingPrice: item.sellingPrice,
-            expiryDate: item.expiryDate 
-        });
+      branchesMap[item.branchId].items.push({
+        itemId: item.itemId,
+        qty: item.qty,
+        qtyUnit: item.qtyUnit,
+        costPrice: item.costPrice,
+        sellingPrice: item.sellingPrice,
+        expiryDate: item.expiryDate
+      });
     });
 
     const branchesPayload = Object.values(branchesMap);
 
     const payload = {
-        supplierId: Number(supplierId),
-        // 🟢 වෙනස් කරපු තැන: invoiceNo හිස් නම් null යවනවා 
-        invoiceNo: invoiceNo ? invoiceNo : null, 
-        branches: branchesPayload
+      supplierId: Number(supplierId),
+      // 🟢 වෙනස් කරපු තැන: invoiceNo හිස් නම් null යවනවා 
+      invoiceNo: invoiceNo ? invoiceNo : null,
+      branches: branchesPayload
     };
 
     try {
       await purchasesAPI.create(payload);
       toast.success("Purchase saved successfully!");
-      navigate("/purchases"); 
+      navigate("/purchases");
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Failed to save purchase.");
@@ -265,9 +271,9 @@ const PurchaseFormPage = () => {
       </div>
 
       <Card className="p-5 border-t-4 border-t-blue-600">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* 🟢 Supplier Custom Select */}
-          <div className="relative z-50">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Supplier Select */}
+          <div>
             <label className="label-text">Supplier</label>
             <div className="flex gap-2">
               <div className="flex-1">
@@ -279,17 +285,17 @@ const PurchaseFormPage = () => {
                   disabled={cartItems.length > 0}
                 />
               </div>
-              <Button 
-                onClick={() => setShowSupplierModal(true)} 
-                variant="secondary" 
-                className="px-3 shrink-0" 
+              <Button
+                onClick={() => setShowSupplierModal(true)}
+                variant="secondary"
+                className="px-3 shrink-0"
                 disabled={cartItems.length > 0}
               >
                 <Plus size={18} />
               </Button>
             </div>
           </div>
-          
+
           <div>
             <label className="label-text">Invoice No</label>
             <input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="input w-full" placeholder="Ex: INV-999" />
@@ -309,21 +315,21 @@ const PurchaseFormPage = () => {
 
             <div className="relative mb-4">
               <input
-                ref={searchInputRef} 
+                ref={searchInputRef}
                 placeholder="Scan barcode or type name..."
                 value={search}
                 onChange={(e) => searchItems(e.target.value)}
-                onKeyDown={handleSearchKeyDown} 
+                onKeyDown={handleSearchKeyDown}
                 className="input w-full border-blue-300 focus:ring-blue-500"
                 autoFocus
               />
               {searchResults.length > 0 && (
                 <div className="absolute z-10 w-full bg-white border rounded-md shadow-xl mt-1 max-h-60 overflow-y-auto">
                   {searchResults.map((item) => {
-                    
-                    const totalStock = item.batches && item.batches.length > 0 
-                        ? item.batches.reduce((sum, batch) => sum + Number(batch.qty), 0)
-                        : (item.availableQty || 0);
+
+                    const totalStock = item.batches && item.batches.length > 0
+                      ? item.batches.reduce((sum, batch) => sum + Number(batch.qty), 0)
+                      : (item.availableQty || 0);
                     return (
                       <div
                         key={item.id}
@@ -351,7 +357,7 @@ const PurchaseFormPage = () => {
                     <div className="font-bold text-blue-900">{selectedItem.name}</div>
                     <div className="text-xs text-blue-600">{selectedItem.barcode}</div>
                   </div>
-                  <button onClick={() => { setSelectedItem(null); if(searchInputRef.current) searchInputRef.current.focus(); }} className="text-xs text-red-500 font-medium hover:underline">
+                  <button onClick={() => { setSelectedItem(null); if (searchInputRef.current) searchInputRef.current.focus(); }} className="text-xs text-red-500 font-medium hover:underline">
                     Cancel Item
                   </button>
                 </div>
@@ -361,12 +367,14 @@ const PurchaseFormPage = () => {
                     <div className="col-span-3">Branch</div>
                     <div className="col-span-2 text-center">Cost</div>
                     <div className="col-span-2 text-center">Sell</div>
-                    <div className="col-span-2 text-center">Qty</div>
-                    <div className="col-span-3 text-center">Expiry</div>
+                    <div className={`${selectedItem?.weightItem ? 'col-span-1' : 'col-span-2'} text-center`}>Qty</div>
+                    {selectedItem?.weightItem && <div className="col-span-1 text-center">Unit</div>}
+                    <div className={`${selectedItem?.weightItem ? 'col-span-2' : 'col-span-3'} text-center`}>Expiry</div>
                   </div>
 
                   {branches.map((branch, idx) => {
                     const inputs = branchInputs[branch.id] || {};
+                    const isWeightItem = selectedItem?.weightItem || false;
                     return (
                       <div key={branch.id} className="grid grid-cols-12 gap-1 items-center bg-white p-2 rounded border border-slate-200 shadow-sm mb-2">
                         <div className="col-span-3 text-xs font-bold text-slate-700 truncate" title={branch.name}>
@@ -390,10 +398,11 @@ const PurchaseFormPage = () => {
                             onChange={(e) => handleInputChange(branch.id, 'sell', e.target.value)}
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div className={`${isWeightItem ? 'col-span-1' : 'col-span-2'}`}>
                           <input
-                            ref={idx === 0 ? firstQtyInputRef : null} 
+                            ref={idx === 0 ? firstQtyInputRef : null}
                             type="number"
+                            step={isWeightItem ? "0.1" : "1"}
                             className={`input h-8 text-xs p-1 text-center font-bold ${inputs.qty > 0 ? 'border-green-500 bg-green-50' : ''}`}
                             placeholder="Qty"
                             value={inputs.qty}
@@ -403,7 +412,19 @@ const PurchaseFormPage = () => {
                             }}
                           />
                         </div>
-                        <div className="col-span-3 flex gap-1">
+                        {isWeightItem && (
+                          <div className="col-span-1">
+                            <select
+                              value={inputs.qtyUnit || selectedItem.defaultUnit}
+                              onChange={(e) => handleInputChange(branch.id, 'qtyUnit', e.target.value)}
+                              className="input h-8 text-xs p-1 text-center"
+                            >
+                              <option value="G">G</option>
+                              <option value="KG">KG</option>
+                            </select>
+                          </div>
+                        )}
+                        <div className={`${isWeightItem ? 'col-span-2' : 'col-span-3'} flex gap-1`}>
                           <input
                             type="date"
                             className="input h-8 text-[10px] p-0 px-1 w-full"
@@ -468,7 +489,10 @@ const PurchaseFormPage = () => {
                         </td>
                         <td className="p-3 text-right text-slate-600">{item.costPrice.toFixed(2)}</td>
                         <td className="p-3 text-right text-slate-600">{item.sellingPrice.toFixed(2)}</td>
-                        <td className="p-3 text-center font-bold text-slate-800">{item.qty}</td>
+                        <td className="p-3 text-center font-bold text-slate-800">
+                          {item.weightItem ? item.qty.toFixed(2) : item.qty}
+                          {item.qtyUnit && <span className="text-xs text-slate-500 ml-1">{item.qtyUnit}</span>}
+                        </td>
                         <td className="p-3 text-right font-bold text-slate-800">{item.lineTotal.toLocaleString()}</td>
                         <td className="p-3 text-center">
                           <button onClick={() => handleRemoveItem(index)} className="text-slate-300 hover:text-red-500 transition-colors">
@@ -498,7 +522,7 @@ const PurchaseFormPage = () => {
 
       <SupplierQuickAddModal
         isOpen={showSupplierModal}
-        onClose={() => { setShowSupplierModal(false); if(searchInputRef.current) searchInputRef.current.focus(); }}
+        onClose={() => { setShowSupplierModal(false); if (searchInputRef.current) searchInputRef.current.focus(); }}
         onCreated={handleSupplierCreated}
       />
     </div>

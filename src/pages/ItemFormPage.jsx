@@ -55,6 +55,8 @@ const ItemFormPage = ({ mode }) => {
     sellingPrice: "",
     reorderLevel: "",
     imageUrl: "",
+    weightItem: false,
+    defaultUnit: "PCS",
   });
 
   // Categories & SubCategories State
@@ -126,6 +128,8 @@ const ItemFormPage = ({ mode }) => {
           sellingPrice: item.sellingPrice ?? "",
           reorderLevel: item.reorderLevel ?? "",
           imageUrl: item.imageUrl ?? "",
+          weightItem: item.weightItem ?? false,
+          defaultUnit: item.defaultUnit ?? "PCS",
         });
 
         if (item.categoryId) {
@@ -209,6 +213,8 @@ const ItemFormPage = ({ mode }) => {
         sellingPrice: Number(formData.sellingPrice || 0),
         reorderLevel: Number(formData.reorderLevel || 0),
         imageUrl: formData.imageUrl?.trim() || null,
+        weightItem: formData.weightItem,
+        defaultUnit: formData.weightItem ? formData.defaultUnit : "PCS",
         active: true,
       };
 
@@ -366,8 +372,34 @@ const ItemFormPage = ({ mode }) => {
                     </div>
                   </div>
 
+                  <div className="md:col-span-2 flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={formData.weightItem}
+                        onChange={(e) => setFormData({ ...formData, weightItem: e.target.checked, defaultUnit: e.target.checked ? "KG" : "PCS" })}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      Is this a Weight Item?
+                    </label>
+
+                    {formData.weightItem && (
+                      <div className="flex items-center gap-2 mt-2 md:mt-0">
+                        <label className="text-sm font-medium text-slate-700">Default Unit:</label>
+                        <select
+                          value={formData.defaultUnit}
+                          onChange={(e) => setFormData({ ...formData, defaultUnit: e.target.value })}
+                          className="border border-slate-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="KG">KG</option>
+                          <option value="G">G</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Cost Price</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Cost Price {formData.weightItem && "(per 1 KG)"}</label>
                     <input
                       type="number" min="0" step="0.01"
                       value={formData.costPrice}
@@ -377,7 +409,7 @@ const ItemFormPage = ({ mode }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Selling Price</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Selling Price {formData.weightItem && "(per 1 KG)"}</label>
                     <input
                       type="number" min="0" step="0.01"
                       value={formData.sellingPrice}

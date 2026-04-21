@@ -4,32 +4,64 @@ import { formatCurrency } from "../../utils/formatters";
 import { DISCOUNT_TYPES } from "../../utils/constants";
 import Button from "../../components/common/Button";
 
-const Cart = ({ 
-  items, 
-  customer, 
-  onUpdateQty, 
-  onRemoveItem, 
-  onInlineDiscount, 
-  total, 
+const Cart = ({
+  items,
+  customer,
+  onUpdateQty,
+  onRemoveItem,
+  onInlineDiscount,
+  total,
   subTotal,
-  billDiscount, 
-  setBillDiscount, 
-  onCheckout, 
-  loading, 
-  onAddCustomer 
+  billDiscount,
+  setBillDiscount,
+  onCheckout,
+  loading,
+  onAddCustomer,
+  onUpdateQtyUnit,
+  focusSearch // 🔴 අලුතින් ආපු Prop එක
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
 
-  // Enter press karama editor eka close wenna hadapu function eka
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       setEditingIndex(null);
     }
   };
 
+  const handleManualQtyChange = (index, value) => {
+    const numVal = parseFloat(value);
+    if (!isNaN(numVal) && numVal >= 0) {
+      // 🔴 අගය වෙනස් වෙද්දී (type කරද්දී) preventFocus = true කරලා යවනවා
+      onUpdateQty(index, numVal, true);
+    } else if (value === "") {
+      onUpdateQty(index, 0, true);
+    }
+  };
+
+  const calculateItemTotal = (item) => {
+    if (!item.qty || item.qty <= 0) return 0;
+
+    let lineTotal = 0;
+    if (item.weightItem && item.qtyUnit === 'G') {
+      lineTotal = item.qty * item.perGramPrice;
+    } else {
+      lineTotal = item.qty * item.unitPrice;
+    }
+
+    if (item.discountValue > 0) {
+      if (item.discountType === DISCOUNT_TYPES.PERCENT) {
+        lineTotal -= lineTotal * (item.discountValue / 100);
+      } else {
+        lineTotal -= parseFloat(item.discountValue);
+      }
+    }
+
+    return Math.max(0, lineTotal);
+  };
+
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* --- Cart Header --- */}
+      {/* ... (Header and Customer Section) ... */}
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
         <div className="flex items-center gap-2">
           <div className="bg-blue-600 text-white p-2 rounded-lg">
@@ -42,7 +74,6 @@ const Cart = ({
         </span>
       </div>
 
-      {/* --- Customer Section --- */}
       <div className="px-4 py-3 border-b border-slate-50">
         {customer ? (
           <div className="flex items-center justify-between bg-blue-50 p-2 rounded-xl border border-blue-100">
@@ -60,7 +91,7 @@ const Cart = ({
             </button>
           </div>
         ) : (
-          <button 
+          <button
             onClick={onAddCustomer}
             className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 hover:border-blue-400 hover:text-blue-500 transition-all text-sm font-medium"
           >
@@ -78,68 +109,135 @@ const Cart = ({
             <p className="font-bold">Cart is empty</p>
           </div>
         ) : (
-          items.map((item, index) => (
-            <div key={index} className="relative group overflow-hidden bg-white border border-slate-100 rounded-xl hover:border-blue-200 transition-all">
-              <div className="p-3 flex items-center gap-3">
-                <div className="flex-1">
-                  <h4 className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs font-medium text-slate-400">{formatCurrency(item.unitPrice)}</span>
-                    {item.discountValue > 0 && (
-                      <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
-                        -{item.discountType === DISCOUNT_TYPES.PERCENT ? `${item.discountValue}%` : formatCurrency(item.discountValue)}
-                      </span>
-                    )}
+          items.map((item, index) => {
+            const stepValue = item.weightItem
+              ? (item.qtyUnit === 'G' ? 100 : 0.1)
+              : 1;
+
+            return (
+              <div key={index} className="relative group overflow-hidden bg-white border border-slate-100 rounded-xl hover:border-blue-200 transition-all shadow-sm">
+                <div className="p-3 flex items-center gap-3">
+                  <div className="flex-1">
+                    <h4 className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[11px] font-medium text-slate-400">1 {item.defaultUnit} = {formatCurrency(item.unitPrice)}</span>
+                      {item.weightItem && (
+                        <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">
+                          {item.qtyUnit || item.defaultUnit}
+                        </span>
+                      )}
+                      {item.discountValue > 0 && (
+                        <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
+                          -{item.discountType === DISCOUNT_TYPES.PERCENT ? `${item.discountValue}%` : formatCurrency(item.discountValue)}
+                        </span>
+                      )}
+                    </div>
+                    {/* Item Line Total */}
+                    <div className="mt-1.5 font-bold text-blue-600 text-sm">
+                      {formatCurrency(calculateItemTotal(item))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                        {/* 🔴 +/- බටන් එබුවම preventFocus දාලා නෑ, ඒ නිසා කෙලින්ම Search එක focus වෙනවා */}
+                        <button
+                          onClick={() => onUpdateQty(index, Math.max(0, item.qty - stepValue))}
+                          className="p-1 hover:bg-white rounded shadow-sm transition-all"
+                        >
+                          <Minus size={14} />
+                        </button>
+
+                        {/* 🔴 අලුත් Input Box Events (onBlur, onKeyDown) */}
+                        <input
+                          type="number"
+                          value={item.qty === 0 ? "" : item.qty}
+                          onChange={(e) => handleManualQtyChange(index, e.target.value)}
+                          onBlur={focusSearch} // වෙන තැනක් click කරාම (හෝ Enter ගැහුවම) search එකට යනවා
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur(); // Enter ගැහුවම Box එකෙන් focus අයින් කරනවා (එතකොට onBlur එක වැඩ කරනවා)
+                            }
+                          }}
+                          className="w-14 text-center text-sm font-bold bg-transparent outline-none focus:bg-white rounded px-1 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          title="Click to edit quantity"
+                        />
+
+                        <button
+                          onClick={() => onUpdateQty(index, item.qty + stepValue)}
+                          className="p-1 hover:bg-white rounded shadow-sm transition-all"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+
+                      {item.weightItem ? (
+                        <select
+                          value={item.qtyUnit || item.defaultUnit}
+                          onChange={(e) => {
+                            onUpdateQtyUnit?.(index, e.target.value);
+                            focusSearch(); // Unit එක මාරු කරාමත් search එකට යවනවා
+                          }}
+                          className="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded p-1 outline-none cursor-pointer hover:bg-slate-100 focus:ring-1 focus:ring-blue-500 transition-all"
+                        >
+                          <option value="KG">KG</option>
+                          <option value="G">G</option>
+                        </select>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-500 min-w-[2rem] text-center px-1">
+                          {item.defaultUnit}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setEditingIndex(editingIndex === index ? null : index)}
+                        className={`p-1.5 rounded-lg transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
+                        title="Add Discount"
+                      >
+                        <Tag size={14} />
+                      </button>
+                      <button onClick={() => onRemoveItem(index)} className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all" title="Remove Item">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                    <button onClick={() => onUpdateQty(index, item.qty - 1)} className="p-1 hover:bg-white rounded shadow-sm transition-all"><Minus size={14} /></button>
-                    <span className="w-8 text-center text-sm font-bold">{item.qty}</span>
-                    <button onClick={() => onUpdateQty(index, item.qty + 1)} className="p-1 hover:bg-white rounded shadow-sm transition-all"><Plus size={14} /></button>
+                {/* --- Inline Discount Editor --- */}
+                {editingIndex === index && (
+                  <div className="bg-slate-50 border-t border-slate-100 p-3 animate-in slide-in-from-top duration-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Item Discount</span>
+                      <button onClick={() => setEditingIndex(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
+                    </div>
+                    <div className="flex gap-2">
+                      <select
+                        value={item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.FIXED : item.discountType}
+                        onChange={(e) => onInlineDiscount(index, e.target.value, item.discountValue)}
+                        className="text-xs font-bold border border-slate-200 rounded-lg bg-white px-2 outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value={DISCOUNT_TYPES.FIXED}>Fixed (LKR)</option>
+                        <option value={DISCOUNT_TYPES.PERCENT}>Percent (%)</option>
+                      </select>
+                      <input
+                        type="number"
+                        autoFocus
+                        value={item.discountValue || ""}
+                        onKeyDown={handleKeyDown}
+                        onChange={(e) => onInlineDiscount(index, item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.FIXED : item.discountType, e.target.value)}
+                        placeholder="0.00"
+                        className="flex-1 text-sm font-bold border border-slate-200 rounded-lg bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 shadow-inner"
+                      />
+                    </div>
+                    <p className="text-[9px] text-slate-400 mt-2 italic">Press Enter to apply</p>
                   </div>
-                  <button 
-                    onClick={() => setEditingIndex(editingIndex === index ? null : index)}
-                    className={`p-2 rounded-lg transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
-                  >
-                    <Tag size={16} />
-                  </button>
-                  <button onClick={() => onRemoveItem(index)} className="p-2 text-slate-300 hover:text-red-500 transition-all"><Trash2 size={16} /></button>
-                </div>
+                )}
               </div>
-
-              {/* --- Inline Discount Editor --- */}
-              {editingIndex === index && (
-                <div className="bg-slate-50 border-t border-slate-100 p-3 animate-in slide-in-from-top duration-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Item Discount</span>
-                    <button onClick={() => setEditingIndex(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
-                  </div>
-                  <div className="flex gap-2">
-                    <select 
-                      value={item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.FIXED : item.discountType}
-                      onChange={(e) => onInlineDiscount(index, e.target.value, item.discountValue)}
-                      className="text-xs font-bold border border-slate-200 rounded-lg bg-white px-2 outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value={DISCOUNT_TYPES.FIXED}>Fixed (LKR)</option>
-                      <option value={DISCOUNT_TYPES.PERCENT}>Percent (%)</option>
-                    </select>
-                    <input 
-                      type="number"
-                      autoFocus
-                      value={item.discountValue || ""}
-                      onKeyDown={handleKeyDown}
-                      onChange={(e) => onInlineDiscount(index, item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.FIXED : item.discountType, e.target.value)}
-                      placeholder="0.00"
-                      className="flex-1 text-sm font-bold border border-slate-200 rounded-lg bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 shadow-inner"
-                    />
-                  </div>
-                  <p className="text-[9px] text-slate-400 mt-2 italic">Press Enter to apply</p>
-                </div>
-              )}
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -151,11 +249,15 @@ const Cart = ({
             <span className="font-medium text-slate-700">{formatCurrency(subTotal)}</span>
           </div>
           <div className="flex justify-between items-center text-slate-500 text-sm">
-            <span className="flex items-center gap-1"><Tag size={12}/> Bill Discount</span>
-            <input 
-              type="number" 
+            <span className="flex items-center gap-1"><Tag size={12} /> Bill Discount</span>
+            <input
+              type="number"
               value={billDiscount || ""}
               onChange={(e) => setBillDiscount(parseFloat(e.target.value) || 0)}
+              onBlur={focusSearch} // Discount එක ගහලා ඉවර වුණාමත් search එකට යවනවා
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+              }}
               placeholder="0.00"
               className="w-24 text-right font-bold text-slate-800 bg-white border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none"
             />
@@ -169,7 +271,7 @@ const Cart = ({
           </span>
         </div>
 
-        <Button 
+        <Button
           onClick={onCheckout}
           disabled={items.length === 0 || loading}
           className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-all active:scale-95"

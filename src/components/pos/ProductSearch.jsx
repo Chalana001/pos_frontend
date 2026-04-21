@@ -25,7 +25,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
   const searchItems = async (name) => {
     setLoading(true);
     try {
-      const response = await itemsAPI.search(name, branchId);
+      const response = await itemsAPI.searchForPos(name, branchId);
       setItems(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       setItems([]);
@@ -54,8 +54,8 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
             <div className="flex justify-center py-10"><LoadingSpinner /></div>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-60">
-               <Box size={48} className="mb-2"/>
-               <p>No products found</p>
+              <Box size={48} className="mb-2" />
+              <p>No products found</p>
             </div>
           ) : (
             items.map((item) => (
@@ -67,14 +67,14 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
                 <div>
                   <h3 className="font-bold text-slate-800 group-hover:text-blue-700">{item.name}</h3>
                   <div className="flex gap-3 text-sm text-slate-500 mt-1">
-                     <span className="flex items-center gap-1"><Barcode size={14}/> {item.barcode}</span>
-                     <span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">{item.category}</span>
+                    <span className="flex items-center gap-1"><Barcode size={14} /> {item.barcode}</span>
+                    <span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">{item.category}</span>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-bold text-slate-900 font-mono">{formatCurrency(item.sellingPrice)}</div>
                   <div className={`text-xs font-medium ${item.availableQty > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                     {item.availableQty} in stock
+                    {item.availableQty} in stock
                   </div>
                 </div>
               </button>

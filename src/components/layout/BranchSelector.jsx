@@ -48,8 +48,8 @@ const BranchSelector = () => {
     <div className="relative flex items-center gap-2 ml-14 xl:ml-0">
       <Building2 size={20} className="text-slate-500 hidden sm:block shrink-0" />
 
-      {/* 🟢 Custom Select එක පාවිච්චි කළා (පළල w-40 විදිහට දුන්නා) */}
-      <div className="w-40 z-50">
+      {/* Custom Select with proper z-index */}
+      <div className="w-40 z-20">
         <CustomSelect
           value={selectedBranchId}
           onChange={handleManualChange}
