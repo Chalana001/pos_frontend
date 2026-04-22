@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { salesAPI } from "../api/sales.api"; 
+import { receiptSettingsAPI } from "../api/receiptSettings.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
@@ -23,6 +24,7 @@ const SalesDetailsPage = () => {
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [receiptSettings, setReceiptSettings] = useState(null);
 
   // 🟢 Modal එකට අදාළ States 
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -39,6 +41,17 @@ const SalesDetailsPage = () => {
       setLoading(true);
       const res = await salesAPI.getById(id);
       setSale(res.data);
+      if (res.data?.branchId) {
+        try {
+          const settingsRes = await receiptSettingsAPI.getByBranch(res.data.branchId);
+          setReceiptSettings(settingsRes.data);
+        } catch (settingsError) {
+          console.error("Failed to load receipt settings", settingsError);
+          setReceiptSettings(null);
+        }
+      } else {
+        setReceiptSettings(null);
+      }
     } catch (error) {
       console.error("Failed to load Sale details", error);
       toast.error("Failed to load sale details");
@@ -60,7 +73,9 @@ const SalesDetailsPage = () => {
       orderType: sale.orderType || 'CASH',
       branchName: sale.branchName,
       branchAddress: sale.branchAddress,
-      branchPhone: sale.branchPhone
+      branchPhone: sale.branchPhone,
+      branchLogo: sale.branchLogo,
+      createdAt: sale.createdAt
     };
 
     const cartItems = sale.items.map(item => ({
@@ -76,12 +91,12 @@ const SalesDetailsPage = () => {
     const storeName = user?.shopName || "POS SYSTEM"; 
     
     const shiftData = {
-      cashierName: sale.cashierName || sale.cashierUserId ? `Cashier #${sale.cashierUserId}` : "Cashier"
+      cashierName: sale.cashierName || (sale.cashierUserId ? `Cashier #${sale.cashierUserId}` : "Cashier")
     };
 
     const customerData = sale.customerId ? { name: sale.customerName } : null;
 
-    printRef.current.printOrder(orderData, cartItems, storeName, shiftData, customerData);
+    printRef.current.printOrder(orderData, cartItems, storeName, shiftData, customerData, receiptSettings);
   };
 
   // 🟢 1. Open Modal

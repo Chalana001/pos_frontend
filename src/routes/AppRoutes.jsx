@@ -31,6 +31,7 @@ import NewPurchase from "../pages/PurchaseFormPage";
 import PurchaseDetailsPage from "../pages/PurchaseDetailsPage";
 import Reports from '../pages/Reports';
 import Branches from "../pages/Branches";
+import ReceiptSettingsPage from '../pages/ReceiptSettingsPage';
 import Users from '../pages/Users';
 import SubscriptionPage from '../pages/SubscriptionPage';
 
@@ -93,6 +94,7 @@ const AppRoutes = () => {
 
         <Route path="reports" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS"><Reports /></ProtectedRoute>} />
         <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES"><Branches /></ProtectedRoute>} />
+        <Route path="receipt-settings" element={<ProtectedRoute permission="MANAGE_BRANCHES"><ReceiptSettingsPage /></ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute permission="MANAGE_USERS" feature="USER_MANAGEMENT"><Users /></ProtectedRoute>} />
       </Route>
 

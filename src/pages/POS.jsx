@@ -16,6 +16,7 @@ import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter";
+import { receiptSettingsAPI } from "../api/receiptSettings.api";
 
 const GRAMS_PER_KILOGRAM = 1000;
 
@@ -99,6 +100,7 @@ const POS = () => {
   const [billDiscount, setBillDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
+  const [receiptSettings, setReceiptSettings] = useState(null);
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
 
@@ -148,6 +150,25 @@ const POS = () => {
 
     loadMyShift();
   }, [isAdminUser, selectedBranchId]);
+
+  useEffect(() => {
+    if (!myShift?.branchId) {
+      setReceiptSettings(null);
+      return;
+    }
+
+    const loadReceiptSettings = async () => {
+      try {
+        const response = await receiptSettingsAPI.getByBranch(myShift.branchId);
+        setReceiptSettings(response.data);
+      } catch (error) {
+        console.error("Failed to load receipt settings", error);
+        setReceiptSettings(null);
+      }
+    };
+
+    loadReceiptSettings();
+  }, [myShift?.branchId]);
 
   const fetchProducts = async (branchId) => {
     try {
@@ -463,10 +484,11 @@ const POS = () => {
           billDiscount: billDiscount,
           netTotal: total,
           paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : total,
-          orderType: orderType
+          orderType: orderType,
+          createdAt: response.data.createdAt
         };
 
-        printRef.current.printOrder(printData, cartItems, storeName, myShift, customer);
+        printRef.current.printOrder(printData, cartItems, storeName, myShift, customer, receiptSettings);
       }
 
       await fetchProducts(myShift.branchId);

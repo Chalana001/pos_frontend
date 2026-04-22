@@ -71,6 +71,7 @@ export const BranchProvider = ({ children }) => {
         selectedBranchId,
         loadingBranches,
         isAdmin,
+        setBranches,
         setSelectedBranchId: (id) => {
           if (!isAdmin) return;
           setSelectedBranchId(Number(id));

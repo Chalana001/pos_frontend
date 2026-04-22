@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  ReceiptText,
   CreditCard, // 🔴 Sales වලට අලුත් Icon එකක් ගත්තා
   // Printer,
 } from "lucide-react";
@@ -168,6 +169,12 @@ const Sidebar = () => {
       name: "Branches",
       icon: Building2,
       path: "/branches",
+      permission: "MANAGE_BRANCHES",
+    },
+    {
+      name: "Receipt Design",
+      icon: ReceiptText,
+      path: "/receipt-settings",
       permission: "MANAGE_BRANCHES",
     },
     {
