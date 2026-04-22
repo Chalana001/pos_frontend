@@ -1,20 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal"; 
-import CustomSelect from "../components/common/CustomSelect"; // 🟢 අලුත් Custom Select එක Import කළා
+import CustomSelect from "../components/common/CustomSelect"; 
 
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api";
+import { useBranch } from "../context/BranchContext";
+import { ItemType, ItemTypeLabels } from "../utils/constants"; // 🟢 Constant එක Import කළා
 
 import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon } from "lucide-react";
 
-/* -----------------------------
-  Collapsible Section UI
------------------------------- */
 const Section = ({ title, open, onToggle, right, children }) => {
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -37,15 +36,14 @@ const Section = ({ title, open, onToggle, right, children }) => {
 const ItemFormPage = ({ mode }) => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { branches: availableBranches } = useBranch();
 
   const [submitting, setSubmitting] = useState(false);
   const [loadingItem, setLoadingItem] = useState(false);
 
-  // sections
   const [secGeneral, setSecGeneral] = useState(true);
   const [secLabels, setSecLabels] = useState(false);
 
-  // form data
   const [formData, setFormData] = useState({
     name: "",
     barcode: "",
@@ -55,15 +53,15 @@ const ItemFormPage = ({ mode }) => {
     sellingPrice: "",
     reorderLevel: "",
     imageUrl: "",
-    weightItem: false,
+    itemType: ItemType.NORMAL, // 🟢 Default අගය
     defaultUnit: "PCS",
+    branchIds: [],
+    active: true,
   });
 
-  // Categories & SubCategories State
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
 
-  // Modal States
   const [showCatModal, setShowCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [savingCat, setSavingCat] = useState(false);
@@ -72,16 +70,15 @@ const ItemFormPage = ({ mode }) => {
   const [newSubCatName, setNewSubCatName] = useState("");
   const [savingSubCat, setSavingSubCat] = useState(false);
 
-  // image preview error
-  const [imgError, setImgError] = useState(false);
+  const branches = useMemo(
+    () => availableBranches.filter((branch) => Number(branch.id) !== 0),
+    [availableBranches]
+  );
 
-  // labels UI
+  const [imgError, setImgError] = useState(false);
   const [labels, setLabels] = useState([]);
   const [labelInput, setLabelInput] = useState("");
 
-  /* -----------------------------
-    Load Categories
-  ------------------------------ */
   useEffect(() => {
     loadCategories();
   }, []);
@@ -108,9 +105,6 @@ const ItemFormPage = ({ mode }) => {
     }
   };
 
-  /* -----------------------------
-    Load item (edit only)
-  ------------------------------ */
   useEffect(() => {
     const load = async () => {
       if (mode !== "edit") return;
@@ -128,8 +122,10 @@ const ItemFormPage = ({ mode }) => {
           sellingPrice: item.sellingPrice ?? "",
           reorderLevel: item.reorderLevel ?? "",
           imageUrl: item.imageUrl ?? "",
-          weightItem: item.weightItem ?? false,
+          itemType: item.itemType || ItemType.NORMAL,
           defaultUnit: item.defaultUnit ?? "PCS",
+          branchIds: item.branchIds ?? [],
+          active: item.active ?? true,
         });
 
         if (item.categoryId) {
@@ -150,7 +146,15 @@ const ItemFormPage = ({ mode }) => {
     loadSubCategories(catId);
   };
 
-  // Create Category Submit
+  const toggleBranchId = (branchId) => {
+    setFormData((prev) => ({
+      ...prev,
+      branchIds: prev.branchIds.includes(branchId)
+        ? prev.branchIds.filter((id) => id !== branchId)
+        : [...prev.branchIds, branchId],
+    }));
+  };
+
   const submitNewCategory = async () => {
     if (!newCatName.trim()) return toast.error("Category name is required");
     
@@ -170,7 +174,6 @@ const ItemFormPage = ({ mode }) => {
     }
   };
 
-  // Create Sub-Category Submit
   const submitNewSubCategory = async () => {
     if (!newSubCatName.trim()) return toast.error("Sub-category name is required");
     
@@ -193,9 +196,6 @@ const ItemFormPage = ({ mode }) => {
     }
   };
 
-  /* -----------------------------
-    Create/Edit Submit (Items)
-  ------------------------------ */
   const submitItem = async () => {
     if (!formData.name.trim() || !formData.subCategoryId) {
       toast.error("Please fill required fields (Name, Sub Category)");
@@ -203,19 +203,32 @@ const ItemFormPage = ({ mode }) => {
       return;
     }
 
+    if (formData.itemType === ItemType.SERVICE && formData.branchIds.length === 0) {
+      toast.error("Select at least one branch for the service");
+      setSecGeneral(true);
+      return;
+    }
+
     setSubmitting(true);
     try {
+      // 🟢 weightItem ඉවත් කළා, itemType යවනවා
       const payload = {
         name: formData.name.trim(),
         barcode: formData.barcode.trim(),
         subCategoryId: Number(formData.subCategoryId),
         costPrice: Number(formData.costPrice || 0),
         sellingPrice: Number(formData.sellingPrice || 0),
-        reorderLevel: Number(formData.reorderLevel || 0),
+        reorderLevel: formData.itemType === ItemType.SERVICE ? 0 : Number(formData.reorderLevel || 0),
         imageUrl: formData.imageUrl?.trim() || null,
-        weightItem: formData.weightItem,
-        defaultUnit: formData.weightItem ? formData.defaultUnit : "PCS",
-        active: true,
+        itemType: formData.itemType,
+        defaultUnit:
+          formData.itemType === ItemType.WEIGHT
+            ? formData.defaultUnit
+            : formData.itemType === ItemType.SERVICE
+              ? "SERVICE"
+              : "PCS",
+        active: formData.active,
+        ...(formData.itemType === ItemType.SERVICE ? { branchIds: formData.branchIds } : {}),
       };
 
       if (mode === "edit") {
@@ -233,9 +246,6 @@ const ItemFormPage = ({ mode }) => {
     }
   };
 
-  /* -----------------------------
-    Labels UI
-  ------------------------------ */
   const addLabel = () => {
     const v = labelInput.trim();
     if (!v) return;
@@ -259,7 +269,6 @@ const ItemFormPage = ({ mode }) => {
           <div className="py-12 text-slate-600">Loading item...</div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* LEFT COLUMN: Product Image */}
             <div className="lg:col-span-1">
               <div className="rounded-xl border border-slate-200 bg-white overflow-hidden h-full">
                 <div className="px-5 py-4 bg-slate-50 border-b">
@@ -304,9 +313,7 @@ const ItemFormPage = ({ mode }) => {
               </div>
             </div>
 
-            {/* RIGHT COLUMN: General + Labels */}
             <div className="lg:col-span-2 space-y-6">
-              {/* 1. General */}
               <Section
                 title="General Information"
                 open={secGeneral}
@@ -333,8 +340,7 @@ const ItemFormPage = ({ mode }) => {
                     />
                   </div>
 
-                  {/* 🟢 Custom Category Dropdown */}
-                  <div className="relative z-20"> {/* z-index added for dropdown overlapping */}
+                  <div className="relative z-20"> 
                     <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
                     <div className="flex gap-2">
                       <CustomSelect
@@ -349,8 +355,7 @@ const ItemFormPage = ({ mode }) => {
                     </div>
                   </div>
 
-                  {/* 🟢 Custom Sub Category Dropdown */}
-                  <div className="relative z-10"> {/* z-index lower than category */}
+                  <div className="relative z-10"> 
                     <label className="block text-sm font-medium text-slate-700 mb-1">Sub Category *</label>
                     <div className="flex gap-2">
                       <CustomSelect
@@ -372,24 +377,36 @@ const ItemFormPage = ({ mode }) => {
                     </div>
                   </div>
 
+                  {/* 🟢 Dropdown with Enum */}
                   <div className="md:col-span-2 flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={formData.weightItem}
-                        onChange={(e) => setFormData({ ...formData, weightItem: e.target.checked, defaultUnit: e.target.checked ? "KG" : "PCS" })}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                      />
-                      Is this a Weight Item?
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-slate-700">Item Type:</label>
+                      <select
+                        value={formData.itemType}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData({ 
+                            ...formData, 
+                            itemType: val, 
+                            defaultUnit: val === ItemType.WEIGHT ? "KG" : val === ItemType.SERVICE ? "SERVICE" : "PCS",
+                            branchIds: val === ItemType.SERVICE ? formData.branchIds : [],
+                          });
+                        }}
+                        className="border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      >
+                        <option value={ItemType.NORMAL}>{ItemTypeLabels.NORMAL}</option>
+                        <option value={ItemType.WEIGHT}>{ItemTypeLabels.WEIGHT}</option>
+                        <option value={ItemType.SERVICE}>{ItemTypeLabels.SERVICE}</option>
+                      </select>
+                    </div>
 
-                    {formData.weightItem && (
-                      <div className="flex items-center gap-2 mt-2 md:mt-0">
+                    {formData.itemType === ItemType.WEIGHT && (
+                      <div className="flex items-center gap-2 mt-2 md:mt-0 md:ml-4 border-l md:pl-4 border-slate-300">
                         <label className="text-sm font-medium text-slate-700">Default Unit:</label>
                         <select
                           value={formData.defaultUnit}
                           onChange={(e) => setFormData({ ...formData, defaultUnit: e.target.value })}
-                          className="border border-slate-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                         >
                           <option value="KG">KG</option>
                           <option value="G">G</option>
@@ -398,8 +415,44 @@ const ItemFormPage = ({ mode }) => {
                     )}
                   </div>
 
+                  {formData.itemType === ItemType.SERVICE && (
+                    <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700">Available Branches *</label>
+                          <p className="text-xs text-slate-500">This service is visible in POS only for selected branches.</p>
+                        </div>
+                        <span className="text-xs font-medium text-slate-600">{formData.branchIds.length} selected</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {branches.map((branch) => {
+                          const checked = formData.branchIds.includes(branch.id);
+                          return (
+                            <label
+                              key={branch.id}
+                              className={`flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition ${
+                                checked ? "border-blue-400 bg-blue-50" : "border-slate-200 bg-white"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleBranchId(branch.id)}
+                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-slate-700">{branch.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Cost Price {formData.weightItem && "(per 1 KG)"}</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Cost Price {formData.itemType === ItemType.WEIGHT && "(per 1 KG)"}
+                    </label>
                     <input
                       type="number" min="0" step="0.01"
                       value={formData.costPrice}
@@ -409,7 +462,9 @@ const ItemFormPage = ({ mode }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Selling Price {formData.weightItem && "(per 1 KG)"}</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Selling Price {formData.itemType === ItemType.WEIGHT && "(per 1 KG)"}
+                    </label>
                     <input
                       type="number" min="0" step="0.01"
                       value={formData.sellingPrice}
@@ -422,15 +477,16 @@ const ItemFormPage = ({ mode }) => {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Reorder Level</label>
                     <input
                       type="number" min="0"
-                      value={formData.reorderLevel}
+                      value={formData.itemType === ItemType.SERVICE ? "0" : formData.reorderLevel}
                       onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={formData.itemType === ItemType.SERVICE}
+                      className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${formData.itemType === ItemType.SERVICE ? "bg-slate-100 text-slate-400 border-slate-200" : "border-slate-300"}`}
+                      title={formData.itemType === ItemType.SERVICE ? "Services do not have a reorder level" : ""}
                     />
                   </div>
                 </div>
               </Section>
 
-              {/* 2. Labels */}
               <Section title="Label and Certificate" open={secLabels} onToggle={() => setSecLabels((v) => !v)}>
                 <div className="space-y-4">
                   <div className="flex gap-2">
@@ -460,7 +516,6 @@ const ItemFormPage = ({ mode }) => {
                 </div>
               </Section>
 
-              {/* Footer Buttons */}
               <div className="flex justify-end gap-2 border-t pt-4">
                 <Button type="button" variant="secondary" onClick={() => navigate("/items")} disabled={submitting}>
                   Cancel
@@ -474,7 +529,6 @@ const ItemFormPage = ({ mode }) => {
         )}
       </Card>
 
-      {/* 🟢 Category Modal */}
       <Modal isOpen={showCatModal} onClose={() => !savingCat && setShowCatModal(false)} title="Add New Category">
         <div className="space-y-4">
           <div>
@@ -499,7 +553,6 @@ const ItemFormPage = ({ mode }) => {
         </div>
       </Modal>
 
-      {/* 🟢 Sub-Category Modal */}
       <Modal isOpen={showSubCatModal} onClose={() => !savingSubCat && setShowSubCatModal(false)} title="Add New Sub-Category">
         <div className="space-y-4">
           <div>

@@ -12,6 +12,10 @@ import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { Plus, Trash2, Save, Copy } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { ItemType } from "../utils/constants";
+
+const isWeightItem = (item) =>
+  item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
 
 const PurchaseFormPage = () => {
   const navigate = useNavigate();
@@ -41,6 +45,20 @@ const PurchaseFormPage = () => {
 
   // --- CART STATE ---
   const [cartItems, setCartItems] = useState([]);
+
+  const formatStockQty = (item) => {
+    if (isWeightItem(item)) {
+      const rawQty = item.batches && item.batches.length > 0
+        ? item.batches.reduce((sum, batch) => sum + Number(batch.qty || 0), 0)
+        : Number(item.availableBaseQty ?? item.availableQty ?? 0);
+      return `${(rawQty / 1000).toFixed(3).replace(/\.?0+$/, "")} KG`;
+    }
+
+    const totalStock = item.batches && item.batches.length > 0
+      ? item.batches.reduce((sum, batch) => sum + Number(batch.qty || 0), 0)
+      : Number(item.availableQty || 0);
+    return `${totalStock} ${item.defaultUnit || "PCS"}`;
+  };
 
   useEffect(() => {
     loadInitialData();
@@ -169,8 +187,8 @@ const PurchaseFormPage = () => {
     const newRows = [];
 
     Object.entries(branchInputs).forEach(([branchIdStr, data]) => {
-      const isWeightItem = selectedItem.weightItem || false;
-      const qty = isWeightItem ? parseFloat(data.qty) : Number(data.qty);
+      const weightItem = isWeightItem(selectedItem);
+      const qty = weightItem ? parseFloat(data.qty) : Number(data.qty);
 
       if (qty > 0) {
         const branch = branches.find(b => b.id == branchIdStr);
@@ -183,8 +201,8 @@ const PurchaseFormPage = () => {
           branchId: Number(branchIdStr),
           branchName: branch?.name || "Unknown",
           qty: qty,
-          qtyUnit: isWeightItem ? data.qtyUnit : undefined,
-          weightItem: selectedItem.weightItem,
+          qtyUnit: weightItem ? data.qtyUnit : undefined,
+          weightItem: weightItem,
           costPrice: Number(data.cost),
           sellingPrice: Number(data.sell),
           expiryDate: data.expiry || null,
@@ -326,10 +344,6 @@ const PurchaseFormPage = () => {
               {searchResults.length > 0 && (
                 <div className="absolute z-10 w-full bg-white border rounded-md shadow-xl mt-1 max-h-60 overflow-y-auto">
                   {searchResults.map((item) => {
-
-                    const totalStock = item.batches && item.batches.length > 0
-                      ? item.batches.reduce((sum, batch) => sum + Number(batch.qty), 0)
-                      : (item.availableQty || 0);
                     return (
                       <div
                         key={item.id}
@@ -341,7 +355,7 @@ const PurchaseFormPage = () => {
                           <div className="text-xs text-slate-500">{item.barcode}</div>
                         </div>
                         <div className="text-xs font-semibold bg-slate-100 px-2 py-1 rounded">
-                          Stock: {totalStock}
+                          Stock: {formatStockQty(item)}
                         </div>
                       </div>
                     );
@@ -367,14 +381,14 @@ const PurchaseFormPage = () => {
                     <div className="col-span-3">Branch</div>
                     <div className="col-span-2 text-center">Cost</div>
                     <div className="col-span-2 text-center">Sell</div>
-                    <div className={`${selectedItem?.weightItem ? 'col-span-1' : 'col-span-2'} text-center`}>Qty</div>
-                    {selectedItem?.weightItem && <div className="col-span-1 text-center">Unit</div>}
-                    <div className={`${selectedItem?.weightItem ? 'col-span-2' : 'col-span-3'} text-center`}>Expiry</div>
+                    <div className={`${isWeightItem(selectedItem) ? 'col-span-1' : 'col-span-2'} text-center`}>Qty</div>
+                    {isWeightItem(selectedItem) && <div className="col-span-1 text-center">Unit</div>}
+                    <div className={`${isWeightItem(selectedItem) ? 'col-span-2' : 'col-span-3'} text-center`}>Expiry</div>
                   </div>
 
                   {branches.map((branch, idx) => {
                     const inputs = branchInputs[branch.id] || {};
-                    const isWeightItem = selectedItem?.weightItem || false;
+                    const weightItem = isWeightItem(selectedItem);
                     return (
                       <div key={branch.id} className="grid grid-cols-12 gap-1 items-center bg-white p-2 rounded border border-slate-200 shadow-sm mb-2">
                         <div className="col-span-3 text-xs font-bold text-slate-700 truncate" title={branch.name}>
@@ -398,11 +412,11 @@ const PurchaseFormPage = () => {
                             onChange={(e) => handleInputChange(branch.id, 'sell', e.target.value)}
                           />
                         </div>
-                        <div className={`${isWeightItem ? 'col-span-1' : 'col-span-2'}`}>
+                        <div className={`${weightItem ? 'col-span-1' : 'col-span-2'}`}>
                           <input
                             ref={idx === 0 ? firstQtyInputRef : null}
                             type="number"
-                            step={isWeightItem ? "0.1" : "1"}
+                            step={weightItem ? "0.1" : "1"}
                             className={`input h-8 text-xs p-1 text-center font-bold ${inputs.qty > 0 ? 'border-green-500 bg-green-50' : ''}`}
                             placeholder="Qty"
                             value={inputs.qty}
@@ -412,7 +426,7 @@ const PurchaseFormPage = () => {
                             }}
                           />
                         </div>
-                        {isWeightItem && (
+                        {weightItem && (
                           <div className="col-span-1">
                             <select
                               value={inputs.qtyUnit || selectedItem.defaultUnit}
@@ -424,7 +438,7 @@ const PurchaseFormPage = () => {
                             </select>
                           </div>
                         )}
-                        <div className={`${isWeightItem ? 'col-span-2' : 'col-span-3'} flex gap-1`}>
+                        <div className={`${weightItem ? 'col-span-2' : 'col-span-3'} flex gap-1`}>
                           <input
                             type="date"
                             className="input h-8 text-[10px] p-0 px-1 w-full"

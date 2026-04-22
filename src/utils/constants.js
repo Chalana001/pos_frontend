@@ -9,6 +9,25 @@ export const DISCOUNT_TYPES = {
   PERCENT: 'PERCENT',
 };
 
+export const ItemType = {
+    NORMAL: "NORMAL",
+    WEIGHT: "WEIGHT",
+    SERVICE: "SERVICE"
+};
+
+export const ItemTypeLabels = {
+    NORMAL: "Normal Item (Stock Managed)",
+    WEIGHT: "Weight Based (KG/G)",
+    SERVICE: "Service / Non-Stock"
+};
+
+export const MeasurementUnit = {
+  PCS: 'PCS',
+  G: 'G',
+  KG: 'KG',
+  SERVICE: 'SERVICE',
+};
+
 export const EXPENSE_CATEGORIES = {
     TEA_AND_SNACKS: "TEA_AND_SNACKS",
     LUNCH: "LUNCH",

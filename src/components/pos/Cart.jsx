@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { Trash2, Minus, Plus, Tag, UserPlus, Receipt, X } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
-import { DISCOUNT_TYPES } from "../../utils/constants";
+import { DISCOUNT_TYPES, ItemType } from "../../utils/constants";
 import Button from "../../components/common/Button";
 
 const Cart = ({
   items,
   customer,
   onUpdateQty,
+  onUpdatePrice,
   onRemoveItem,
   onInlineDiscount,
   total,
@@ -18,7 +19,7 @@ const Cart = ({
   loading,
   onAddCustomer,
   onUpdateQtyUnit,
-  focusSearch // 🔴 අලුතින් ආපු Prop එක
+  focusSearch
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
 
@@ -31,7 +32,6 @@ const Cart = ({
   const handleManualQtyChange = (index, value) => {
     const numVal = parseFloat(value);
     if (!isNaN(numVal) && numVal >= 0) {
-      // 🔴 අගය වෙනස් වෙද්දී (type කරද්දී) preventFocus = true කරලා යවනවා
       onUpdateQty(index, numVal, true);
     } else if (value === "") {
       onUpdateQty(index, 0, true);
@@ -59,9 +59,22 @@ const Cart = ({
     return Math.max(0, lineTotal);
   };
 
+  const getPriceLabel = (item) => {
+    if (item.itemType === ItemType.SERVICE) {
+      return null;
+    }
+
+    if (item.weightItem) {
+      return item.qtyUnit === "G"
+        ? `1 G = ${formatCurrency(item.perGramPrice)}`
+        : `1 KG = ${formatCurrency(item.unitPrice)}`;
+    }
+
+    return `1 ${item.defaultUnit} = ${formatCurrency(item.unitPrice)}`;
+  };
+
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* ... (Header and Customer Section) ... */}
       <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
         <div className="flex items-center gap-2">
           <div className="bg-blue-600 text-white p-2 rounded-lg">
@@ -120,7 +133,31 @@ const Cart = ({
                   <div className="flex-1">
                     <h4 className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</h4>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[11px] font-medium text-slate-400">1 {item.defaultUnit} = {formatCurrency(item.unitPrice)}</span>
+                      
+                      {item.itemType === ItemType.SERVICE ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] font-medium text-slate-400">Price:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="w-20 text-right font-bold text-purple-600 bg-purple-50 border border-purple-200 rounded px-1.5 py-0.5 text-[11px] focus:ring-1 focus:ring-purple-500 outline-none"
+                            value={item.unitPrice === 0 ? "" : item.unitPrice}
+                            onChange={(e) => onUpdatePrice(index, e.target.value)}
+                            onBlur={focusSearch}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') e.currentTarget.blur();
+                            }}
+                            placeholder="0.00"
+                            title="Edit Service Price"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-[11px] font-medium text-slate-400">
+                          {getPriceLabel(item)}
+                        </span>
+                      )}
+
                       {item.weightItem && (
                         <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">
                           {item.qtyUnit || item.defaultUnit}
@@ -132,7 +169,6 @@ const Cart = ({
                         </span>
                       )}
                     </div>
-                    {/* Item Line Total */}
                     <div className="mt-1.5 font-bold text-blue-600 text-sm">
                       {formatCurrency(calculateItemTotal(item))}
                     </div>
@@ -141,7 +177,6 @@ const Cart = ({
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2">
                       <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                        {/* 🔴 +/- බටන් එබුවම preventFocus දාලා නෑ, ඒ නිසා කෙලින්ම Search එක focus වෙනවා */}
                         <button
                           onClick={() => onUpdateQty(index, Math.max(0, item.qty - stepValue))}
                           className="p-1 hover:bg-white rounded shadow-sm transition-all"
@@ -149,15 +184,14 @@ const Cart = ({
                           <Minus size={14} />
                         </button>
 
-                        {/* 🔴 අලුත් Input Box Events (onBlur, onKeyDown) */}
                         <input
                           type="number"
                           value={item.qty === 0 ? "" : item.qty}
                           onChange={(e) => handleManualQtyChange(index, e.target.value)}
-                          onBlur={focusSearch} // වෙන තැනක් click කරාම (හෝ Enter ගැහුවම) search එකට යනවා
+                          onBlur={focusSearch}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                              e.currentTarget.blur(); // Enter ගැහුවම Box එකෙන් focus අයින් කරනවා (එතකොට onBlur එක වැඩ කරනවා)
+                              e.currentTarget.blur();
                             }
                           }}
                           className="w-14 text-center text-sm font-bold bg-transparent outline-none focus:bg-white rounded px-1 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -177,7 +211,7 @@ const Cart = ({
                           value={item.qtyUnit || item.defaultUnit}
                           onChange={(e) => {
                             onUpdateQtyUnit?.(index, e.target.value);
-                            focusSearch(); // Unit එක මාරු කරාමත් search එකට යවනවා
+                            focusSearch();
                           }}
                           className="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded p-1 outline-none cursor-pointer hover:bg-slate-100 focus:ring-1 focus:ring-blue-500 transition-all"
                         >
@@ -185,9 +219,12 @@ const Cart = ({
                           <option value="G">G</option>
                         </select>
                       ) : (
-                        <span className="text-xs font-bold text-slate-500 min-w-[2rem] text-center px-1">
-                          {item.defaultUnit}
-                        </span>
+                        /* 🟢 මෙතන තමයි වෙනස කළේ! Service එකක් නෙවෙයි නම් විතරක් 'PCS' කියලා පෙන්වන්න හදලා තියෙනවා */
+                        item.itemType !== ItemType.SERVICE && (
+                          <span className="text-xs font-bold text-slate-500 min-w-[2rem] text-center px-1">
+                            {item.defaultUnit}
+                          </span>
+                        )
                       )}
                     </div>
 
@@ -206,7 +243,6 @@ const Cart = ({
                   </div>
                 </div>
 
-                {/* --- Inline Discount Editor --- */}
                 {editingIndex === index && (
                   <div className="bg-slate-50 border-t border-slate-100 p-3 animate-in slide-in-from-top duration-200">
                     <div className="flex items-center justify-between mb-2">
@@ -225,6 +261,7 @@ const Cart = ({
                       <input
                         type="number"
                         autoFocus
+                        min="0"
                         value={item.discountValue || ""}
                         onKeyDown={handleKeyDown}
                         onChange={(e) => onInlineDiscount(index, item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.FIXED : item.discountType, e.target.value)}
@@ -241,7 +278,6 @@ const Cart = ({
         )}
       </div>
 
-      {/* --- Summary Section --- */}
       <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
         <div className="space-y-2">
           <div className="flex justify-between text-slate-500 text-sm">
@@ -252,9 +288,10 @@ const Cart = ({
             <span className="flex items-center gap-1"><Tag size={12} /> Bill Discount</span>
             <input
               type="number"
+              min="0"
               value={billDiscount || ""}
-              onChange={(e) => setBillDiscount(parseFloat(e.target.value) || 0)}
-              onBlur={focusSearch} // Discount එක ගහලා ඉවර වුණාමත් search එකට යවනවා
+              onChange={(e) => setBillDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+              onBlur={focusSearch} 
               onKeyDown={(e) => {
                 if (e.key === 'Enter') e.currentTarget.blur();
               }}

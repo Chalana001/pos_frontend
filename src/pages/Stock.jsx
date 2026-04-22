@@ -9,6 +9,7 @@ import api from '../api/axios';
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { ADJUSTMENT_TYPES } from "../utils/constants";
+import { ItemType } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
 
 import Card from "../components/common/Card";
@@ -16,6 +17,43 @@ import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
+
+const isWeightItem = (item) =>
+  item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
+
+const formatQty = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return String(value ?? "");
+  }
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, "");
+};
+
+const getDisplayQty = (entity, fallback = 0) => {
+  if (isWeightItem(entity)) {
+    const rawValue =
+      entity?.qty ??
+      entity?.totalQuantity ??
+      entity?.availableBaseQty ??
+      entity?.availableQty ??
+      fallback;
+    const numeric = Number(rawValue);
+    return Number.isFinite(numeric) ? numeric / 1000 : 0;
+  }
+
+  const value =
+    entity?.displayQty ??
+    entity?.displayQuantity ??
+    entity?.availableQty ??
+    fallback;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const getDisplayUnit = (entity, fallbackUnit = "") =>
+  isWeightItem(entity) ? "KG" : (entity?.displayUnit ?? entity?.defaultUnit ?? fallbackUnit);
+
+const formatQtyWithUnit = (value, unit) => (unit ? `${formatQty(value)} ${unit}` : formatQty(value));
 
 const Stock = () => {
   const { user } = useAuth();
@@ -107,7 +145,9 @@ const Stock = () => {
 
   const totalValue = useMemo(() => {
     return stockItems.reduce((sum, item) => {
-      const qty = item?.displayQuantity !== undefined ? item.displayQuantity : (item?.totalQuantity ?? 0);
+      const qty = item?.itemType === "WEIGHT"
+        ? Number(item?.totalQuantity ?? 0) / 1000
+        : getDisplayQty(item, item?.totalQuantity ?? 0);
       const cost = item?.costPrice ?? 0;
       return sum + qty * cost;
     }, 0);
@@ -126,6 +166,10 @@ const Stock = () => {
       const branchBatches = matchedItem?.batches || [];
 
       setItemBatches(branchBatches);
+      setFormState(prev => ({
+        ...prev,
+        qtyUnit: isWeightItem(matchedItem || item) ? (matchedItem?.defaultUnit || item.defaultUnit || "KG") : prev.qtyUnit,
+      }));
 
       if (branchBatches.length === 1) {
         setFormState(prev => ({ ...prev, batchId: String(branchBatches[0].batchId) }));
@@ -139,7 +183,13 @@ const Stock = () => {
   };
 
   const handleOpenAdjust = async (item) => {
-    setAdjustFormData({ batchId: '', type: ADJUSTMENT_TYPES.MANUAL, qty: '', qtyUnit: 'KG', reason: '' });
+    setAdjustFormData({
+      batchId: '',
+      type: ADJUSTMENT_TYPES.MANUAL,
+      qty: '',
+      qtyUnit: isWeightItem(item) ? (item.defaultUnit || "KG") : "KG",
+      reason: '',
+    });
     setShowAdjustModal(true);
     await loadItemBatches(item, setAdjustFormData);
   };
@@ -152,15 +202,15 @@ const Stock = () => {
     setIsSubmitting(true);
     try {
       const currentBranchId = selectedBranchId || 0;
-      const isWeightItem = selectedItem?.weightItem || false;
+      const weightItem = isWeightItem(selectedItem);
 
       await api.post('/stock-adjustments', {
         ...adjustFormData,
         branchId: currentBranchId,
         itemId: selectedItem.itemId,
         batchId: parseInt(adjustFormData.batchId),
-        qty: isWeightItem ? parseFloat(adjustFormData.qty) : parseInt(adjustFormData.qty),
-        qtyUnit: isWeightItem ? adjustFormData.qtyUnit : undefined,
+        qty: weightItem ? parseFloat(adjustFormData.qty) : parseInt(adjustFormData.qty),
+        qtyUnit: weightItem ? adjustFormData.qtyUnit : undefined,
       });
 
       toast.success('Stock adjusted successfully');
@@ -174,7 +224,13 @@ const Stock = () => {
   };
 
   const handleOpenTransfer = async (item) => {
-    setTransferFormData({ batchId: '', toBranchId: '', qty: '', qtyUnit: 'KG', notes: '' });
+    setTransferFormData({
+      batchId: '',
+      toBranchId: '',
+      qty: '',
+      qtyUnit: isWeightItem(item) ? (item.defaultUnit || "KG") : "KG",
+      notes: '',
+    });
     setShowTransferModal(true);
     await loadItemBatches(item, setTransferFormData);
   };
@@ -187,7 +243,7 @@ const Stock = () => {
     setIsSubmitting(true);
     try {
       const currentBranchId = selectedBranchId || 0;
-      const isWeightItem = selectedItem?.weightItem || false;
+      const weightItem = isWeightItem(selectedItem);
 
       const payload = {
         fromBranchId: currentBranchId,
@@ -197,8 +253,8 @@ const Stock = () => {
           {
             itemId: selectedItem.itemId,
             batchId: parseInt(transferFormData.batchId),
-            qty: isWeightItem ? parseFloat(transferFormData.qty) : parseInt(transferFormData.qty),
-            qtyUnit: isWeightItem ? transferFormData.qtyUnit : undefined,
+            qty: weightItem ? parseFloat(transferFormData.qty) : parseInt(transferFormData.qty),
+            qtyUnit: weightItem ? transferFormData.qtyUnit : undefined,
           }
         ]
       };
@@ -226,16 +282,16 @@ const Stock = () => {
         header: "Quantity",
         render: (item) => {
           // ✅ displayQuantity එක තියෙනවා නම් ඒක ගන්නවා, නැත්නම් totalQuantity ගන්නවා
-          const displayQty = item.displayQuantity !== undefined ? item.displayQuantity : (item.totalQuantity ?? 0);
+          const displayQty = getDisplayQty(item, item.totalQuantity ?? 0);
           
           // ✅ අගට Unit එක එකතු කරනවා (ex: " KG", " PCS")
-          const unit = item.defaultUnit ? ` ${item.defaultUnit}` : "";
+          const displayUnit = getDisplayUnit(item, item.defaultUnit);
           
           const isLow = (item.totalQuantity ?? 0) <= 0;
           
           return (
             <span className={`font-semibold ${isLow ? "text-red-600" : "text-slate-800"}`}>
-              {displayQty}{unit}
+              {formatQtyWithUnit(displayQty, displayUnit)}
               {isLow && <AlertTriangle size={14} className="inline ml-1 text-red-500" />}
             </span>
           );
@@ -379,7 +435,7 @@ const Stock = () => {
                 {itemBatches.length === 1 ? (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                     <span className="text-sm text-blue-800 font-semibold">Batch #{itemBatches[0].batchId} Auto-selected</span>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">In Stock: {itemBatches[0].qty}</span>
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">In Stock: {formatQtyWithUnit(getDisplayQty(itemBatches[0]), getDisplayUnit(itemBatches[0], selectedItem?.defaultUnit))}</span>
                   </div>
                 ) : itemBatches.length > 1 ? (
                   <select
@@ -391,7 +447,7 @@ const Stock = () => {
                     <option value="">-- Choose a Batch --</option>
                     {itemBatches.map((batch) => (
                       <option key={batch.batchId} value={batch.batchId}>
-                        Batch #{batch.batchId} | Qty: {batch.qty} | Price: {formatCurrency(batch.price)}
+                        Batch #{batch.batchId} | Qty: {formatQtyWithUnit(getDisplayQty(batch), getDisplayUnit(batch, selectedItem?.defaultUnit))} | Price: {formatCurrency(batch.price)}
                       </option>
                     ))}
                   </select>
@@ -421,14 +477,14 @@ const Stock = () => {
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    step={selectedItem?.weightItem ? "0.1" : "1"}
+                    step={isWeightItem(selectedItem) ? (adjustFormData.qtyUnit === "G" ? "1" : "0.1") : "1"}
                     value={adjustFormData.qty}
                     onChange={(e) => setAdjustFormData({ ...adjustFormData, qty: e.target.value })}
                     className="flex-1 p-2 border border-slate-300 rounded-lg w-full"
                     placeholder="e.g., -5 to remove, +5 to add"
                     required
                   />
-                  {selectedItem?.weightItem && (
+                  {isWeightItem(selectedItem) && (
                     <select
                       value={adjustFormData.qtyUnit}
                       onChange={(e) => setAdjustFormData({ ...adjustFormData, qtyUnit: e.target.value })}
@@ -476,7 +532,7 @@ const Stock = () => {
                 {itemBatches.length === 1 ? (
                   <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between">
                     <span className="text-sm text-purple-800 font-semibold">Batch #{itemBatches[0].batchId} Auto-selected</span>
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">In Stock: {itemBatches[0].qty}</span>
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">In Stock: {formatQtyWithUnit(getDisplayQty(itemBatches[0]), getDisplayUnit(itemBatches[0], selectedItem?.defaultUnit))}</span>
                   </div>
                 ) : itemBatches.length > 1 ? (
                   <select
@@ -488,7 +544,7 @@ const Stock = () => {
                     <option value="">-- Choose a Batch --</option>
                     {itemBatches.map((batch) => (
                       <option key={batch.batchId} value={batch.batchId}>
-                        Batch #{batch.batchId} | Qty: {batch.qty} | Price: {formatCurrency(batch.price)}
+                        Batch #{batch.batchId} | Qty: {formatQtyWithUnit(getDisplayQty(batch), getDisplayUnit(batch, selectedItem?.defaultUnit))} | Price: {formatCurrency(batch.price)}
                       </option>
                     ))}
                   </select>
@@ -522,14 +578,14 @@ const Stock = () => {
                   <input
                     type="number"
                     min="0.1"
-                    step={selectedItem?.weightItem ? "0.1" : "1"}
+                    step={isWeightItem(selectedItem) ? (transferFormData.qtyUnit === "G" ? "1" : "0.1") : "1"}
                     value={transferFormData.qty}
                     onChange={(e) => setTransferFormData({ ...transferFormData, qty: e.target.value })}
                     className="flex-1 p-2 border border-slate-300 rounded-lg"
                     placeholder="e.g., 5"
                     required
                   />
-                  {selectedItem?.weightItem && (
+                  {isWeightItem(selectedItem) && (
                     <select
                       value={transferFormData.qtyUnit}
                       onChange={(e) => setTransferFormData({ ...transferFormData, qtyUnit: e.target.value })}

@@ -1,8 +1,13 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, formatQuantityWithUnit } from '../../utils/formatters';
 
 const ReceiptPrinter = forwardRef((props, ref) => {
   const printFrameRef = useRef(null);
+
+  const formatReceiptQty = (qty, qtyUnit) => {
+    const formatted = formatQuantityWithUnit(qty, qtyUnit);
+    return formatted.replace(/\bSERVICE\b/g, 'S');
+  };
 
   useImperativeHandle(ref, () => ({
     printOrder: (orderData, cartItems, storeName, shiftData, customerData) => {
@@ -77,7 +82,7 @@ const ReceiptPrinter = forwardRef((props, ref) => {
                           ${item.name} <br/>
                           <span class="item-price">@ ${formatCurrency(item.unitPrice)}</span>
                         </td>
-                        <td class="text-center">${item.qty}</td>
+                        <td class="text-center">${formatReceiptQty(item.qty, item.qtyUnit || item.defaultUnit)}</td>
                         <td class="text-right">${formatCurrency(Math.max(0, itemTotal))}</td>
                       </tr>
                     `;

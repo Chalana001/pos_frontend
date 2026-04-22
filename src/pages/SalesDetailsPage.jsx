@@ -5,6 +5,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
 import { useAuth } from "../context/AuthContext"; 
+import { formatQuantityWithUnit } from "../utils/formatters";
 import { 
   ArrowLeft, Printer, Calendar, User, 
   CreditCard, Package, Ban 
@@ -66,6 +67,7 @@ const SalesDetailsPage = () => {
       name: item.itemName,
       unitPrice: item.unitPrice,
       qty: item.qty,
+      qtyUnit: item.qtyUnit,
       discountType: item.discountType || 'FIXED', 
       discountValue: item.discountValue || 0,
       lineTotal: item.lineTotal 
@@ -256,7 +258,7 @@ const SalesDetailsPage = () => {
                                 </td>
                                 <td className="p-4 text-center">
                                     <span className="bg-slate-100 border px-2 py-1 rounded font-bold text-slate-700">
-                                        {item.qty}
+                                        {formatQuantityWithUnit(item.qty, item.qtyUnit)}
                                     </span>
                                 </td>
                                 <td className="p-4 text-right text-red-500 text-xs">

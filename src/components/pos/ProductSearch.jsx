@@ -5,6 +5,26 @@ import { useDebounce } from "../../hooks/useDebounce";
 import Modal from "../common/Modal";
 import LoadingSpinner from "../common/LoadingSpinner";
 import { formatCurrency } from "../../utils/formatters";
+import { ItemType } from "../../utils/constants";
+
+const formatQty = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return String(value ?? "");
+  }
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, "");
+};
+
+const getStockDisplay = (item) => {
+  if (item.itemType === ItemType.WEIGHT) {
+    const rawBaseQty = Number(item.availableBaseQty ?? item.availableQty ?? 0);
+    const qty = Number.isFinite(rawBaseQty) ? rawBaseQty / 1000 : 0;
+    return `${formatQty(qty)} KG`;
+  }
+
+  const qty = Number(item.availableQty ?? 0);
+  return item.defaultUnit ? `${formatQty(qty)} ${item.defaultUnit}` : formatQty(qty);
+};
 
 const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,27 +78,32 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
               <p>No products found</p>
             </div>
           ) : (
-            items.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => { onSelectItem(item); onClose(); }}
-                className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-blue-400 hover:shadow-md hover:bg-blue-50/30 transition-all text-left group"
-              >
-                <div>
-                  <h3 className="font-bold text-slate-800 group-hover:text-blue-700">{item.name}</h3>
-                  <div className="flex gap-3 text-sm text-slate-500 mt-1">
-                    <span className="flex items-center gap-1"><Barcode size={14} /> {item.barcode}</span>
-                    <span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">{item.category}</span>
+            items.map((item) => {
+              const isService = item.itemType === ItemType.SERVICE;
+              const qtyLabel = getStockDisplay(item);
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => { onSelectItem(item); onClose(); }}
+                  className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-blue-400 hover:shadow-md hover:bg-blue-50/30 transition-all text-left group"
+                >
+                  <div>
+                    <h3 className="font-bold text-slate-800 group-hover:text-blue-700">{item.name}</h3>
+                    <div className="flex gap-3 text-sm text-slate-500 mt-1">
+                      <span className="flex items-center gap-1"><Barcode size={14} /> {item.barcode}</span>
+                      <span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">{item.category}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-slate-900 font-mono">{formatCurrency(item.sellingPrice)}</div>
-                  <div className={`text-xs font-medium ${item.availableQty > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {item.availableQty} in stock
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-slate-900 font-mono">{formatCurrency(item.sellingPrice)}</div>
+                    <div className={`text-xs font-medium mt-1 ${isService ? "text-purple-600" : (item.availableQty > 0 ? "text-emerald-600" : "text-red-500")}`}>
+                      {isService ? "Service Item" : `${qtyLabel} in stock`}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))
+                </button>
+              );
+            })
           )}
         </div>
       </div>

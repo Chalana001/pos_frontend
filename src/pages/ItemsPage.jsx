@@ -10,6 +10,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { ItemType } from "../utils/constants"; // 🟢 Constant එක Import කළා
 
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -71,8 +72,14 @@ const ItemsPage = () => {
     },
     { 
       header: "Name", 
-      accessor: "name",
-      render: (i) => <span className="font-medium text-slate-800">{i.name}</span>
+      render: (i) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-slate-800">{i.name}</span>
+          {/* 🟢 Enum එක පාවිච්චි කිරීම */}
+          {i.itemType === ItemType.SERVICE && <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded w-fit mt-1">Service</span>}
+          {i.itemType === ItemType.WEIGHT && <span className="text-[10px] uppercase font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded w-fit mt-1">Weight Item</span>}
+        </div>
+      )
     },
     { 
       header: "Category", 
@@ -99,11 +106,10 @@ const ItemsPage = () => {
     },
     { 
       header: "Reorder", 
-      accessor: "reorderLevel",
       render: (i) => (
         <div className="text-center">
             <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold">
-                {i.reorderLevel}
+                {i.itemType === ItemType.SERVICE ? "-" : i.reorderLevel}
             </span>
         </div>
       )

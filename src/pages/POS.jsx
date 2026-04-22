@@ -11,10 +11,66 @@ import CheckoutOverlay from "../components/pos/CheckoutOverlay";
 import BatchSelectModal from "../components/pos/BatchSelectModal";
 import { formatCurrency } from "../utils/formatters";
 import { ORDER_TYPES, DISCOUNT_TYPES } from "../utils/constants";
+import { ItemType } from "../utils/constants"; // 🟢 Constant එක Import කළා
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter";
+
+const GRAMS_PER_KILOGRAM = 1000;
+
+const isWeightItem = (item) =>
+  item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
+
+const toBaseQuantity = (quantity, unit, weightItem = false) => {
+  const numeric = Number(quantity);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  if (!weightItem) {
+    return numeric;
+  }
+  return unit === "KG" ? numeric * GRAMS_PER_KILOGRAM : numeric;
+};
+
+const getWeightStep = (unit) => (unit === "G" ? 100 : 0.1);
+
+const getInitialWeightQuantity = (unit) => getWeightStep(unit);
+
+const getPerGramPrice = (configuredPrice, weightItem = false) => {
+  const numeric = Number(configuredPrice);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return weightItem ? numeric / GRAMS_PER_KILOGRAM : numeric;
+};
+
+const formatQty = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return String(value ?? "");
+  }
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, "");
+};
+
+const getStockDisplayQty = (item, batch = null) => {
+  if (!isWeightItem(item)) {
+    const rawQty = batch ? batch.qty : item.availableQty;
+    const numeric = Number(rawQty);
+    return Number.isFinite(numeric) ? numeric : 0;
+  }
+
+  const rawBaseQty = batch
+    ? batch.qty
+    : (item.availableBaseQty ?? item.availableQty ?? 0);
+  const numeric = Number(rawBaseQty);
+  return Number.isFinite(numeric) ? numeric / GRAMS_PER_KILOGRAM : 0;
+};
+
+const getStockDisplayUnit = (item) => (isWeightItem(item) ? "KG" : (item.defaultUnit || "PCS"));
+
+const formatStockDisplay = (item, batch = null) =>
+  `${formatQty(getStockDisplayQty(item, batch))} ${getStockDisplayUnit(item)}`;
 
 const POS = () => {
   const { user } = useAuth();
@@ -51,6 +107,14 @@ const POS = () => {
       searchInputRef.current.focus();
     }
   }, [loadingShift, myShift]);
+
+  const toNonNegativeNumber = (value) => {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return 0;
+    }
+    return parsed;
+  };
 
   useEffect(() => {
     const loadMyShift = async () => {
@@ -90,6 +154,8 @@ const POS = () => {
       const response = await itemsAPI.searchForPos("", branchId);
       let items = Array.isArray(response.data) ? response.data : [];
       items = items.filter(item => {
+        // 🟢 Service අයිටම් එකක් නම් කොහොමත් පෙන්නනවා (තොග නෑනේ)
+        if (item.itemType === ItemType.SERVICE) return true;
         if (item.batches && item.batches.length > 0) return true;
         if (item.availableQty !== undefined && item.availableQty !== null) return true;
         return false;
@@ -127,6 +193,12 @@ const POS = () => {
       return;
     }
 
+    // 🟢 Service එකක් නම් Batch හොයන්නේ නැතුව කෙලින්ම Cart එකට දානවා
+    if (item.itemType === ItemType.SERVICE) {
+      processAddToCart(item, item.sellingPrice || 0, 1, null);
+      return;
+    }
+
     if (item.batches && item.batches.length > 1) {
       setSelectedBatchItem(item);
       setShowBatchModal(true);
@@ -144,11 +216,20 @@ const POS = () => {
   };
 
   const processAddToCart = (item, price, qty, batchData = null) => {
+    const isService = item.itemType === ItemType.SERVICE;
+    const isWeight = isWeightItem(item);
     const batchId = batchData ? batchData.batchId : (item.batches?.[0]?.batchId || null);
-    const stockQty = batchData ? batchData.qty : (item.availableQty || 0);
+    
+    // 🟢 Service එකකට Stock Unlimited විදිහට සලකනවා
+    const defaultUnit = item.defaultUnit || "PCS";
+    const qtyToAdd = isWeight ? getInitialWeightQuantity(defaultUnit) : qty;
+    const stockBaseQty = isService
+      ? Infinity
+      : Number(batchData ? batchData.qty : (item.availableBaseQty ?? 0));
+    const requestedBaseQty = isWeight ? toBaseQuantity(qtyToAdd, defaultUnit, true) : qtyToAdd;
 
-    if (stockQty < qty) {
-      toast.error(`Insufficient stock! Available: ${stockQty}`);
+    if (!isService && stockBaseQty < requestedBaseQty) {
+      toast.error(`Insufficient stock! Available: ${formatStockDisplay(item, batchData)}`);
       if (searchInputRef.current) searchInputRef.current.focus();
       return;
     }
@@ -159,20 +240,25 @@ const POS = () => {
 
     if (existingIndex !== -1) {
       const newItems = [...cartItems];
-      const nextQty = newItems[existingIndex].qty + qty;
-      if (nextQty > stockQty) {
-        toast.error(`Low stock. Available: ${stockQty}`);
+      const currentItem = newItems[existingIndex];
+      const incrementQty = isWeight
+        ? getWeightStep(currentItem.qtyUnit || currentItem.defaultUnit)
+        : qty;
+      const nextQty = currentItem.qty + incrementQty;
+      const nextBaseQty = isWeight
+        ? toBaseQuantity(nextQty, currentItem.qtyUnit || currentItem.defaultUnit, true)
+        : nextQty;
+      if (!isService && nextBaseQty > currentItem.stockBaseQty) {
+        toast.error(`Low stock. Available: ${formatStockDisplay(item, batchData)}`);
         if (searchInputRef.current) searchInputRef.current.focus();
         return;
       }
       newItems[existingIndex] = { ...newItems[existingIndex], qty: nextQty };
       setCartItems(newItems);
     } else {
-      const isWeight = item.weightItem || false;
-      const defUnit = item.defaultUnit || "PCS";
       const uPrice = Number(price);
 
-      const gramPrice = (isWeight && defUnit === "KG") ? (uPrice / 1000) : uPrice;
+      const gramPrice = getPerGramPrice(uPrice, isWeight);
 
       setCartItems((prev) => [
         ...prev,
@@ -183,13 +269,14 @@ const POS = () => {
           barcode: item.barcode,
           unitPrice: uPrice,
           perGramPrice: gramPrice,
-          qty: isWeight ? 0.1 : 1,
-          qtyUnit: defUnit,
+          qty: qtyToAdd,
+          qtyUnit: defaultUnit,
           weightItem: isWeight,
-          defaultUnit: defUnit,
+          itemType: item.itemType, // 🟢 Item Type එකත් Cart එකේ තියාගන්නවා
+          defaultUnit: defaultUnit,
           discountType: DISCOUNT_TYPES.NONE,
           discountValue: 0,
-          stockQty,
+          stockBaseQty,
           image: item.imageUrl
         },
       ]);
@@ -218,8 +305,10 @@ const POS = () => {
       const itemToAdd = exactMatch || filteredItems[0];
 
       if (itemToAdd) {
-        const stockQty = Number(itemToAdd.availableQty ?? 0);
-        if (stockQty <= 0) {
+        const isService = itemToAdd.itemType === ItemType.SERVICE;
+        const stockQty = Number(itemToAdd.availableBaseQty ?? 0);
+        
+        if (!isService && stockQty <= 0) {
           toast.error("Item is Out of Stock!");
           setSearchQuery("");
           return;
@@ -229,9 +318,9 @@ const POS = () => {
     }
   };
 
-  // 🔴 වෙනස් කරපු තැන: preventFocus parameter එක එකතු කළා
   const updateQuantity = (index, newQty, preventFocus = false) => {
     const item = cartItems[index];
+    const isService = item.itemType === ItemType.SERVICE;
 
     let finalQty = newQty;
     if (item.weightItem && item.qtyUnit === 'KG') {
@@ -244,13 +333,12 @@ const POS = () => {
 
     if (finalQty < 0) return;
 
-    if (item.stockQty > 0) {
-      let compareQty = finalQty;
-      if (item.weightItem && item.qtyUnit === 'G' && item.defaultUnit === 'KG') {
-        compareQty = finalQty / 1000;
-      }
-      if (compareQty > item.stockQty) {
-        toast.error(`Low stock. Available: ${item.stockQty}`);
+    if (!isService && item.stockBaseQty > 0) {
+      const compareQty = item.weightItem
+        ? toBaseQuantity(finalQty, item.qtyUnit || item.defaultUnit, true)
+        : finalQty;
+      if (compareQty > item.stockBaseQty) {
+        toast.error("Low stock.");
         return;
       }
     }
@@ -263,6 +351,14 @@ const POS = () => {
       searchInputRef.current.focus();
     }
   };
+
+  // 🟢 අලුතින් එකතු කළ Method එක: Service Item වල ගාණ වෙනස් කිරීම
+  const updateUnitPrice = (index, newPrice) => {
+    const newItems = [...cartItems];
+    newItems[index].unitPrice = toNonNegativeNumber(newPrice);
+    setCartItems(newItems);
+  };
+
   const focusSearch = () => {
     if (searchInputRef.current) {
       searchInputRef.current.focus();
@@ -291,7 +387,7 @@ const POS = () => {
   const handleInlineDiscount = (index, type, value) => {
     const newItems = [...cartItems];
     newItems[index].discountType = type;
-    newItems[index].discountValue = parseFloat(value) || 0;
+    newItems[index].discountValue = toNonNegativeNumber(value);
     setCartItems(newItems);
   };
 
@@ -345,7 +441,7 @@ const POS = () => {
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
         items: cartItems.map((item) => ({
           itemId: item.itemId,
-          batchId: item.batchId,
+          batchId: item.batchId, // backend supports null for services
           qty: item.qty,
           qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
           unitPrice: item.unitPrice,
@@ -464,9 +560,10 @@ const POS = () => {
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-4 gap-1.5 lg:gap-4">
                 {filteredItems.map((item) => {
-                  const stockQty = Number(item.availableQty ?? 0);
-                  const isOutOfStock = stockQty <= 0;
-                  const unit = item.defaultUnit ? ` ${item.defaultUnit}` : '';
+                  const isService = item.itemType === ItemType.SERVICE;
+                  const stockQty = Number(item.availableBaseQty ?? item.availableQty ?? 0);
+                  const isOutOfStock = !isService && stockQty <= 0;
+                  const stockLabel = formatStockDisplay(item);
 
                   return (
                     <div
@@ -480,10 +577,12 @@ const POS = () => {
                         `}
                     >
                       <div className="absolute top-1 right-1 lg:top-3 lg:right-3 flex flex-col items-end gap-1">
-                        {isOutOfStock ? (
+                        {isService ? (
+                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-purple-50 text-purple-600 text-[8px] lg:text-[10px] font-bold rounded border border-purple-100 uppercase">Service</span>
+                        ) : isOutOfStock ? (
                           <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-red-50 text-red-500 text-[8px] lg:text-[10px] font-bold rounded border border-red-100 uppercase">Out</span>
                         ) : (
-                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-emerald-50 text-emerald-600 text-[8px] lg:text-[10px] font-bold rounded border border-emerald-100 whitespace-nowrap">{stockQty}{unit}</span>
+                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-emerald-50 text-emerald-600 text-[8px] lg:text-[10px] font-bold rounded border border-emerald-100 whitespace-nowrap">{stockLabel}</span>
                         )}
                       </div>
 
@@ -491,7 +590,7 @@ const POS = () => {
                         <ChefHat className={`w-4 h-4 lg:w-8 lg:h-8 ${isOutOfStock ? "text-slate-200" : "text-slate-300"}`} />
                       </div>
                       <h3 className="font-semibold text-slate-800 text-[9px] lg:text-sm mb-0.5 lg:mb-3 line-clamp-2 min-h-[1.25rem] lg:min-h-[2.5rem] leading-tight">{item.name}</h3>
-                      <p className="text-blue-600 font-bold text-[10px] lg:text-sm">{formatCurrency(item.sellingPrice)}</p>
+                      <p className="text-blue-600 font-bold text-[10px] lg:text-sm">{isService && item.sellingPrice === 0 ? 'Open Price' : formatCurrency(item.sellingPrice)}</p>
                     </div>
                   );
                 })}
@@ -505,6 +604,7 @@ const POS = () => {
             customer={customer}
             setCustomer={setCustomer}
             onUpdateQty={updateQuantity}
+            onUpdatePrice={updateUnitPrice} /* 🟢 අලුත් Prop එක යැව්වා */
             onRemoveItem={removeItem}
             onInlineDiscount={handleInlineDiscount}
             onUpdateQtyUnit={updateQtyUnit}
@@ -515,7 +615,7 @@ const POS = () => {
             onCheckout={handleCheckout}
             loading={loading}
             onAddCustomer={() => setShowCustomerSelect(true)}
-            focusSearch={focusSearch} /* 🔴 අලුත් Prop එක යවනවා */
+            focusSearch={focusSearch} 
           />
         </div>
       </div>
