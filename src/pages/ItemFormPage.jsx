@@ -233,10 +233,10 @@ const ItemFormPage = ({ mode }) => {
 
       if (mode === "edit") {
         await itemsAPI.update(id, payload);
-        toast.success("Item updated ✅");
+        toast.success("Item updated");
       } else {
         await itemsAPI.create(payload);
-        toast.success("Item created ✅");
+        toast.success("Item created");
       }
       navigate("/items");
     } catch (error) {
