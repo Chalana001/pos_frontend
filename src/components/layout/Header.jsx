@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Bell } from 'lucide-react';
 import BranchSelector from './BranchSelector';
 import { canAccessAllBranches } from '../../utils/permissions';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '../../context/LanguageContext';
 
 const formatPlanName = (name) => {
   const labels = {
@@ -18,6 +20,7 @@ const formatPlanName = (name) => {
 
 const Header = () => {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const validUntilLabel = user?.subscriptionValidUntil
@@ -36,13 +39,14 @@ const Header = () => {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
+        <LanguageSelector compact />
         {validUntilLabel && (
           <div className="hidden lg:flex flex-col rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-right">
             <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
-              {formatPlanName(user?.planName)}
+              {t(formatPlanName(user?.planName))}
             </div>
             <div className="text-xs text-emerald-800">
-              Valid until {validUntilLabel}
+              {t(`Valid until ${validUntilLabel}`)}
             </div>
           </div>
         )}
@@ -63,7 +67,7 @@ const Header = () => {
             
             <div className="text-left hidden sm:block">
               <div className="text-sm font-medium text-slate-800 leading-tight">{user.username}</div>
-              <div className="text-xs text-slate-500">{user.role}</div>
+              <div className="text-xs text-slate-500">{t(user.role)}</div>
             </div>
           </button>
 
@@ -76,8 +80,8 @@ const Header = () => {
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-20">
                 {validUntilLabel && (
                   <div className="px-4 py-2 border-b border-slate-100">
-                    <div className="text-xs font-semibold text-slate-700">{formatPlanName(user?.planName)}</div>
-                    <div className="text-xs text-slate-500">Valid until {validUntilLabel}</div>
+                    <div className="text-xs font-semibold text-slate-700">{t(formatPlanName(user?.planName))}</div>
+                    <div className="text-xs text-slate-500">{t(`Valid until ${validUntilLabel}`)}</div>
                   </div>
                 )}
                 <button
@@ -85,7 +89,7 @@ const Header = () => {
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
                 >
                   <LogOut size={16} />
-                  Logout
+                  {t('Logout')}
                 </button>
               </div>
             </>

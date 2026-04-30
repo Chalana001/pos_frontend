@@ -11,6 +11,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import CustomSelect from "../components/common/CustomSelect";
 
 const Shifts = () => {
   const { user } = useAuth();
@@ -32,6 +33,18 @@ const Shifts = () => {
   const [branchUsers, setBranchUsers] = useState([]);
   const [assignedCashierId, setAssignedCashierId] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const cashierOptions = useMemo(
+    () => [
+      { value: "0", label: `Myself (${user?.username})` },
+      ...branchUsers
+        .filter((cashier) => cashier.id !== user?.id)
+        .map((cashier) => ({
+          value: String(cashier.id),
+          label: `${cashier.username} (${cashier.role})`,
+        })),
+    ],
+    [branchUsers, user?.id, user?.username]
+  );
 
   const handleOpenClick = async () => {
     setShowOpenModal(true);
@@ -251,22 +264,14 @@ const Shifts = () => {
               {loadingUsers ? (
                 <div className="text-sm text-slate-500 mb-2">Loading cashiers...</div>
               ) : (
-                <select
+                <CustomSelect
                   value={assignedCashierId}
-                  onChange={(e) => setAssignedCashierId(e.target.value)}
-                  className="input" 
-                  required
-                >
-                  <option value="0">Myself ({user?.username})</option>
-                  {branchUsers
-                    .filter(u => u.id !== user?.id)
-                    .map(u => (
-                      <option key={u.id} value={u.id}>
-                        {u.username} ({u.role})
-                      </option>
-                    ))
-                  }
-                </select>
+                  onChange={setAssignedCashierId}
+                  options={cashierOptions}
+                  valueKey="value"
+                  labelKey="label"
+                  buttonClassName="input"
+                />
               )}
             </div>
           )}

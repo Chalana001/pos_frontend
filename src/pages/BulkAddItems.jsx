@@ -31,6 +31,24 @@ const buildEmptyIngredient = () => ({
   search: "",
 });
 
+const itemTypeOptions = [
+  { value: ItemType.NORMAL, label: ItemTypeLabels.NORMAL },
+  { value: ItemType.WEIGHT, label: ItemTypeLabels.WEIGHT },
+  { value: ItemType.SERVICE, label: ItemTypeLabels.SERVICE },
+  { value: ItemType.RECIPE, label: ItemTypeLabels.RECIPE },
+];
+
+const weightUnitOptions = [
+  { value: "KG", label: "KG" },
+  { value: "G", label: "G" },
+];
+
+const recipeUnitOptions = [
+  { value: "PCS", label: "PCS" },
+  { value: "KG", label: "KG" },
+  { value: "G", label: "G" },
+];
+
 const emptyDraft = () => ({
   imageUrl: "",
   name: "",
@@ -662,10 +680,9 @@ export default function BulkAddItems() {
                 <div className="space-y-2 col-span-2 p-3 bg-slate-50 border rounded-lg">
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-slate-700">Type:</label>
-                    <select
+                    <CustomSelect
                       value={draft.itemType}
-                      onChange={(e) => {
-                        const val = e.target.value;
+                      onChange={(val) => {
                         setIngredientSearchResults({});
                         setDraft({
                            ...draft, 
@@ -676,25 +693,25 @@ export default function BulkAddItems() {
                            branchIds: val === ItemType.SERVICE ? draft.branchIds : [],
                         });
                       }}
-                      className="border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
-                    >
-                      <option value={ItemType.NORMAL}>{ItemTypeLabels.NORMAL}</option>
-                      <option value={ItemType.WEIGHT}>{ItemTypeLabels.WEIGHT}</option>
-                      <option value={ItemType.SERVICE}>{ItemTypeLabels.SERVICE}</option>
-                      <option value={ItemType.RECIPE}>{ItemTypeLabels.RECIPE}</option>
-                    </select>
+                      options={itemTypeOptions}
+                      valueKey="value"
+                      labelKey="label"
+                      className="w-[190px]"
+                      buttonClassName="rounded-lg px-3 py-1.5 text-sm"
+                    />
 
                     {draft.itemType === ItemType.WEIGHT && (
                       <div className="flex items-center gap-2 ml-4 border-l pl-4 border-slate-300">
                         <label className="text-sm font-medium text-slate-700">Unit:</label>
-                        <select
+                        <CustomSelect
                           value={draft.defaultUnit}
-                          onChange={(e) => updateDraft("defaultUnit", e.target.value)}
-                          className="border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
-                        >
-                          <option value="KG">KG</option>
-                          <option value="G">G</option>
-                        </select>
+                          onChange={(value) => updateDraft("defaultUnit", value)}
+                          options={weightUnitOptions}
+                          valueKey="value"
+                          labelKey="label"
+                          className="w-[96px]"
+                          buttonClassName="rounded-lg px-2 py-1.5 text-sm"
+                        />
                       </div>
                     )}
                   </div>
@@ -874,15 +891,13 @@ export default function BulkAddItems() {
 
                         <div>
                           <label className="mb-1 block text-sm font-medium text-slate-700">Unit</label>
-                          <select
+                          <CustomSelect
                             value={ingredient.qtyUnit}
-                            onChange={(e) => updateIngredient(index, "qtyUnit", e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="PCS">PCS</option>
-                            <option value="KG">KG</option>
-                            <option value="G">G</option>
-                          </select>
+                            onChange={(value) => updateIngredient(index, "qtyUnit", value)}
+                            options={recipeUnitOptions}
+                            valueKey="value"
+                            labelKey="label"
+                          />
                         </div>
 
                         <div className="flex items-end">

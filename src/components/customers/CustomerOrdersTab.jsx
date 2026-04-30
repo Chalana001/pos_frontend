@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { customersAPI } from "../../api/customers.api";
 import { toast } from "react-hot-toast";
 import { formatCurrency } from "../../utils/formatters";
+import CustomSelect from "../common/CustomSelect";
 
 const CustomerOrdersTab = ({ customerId }) => {
   const [loading, setLoading] = useState(false);
@@ -9,6 +10,11 @@ const CustomerOrdersTab = ({ customerId }) => {
 
   // filters (optional)
   const [paymentType, setPaymentType] = useState("ALL"); // ALL | CASH | CREDIT
+  const paymentTypeOptions = [
+    { value: "ALL", label: "All" },
+    { value: "CASH", label: "Cash" },
+    { value: "CREDIT", label: "Credit" },
+  ];
 
   useEffect(() => {
     fetchOrders();
@@ -41,15 +47,14 @@ const CustomerOrdersTab = ({ customerId }) => {
           Customer Orders (Cash/Credit)
         </div>
 
-        <select
+        <CustomSelect
           value={paymentType}
-          onChange={(e) => setPaymentType(e.target.value)}
-          className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="ALL">All</option>
-          <option value="CASH">Cash</option>
-          <option value="CREDIT">Credit</option>
-        </select>
+          onChange={setPaymentType}
+          options={paymentTypeOptions}
+          valueKey="value"
+          labelKey="label"
+          className="w-[180px]"
+        />
       </div>
 
       {/* Table */}

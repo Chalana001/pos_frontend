@@ -42,6 +42,24 @@ const buildEmptyIngredient = () => ({
   search: "",
 });
 
+const itemTypeOptions = [
+  { value: ItemType.NORMAL, label: ItemTypeLabels.NORMAL },
+  { value: ItemType.WEIGHT, label: ItemTypeLabels.WEIGHT },
+  { value: ItemType.SERVICE, label: ItemTypeLabels.SERVICE },
+  { value: ItemType.RECIPE, label: ItemTypeLabels.RECIPE },
+];
+
+const weightUnitOptions = [
+  { value: "KG", label: "KG" },
+  { value: "G", label: "G" },
+];
+
+const recipeUnitOptions = [
+  { value: "PCS", label: "PCS" },
+  { value: "KG", label: "KG" },
+  { value: "G", label: "G" },
+];
+
 const ItemFormPage = ({ mode }) => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -578,10 +596,9 @@ const ItemFormPage = ({ mode }) => {
                   <div className="md:col-span-2 flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-2">
                       <label className="text-sm font-medium text-slate-700">Item Type:</label>
-                      <select
+                      <CustomSelect
                         value={formData.itemType}
-                        onChange={(e) => {
-                          const value = e.target.value;
+                        onChange={(value) => {
                           setFormData({
                             ...formData,
                             itemType: value,
@@ -591,26 +608,26 @@ const ItemFormPage = ({ mode }) => {
                             branchIds: value === ItemType.SERVICE ? formData.branchIds : [],
                           });
                         }}
-                        className="border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      >
-                        <option value={ItemType.NORMAL}>{ItemTypeLabels.NORMAL}</option>
-                        <option value={ItemType.WEIGHT}>{ItemTypeLabels.WEIGHT}</option>
-                        <option value={ItemType.SERVICE}>{ItemTypeLabels.SERVICE}</option>
-                        <option value={ItemType.RECIPE}>{ItemTypeLabels.RECIPE}</option>
-                      </select>
+                        options={itemTypeOptions}
+                        valueKey="value"
+                        labelKey="label"
+                        className="w-[190px]"
+                        buttonClassName="rounded-lg px-3 py-1.5"
+                      />
                     </div>
 
                     {formData.itemType === ItemType.WEIGHT && (
                       <div className="flex items-center gap-2 mt-2 md:mt-0 md:ml-4 border-l md:pl-4 border-slate-300">
                         <label className="text-sm font-medium text-slate-700">Default Unit:</label>
-                        <select
+                        <CustomSelect
                           value={formData.defaultUnit}
-                          onChange={(e) => setFormData({ ...formData, defaultUnit: e.target.value })}
-                          className="border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                        >
-                          <option value="KG">KG</option>
-                          <option value="G">G</option>
-                        </select>
+                          onChange={(value) => setFormData({ ...formData, defaultUnit: value })}
+                          options={weightUnitOptions}
+                          valueKey="value"
+                          labelKey="label"
+                          className="w-[96px]"
+                          buttonClassName="rounded-lg px-3 py-1.5"
+                        />
                       </div>
                     )}
                   </div>
@@ -801,15 +818,13 @@ const ItemFormPage = ({ mode }) => {
 
                             <div>
                               <label className="mb-1 block text-sm font-medium text-slate-700">Unit</label>
-                              <select
+                              <CustomSelect
                                 value={ingredient.qtyUnit}
-                                onChange={(e) => updateIngredient(index, "qtyUnit", e.target.value)}
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              >
-                                <option value="PCS">PCS</option>
-                                <option value="KG">KG</option>
-                                <option value="G">G</option>
-                              </select>
+                                onChange={(value) => updateIngredient(index, "qtyUnit", value)}
+                                options={recipeUnitOptions}
+                                valueKey="value"
+                                labelKey="label"
+                              />
                             </div>
 
                             <div className="flex items-end">

@@ -3,13 +3,14 @@ import { Building2 } from "lucide-react";
 import api from "../../api/axios";
 import { useBranch } from "../../context/BranchContext";
 import { useAuth } from "../../context/AuthContext";
-import CustomSelect from "../common/CustomSelect"; // 🟢 Custom Select එක Import කළා (Path එක ඔයාගේ ෆෝල්ඩර් විදිහට හදාගන්න)
+import { useLanguage } from "../../context/LanguageContext";
+import CustomSelect from "../common/CustomSelect";
 
 const BranchSelector = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { branches, setBranches, selectedBranchId, setSelectedBranchId } = useBranch();
 
-  // 🔴 ADMIN එකමයි dropdown දෙක (CASHIER/MANAGER dropdown නෑ)
   if (user?.role !== "ADMIN") return null;
 
   useEffect(() => {
@@ -24,7 +25,7 @@ const BranchSelector = () => {
 
       setBranches(list);
 
-      if (selectedBranchId && list.some((b) => String(b.id) === String(selectedBranchId))) {
+      if (selectedBranchId && list.some((branch) => String(branch.id) === String(selectedBranchId))) {
         return;
       }
 
@@ -45,16 +46,14 @@ const BranchSelector = () => {
   };
 
   return (
-    <div className="relative flex items-center gap-2 ml-14 xl:ml-0">
-      <Building2 size={20} className="text-slate-500 hidden sm:block shrink-0" />
-
-      {/* Custom Select with proper z-index */}
-      <div className="w-40 z-20">
+    <div className="relative ml-14 flex items-center gap-2 xl:ml-0">
+      <Building2 size={20} className="hidden shrink-0 text-slate-500 sm:block" />
+      <div className="z-20 w-40">
         <CustomSelect
           value={selectedBranchId}
           onChange={handleManualChange}
           options={branches}
-          placeholder="Select Branch"
+          placeholder={t("Select Branch")}
         />
       </div>
     </div>

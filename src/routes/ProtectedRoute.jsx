@@ -1,11 +1,13 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { hasPermission } from '../utils/permissions';
 import { hasPlanFeature } from '../utils/subscriptionFeatures';
 
 const ProtectedRoute = ({ children, permission, feature }) => {
   const { user, isAuthenticated, loading, planLoading } = useAuth();
+  const { t } = useLanguage();
 
   if (loading || planLoading) {
     return (
@@ -23,8 +25,8 @@ const ProtectedRoute = ({ children, permission, feature }) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-slate-800 mb-4">Access Denied</h1>
-          <p className="text-slate-600">You don't have permission to access this page.</p>
+          <h1 className="text-4xl font-bold text-slate-800 mb-4">{t('Access Denied')}</h1>
+          <p className="text-slate-600">{t("You don't have permission to access this page.")}</p>
         </div>
       </div>
     );
@@ -34,8 +36,8 @@ const ProtectedRoute = ({ children, permission, feature }) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-slate-800 mb-4">Package Restricted</h1>
-          <p className="text-slate-600">Your current package does not include this feature.</p>
+          <h1 className="text-4xl font-bold text-slate-800 mb-4">{t('Package Restricted')}</h1>
+          <p className="text-slate-600">{t('Your current package does not include this feature.')}</p>
         </div>
       </div>
     );

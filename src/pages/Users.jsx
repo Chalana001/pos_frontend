@@ -10,6 +10,7 @@ import Card from "../components/common/Card";
 import Table from "../components/common/Table";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import CustomSelect from "../components/common/CustomSelect";
 
 // ✅ simple modal (if you already have Modal component, use it instead)
 const Modal = ({ open, onClose, title, children }) => {
@@ -65,6 +66,28 @@ const Users = () => {
     });
 
     const isAdmin = user?.role === "ADMIN";
+    const roleFilterOptions = [
+        { value: "ALL", label: "All Roles" },
+        { value: "ADMIN", label: "ADMIN" },
+        { value: "MANAGER", label: "MANAGER" },
+        { value: "CASHIER", label: "CASHIER" },
+    ];
+    const statusFilterOptions = [
+        { value: "ALL", label: "All Status" },
+        { value: "ENABLED", label: "Enabled" },
+        { value: "DISABLED", label: "Disabled" },
+    ];
+    const userRoleOptions = [
+        { value: "CASHIER", label: "CASHIER" },
+        { value: "MANAGER", label: "MANAGER" },
+        { value: "ADMIN", label: "ADMIN" },
+    ];
+    const branchOptions = (branches || [])
+        .filter((branch) => Number(branch.id) !== 0)
+        .map((branch) => ({
+            value: String(branch.id),
+            label: branch.name,
+        }));
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -340,27 +363,24 @@ const Users = () => {
                     </div>
 
                     {/* Role filter */}
-                    <select
+                    <CustomSelect
                         value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value)}
-                        className="input"
-                    >
-                        <option value="ALL">All Roles</option>
-                        <option value="ADMIN">ADMIN</option>
-                        <option value="MANAGER">MANAGER</option>
-                        <option value="CASHIER">CASHIER</option>
-                    </select>
+                        onChange={setRoleFilter}
+                        options={roleFilterOptions}
+                        valueKey="value"
+                        labelKey="label"
+                        buttonClassName="input"
+                    />
 
                     {/* Status filter */}
-                    <select
+                    <CustomSelect
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="input"
-                    >
-                        <option value="ALL">All Status</option>
-                        <option value="ENABLED">Enabled</option>
-                        <option value="DISABLED">Disabled</option>
-                    </select>
+                        onChange={setStatusFilter}
+                        options={statusFilterOptions}
+                        valueKey="value"
+                        labelKey="label"
+                        buttonClassName="input"
+                    />
                 </div>
 
                 {loading ? (
@@ -398,33 +418,29 @@ const Users = () => {
 
                     <div>
                         <label className="text-sm font-medium text-slate-700">Role</label>
-                        <select
-                            className="input mt-1"
+                        <CustomSelect
                             value={createForm.role}
-                            onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
-                        >
-                            <option value="CASHIER">CASHIER</option>
-                            <option value="MANAGER">MANAGER</option>
-                            <option value="ADMIN">ADMIN</option>
-                        </select>
+                            onChange={(value) => setCreateForm({ ...createForm, role: value })}
+                            options={userRoleOptions}
+                            valueKey="value"
+                            labelKey="label"
+                            className="mt-1"
+                            buttonClassName="input"
+                        />
                     </div>
 
                     <div>
                         <label className="text-sm font-medium text-slate-700">Branch</label>
-                        <select
-                            className="input mt-1"
+                        <CustomSelect
                             value={createForm.branchId}
-                            onChange={(e) => setCreateForm({ ...createForm, branchId: e.target.value })}
-                        >
-                            <option value="">Select branch</option>
-                            {(branches || [])
-                                .filter((b) => Number(b.id) !== 0)
-                                .map((b) => (
-                                    <option key={b.id} value={b.id}>
-                                        {b.name}
-                                    </option>
-                                ))}
-                        </select>
+                            onChange={(value) => setCreateForm({ ...createForm, branchId: value })}
+                            options={branchOptions}
+                            valueKey="value"
+                            labelKey="label"
+                            placeholder="Select branch"
+                            className="mt-1"
+                            buttonClassName="input"
+                        />
                     </div>
                 </div>
 
@@ -448,20 +464,16 @@ const Users = () => {
             >
                 <div>
                     <label className="text-sm font-medium text-slate-700">Branch</label>
-                    <select
-                        className="input mt-1"
+                    <CustomSelect
                         value={assignForm.branchId}
-                        onChange={(e) => setAssignForm({ branchId: e.target.value })}
-                    >
-                        <option value="">Select branch</option>
-                        {(branches || [])
-                            .filter((b) => Number(b.id) !== 0)
-                            .map((b) => (
-                                <option key={b.id} value={b.id}>
-                                    {b.name}
-                                </option>
-                            ))}
-                    </select>
+                        onChange={(value) => setAssignForm({ branchId: value })}
+                        options={branchOptions}
+                        valueKey="value"
+                        labelKey="label"
+                        placeholder="Select branch"
+                        className="mt-1"
+                        buttonClassName="input"
+                    />
                 </div>
 
                 <div className="flex justify-end gap-2 mt-4">

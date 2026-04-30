@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useLanguage } from "../../context/LanguageContext";
 import { hasPermission } from "../../utils/permissions";
 import { hasPlanFeature } from "../../utils/subscriptionFeatures";
 import {
@@ -25,6 +26,7 @@ import {
 
 const Sidebar = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const role = user?.role;
   const canUseFeature = (feature) => hasPlanFeature(user?.planName, feature);
@@ -207,8 +209,8 @@ return (
       >
         <div className="p-6 border-b border-slate-800 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">POS System</h1>
-            <p className="text-sm text-slate-400 mt-1">{role}</p>
+            <h1 className="text-2xl font-bold">{t("POS System")}</h1>
+            <p className="text-sm text-slate-400 mt-1">{t(role)}</p>
           </div>
           <button
             onClick={() => setIsOpen(false)}
@@ -255,7 +257,7 @@ return (
                   >
                     <div className="flex items-center gap-3">
                       <Icon size={20} />
-                      <span className="font-medium">Sales</span>
+                      <span className="font-medium">{t("Sales")}</span>
                     </div>
                     {openSales ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                   </button>
@@ -272,7 +274,7 @@ return (
                             }`
                           }
                         >
-                          Sales History
+                          {t("Sales History")}
                         </NavLink>
                       )}
                       
@@ -305,7 +307,7 @@ return (
                   >
                     <div className="flex items-center gap-3">
                       <Icon size={20} />
-                      <span className="font-medium">Items</span>
+                      <span className="font-medium">{t("Items")}</span>
                     </div>
                     {openItems ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                   </button>
@@ -323,7 +325,7 @@ return (
                             }`
                           }
                         >
-                          Item List
+                          {t("Item List")}
                         </NavLink>
                       )}
 
@@ -337,7 +339,7 @@ return (
                             }`
                           }
                         >
-                          Add Item
+                          {t("Add Item")}
                         </NavLink>
                       )}
 
@@ -351,7 +353,7 @@ return (
                             }`
                           }
                         >
-                          Bulk Add Items
+                          {t("Bulk Add Items")}
                         </NavLink>
                       )}
 
@@ -365,13 +367,13 @@ return (
                             }`
                           }
                         >
-                          Print Barcodes
+                          {t("Print Barcodes")}
                         </NavLink>
                       )}
 
                       {isEditingItem && (
                         <div className="block px-3 py-2 rounded-lg text-sm bg-slate-800 text-white">
-                          Edit Item
+                          {t("Edit Item")}
                         </div>
                       )}
                     </div>
@@ -398,7 +400,7 @@ return (
                   >
                     <div className="flex items-center gap-3">
                       <Icon size={20} />
-                      <span className="font-medium">Customers</span>
+                      <span className="font-medium">{t("Customers")}</span>
                     </div>
                     {openCustomers ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                   </button>
@@ -416,7 +418,7 @@ return (
                             }`
                           }
                         >
-                          Customer List
+                          {t("Customer List")}
                         </NavLink>
                       )}
 
@@ -430,19 +432,19 @@ return (
                             }`
                           }
                         >
-                          Add Customer
+                          {t("Add Customer")}
                         </NavLink>
                       )}
 
                       {isViewingCustomer && (
                         <div className="block px-3 py-2 rounded-lg text-sm bg-slate-800 text-white">
-                          View Customer
+                          {t("View Customer")}
                         </div>
                       )}
 
                       {isEditingCustomer && (
                         <div className="block px-3 py-2 rounded-lg text-sm bg-slate-800 text-white">
-                          Edit Customer
+                          {t("Edit Customer")}
                         </div>
                       )}
                     </div>
@@ -467,7 +469,7 @@ return (
                   >
                     <div className="flex items-center gap-3">
                       <Icon size={20} />
-                      <span className="font-medium">Shifts</span>
+                      <span className="font-medium">{t("Shifts")}</span>
                     </div>
                     {openShifts ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                   </button>
@@ -483,7 +485,7 @@ return (
                           }`
                         }
                       >
-                        Active Shift
+                        {t("Active Shift")}
                       </NavLink>)}
                       {hasPermission(role, "MANAGE_SHIFTS_HISTORY") && canUseFeature("SHIFT_HISTORY") && (<NavLink
                         to="/shifts/history"
@@ -493,7 +495,7 @@ return (
                           }`
                         }
                       >
-                        Shift History
+                        {t("Shift History")}
                       </NavLink>)}
                     </div>
                   )}
@@ -523,7 +525,7 @@ return (
                   >
                     <div className="flex items-center gap-3">
                       <Icon size={20} />
-                      <span className="font-medium">Stock</span>
+                      <span className="font-medium">{t("Stock")}</span>
                     </div>
                     {openStock ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                   </button>
@@ -541,7 +543,7 @@ return (
                             }`
                           }
                         >
-                          Stock List
+                          {t("Stock List")}
                         </NavLink>
                       )}
 
@@ -555,7 +557,7 @@ return (
                             }`
                           }
                         >
-                          Adjustments
+                          {t("Adjustments")}
                         </NavLink>
                       )}
 
@@ -569,7 +571,7 @@ return (
                             }`
                           }
                         >
-                          Transfers
+                          {t("Transfers")}
                         </NavLink>
                       )}
                     </div>
@@ -600,7 +602,7 @@ return (
                   >
                     <div className="flex items-center gap-3">
                       <Icon size={20} />
-                      <span className="font-medium">Purchase</span>
+                      <span className="font-medium">{t("Purchase")}</span>
                     </div>
                     {openPurchase ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                   </button>
@@ -618,7 +620,7 @@ return (
                             }`
                           }
                         >
-                          Purchase List
+                          {t("Purchase List")}
                         </NavLink>
                       )}
 
@@ -632,7 +634,7 @@ return (
                             }`
                           }
                         >
-                          New Purchase
+                          {t("New Purchase")}
                         </NavLink>
                       )}
                     </div>
@@ -654,7 +656,7 @@ return (
                 }
               >
                 <Icon size={20} />
-                <span className="font-medium">{item.name}</span>
+                <span className="font-medium">{t(item.name)}</span>
               </NavLink>
             );
           })}
@@ -662,7 +664,7 @@ return (
 
         <div className="p-4 border-t border-slate-800">
           <div className="text-xs text-slate-400">
-            Branch: {user?.branchId ? `#${user.branchId}` : "All Branches"}
+            {t(user?.branchId ? `Branch: #${user.branchId}` : "All Branches")}
           </div>
         </div>
       </aside>

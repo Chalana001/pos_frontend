@@ -4,6 +4,7 @@ import { Building2, Printer, Save, Ticket, FileText, ChefHat, Plus, Pencil, Tras
 
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import CustomSelect from '../components/common/CustomSelect';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ReceiptTemplate from '../components/receipt/ReceiptTemplate';
 import InvoiceTemplate from '../components/invoice/InvoiceTemplate';
@@ -56,6 +57,11 @@ const INITIAL_TABLE_FORM = {
   tableName: '',
   status: 'AVAILABLE',
 };
+
+const tableStatusOptions = [
+  { value: 'AVAILABLE', label: 'Available' },
+  { value: 'OCCUPIED', label: 'Occupied' },
+];
 
 const ReceiptPreview = ({ branch, storeName, settings, templateType }) => {
   const normalized = normalizeReceiptSettings({
@@ -622,14 +628,14 @@ const ReceiptSettingsPage = () => {
 
                       <div>
                         <label className="text-sm font-medium text-slate-700">Status</label>
-                        <select
+                        <CustomSelect
                           value={tableForm.status}
-                          onChange={(event) => setTableForm((prev) => ({ ...prev, status: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        >
-                          <option value="AVAILABLE">Available</option>
-                          <option value="OCCUPIED">Occupied</option>
-                        </select>
+                          onChange={(value) => setTableForm((prev) => ({ ...prev, status: value }))}
+                          options={tableStatusOptions}
+                          valueKey="value"
+                          labelKey="label"
+                          className="mt-1"
+                        />
                       </div>
 
                       <div className="flex items-end">

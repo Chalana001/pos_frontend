@@ -17,6 +17,7 @@ import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
+import CustomSelect from "../components/common/CustomSelect";
 
 const isWeightItem = (item) =>
   item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
@@ -54,6 +55,19 @@ const getDisplayUnit = (entity, fallbackUnit = "") =>
   isWeightItem(entity) ? "KG" : (entity?.displayUnit ?? entity?.defaultUnit ?? fallbackUnit);
 
 const formatQtyWithUnit = (value, unit) => (unit ? `${formatQty(value)} ${unit}` : formatQty(value));
+
+const adjustmentTypeOptions = [
+  { value: ADJUSTMENT_TYPES.EXPIRED, label: "Expired" },
+  { value: ADJUSTMENT_TYPES.DAMAGED, label: "Damaged" },
+  { value: ADJUSTMENT_TYPES.LOST, label: "Lost" },
+  { value: ADJUSTMENT_TYPES.FOUND, label: "Found" },
+  { value: ADJUSTMENT_TYPES.MANUAL, label: "Manual" },
+];
+
+const weightUnitOptions = [
+  { value: "G", label: "Grams (G)" },
+  { value: "KG", label: "Kilograms (KG)" },
+];
 
 const Stock = () => {
   const { user } = useAuth();
@@ -336,6 +350,18 @@ const Stock = () => {
     [selectedBranchId]
   );
 
+  const batchOptions = itemBatches.map((batch) => ({
+    value: String(batch.batchId),
+    label: `Batch #${batch.batchId} | Qty: ${formatQtyWithUnit(getDisplayQty(batch), getDisplayUnit(batch, selectedItem?.defaultUnit))} | Price: ${formatCurrency(batch.price)}`,
+  }));
+
+  const transferBranchOptions = branches
+    .filter((branch) => String(branch.id) !== String(selectedBranchId || 0))
+    .map((branch) => ({
+      value: String(branch.id),
+      label: branch.name,
+    }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -438,19 +464,14 @@ const Stock = () => {
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">In Stock: {formatQtyWithUnit(getDisplayQty(itemBatches[0]), getDisplayUnit(itemBatches[0], selectedItem?.defaultUnit))}</span>
                   </div>
                 ) : itemBatches.length > 1 ? (
-                  <select
+                  <CustomSelect
                     value={adjustFormData.batchId}
-                    onChange={(e) => setAdjustFormData({ ...adjustFormData, batchId: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">-- Choose a Batch --</option>
-                    {itemBatches.map((batch) => (
-                      <option key={batch.batchId} value={batch.batchId}>
-                        Batch #{batch.batchId} | Qty: {formatQtyWithUnit(getDisplayQty(batch), getDisplayUnit(batch, selectedItem?.defaultUnit))} | Price: {formatCurrency(batch.price)}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setAdjustFormData({ ...adjustFormData, batchId: value })}
+                    options={batchOptions}
+                    valueKey="value"
+                    labelKey="label"
+                    placeholder="-- Choose a Batch --"
+                  />
                 ) : (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">No available batches.</div>
                 )}
@@ -458,17 +479,13 @@ const Stock = () => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Adjustment Type *</label>
-                <select
+                <CustomSelect
                   value={adjustFormData.type}
-                  onChange={(e) => setAdjustFormData({ ...adjustFormData, type: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                >
-                  <option value={ADJUSTMENT_TYPES.EXPIRED}>Expired</option>
-                  <option value={ADJUSTMENT_TYPES.DAMAGED}>Damaged</option>
-                  <option value={ADJUSTMENT_TYPES.LOST}>Lost</option>
-                  <option value={ADJUSTMENT_TYPES.FOUND}>Found</option>
-                  <option value={ADJUSTMENT_TYPES.MANUAL}>Manual</option>
-                </select>
+                  onChange={(value) => setAdjustFormData({ ...adjustFormData, type: value })}
+                  options={adjustmentTypeOptions}
+                  valueKey="value"
+                  labelKey="label"
+                />
               </div>
 
               {/* ✅ Updated Quantity Input for Weight Items */}
@@ -485,14 +502,14 @@ const Stock = () => {
                     required
                   />
                   {isWeightItem(selectedItem) && (
-                    <select
+                    <CustomSelect
                       value={adjustFormData.qtyUnit}
-                      onChange={(e) => setAdjustFormData({ ...adjustFormData, qtyUnit: e.target.value })}
-                      className="p-2 border border-slate-300 rounded-lg min-w-max"
-                    >
-                      <option value="G">Grams (G)</option>
-                      <option value="KG">Kilograms (KG)</option>
-                    </select>
+                      onChange={(value) => setAdjustFormData({ ...adjustFormData, qtyUnit: value })}
+                      options={weightUnitOptions}
+                      valueKey="value"
+                      labelKey="label"
+                      className="min-w-[150px]"
+                    />
                   )}
                 </div>
               </div>
@@ -535,19 +552,14 @@ const Stock = () => {
                     <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">In Stock: {formatQtyWithUnit(getDisplayQty(itemBatches[0]), getDisplayUnit(itemBatches[0], selectedItem?.defaultUnit))}</span>
                   </div>
                 ) : itemBatches.length > 1 ? (
-                  <select
+                  <CustomSelect
                     value={transferFormData.batchId}
-                    onChange={(e) => setTransferFormData({ ...transferFormData, batchId: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    required
-                  >
-                    <option value="">-- Choose a Batch --</option>
-                    {itemBatches.map((batch) => (
-                      <option key={batch.batchId} value={batch.batchId}>
-                        Batch #{batch.batchId} | Qty: {formatQtyWithUnit(getDisplayQty(batch), getDisplayUnit(batch, selectedItem?.defaultUnit))} | Price: {formatCurrency(batch.price)}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setTransferFormData({ ...transferFormData, batchId: value })}
+                    options={batchOptions}
+                    valueKey="value"
+                    labelKey="label"
+                    placeholder="-- Choose a Batch --"
+                  />
                 ) : (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">No stock available to transfer.</div>
                 )}
@@ -555,21 +567,14 @@ const Stock = () => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">To Branch *</label>
-                <select
+                <CustomSelect
                   value={transferFormData.toBranchId}
-                  onChange={(e) => setTransferFormData({ ...transferFormData, toBranchId: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
-                  required
-                >
-                  <option value="">-- Select Destination Branch --</option>
-                  {branches
-                    .filter(b => String(b.id) !== String(selectedBranchId || 0))
-                    .map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </option>
-                    ))}
-                </select>
+                  onChange={(value) => setTransferFormData({ ...transferFormData, toBranchId: value })}
+                  options={transferBranchOptions}
+                  valueKey="value"
+                  labelKey="label"
+                  placeholder="-- Select Destination Branch --"
+                />
               </div>
 
               <div>
@@ -586,14 +591,14 @@ const Stock = () => {
                     required
                   />
                   {isWeightItem(selectedItem) && (
-                    <select
+                    <CustomSelect
                       value={transferFormData.qtyUnit}
-                      onChange={(e) => setTransferFormData({ ...transferFormData, qtyUnit: e.target.value })}
-                      className="p-2 border border-slate-300 rounded-lg min-w-max"
-                    >
-                      <option value="G">Grams (G)</option>
-                      <option value="KG">Kilograms (KG)</option>
-                    </select>
+                      onChange={(value) => setTransferFormData({ ...transferFormData, qtyUnit: value })}
+                      options={weightUnitOptions}
+                      valueKey="value"
+                      labelKey="label"
+                      className="min-w-[150px]"
+                    />
                   )}
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { Trash2, Minus, Plus, Tag, UserPlus, Receipt, X } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { DISCOUNT_TYPES, ItemType } from "../../utils/constants";
 import Button from "../../components/common/Button";
+import CustomSelect from "../../components/common/CustomSelect";
 
 const Cart = ({
   items,
@@ -25,6 +26,14 @@ const Cart = ({
   checkoutLabel = "Checkout (F9)",
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
+  const qtyUnitOptions = [
+    { value: "KG", label: "KG" },
+    { value: "G", label: "G" },
+  ];
+  const discountTypeOptions = [
+    { value: DISCOUNT_TYPES.FIXED, label: "Fixed (LKR)" },
+    { value: DISCOUNT_TYPES.PERCENT, label: "Percent (%)" },
+  ];
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -213,17 +222,19 @@ const Cart = ({
                       </div>
 
                       {item.weightItem ? (
-                        <select
+                        <CustomSelect
                           value={item.qtyUnit || item.defaultUnit}
-                          onChange={(e) => {
-                            onUpdateQtyUnit?.(index, e.target.value);
+                          onChange={(value) => {
+                            onUpdateQtyUnit?.(index, value);
                             focusSearch();
                           }}
-                          className="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded p-1 outline-none cursor-pointer hover:bg-slate-100 focus:ring-1 focus:ring-blue-500 transition-all"
-                        >
-                          <option value="KG">KG</option>
-                          <option value="G">G</option>
-                        </select>
+                          options={qtyUnitOptions}
+                          valueKey="value"
+                          labelKey="label"
+                          className="w-[76px]"
+                          buttonClassName="rounded-lg border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-600 shadow-none"
+                          menuClassName="min-w-[76px]"
+                        />
                       ) : (
                         /* 🟢 මෙතන තමයි වෙනස කළේ! Service එකක් නෙවෙයි නම් විතරක් 'PCS' කියලා පෙන්වන්න හදලා තියෙනවා */
                         item.itemType !== ItemType.SERVICE && (
@@ -256,14 +267,15 @@ const Cart = ({
                       <button onClick={() => setEditingIndex(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
                     </div>
                     <div className="flex gap-2">
-                      <select
+                      <CustomSelect
                         value={item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.FIXED : item.discountType}
-                        onChange={(e) => onInlineDiscount(index, e.target.value, item.discountValue)}
-                        className="text-xs font-bold border border-slate-200 rounded-lg bg-white px-2 outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value={DISCOUNT_TYPES.FIXED}>Fixed (LKR)</option>
-                        <option value={DISCOUNT_TYPES.PERCENT}>Percent (%)</option>
-                      </select>
+                        onChange={(value) => onInlineDiscount(index, value, item.discountValue)}
+                        options={discountTypeOptions}
+                        valueKey="value"
+                        labelKey="label"
+                        className="w-[140px]"
+                        buttonClassName="rounded-lg border-slate-200 bg-white px-2 py-2 text-xs font-bold shadow-none"
+                      />
                       <input
                         type="number"
                         autoFocus

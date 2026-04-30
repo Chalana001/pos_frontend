@@ -17,6 +17,11 @@ import { ItemType } from "../utils/constants";
 const isWeightItem = (item) =>
   item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
 
+const weightUnitOptions = [
+  { value: "G", label: "G" },
+  { value: "KG", label: "KG" },
+];
+
 const PurchaseFormPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -428,14 +433,15 @@ const PurchaseFormPage = () => {
                         </div>
                         {weightItem && (
                           <div className="col-span-1">
-                            <select
+                            <CustomSelect
                               value={inputs.qtyUnit || selectedItem.defaultUnit}
-                              onChange={(e) => handleInputChange(branch.id, 'qtyUnit', e.target.value)}
-                              className="input h-8 text-xs p-1 text-center"
-                            >
-                              <option value="G">G</option>
-                              <option value="KG">KG</option>
-                            </select>
+                              onChange={(value) => handleInputChange(branch.id, 'qtyUnit', value)}
+                              options={weightUnitOptions}
+                              valueKey="value"
+                              labelKey="label"
+                              buttonClassName="input h-8 px-2 py-1 text-xs text-center shadow-none"
+                              className="min-w-[72px]"
+                            />
                           </div>
                         )}
                         <div className={`${weightItem ? 'col-span-2' : 'col-span-3'} flex gap-1`}>
