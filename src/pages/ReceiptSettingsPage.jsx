@@ -27,7 +27,9 @@ const toSavePayload = (settings, templateType) => {
     showStoreName: normalized.showStoreName,
     showBranchName: normalized.showBranchName,
     showAddress: normalized.showAddress,
+    showAddressLabel: normalized.showAddressLabel,
     showPhone: normalized.showPhone,
+    showPhoneLabel: normalized.showPhoneLabel,
     showInvoiceNumber: normalized.showInvoiceNumber,
     showDateTime: normalized.showDateTime,
     showCashier: normalized.showCashier,
@@ -41,6 +43,7 @@ const toSavePayload = (settings, templateType) => {
     showThanksMessage: normalized.showThanksMessage,
     showCredits: true,
     logoWidthPercent: normalized.logoWidthPercent,
+    invoiceLogoWidthPercent: normalized.invoiceLogoWidthPercent,
     paperWidthMm: templateType === PRINT_TEMPLATE_TYPES.A4 ? 210 : normalized.paperWidthMm,
     thanksMessage: normalized.thanksMessage,
     creditsLine1: normalized.creditsLine1,
@@ -468,6 +471,13 @@ const ReceiptSettingsPage = () => {
               <Card title="Visible Sections">
                 <div className="grid gap-3 md:grid-cols-2">
                   {RECEIPT_SECTION_FIELDS.map((field) => (
+                    (() => {
+                      const disabledByParent =
+                        (field.key === 'showAddressLabel' && !form.showAddress) ||
+                        (field.key === 'showPhoneLabel' && !form.showPhone);
+                      const isDisabled = field.locked || disabledByParent;
+
+                      return (
                     <label
                       key={field.key}
                       className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
@@ -477,15 +487,18 @@ const ReceiptSettingsPage = () => {
                       <div>
                         <div className="font-medium text-slate-800">{field.label}</div>
                         {field.locked ? <div className="text-xs text-slate-500">Always visible on printed bills</div> : null}
+                        {disabledByParent ? <div className="text-xs text-slate-500">Enable the parent field first</div> : null}
                       </div>
                       <input
                         type="checkbox"
                         checked={!!form[field.key]}
-                        disabled={field.locked}
+                        disabled={isDisabled}
                         onChange={(event) => updateField(field.key, event.target.checked)}
                         className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
                     </label>
+                      );
+                    })()
                   ))}
                 </div>
               </Card>
@@ -495,19 +508,24 @@ const ReceiptSettingsPage = () => {
                   <div className="space-y-5">
                     <div>
                       <div className="flex items-center justify-between text-sm text-slate-700">
-                        <label className="font-medium">Logo Size</label>
-                        <span>{form.logoWidthPercent}%</span>
+                        <label className="font-medium">{activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 'Invoice Logo Size' : 'Logo Size'}</label>
+                        <span>{activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? form.invoiceLogoWidthPercent : form.logoWidthPercent}%</span>
                       </div>
                       <input
                         type="range"
                         min="35"
-                        max="100"
-                        value={form.logoWidthPercent}
-                        onChange={(event) => updateField('logoWidthPercent', Number(event.target.value))}
+                        max="200"
+                        value={activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? form.invoiceLogoWidthPercent : form.logoWidthPercent}
+                        onChange={(event) => updateField(
+                          activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 'invoiceLogoWidthPercent' : 'logoWidthPercent',
+                          Number(event.target.value)
+                        )}
                         className="mt-3 w-full accent-blue-600"
                       />
                       <p className="mt-2 text-xs text-slate-500">
-                        Uploaded logos will auto-fit to this width, so every branch prints in a consistent size.
+                        {activeTemplate === PRINT_TEMPLATE_TYPES.A4
+                          ? 'Full invoice logo size is controlled separately from the thermal receipt.'
+                          : 'Uploaded logos will auto-fit to this width, so every branch prints in a consistent size.'}
                       </p>
                     </div>
 

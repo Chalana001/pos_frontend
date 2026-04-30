@@ -132,6 +132,9 @@ const POS = () => {
   const [savingDraft, setSavingDraft] = useState(false);
   const [printingKot, setPrintingKot] = useState(false);
   const [, setKotStateVersion] = useState(0);
+  const [cartPanelWidth, setCartPanelWidth] = useState(470);
+  const [isResizingPanels, setIsResizingPanels] = useState(false);
+  const resizeStateRef = useRef({ startX: 0, startWidth: 470 });
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
 
@@ -154,6 +157,34 @@ const POS = () => {
       searchInputRef.current.focus();
     }
   }, [loadingShift, myShift]);
+
+  useEffect(() => {
+    if (!isResizingPanels) {
+      return undefined;
+    }
+
+    const handleMouseMove = (event) => {
+      const deltaX = resizeStateRef.current.startX - event.clientX;
+      const nextWidth = Math.max(360, Math.min(720, resizeStateRef.current.startWidth + deltaX));
+      setCartPanelWidth(nextWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingPanels(false);
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingPanels]);
 
   const toNonNegativeNumber = (value) => {
     const parsed = Number.parseFloat(value);
@@ -598,6 +629,14 @@ const POS = () => {
     }
   };
 
+  const handleResizeStart = (event) => {
+    resizeStateRef.current = {
+      startX: event.clientX,
+      startWidth: cartPanelWidth,
+    };
+    setIsResizingPanels(true);
+  };
+
   const updateQtyUnit = (index, unit) => {
     const newItems = [...cartItems];
     const item = newItems[index];
@@ -939,7 +978,7 @@ const POS = () => {
   return (
     <div className="flex h-full gap-1.5 lg:gap-4 bg-slate-100 p-1.5 lg:p-4 font-sans text-slate-800 flex-col overflow-y-auto lg:overflow-hidden">
       <div className="flex flex-col lg:flex-row flex-1 gap-1.5 lg:gap-4 lg:overflow-hidden lg:h-full">
-        <div className="flex flex-col h-[55vh] flex-shrink-0 lg:h-full lg:flex-1 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
+        <div className="flex min-w-0 flex-col h-[55vh] flex-shrink-0 lg:h-full lg:flex-1 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
 
           <header className="px-2 py-2 lg:px-6 lg:py-5 bg-white border-b border-slate-100 flex flex-col gap-3 flex-shrink-0">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
@@ -1095,7 +1134,7 @@ const POS = () => {
                 <p className="text-sm lg:text-lg font-medium text-center">No items found</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-4 gap-1.5 lg:gap-4">
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-4 lg:gap-3 xl:grid-cols-5 2xl:grid-cols-6">
                 {filteredItems.map((item) => {
                   const unlimitedStockItem = isUnlimitedStockItem(item);
                   const stockQty = Number(item.availableBaseQty ?? item.availableQty ?? 0);
@@ -1106,13 +1145,13 @@ const POS = () => {
                     <div
                       key={item.id}
                       onClick={() => !isOutOfStock && addToCart(item)}
-                      className={`group bg-white rounded-lg lg:rounded-xl p-2 lg:p-6 border border-slate-200 transition-all relative flex flex-col items-center text-center ${
+                      className={`group bg-white rounded-lg lg:rounded-xl p-2 lg:px-3 lg:py-4 border border-slate-200 transition-all relative flex flex-col items-center text-center ${
                         !isOutOfStock
                           ? "hover:shadow-md cursor-pointer active:scale-95"
                           : "cursor-not-allowed opacity-90"
                       }`}
                     >
-                      <div className="absolute top-1 right-1 lg:top-3 lg:right-3 flex flex-col items-end gap-1">
+                      <div className="absolute top-1 right-1 lg:top-2 lg:right-2 flex flex-col items-end gap-1">
                         {item.itemType === ItemType.SERVICE ? (
                           <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-purple-50 text-purple-600 text-[8px] lg:text-[10px] font-bold rounded border border-purple-100 uppercase">Service</span>
                         ) : item.itemType === ItemType.RECIPE ? (
@@ -1126,11 +1165,11 @@ const POS = () => {
                         )}
                       </div>
 
-                      <div className="w-8 h-8 lg:w-20 lg:h-20 rounded-full bg-slate-50 mb-1 lg:mb-6 flex items-center justify-center mt-3 lg:mt-2">
-                        <ChefHat className={`w-4 h-4 lg:w-8 lg:h-8 ${isOutOfStock ? "text-slate-200" : "text-slate-300"}`} />
+                      <div className="mt-3 mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 lg:mt-3 lg:mb-3 lg:h-14 lg:w-14">
+                        <ChefHat className={`w-4 h-4 lg:w-6 lg:h-6 ${isOutOfStock ? "text-slate-200" : "text-slate-300"}`} />
                       </div>
-                      <h3 className="font-semibold text-slate-800 text-[9px] lg:text-sm mb-0.5 lg:mb-3 line-clamp-2 min-h-[1.25rem] lg:min-h-[2.5rem] leading-tight">{item.name}</h3>
-                      <p className="text-blue-600 font-bold text-[10px] lg:text-sm">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
+                      <h3 className="mb-0.5 min-h-[1.25rem] text-[9px] font-semibold leading-tight text-slate-800 line-clamp-2 lg:mb-2 lg:min-h-[2rem] lg:text-[13px]">{item.name}</h3>
+                      <p className="text-[10px] font-bold text-blue-600 lg:text-[13px]">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
                     </div>
                   );
                 })}
@@ -1138,7 +1177,20 @@ const POS = () => {
             )}
           </div>
         </div>
-        <div className={`w-full lg:w-[380px] flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!myShift ? "opacity-50 pointer-events-none grayscale" : ""}`}>
+        <div className="hidden lg:flex lg:w-3 lg:flex-shrink-0 lg:items-stretch">
+          <button
+            type="button"
+            aria-label="Resize panels"
+            onMouseDown={handleResizeStart}
+            className={`group flex w-full cursor-col-resize items-center justify-center rounded-full bg-transparent outline-none transition ${isResizingPanels ? "opacity-100" : "opacity-70 hover:opacity-100"}`}
+          >
+            <span className={`h-full w-[3px] rounded-full transition ${isResizingPanels ? "bg-blue-500" : "bg-slate-200 group-hover:bg-slate-300"}`} />
+          </button>
+        </div>
+        <div
+          className={`w-full min-w-0 flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!myShift ? "opacity-50 pointer-events-none grayscale" : ""}`}
+          style={{ width: `min(100%, ${cartPanelWidth}px)` }}
+        >
           <Cart
             items={cartItems}
             customer={customer}

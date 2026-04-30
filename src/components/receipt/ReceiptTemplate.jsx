@@ -17,6 +17,23 @@ const getLogoWidth = (settings, mode) => {
   return `${Math.round((Number(settings.logoWidthPercent) / 100) * 220)}px`;
 };
 
+const getLogoMaxHeight = (settings, mode, templateType) => {
+  const normalizedPercent = Math.max(35, Math.min(200, Number(settings.logoWidthPercent) || 78));
+  const isThermalFamily = templateType === PRINT_TEMPLATE_TYPES.THERMAL || templateType === PRINT_TEMPLATE_TYPES.KOT;
+
+  if (mode === 'print') {
+    if (isThermalFamily) {
+      return `${Math.max(18, 14 + (normalizedPercent - 35) * 0.24)}mm`;
+    }
+    return '28mm';
+  }
+
+  if (isThermalFamily) {
+    return `${Math.round(Math.max(70, 52 + (normalizedPercent - 35) * 1.1))}px`;
+  }
+  return '132px';
+};
+
 const calculateItemTotal = (item) => {
   const lineTotal = Number(item?.lineTotal);
   if (Number.isFinite(lineTotal) && lineTotal >= 0) {
@@ -43,7 +60,7 @@ const calculateItemTotal = (item) => {
   return Math.max(0, itemTotal);
 };
 
-const getStyles = (settings, mode) => ({
+const getStyles = (settings, mode, templateType) => ({
   page: {
     width: '100%',
     boxSizing: 'border-box',
@@ -57,12 +74,13 @@ const getStyles = (settings, mode) => ({
     lineHeight: 1.35,
     color: '#000',
     backgroundColor: '#fff',
-    padding: mode === 'print' ? '1mm 3mm 3mm' : '8px 16px 16px',
+    padding: mode === 'print' ? '0 3mm 3mm' : '4px 16px 16px',
   },
   header: {
     textAlign: 'center',
   },
   logoWrap: {
+    marginTop: mode === 'print' ? '-1.4mm' : '-6px',
     marginBottom: mode === 'print' ? '-5mm' : '-18px',
     display: 'flex',
     justifyContent: 'center',
@@ -71,7 +89,7 @@ const getStyles = (settings, mode) => ({
   logo: {
     width: getLogoWidth(settings, mode),
     maxWidth: '100%',
-    maxHeight: mode === 'print' ? '28mm' : '132px',
+    maxHeight: getLogoMaxHeight(settings, mode, templateType),
     height: 'auto',
     objectFit: 'contain',
     display: 'block',
@@ -214,8 +232,8 @@ const ReceiptTemplate = ({
   mode = 'preview',
 }) => {
   const normalized = normalizeReceiptSettings(settings);
-  const styles = getStyles(normalized, mode);
   const isKot = templateType === PRINT_TEMPLATE_TYPES.KOT;
+  const styles = getStyles(normalized, mode, templateType);
   const createdAt = orderData?.createdAt ? new Date(orderData.createdAt) : new Date();
   const customerName = customerData?.name || orderData?.customerName;
   const invoiceValue = orderData?.invoiceNo || orderData?.orderId || '-';
@@ -244,10 +262,16 @@ const ReceiptTemplate = ({
 
           <div style={styles.contactInfo}>
             {normalized.showAddress && branchData.address ? (
-              <p style={styles.contactParagraph}>Address: {branchData.address}</p>
+              <p style={styles.contactParagraph}>
+                {normalized.showAddressLabel ? 'Address: ' : ''}
+                {branchData.address}
+              </p>
             ) : null}
             {normalized.showPhone && branchData.phone ? (
-              <p style={styles.contactParagraph}>Phone: {branchData.phone}</p>
+              <p style={styles.contactParagraph}>
+                {normalized.showPhoneLabel ? 'Phone: ' : ''}
+                {branchData.phone}
+              </p>
             ) : null}
           </div>
 

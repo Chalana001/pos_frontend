@@ -1,11 +1,11 @@
 import axios from 'axios';
-import toast from 'react-hot-toast'; 
-import { getToken, clearAuth } from '../utils/auth';
+import toast from 'react-hot-toast';
+import { getToken, clearAuth, notifyAuthExpired } from '../utils/auth';
 
-const currentHost = window.location.hostname; 
+let isHandlingUnauthorized = false;
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ,
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -18,11 +18,9 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // 🚀 මෙන්න මේ කෑල්ල තමයි අනිවාර්යයෙන්ම ඕනේ! (Tenant ID එක යවනවා)
-    const hostname = window.location.hostname; // උදා: demo-test.chalanawijesingha.xyz
-    const tenantId = hostname.split('.')[0];   // උදා: demo-test
-    
-    // localhost වගේ ඒවා නැතුව ඇත්තම subdomain එකක් ආවොත් විතරක් Header එක දානවා
+    const hostname = window.location.hostname;
+    const tenantId = hostname.split('.')[0];
+
     if (tenantId && tenantId !== 'www' && tenantId !== 'localhost' && tenantId !== '127') {
       config.headers['X-Tenant-ID'] = tenantId;
     }
@@ -32,40 +30,41 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (!error.response) {
-      toast.error("Network Error! Please check your connection or server.");
+      toast.error('Network Error! Please check your connection or server.');
       return Promise.reject(error);
     }
 
     const status = error.response.status;
-    const message = error.response.data?.message || error.response.data?.detail || "Something went wrong!";
+    const message = error.response.data?.message || error.response.data?.detail || 'Something went wrong!';
 
     if (status === 401) {
-      // Token Expire වෙලා නම්
-      toast.error("Session expired. Please log in again.");
-      clearAuth();
-      window.location.href = '/login';
-    } 
-    else if (status === 402) {
-      console.warn("Subscription Expired! Redirecting to plans...");
-      toast.error("Subscription Expired! Please renew your plan.");
-      if (window.location.pathname !== '/pricing') {
-        window.location.href = '/pricing'; 
+      if (!isHandlingUnauthorized) {
+        isHandlingUnauthorized = true;
+        toast.error('Session expired. Please log in again.');
+        clearAuth();
+        notifyAuthExpired();
+        if (window.location.pathname !== '/login') {
+          window.location.replace('/login');
+        }
+        window.setTimeout(() => {
+          isHandlingUnauthorized = false;
+        }, 500);
       }
-    }
-    else if (status === 403) {
-      // Permission නැත්නම්
+    } else if (status === 402) {
+      console.warn('Subscription Expired! Redirecting to plans...');
+      toast.error('Subscription Expired! Please renew your plan.');
+      if (window.location.pathname !== '/pricing') {
+        window.location.href = '/pricing';
+      }
+    } else if (status === 403) {
       toast.error("Access Denied! You don't have permission to perform this action.");
-    }
-    else if (status === 500) {
-      // Backend එකේ කෝඩ් එක කැඩුනොත්
-      toast.error("Server Error: " + message);
-    }
-    else if (status !== 400 && status !== 404) {
+    } else if (status === 500) {
+      toast.error(`Server Error: ${message}`);
+    } else if (status !== 400 && status !== 404) {
       toast.error(message);
     }
 

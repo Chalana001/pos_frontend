@@ -6,12 +6,24 @@ const mmToPx = (mm) => `${Math.round(mm * 3.78)}px`;
 
 const templateUnit = (mode, mm, pxFallback) => (mode === 'print' ? `${mm}mm` : pxFallback || mmToPx(mm));
 
+const getInvoiceLogoPercent = (settings) =>
+  Math.max(35, Math.min(200, Number(settings.invoiceLogoWidthPercent ?? settings.logoWidthPercent) || 78));
+
 const getLogoWidth = (settings, mode) => {
+  const percent = getInvoiceLogoPercent(settings);
   if (mode === 'print') {
-    return `${Math.max(30, ((210 - 24) * settings.logoWidthPercent) / 100)}mm`;
+    return `${Math.max(24, (68 * percent) / 100)}mm`;
   }
 
-  return `${Math.round((Number(settings.logoWidthPercent) / 100) * 240)}px`;
+  return `${Math.round(Math.max(84, (percent / 100) * 257))}px`;
+};
+
+const getLogoMaxHeight = (settings, mode) => {
+  const percent = getInvoiceLogoPercent(settings);
+  if (mode === 'print') {
+    return `${Math.max(12, 10 + (percent - 35) * 0.14)}mm`;
+  }
+  return `${Math.round(Math.max(44, 38 + (percent - 35) * 0.55))}px`;
 };
 
 const calculateItemTotal = (item) => {
@@ -58,22 +70,28 @@ const getStyles = (settings, mode) => ({
     lineHeight: 1.3,
   },
   topRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    display: 'grid',
+    gridTemplateColumns: mode === 'print' ? 'minmax(0,1fr) 64mm' : 'minmax(0,1fr) 236px',
+    alignItems: 'start',
     gap: mode === 'print' ? '6mm' : '22px',
   },
   businessBlock: {
-    flex: 1,
     minWidth: 0,
+  },
+  logoWrap: {
+    width: mode === 'print' ? '78mm' : '295px',
+    minHeight: mode === 'print' ? '14mm' : '54px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: mode === 'print' ? '2mm' : '8px',
   },
   logo: {
     width: getLogoWidth(settings, mode),
     maxWidth: '100%',
-    maxHeight: mode === 'print' ? '18mm' : '76px',
+    maxHeight: getLogoMaxHeight(settings, mode),
     objectFit: 'contain',
     display: 'block',
-    marginBottom: mode === 'print' ? '2mm' : '8px',
   },
   companyName: {
     margin: 0,
@@ -95,7 +113,7 @@ const getStyles = (settings, mode) => ({
     color: '#475569',
   },
   invoicePanel: {
-    width: mode === 'print' ? '64mm' : '236px',
+    width: '100%',
     border: '1px solid #cbd5e1',
     borderRadius: mode === 'print' ? '2mm' : '10px',
     padding: mode === 'print' ? '3mm' : '14px',
@@ -293,13 +311,25 @@ const InvoiceTemplate = ({
         <div style={styles.topRow}>
           <div style={styles.businessBlock}>
             {normalized.showLogo && branchData.logo ? (
-              <img src={branchData.logo} alt="Branch Logo" style={styles.logo} />
+              <div style={styles.logoWrap}>
+                <img src={branchData.logo} alt="Branch Logo" style={styles.logo} />
+              </div>
             ) : null}
             {normalized.showStoreName ? <h1 style={styles.companyName}>{storeName || 'Store Name'}</h1> : null}
             {normalized.showBranchName ? <p style={styles.branchName}>{branchData.name || 'Main Branch'}</p> : null}
             <div style={styles.businessMeta}>
-              {normalized.showAddress && branchData.address ? <div>{branchData.address}</div> : null}
-              {normalized.showPhone && branchData.phone ? <div>{branchData.phone}</div> : null}
+              {normalized.showAddress && branchData.address ? (
+                <div>
+                  {normalized.showAddressLabel ? 'Address: ' : ''}
+                  {branchData.address}
+                </div>
+              ) : null}
+              {normalized.showPhone && branchData.phone ? (
+                <div>
+                  {normalized.showPhoneLabel ? 'Phone: ' : ''}
+                  {branchData.phone}
+                </div>
+              ) : null}
             </div>
           </div>
 

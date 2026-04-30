@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getUser, setUser, getToken, setToken, clearAuth } from '../utils/auth';
+import { AUTH_EXPIRED_EVENT, getUser, setUser, getToken, setToken, clearAuth } from '../utils/auth';
 import { authAPI } from '../api/auth.api';
 import api from '../api/axios';
 
@@ -41,6 +41,30 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(false);
   }, [fetchAndStoreSubscription]);
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setUserState(null);
+      setPlanLoading(false);
+      setLoading(false);
+    };
+
+    const handleStorage = (event) => {
+      if (event.key === 'pos_token' || event.key === 'pos_user') {
+        if (!getToken() || !getUser()) {
+          handleAuthExpired();
+        }
+      }
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   const login = async (credentials) => {
     const response = await authAPI.login(credentials);

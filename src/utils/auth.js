@@ -1,5 +1,6 @@
 const TOKEN_KEY = 'pos_token';
 const USER_KEY = 'pos_user';
+export const AUTH_EXPIRED_EVENT = 'pos:auth-expired';
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 
@@ -18,3 +19,7 @@ export const clearAuth = () => {
 };
 
 export const isAuthenticated = () => !!getToken();
+
+export const notifyAuthExpired = () => {
+  window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
+};
