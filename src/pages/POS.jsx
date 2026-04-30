@@ -1,27 +1,34 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Search, ChefHat, Lock } from "lucide-react";
+import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw } from "lucide-react";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { itemsAPI } from "../api/items.api";
 import { ordersAPI } from "../api/orders.api";
 import { shiftsAPI } from "../api/shifts.api";
+import { diningTablesAPI } from "../api/diningTables.api";
+import { pendingOrdersAPI } from "../api/pendingOrders.api";
 import CustomerSelect from "../components/pos/CustomerSelect";
 import Cart from "../components/pos/Cart";
 import CheckoutOverlay from "../components/pos/CheckoutOverlay";
 import BatchSelectModal from "../components/pos/BatchSelectModal";
 import { formatCurrency } from "../utils/formatters";
-import { ORDER_TYPES, DISCOUNT_TYPES } from "../utils/constants";
-import { ItemType } from "../utils/constants"; // 🟢 Constant එක Import කළා
+import { ORDER_TYPES, DISCOUNT_TYPES, ItemType, SALE_MODES } from "../utils/constants";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter";
+import KotPrinter from "../components/pos/KotPrinter";
 import { receiptSettingsAPI } from "../api/receiptSettings.api";
+import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
+import { openPdfBlob } from "../utils/pdf";
 
 const GRAMS_PER_KILOGRAM = 1000;
 
 const isWeightItem = (item) =>
   item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
+
+const isUnlimitedStockItem = (item) =>
+  item?.itemType === ItemType.SERVICE || item?.itemType === ItemType.RECIPE;
 
 const toBaseQuantity = (quantity, unit, weightItem = false) => {
   const numeric = Number(quantity);
@@ -32,6 +39,17 @@ const toBaseQuantity = (quantity, unit, weightItem = false) => {
     return numeric;
   }
   return unit === "KG" ? numeric * GRAMS_PER_KILOGRAM : numeric;
+};
+
+const fromBaseQuantity = (baseQuantity, unit, weightItem = false) => {
+  const numeric = Number(baseQuantity);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  if (!weightItem) {
+    return numeric;
+  }
+  return unit === "KG" ? numeric / GRAMS_PER_KILOGRAM : numeric;
 };
 
 const getWeightStep = (unit) => (unit === "G" ? 100 : 0.1);
@@ -76,9 +94,10 @@ const formatStockDisplay = (item, batch = null) =>
 const POS = () => {
   const { user } = useAuth();
   const { selectedBranchId } = useBranch();
-  const printRef = useRef();
-
+  const printRef = useRef(null);
+  const kotPrintRef = useRef(null);
   const searchInputRef = useRef(null);
+  const kotPrintedQuantitiesRef = useRef({});
 
   const [myShift, setMyShift] = useState(null);
   const [loadingShift, setLoadingShift] = useState(true);
@@ -97,12 +116,38 @@ const POS = () => {
 
   const [customer, setCustomer] = useState(null);
   const [orderType, setOrderType] = useState(ORDER_TYPES.CASH);
+  const [saleMode, setSaleMode] = useState(SALE_MODES.TAKEAWAY);
   const [billDiscount, setBillDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [receiptSettings, setReceiptSettings] = useState(null);
+  const [kotReceiptSettings, setKotReceiptSettings] = useState(null);
+  const [printFullInvoice, setPrintFullInvoice] = useState(false);
+
+  const [diningTables, setDiningTables] = useState([]);
+  const [pendingOrders, setPendingOrders] = useState([]);
+  const [selectedTableId, setSelectedTableId] = useState(null);
+  const [loadingDiningState, setLoadingDiningState] = useState(false);
+  const [loadingDraft, setLoadingDraft] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [printingKot, setPrintingKot] = useState(false);
+  const [, setKotStateVersion] = useState(0);
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
+
+  const pendingOrdersByTable = useMemo(
+    () => Object.fromEntries((pendingOrders || []).map((pendingOrder) => [Number(pendingOrder.tableId), pendingOrder])),
+    [pendingOrders]
+  );
+
+  const selectedTable = useMemo(
+    () => diningTables.find((table) => Number(table.id) === Number(selectedTableId)) || null,
+    [diningTables, selectedTableId]
+  );
+
+  const currentSessionKey = saleMode === SALE_MODES.DINE_IN && selectedTable
+    ? `DINE_IN_TABLE_${selectedTable.id}`
+    : "TAKEAWAY";
 
   useEffect(() => {
     if (searchInputRef.current && !loadingShift && myShift) {
@@ -116,6 +161,164 @@ const POS = () => {
       return 0;
     }
     return parsed;
+  };
+
+  const calculateItemBaseTotal = (item) => {
+    if (!item.qty || item.qty <= 0) return 0;
+
+    if (item.weightItem && item.qtyUnit === "G") {
+      return item.qty * item.perGramPrice;
+    }
+
+    return item.qty * item.unitPrice;
+  };
+
+  const calculateTotal = () => {
+    let total = 0;
+    cartItems.forEach((item) => {
+      let itemTotal = calculateItemBaseTotal(item);
+
+      if (item.discountType === DISCOUNT_TYPES.FIXED) {
+        itemTotal -= item.discountValue;
+      } else if (item.discountType === DISCOUNT_TYPES.PERCENT) {
+        itemTotal -= (itemTotal * item.discountValue) / 100;
+      }
+      total += Math.max(0, itemTotal);
+    });
+    return Math.max(0, total - billDiscount);
+  };
+
+  const getCartLineKey = (item) => `${item.itemId}-${item.batchId ?? "NA"}`;
+
+  const getComparableQty = (item) =>
+    isWeightItem(item)
+      ? toBaseQuantity(item.qty, item.qtyUnit || item.defaultUnit, true)
+      : Number(item.qty || 0);
+
+  const getKotEligibleItems = (items) => items.filter((item) => item.isKotEnabled);
+
+  const getPendingKotItems = () => {
+    const printedMap = kotPrintedQuantitiesRef.current[currentSessionKey] || {};
+
+    return getKotEligibleItems(cartItems)
+      .map((item) => {
+        const lineKey = getCartLineKey(item);
+        const currentQty = getComparableQty(item);
+        const printedQty = Number(printedMap[lineKey] || 0);
+        const deltaQty = currentQty - printedQty;
+
+        if (deltaQty <= 0) {
+          return null;
+        }
+
+        return {
+          ...item,
+          qty: fromBaseQuantity(deltaQty, item.qtyUnit || item.defaultUnit, item.weightItem),
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const markKotPrinted = (sessionKey) => {
+    const currentPrintedMap = { ...(kotPrintedQuantitiesRef.current[sessionKey] || {}) };
+    getKotEligibleItems(cartItems).forEach((item) => {
+      currentPrintedMap[getCartLineKey(item)] = Math.max(
+        Number(currentPrintedMap[getCartLineKey(item)] || 0),
+        getComparableQty(item)
+      );
+    });
+    kotPrintedQuantitiesRef.current[sessionKey] = currentPrintedMap;
+    setKotStateVersion((value) => value + 1);
+  };
+
+  const clearCartState = ({ preserveSaleMode = true } = {}) => {
+    delete kotPrintedQuantitiesRef.current[currentSessionKey];
+    setCartItems([]);
+    setCustomer(null);
+    setBillDiscount(0);
+    setOrderType(ORDER_TYPES.CASH);
+    setPaidAmount(0);
+    setPrintFullInvoice(false);
+    setShowPayment(false);
+    if (!preserveSaleMode) {
+      setSaleMode(SALE_MODES.TAKEAWAY);
+    }
+  };
+
+  const clearSelectedTableDraft = () => {
+    setCartItems([]);
+    setCustomer(null);
+    setBillDiscount(0);
+  };
+
+  const mapPendingItemToCartItem = (pendingItem) => {
+    const sourceItem = allItems.find((item) => Number(item.id) === Number(pendingItem.itemId));
+    const weightItem = isWeightItem(sourceItem || pendingItem);
+    const qtyUnit = pendingItem.qtyUnit || sourceItem?.defaultUnit || "PCS";
+    const unitPrice = Number(pendingItem.unitPrice || 0);
+
+    return {
+      itemId: pendingItem.itemId,
+      batchId: pendingItem.batchId,
+      name: pendingItem.itemName,
+      barcode: pendingItem.barcode || sourceItem?.barcode,
+      unitPrice,
+      perGramPrice: getPerGramPrice(unitPrice, weightItem),
+      qty: Number(pendingItem.qty || 0),
+      qtyUnit,
+      weightItem,
+      itemType: sourceItem?.itemType || ItemType.NORMAL,
+      defaultUnit: sourceItem?.defaultUnit || qtyUnit,
+      discountType: pendingItem.discountType || DISCOUNT_TYPES.NONE,
+      discountValue: Number(pendingItem.discountValue || 0),
+      stockBaseQty: isUnlimitedStockItem(sourceItem) ? Infinity : Number(sourceItem?.availableBaseQty ?? 0),
+      image: sourceItem?.imageUrl,
+      isKotEnabled: !!sourceItem?.isKotEnabled,
+    };
+  };
+
+  const applyPendingOrderToCart = (pendingOrder) => {
+    setCartItems(Array.isArray(pendingOrder?.items) ? pendingOrder.items.map(mapPendingItemToCartItem) : []);
+    setBillDiscount(Number(pendingOrder?.billDiscount || 0));
+    setCustomer(
+      pendingOrder?.customerId
+        ? {
+            id: pendingOrder.customerId,
+            name: pendingOrder.customerName,
+            phone: "",
+          }
+        : null
+    );
+  };
+
+  const refreshDiningState = async (branchId, preserveSelectedId = selectedTableId) => {
+    if (!branchId) {
+      setDiningTables([]);
+      setPendingOrders([]);
+      return;
+    }
+
+    try {
+      setLoadingDiningState(true);
+      const [tablesResponse, pendingResponse] = await Promise.all([
+        diningTablesAPI.listByBranch(branchId),
+        pendingOrdersAPI.listByBranch(branchId),
+      ]);
+      const nextTables = Array.isArray(tablesResponse.data) ? tablesResponse.data : [];
+      const nextPending = Array.isArray(pendingResponse.data) ? pendingResponse.data : [];
+      setDiningTables(nextTables);
+      setPendingOrders(nextPending);
+
+      if (preserveSelectedId) {
+        const matched = nextTables.find((table) => Number(table.id) === Number(preserveSelectedId));
+        setSelectedTableId(matched ? matched.id : null);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load dining tables");
+    } finally {
+      setLoadingDiningState(false);
+    }
   };
 
   useEffect(() => {
@@ -154,29 +357,40 @@ const POS = () => {
   useEffect(() => {
     if (!myShift?.branchId) {
       setReceiptSettings(null);
+      setKotReceiptSettings(null);
       return;
     }
 
     const loadReceiptSettings = async () => {
       try {
-        const response = await receiptSettingsAPI.getByBranch(myShift.branchId);
-        setReceiptSettings(response.data);
+        const [thermalResponse, kotResponse] = await Promise.all([
+          receiptSettingsAPI.getByBranch(myShift.branchId, PRINT_TEMPLATE_TYPES.THERMAL),
+          receiptSettingsAPI.getByBranch(myShift.branchId, PRINT_TEMPLATE_TYPES.KOT),
+        ]);
+        setReceiptSettings(thermalResponse.data);
+        setKotReceiptSettings(kotResponse.data);
       } catch (error) {
         console.error("Failed to load receipt settings", error);
         setReceiptSettings(null);
+        setKotReceiptSettings(null);
       }
     };
 
     loadReceiptSettings();
   }, [myShift?.branchId]);
 
+  useEffect(() => {
+    if (saleMode === SALE_MODES.DINE_IN && myShift?.branchId) {
+      refreshDiningState(myShift.branchId);
+    }
+  }, [saleMode, myShift?.branchId]);
+
   const fetchProducts = async (branchId) => {
     try {
       const response = await itemsAPI.searchForPos("", branchId);
       let items = Array.isArray(response.data) ? response.data : [];
-      items = items.filter(item => {
-        // 🟢 Service අයිටම් එකක් නම් කොහොමත් පෙන්නනවා (තොග නෑනේ)
-        if (item.itemType === ItemType.SERVICE) return true;
+      items = items.filter((item) => {
+        if (item.itemType === ItemType.SERVICE || item.itemType === ItemType.RECIPE) return true;
         if (item.batches && item.batches.length > 0) return true;
         if (item.availableQty !== undefined && item.availableQty !== null) return true;
         return false;
@@ -185,7 +399,7 @@ const POS = () => {
       setAllItems(items);
       setFilteredItems(items);
 
-      const uniqueCats = ["All", ...new Set(items.map(i => i.categoryName).filter(Boolean))];
+      const uniqueCats = ["All", ...new Set(items.map((item) => item.categoryName).filter(Boolean))];
       setCategories(uniqueCats);
     } catch (error) {
       console.error(error);
@@ -196,11 +410,11 @@ const POS = () => {
   useEffect(() => {
     let result = allItems;
     if (activeCategory !== "All") {
-      result = result.filter(item => item.categoryName === activeCategory);
+      result = result.filter((item) => item.categoryName === activeCategory);
     }
     if (searchQuery.trim()) {
       const lowerQuery = searchQuery.toLowerCase();
-      result = result.filter(item =>
+      result = result.filter((item) =>
         item.name.toLowerCase().includes(lowerQuery) ||
         item.barcode?.toLowerCase().includes(lowerQuery)
       );
@@ -214,8 +428,7 @@ const POS = () => {
       return;
     }
 
-    // 🟢 Service එකක් නම් Batch හොයන්නේ නැතුව කෙලින්ම Cart එකට දානවා
-    if (item.itemType === ItemType.SERVICE) {
+    if (isUnlimitedStockItem(item)) {
       processAddToCart(item, item.sellingPrice || 0, 1, null);
       return;
     }
@@ -226,7 +439,7 @@ const POS = () => {
       return;
     }
 
-    let targetBatch = item.batches && item.batches.length > 0 ? item.batches[0] : null;
+    const targetBatch = item.batches && item.batches.length > 0 ? item.batches[0] : null;
     processAddToCart(item, targetBatch ? targetBatch.price : item.sellingPrice, 1, targetBatch);
   };
 
@@ -237,26 +450,25 @@ const POS = () => {
   };
 
   const processAddToCart = (item, price, qty, batchData = null) => {
-    const isService = item.itemType === ItemType.SERVICE;
+    const unlimitedStockItem = isUnlimitedStockItem(item);
     const isWeight = isWeightItem(item);
     const batchId = batchData ? batchData.batchId : (item.batches?.[0]?.batchId || null);
-    
-    // 🟢 Service එකකට Stock Unlimited විදිහට සලකනවා
+
     const defaultUnit = item.defaultUnit || "PCS";
     const qtyToAdd = isWeight ? getInitialWeightQuantity(defaultUnit) : qty;
-    const stockBaseQty = isService
+    const stockBaseQty = unlimitedStockItem
       ? Infinity
       : Number(batchData ? batchData.qty : (item.availableBaseQty ?? 0));
     const requestedBaseQty = isWeight ? toBaseQuantity(qtyToAdd, defaultUnit, true) : qtyToAdd;
 
-    if (!isService && stockBaseQty < requestedBaseQty) {
+    if (!unlimitedStockItem && stockBaseQty < requestedBaseQty) {
       toast.error(`Insufficient stock! Available: ${formatStockDisplay(item, batchData)}`);
       if (searchInputRef.current) searchInputRef.current.focus();
       return;
     }
 
     const existingIndex = cartItems.findIndex(
-      (ci) => String(ci.itemId) === String(item.id) && String(ci.batchId) === String(batchId)
+      (cartItem) => String(cartItem.itemId) === String(item.id) && String(cartItem.batchId) === String(batchId)
     );
 
     if (existingIndex !== -1) {
@@ -269,36 +481,38 @@ const POS = () => {
       const nextBaseQty = isWeight
         ? toBaseQuantity(nextQty, currentItem.qtyUnit || currentItem.defaultUnit, true)
         : nextQty;
-      if (!isService && nextBaseQty > currentItem.stockBaseQty) {
+
+      if (!unlimitedStockItem && nextBaseQty > currentItem.stockBaseQty) {
         toast.error(`Low stock. Available: ${formatStockDisplay(item, batchData)}`);
         if (searchInputRef.current) searchInputRef.current.focus();
         return;
       }
+
       newItems[existingIndex] = { ...newItems[existingIndex], qty: nextQty };
       setCartItems(newItems);
     } else {
-      const uPrice = Number(price);
-
-      const gramPrice = getPerGramPrice(uPrice, isWeight);
+      const unitPrice = Number(price);
+      const gramPrice = getPerGramPrice(unitPrice, isWeight);
 
       setCartItems((prev) => [
         ...prev,
         {
           itemId: item.id,
-          batchId: batchId,
+          batchId,
           name: item.name,
           barcode: item.barcode,
-          unitPrice: uPrice,
+          unitPrice,
           perGramPrice: gramPrice,
           qty: qtyToAdd,
           qtyUnit: defaultUnit,
           weightItem: isWeight,
-          itemType: item.itemType, // 🟢 Item Type එකත් Cart එකේ තියාගන්නවා
-          defaultUnit: defaultUnit,
+          itemType: item.itemType,
+          defaultUnit,
           discountType: DISCOUNT_TYPES.NONE,
           discountValue: 0,
           stockBaseQty,
-          image: item.imageUrl
+          image: item.imageUrl,
+          isKotEnabled: !!item.isKotEnabled,
         },
       ]);
     }
@@ -320,16 +534,15 @@ const POS = () => {
       }
 
       const exactMatch = filteredItems.find(
-        item => item.barcode?.toLowerCase() === searchQuery.toLowerCase()
+        (item) => item.barcode?.toLowerCase() === searchQuery.toLowerCase()
       );
 
       const itemToAdd = exactMatch || filteredItems[0];
 
       if (itemToAdd) {
-        const isService = itemToAdd.itemType === ItemType.SERVICE;
         const stockQty = Number(itemToAdd.availableBaseQty ?? 0);
-        
-        if (!isService && stockQty <= 0) {
+
+        if (!isUnlimitedStockItem(itemToAdd) && stockQty <= 0) {
           toast.error("Item is Out of Stock!");
           setSearchQuery("");
           return;
@@ -341,12 +554,12 @@ const POS = () => {
 
   const updateQuantity = (index, newQty, preventFocus = false) => {
     const item = cartItems[index];
-    const isService = item.itemType === ItemType.SERVICE;
+    const unlimitedStockItem = isUnlimitedStockItem(item);
 
     let finalQty = newQty;
-    if (item.weightItem && item.qtyUnit === 'KG') {
+    if (item.weightItem && item.qtyUnit === "KG") {
       finalQty = Math.round(newQty * 1000) / 1000;
-    } else if (item.weightItem && item.qtyUnit === 'G') {
+    } else if (item.weightItem && item.qtyUnit === "G") {
       finalQty = Math.round(newQty);
     } else {
       finalQty = Math.round(newQty);
@@ -354,7 +567,7 @@ const POS = () => {
 
     if (finalQty < 0) return;
 
-    if (!isService && item.stockBaseQty > 0) {
+    if (!unlimitedStockItem && item.stockBaseQty > 0) {
       const compareQty = item.weightItem
         ? toBaseQuantity(finalQty, item.qtyUnit || item.defaultUnit, true)
         : finalQty;
@@ -373,7 +586,6 @@ const POS = () => {
     }
   };
 
-  // 🟢 අලුතින් එකතු කළ Method එක: Service Item වල ගාණ වෙනස් කිරීම
   const updateUnitPrice = (index, newPrice) => {
     const newItems = [...cartItems];
     newItems[index].unitPrice = toNonNegativeNumber(newPrice);
@@ -390,9 +602,9 @@ const POS = () => {
     const newItems = [...cartItems];
     const item = newItems[index];
 
-    if (item.qtyUnit === 'KG' && unit === 'G') {
+    if (item.qtyUnit === "KG" && unit === "G") {
       item.qty = item.qty * 1000;
-    } else if (item.qtyUnit === 'G' && unit === 'KG') {
+    } else if (item.qtyUnit === "G" && unit === "KG") {
       item.qty = item.qty / 1000;
     }
 
@@ -401,7 +613,7 @@ const POS = () => {
   };
 
   const removeItem = (index) => {
-    setCartItems(cartItems.filter((_, i) => i !== index));
+    setCartItems(cartItems.filter((_, itemIndex) => itemIndex !== index));
     if (searchInputRef.current) searchInputRef.current.focus();
   };
 
@@ -412,42 +624,181 @@ const POS = () => {
     setCartItems(newItems);
   };
 
-  const calculateItemBaseTotal = (item) => {
-    if (!item.qty || item.qty <= 0) return 0;
+  const createPendingOrderPayload = () => ({
+    customerId: customer ? customer.id : null,
+    billDiscount,
+    note: "",
+    items: cartItems.map((item) => ({
+      itemId: item.itemId,
+      batchId: item.batchId,
+      qty: item.qty,
+      qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
+      unitPrice: item.unitPrice,
+      discountType: item.discountType,
+      discountValue: item.discountValue,
+    })),
+  });
 
-    if (item.weightItem && item.qtyUnit === 'G') {
-      return item.qty * item.perGramPrice;
-    } else {
-      return item.qty * item.unitPrice;
+  const savePendingDraft = async (tableId = selectedTableId, { silent = false } = {}) => {
+    if (!tableId) {
+      if (!silent) toast.error("Select a table first");
+      return null;
+    }
+
+    if (cartItems.length === 0) {
+      if (!silent) toast.error("Cart is empty");
+      return null;
+    }
+
+    setSavingDraft(true);
+    try {
+      const response = await pendingOrdersAPI.saveForTable(tableId, createPendingOrderPayload());
+      await refreshDiningState(myShift?.branchId, tableId);
+      if (!silent) {
+        toast.success(`Draft saved for ${response.data.tableName}`);
+      }
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      if (!silent) {
+        toast.error(error?.response?.data?.message || "Failed to save draft");
+      }
+      throw error;
+    } finally {
+      setSavingDraft(false);
     }
   };
 
-  const calculateTotal = () => {
-    let total = 0;
-    cartItems.forEach((item) => {
-      let itemTotal = calculateItemBaseTotal(item);
+  const handleSelectTable = async (table) => {
+    if (!table) return;
 
-      if (item.discountType === DISCOUNT_TYPES.FIXED) {
-        itemTotal -= item.discountValue;
-      } else if (item.discountType === DISCOUNT_TYPES.PERCENT) {
-        itemTotal -= (itemTotal * item.discountValue) / 100;
+    setLoadingDraft(true);
+    try {
+      if (selectedTableId && Number(selectedTableId) !== Number(table.id) && cartItems.length > 0) {
+        await savePendingDraft(selectedTableId, { silent: true });
       }
-      total += Math.max(0, itemTotal);
-    });
-    return Math.max(0, total - billDiscount);
+
+      setSelectedTableId(table.id);
+
+      try {
+        const response = await pendingOrdersAPI.getByTable(table.id);
+        applyPendingOrderToCart(response.data);
+      } catch (error) {
+        if (error?.response?.status === 404) {
+          clearSelectedTableDraft();
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Failed to load table");
+    } finally {
+      setLoadingDraft(false);
+      focusSearch();
+    }
+  };
+
+  const handleSaleModeChange = async (nextMode) => {
+    if (nextMode === saleMode) {
+      return;
+    }
+
+    if (saleMode === SALE_MODES.DINE_IN && selectedTableId && cartItems.length > 0) {
+      try {
+        await savePendingDraft(selectedTableId, { silent: true });
+      } catch (error) {
+        return;
+      }
+      clearSelectedTableDraft();
+      setSelectedTableId(null);
+    }
+
+    setSaleMode(nextMode);
+
+    if (nextMode === SALE_MODES.TAKEAWAY) {
+      setSelectedTableId(null);
+    }
   };
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return toast.error("Cart is empty");
     if (!myShift) return toast.error("No active shift. Cannot checkout.");
+    if (saleMode === SALE_MODES.DINE_IN && !selectedTableId) return toast.error("Select a table before checkout");
 
     setPaidAmount(calculateTotal());
     setShowPayment(true);
   };
 
+  const handlePrintKot = async () => {
+    if (saleMode === SALE_MODES.DINE_IN && !selectedTableId) {
+      toast.error("Select a table first");
+      return;
+    }
+
+    const pendingKotItems = getPendingKotItems();
+    if (pendingKotItems.length === 0) {
+      toast.error("No new kitchen items to print");
+      return;
+    }
+
+    setPrintingKot(true);
+    try {
+      if (!kotPrintRef.current) {
+        return;
+      }
+
+      let kotMeta;
+
+      if (saleMode === SALE_MODES.DINE_IN) {
+        const draft = await savePendingDraft(selectedTableId, { silent: true });
+        if (!draft) {
+          return;
+        }
+
+        kotMeta = {
+          orderId: draft.id,
+          customerName: customer?.name || draft.customerName || "Walk-in Customer",
+          tableName: draft.tableName,
+          saleMode: "DINE IN",
+          createdAt: new Date().toISOString(),
+          branchName: myShift?.branchName,
+          cashierName: user?.name || user?.username || "Cashier",
+        };
+      } else {
+        kotMeta = {
+          orderId: "QUICK-SALE",
+          customerName: customer?.name || "Walk-in Customer",
+          saleMode: "TAKEAWAY",
+          createdAt: new Date().toISOString(),
+          branchName: myShift?.branchName,
+          cashierName: user?.name || user?.username || "Cashier",
+        };
+      }
+
+      kotPrintRef.current.printKot(
+        kotMeta,
+        pendingKotItems,
+        user?.shopName || "POS SYSTEM",
+        myShift,
+        kotReceiptSettings
+      );
+
+      markKotPrinted(currentSessionKey);
+      toast.success("KOT ready to print");
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || "Failed to print KOT");
+    } finally {
+      setPrintingKot(false);
+    }
+  };
+
   const handlePlaceOrder = async () => {
     const total = calculateTotal();
     const subTotal = cartItems.reduce((acc, item) => acc + calculateItemBaseTotal(item), 0);
+    const kotItems = getKotEligibleItems(cartItems);
+    const shouldPrintFullInvoice = printFullInvoice;
 
     if (orderType === ORDER_TYPES.CASH && paidAmount < total) return toast.error("Insufficient amount");
     if (orderType === ORDER_TYPES.CREDIT && !customer) return toast.error("Select customer for credit");
@@ -457,12 +808,14 @@ const POS = () => {
       const orderData = {
         branchId: myShift.branchId,
         orderType,
+        saleMode,
+        tableId: saleMode === SALE_MODES.DINE_IN ? selectedTableId : null,
         customerId: customer ? customer.id : null,
         billDiscount,
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
         items: cartItems.map((item) => ({
           itemId: item.itemId,
-          batchId: item.batchId, // backend supports null for services
+          batchId: item.batchId,
           qty: item.qty,
           qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
           unitPrice: item.unitPrice,
@@ -475,29 +828,79 @@ const POS = () => {
       const response = await ordersAPI.create(orderData);
       toast.success(`Order ${response.data.invoiceNo} success!`);
 
+      const storeName = user?.shopName || "POS SYSTEM";
+      const branchName = response.data.branchName || myShift?.branchName;
+      const branchAddress = response.data.branchAddress || myShift?.branchAddress || "";
+      const branchPhone = response.data.branchPhone || myShift?.branchPhone || "";
+      const branchLogo = response.data.branchLogo || myShift?.branchLogo || "";
+      const cashierName = user?.name || user?.username || "Cashier";
+      const customerName = customer?.name || response.data.customerName || "Walk-in Customer";
+      const resolvedTableName = saleMode === SALE_MODES.DINE_IN
+        ? (selectedTable?.tableName || pendingOrdersByTable[Number(selectedTableId)]?.tableName || "")
+        : "";
+      const printData = {
+        orderId: response.data.id || response.data.invoiceNo,
+        invoiceNo: response.data.invoiceNo,
+        subTotal,
+        billDiscount,
+        netTotal: total,
+        paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : total,
+        orderType,
+        saleMode,
+        tableName: resolvedTableName,
+        customerName,
+        customerPhone: customer?.phone || "",
+        createdAt: response.data.createdAt,
+        branchName,
+        branchAddress,
+        branchPhone,
+        branchLogo,
+        cashierName,
+        note: "",
+      };
+
       if (printRef.current) {
-        const storeName = user?.shopName || "POS SYSTEM";
-
-        const printData = {
-          invoiceNo: response.data.invoiceNo,
-          subTotal: subTotal,
-          billDiscount: billDiscount,
-          netTotal: total,
-          paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : total,
-          orderType: orderType,
-          createdAt: response.data.createdAt
-        };
-
         printRef.current.printOrder(printData, cartItems, storeName, myShift, customer, receiptSettings);
+      }
+
+      if (shouldPrintFullInvoice) {
+        const invoicePdfResponse = await ordersAPI.downloadInvoicePdf(response.data.invoiceNo);
+        openPdfBlob(invoicePdfResponse.data, `${response.data.invoiceNo}.pdf`);
+      }
+
+      const pendingKotItems = saleMode === SALE_MODES.TAKEAWAY ? getPendingKotItems() : kotItems;
+
+      if (saleMode === SALE_MODES.TAKEAWAY && pendingKotItems.length > 0 && kotPrintRef.current) {
+        kotPrintRef.current.printKot(
+          {
+            orderId: response.data.id || response.data.invoiceNo,
+            invoiceNo: response.data.invoiceNo,
+            customerName: customer?.name || response.data.customerName || "Walk-in Customer",
+            saleMode: "TAKEAWAY",
+            createdAt: response.data.createdAt,
+            branchName,
+            branchAddress,
+            branchPhone,
+            branchLogo,
+            cashierName,
+          },
+          pendingKotItems,
+          storeName,
+          myShift,
+          kotReceiptSettings
+        );
+        markKotPrinted(currentSessionKey);
+      }
+
+      if (saleMode === SALE_MODES.DINE_IN && selectedTableId) {
+        delete kotPrintedQuantitiesRef.current[currentSessionKey];
+        await refreshDiningState(myShift.branchId, null);
+        setSelectedTableId(null);
       }
 
       await fetchProducts(myShift.branchId);
 
-      setCartItems([]);
-      setCustomer(null);
-      setOrderType(ORDER_TYPES.CASH);
-      setBillDiscount(0);
-      setShowPayment(false);
+      clearCartState();
 
       if (searchInputRef.current) {
         searchInputRef.current.focus();
@@ -518,6 +921,17 @@ const POS = () => {
     if (showPayment && !loading) handlePlaceOrder();
   });
 
+  const hasKotItems = getKotEligibleItems(cartItems).length > 0;
+  const pendingKotItemsCount = getPendingKotItems().length;
+  const canPrintKot = saleMode === SALE_MODES.DINE_IN
+    ? !!selectedTableId && pendingKotItemsCount > 0
+    : pendingKotItemsCount > 0;
+  const cartSummary = saleMode === SALE_MODES.DINE_IN
+    ? selectedTable
+      ? `${selectedTable.tableName} • ${pendingOrdersByTable[Number(selectedTable.id)]?.customerName || "Walk-in Customer"}`
+      : "Dine-In • Select a table"
+    : "Takeaway / Quick Sale";
+
   if (loadingShift) {
     return <div className="h-full flex items-center justify-center"><LoadingSpinner text="Checking your shift..." /></div>;
   }
@@ -527,28 +941,128 @@ const POS = () => {
       <div className="flex flex-col lg:flex-row flex-1 gap-1.5 lg:gap-4 lg:overflow-hidden lg:h-full">
         <div className="flex flex-col h-[55vh] flex-shrink-0 lg:h-full lg:flex-1 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
 
-          <header className="px-2 py-2 lg:px-6 lg:py-5 bg-white border-b border-slate-100 flex flex-row items-center justify-between gap-2 flex-shrink-0">
-            <div className="hidden sm:block lg:block">
-              <h1 className="text-sm lg:text-xl font-bold text-slate-800">
-                New Sale {myShift ? `(Branch: ${myShift.branchName || myShift.branchId})` : ''}
-              </h1>
-            </div>
-            <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search barcode or name"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                  disabled={!myShift}
-                  className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs lg:text-sm disabled:opacity-50"
-                />
+          <header className="px-2 py-2 lg:px-6 lg:py-5 bg-white border-b border-slate-100 flex flex-col gap-3 flex-shrink-0">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div className="hidden sm:block lg:block">
+                <h1 className="text-sm lg:text-xl font-bold text-slate-800">
+                  New Sale {myShift ? `(Branch: ${myShift.branchName || myShift.branchId})` : ""}
+                </h1>
+              </div>
+              <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search barcode or name"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    disabled={!myShift}
+                    className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs lg:text-sm disabled:opacity-50"
+                  />
+                </div>
               </div>
             </div>
+
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="inline-flex rounded-xl bg-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => handleSaleModeChange(SALE_MODES.TAKEAWAY)}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                    saleMode === SALE_MODES.TAKEAWAY ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  <ShoppingBag size={16} />
+                  Quick Sale
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaleModeChange(SALE_MODES.DINE_IN)}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                    saleMode === SALE_MODES.DINE_IN ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  <UtensilsCrossed size={16} />
+                  Dine In
+                </button>
+              </div>
+
+              {saleMode === SALE_MODES.DINE_IN ? (
+                <div className="text-xs font-medium text-slate-500">
+                  {selectedTable ? `Selected: ${selectedTable.tableName}` : "Select a table to load or save a draft bill"}
+                </div>
+              ) : null}
+            </div>
           </header>
+
+          {saleMode === SALE_MODES.DINE_IN ? (
+            <div className="border-b border-slate-100 bg-white px-2 py-2 lg:px-6 lg:py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-semibold text-slate-800">Dining Tables</div>
+                <button
+                  type="button"
+                  onClick={() => refreshDiningState(myShift?.branchId)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                >
+                  <RefreshCw size={14} />
+                  Refresh
+                </button>
+              </div>
+
+              {loadingDiningState || loadingDraft ? (
+                <div className="py-6">
+                  <LoadingSpinner text={loadingDraft ? "Loading table draft..." : "Loading tables..."} />
+                </div>
+              ) : diningTables.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+                  No dining tables configured for this branch.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 xl:grid-cols-5">
+                  {diningTables.map((table) => {
+                    const pending = pendingOrdersByTable[Number(table.id)];
+                    const isSelected = Number(selectedTableId) === Number(table.id);
+                    const displayCustomer = isSelected
+                      ? (customer?.name || pending?.customerName || "Walk-in Customer")
+                      : (pending?.customerName || "Walk-in Customer");
+                    const displayTotal = isSelected && cartItems.length > 0
+                      ? calculateTotal()
+                      : Number(pending?.grandTotal || 0);
+
+                    return (
+                      <button
+                        key={table.id}
+                        type="button"
+                        onClick={() => handleSelectTable(table)}
+                        className={`rounded-xl border px-3 py-3 text-left transition ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-50 shadow-sm"
+                            : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-sm font-semibold text-slate-900">{table.tableName}</div>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            table.status === "OCCUPIED"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}>
+                            {table.status}
+                          </span>
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500">
+                          <div>{displayCustomer}</div>
+                          <div className="mt-1 font-semibold text-slate-700">{formatCurrency(displayTotal)}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
 
           <div className="px-2 py-1.5 lg:px-6 lg:py-4 bg-white border-b border-slate-100 flex-shrink-0">
             <div className="flex gap-1.5 lg:gap-2 overflow-x-auto scrollbar-hide pb-0.5 lg:pb-0">
@@ -557,10 +1071,11 @@ const POS = () => {
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
                   disabled={!myShift}
-                  className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-[10px] lg:text-sm font-semibold transition-all ${activeCategory === cat
-                    ? 'bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200'
-                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100 disabled:opacity-50'
-                    }`}
+                  className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-[10px] lg:text-sm font-semibold transition-all ${
+                    activeCategory === cat
+                      ? "bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200"
+                      : "bg-slate-50 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+                  }`}
                 >
                   {cat}
                 </button>
@@ -582,25 +1097,28 @@ const POS = () => {
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-4 gap-1.5 lg:gap-4">
                 {filteredItems.map((item) => {
-                  const isService = item.itemType === ItemType.SERVICE;
+                  const unlimitedStockItem = isUnlimitedStockItem(item);
                   const stockQty = Number(item.availableBaseQty ?? item.availableQty ?? 0);
-                  const isOutOfStock = !isService && stockQty <= 0;
-                  const stockLabel = formatStockDisplay(item);
+                  const isOutOfStock = !unlimitedStockItem && stockQty <= 0;
+                  const stockLabel = item.itemType === ItemType.RECIPE ? "Recipe" : formatStockDisplay(item);
 
                   return (
                     <div
                       key={item.id}
                       onClick={() => !isOutOfStock && addToCart(item)}
-                      className={`group bg-white rounded-lg lg:rounded-xl p-2 lg:p-6 border border-slate-200 transition-all relative flex flex-col items-center text-center 
-                            ${!isOutOfStock
-                          ? 'hover:shadow-md cursor-pointer active:scale-95'
-                          : 'cursor-not-allowed opacity-90'
-                        } 
-                        `}
+                      className={`group bg-white rounded-lg lg:rounded-xl p-2 lg:p-6 border border-slate-200 transition-all relative flex flex-col items-center text-center ${
+                        !isOutOfStock
+                          ? "hover:shadow-md cursor-pointer active:scale-95"
+                          : "cursor-not-allowed opacity-90"
+                      }`}
                     >
                       <div className="absolute top-1 right-1 lg:top-3 lg:right-3 flex flex-col items-end gap-1">
-                        {isService ? (
+                        {item.itemType === ItemType.SERVICE ? (
                           <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-purple-50 text-purple-600 text-[8px] lg:text-[10px] font-bold rounded border border-purple-100 uppercase">Service</span>
+                        ) : item.itemType === ItemType.RECIPE ? (
+                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-rose-50 text-rose-600 text-[8px] lg:text-[10px] font-bold rounded border border-rose-100 uppercase">
+                            {item.isKotEnabled ? "Recipe • KOT" : "Recipe"}
+                          </span>
                         ) : isOutOfStock ? (
                           <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-red-50 text-red-500 text-[8px] lg:text-[10px] font-bold rounded border border-red-100 uppercase">Out</span>
                         ) : (
@@ -612,7 +1130,7 @@ const POS = () => {
                         <ChefHat className={`w-4 h-4 lg:w-8 lg:h-8 ${isOutOfStock ? "text-slate-200" : "text-slate-300"}`} />
                       </div>
                       <h3 className="font-semibold text-slate-800 text-[9px] lg:text-sm mb-0.5 lg:mb-3 line-clamp-2 min-h-[1.25rem] lg:min-h-[2.5rem] leading-tight">{item.name}</h3>
-                      <p className="text-blue-600 font-bold text-[10px] lg:text-sm">{isService && item.sellingPrice === 0 ? 'Open Price' : formatCurrency(item.sellingPrice)}</p>
+                      <p className="text-blue-600 font-bold text-[10px] lg:text-sm">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
                     </div>
                   );
                 })}
@@ -620,13 +1138,13 @@ const POS = () => {
             )}
           </div>
         </div>
-        <div className={`w-full lg:w-[380px] flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!myShift ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+        <div className={`w-full lg:w-[380px] flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!myShift ? "opacity-50 pointer-events-none grayscale" : ""}`}>
           <Cart
             items={cartItems}
             customer={customer}
             setCustomer={setCustomer}
             onUpdateQty={updateQuantity}
-            onUpdatePrice={updateUnitPrice} /* 🟢 අලුත් Prop එක යැව්වා */
+            onUpdatePrice={updateUnitPrice}
             onRemoveItem={removeItem}
             onInlineDiscount={handleInlineDiscount}
             onUpdateQtyUnit={updateQtyUnit}
@@ -637,15 +1155,53 @@ const POS = () => {
             onCheckout={handleCheckout}
             loading={loading}
             onAddCustomer={() => setShowCustomerSelect(true)}
-            focusSearch={focusSearch} 
+            focusSearch={focusSearch}
+            cartSummary={cartSummary}
+            checkoutLabel={saleMode === SALE_MODES.DINE_IN ? "Checkout Table (F9)" : "Checkout (F9)"}
+            footerActions={(
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {saleMode === SALE_MODES.DINE_IN ? (
+                    <button
+                      type="button"
+                      onClick={() => savePendingDraft()}
+                      disabled={savingDraft || !selectedTableId || cartItems.length === 0}
+                      className="inline-flex h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Save size={16} />
+                      {savingDraft ? "Saving..." : "Save Draft"}
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                  <button
+                    type="button"
+                    onClick={handlePrintKot}
+                    disabled={printingKot || !hasKotItems || !canPrintKot}
+                    className="inline-flex h-[44px] items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ChefHat size={16} />
+                    {printingKot ? "Printing..." : "Print KOT"}
+                  </button>
+                </div>
+                {saleMode === SALE_MODES.DINE_IN && !selectedTableId ? (
+                  <div className="text-[11px] text-slate-500">Select a table before saving or sending KOT.</div>
+                ) : !hasKotItems ? (
+                  <div className="text-[11px] text-slate-500">No KOT-enabled items in the cart.</div>
+                ) : !canPrintKot ? (
+                  <div className="text-[11px] text-slate-500">KOT already sent for current items. Add new kitchen items to print again.</div>
+                ) : null}
+              </>
+            )}
           />
         </div>
       </div>
 
       <CustomerSelect isOpen={showCustomerSelect} onClose={() => { setShowCustomerSelect(false); if (searchInputRef.current) searchInputRef.current.focus(); }} onSelectCustomer={setCustomer} />
-      <CheckoutOverlay isOpen={showPayment} onClose={() => { setShowPayment(false); if (searchInputRef.current) searchInputRef.current.focus(); }} total={calculateTotal()} orderType={orderType} setOrderType={setOrderType} paidAmount={paidAmount} setPaidAmount={setPaidAmount} onPlaceOrder={handlePlaceOrder} loading={loading} />
+      <CheckoutOverlay isOpen={showPayment} onClose={() => { setShowPayment(false); if (searchInputRef.current) searchInputRef.current.focus(); }} total={calculateTotal()} orderType={orderType} setOrderType={setOrderType} paidAmount={paidAmount} setPaidAmount={setPaidAmount} onPlaceOrder={handlePlaceOrder} loading={loading} printFullInvoice={printFullInvoice} setPrintFullInvoice={setPrintFullInvoice} />
       <BatchSelectModal isOpen={showBatchModal} onClose={() => { setShowBatchModal(false); if (searchInputRef.current) searchInputRef.current.focus(); }} onSelectBatch={handleBatchSelect} item={selectedBatchItem} />
       <ReceiptPrinter ref={printRef} />
+      <KotPrinter ref={kotPrintRef} />
     </div>
   );
 };

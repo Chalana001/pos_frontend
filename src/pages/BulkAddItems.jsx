@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
@@ -8,7 +8,7 @@ import AccordionSection from "../components/items/BulkItemForm";
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api"; 
 import { useBranch } from "../context/BranchContext";
-import { Plus } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { ItemType, ItemTypeLabels } from "../utils/constants"; // 🟢 Constant එක Import කළා
 
 const uuid = () =>
@@ -22,6 +22,15 @@ const num = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
+const buildEmptyIngredient = () => ({
+  ingredientItemId: "",
+  ingredientName: "",
+  ingredientBarcode: "",
+  quantity: "",
+  qtyUnit: "PCS",
+  search: "",
+});
+
 const emptyDraft = () => ({
   imageUrl: "",
   name: "",
@@ -33,6 +42,8 @@ const emptyDraft = () => ({
   reorderLevel: "",
   itemType: ItemType.NORMAL, // 🟢 Default අගය
   defaultUnit: "PCS",
+  isKotEnabled: false,
+  ingredients: [],
   branchIds: [],
 });
 
@@ -44,9 +55,12 @@ export default function BulkAddItems() {
 
   const [openImage, setOpenImage] = useState(true);
   const [openGeneral, setOpenGeneral] = useState(true);
+  const [openRecipe, setOpenRecipe] = useState(true);
 
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
+  const [ingredientSearchResults, setIngredientSearchResults] = useState({});
+  const ingredientSearchRequestRef = useRef({});
 
   const [showCatModal, setShowCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
@@ -146,6 +160,156 @@ export default function BulkAddItems() {
     }));
   };
 
+  const clearIngredientSearchResults = (index) => {
+    setIngredientSearchResults((prev) => {
+      if (!prev[index]) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const addIngredientRow = () => {
+    setDraft((prev) => ({
+      ...prev,
+      ingredients: [...prev.ingredients, buildEmptyIngredient()],
+    }));
+  };
+
+  const updateIngredient = (index, field, value) => {
+    setDraft((prev) => {
+      const nextIngredients = [...prev.ingredients];
+      nextIngredients[index] = {
+        ...nextIngredients[index],
+        [field]: value,
+      };
+
+      return {
+        ...prev,
+        ingredients: nextIngredients,
+      };
+    });
+  };
+
+  const searchIngredientItems = async (index, query) => {
+    setDraft((prev) => {
+      const nextIngredients = [...prev.ingredients];
+      const currentRow = nextIngredients[index];
+      const isSameSelectedItem = query.trim() === (currentRow?.ingredientName || "").trim();
+
+      nextIngredients[index] = {
+        ...currentRow,
+        search: query,
+        ingredientItemId: isSameSelectedItem ? currentRow.ingredientItemId : "",
+        ingredientName: isSameSelectedItem ? currentRow.ingredientName : "",
+        ingredientBarcode: isSameSelectedItem ? currentRow.ingredientBarcode : "",
+      };
+
+      return {
+        ...prev,
+        ingredients: nextIngredients,
+      };
+    });
+
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      clearIngredientSearchResults(index);
+      return;
+    }
+
+    const requestId = (ingredientSearchRequestRef.current[index] || 0) + 1;
+    ingredientSearchRequestRef.current[index] = requestId;
+
+    setIngredientSearchResults((prev) => ({
+      ...prev,
+      [index]: { loading: true, items: [] },
+    }));
+
+    try {
+      const res = await itemsAPI.search(trimmedQuery);
+      const itemsArray = Array.isArray(res.data) ? res.data : [];
+      const filteredItems = itemsArray.filter(
+        (item) =>
+          (item.itemType === ItemType.NORMAL || item.itemType === ItemType.WEIGHT) &&
+          item.active !== false
+      );
+
+      if (ingredientSearchRequestRef.current[index] !== requestId) {
+        return;
+      }
+
+      setIngredientSearchResults((prev) => ({
+        ...prev,
+        [index]: { loading: false, items: filteredItems },
+      }));
+    } catch (error) {
+      if (ingredientSearchRequestRef.current[index] !== requestId) {
+        return;
+      }
+
+      setIngredientSearchResults((prev) => ({
+        ...prev,
+        [index]: { loading: false, items: [] },
+      }));
+    }
+  };
+
+  const selectIngredientForRow = (index, ingredientItem) => {
+    setDraft((prev) => {
+      const nextIngredients = [...prev.ingredients];
+      nextIngredients[index] = {
+        ...nextIngredients[index],
+        ingredientItemId: ingredientItem.id,
+        ingredientName: ingredientItem.name,
+        ingredientBarcode: ingredientItem.barcode || "",
+        qtyUnit: ingredientItem.defaultUnit || (ingredientItem.itemType === ItemType.WEIGHT ? "KG" : "PCS"),
+        search: ingredientItem.name,
+      };
+
+      return {
+        ...prev,
+        ingredients: nextIngredients,
+      };
+    });
+
+    clearIngredientSearchResults(index);
+  };
+
+  const handleIngredientSearchKeyDown = (index, event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+
+    const searchValue = draft.ingredients[index]?.search?.trim();
+    const resultItems = ingredientSearchResults[index]?.items || [];
+
+    if (!searchValue || resultItems.length === 0) {
+      toast.error("Ingredient not found");
+      return;
+    }
+
+    const exactMatch = resultItems.find(
+      (item) =>
+        item.barcode?.toLowerCase() === searchValue.toLowerCase() ||
+        item.name?.toLowerCase() === searchValue.toLowerCase()
+    );
+
+    selectIngredientForRow(index, exactMatch || resultItems[0]);
+  };
+
+  const removeIngredient = (index) => {
+    clearIngredientSearchResults(index);
+    setDraft((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, ingredientIndex) => ingredientIndex !== index),
+    }));
+  };
+
   const imageBadge = draft.imageUrl?.trim() ? "1 Image" : "0 Image";
 
   const generalFilledCount = useMemo(() => {
@@ -156,11 +320,17 @@ export default function BulkAddItems() {
     if (String(draft.subCategoryId).trim()) c++;
     if (String(draft.costPrice).trim()) c++;
     if (String(draft.sellingPrice).trim()) c++;
-    if (String(draft.reorderLevel).trim() && draft.itemType !== ItemType.SERVICE) c++;
+    if (
+      String(draft.reorderLevel).trim() &&
+      draft.itemType !== ItemType.SERVICE &&
+      draft.itemType !== ItemType.RECIPE
+    ) c++;
     return c;
   }, [draft]);
 
-  const generalBadge = `${generalFilledCount}/${draft.itemType === ItemType.SERVICE ? 6 : 7}`;
+  const generalBadge = `${generalFilledCount}/${
+    draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE ? 6 : 7
+  }`;
 
   const validateGeneral = () => {
     if (!draft.name.trim()) return "Item name is required";
@@ -174,6 +344,21 @@ export default function BulkAddItems() {
     if (sell === null || sell < 0) return "Selling price invalid";
     if (draft.itemType === ItemType.SERVICE && draft.branchIds.length === 0) {
       return "Select at least one branch for the service";
+    }
+    if (draft.itemType === ItemType.RECIPE && draft.ingredients.length === 0) {
+      return "Add at least one ingredient for the recipe";
+    }
+    if (
+      draft.itemType === ItemType.RECIPE &&
+      draft.ingredients.some((ingredient) => !ingredient.ingredientItemId || Number(ingredient.quantity || 0) <= 0)
+    ) {
+      return "Select each ingredient from search and enter a valid quantity";
+    }
+    if (
+      draft.itemType === ItemType.RECIPE &&
+      new Set(draft.ingredients.map((ingredient) => String(ingredient.ingredientItemId))).size !== draft.ingredients.length
+    ) {
+      return "Duplicate ingredient found in recipe";
     }
 
     return null;
@@ -198,8 +383,23 @@ export default function BulkAddItems() {
       imageUrl: draft.imageUrl?.trim() || "",
       costPrice: num(draft.costPrice),
       sellingPrice: num(draft.sellingPrice),
-      reorderLevel: draft.itemType === ItemType.SERVICE ? 0 : (num(draft.reorderLevel) ?? 0),
+      reorderLevel:
+        draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE
+          ? 0
+          : (num(draft.reorderLevel) ?? 0),
       itemType: draft.itemType,
+      isKotEnabled: draft.itemType === ItemType.RECIPE ? !!draft.isKotEnabled : false,
+      ingredients:
+        draft.itemType === ItemType.RECIPE
+          ? draft.ingredients.map((ingredient) => ({
+              ingredientItemId: Number(ingredient.ingredientItemId),
+              ingredientName: ingredient.ingredientName || "",
+              ingredientBarcode: ingredient.ingredientBarcode || "",
+              quantity: Number(ingredient.quantity || 0),
+              qtyUnit: ingredient.qtyUnit,
+              search: ingredient.search || ingredient.ingredientName || "",
+            }))
+          : [],
       defaultUnit:
         draft.itemType === ItemType.WEIGHT
           ? draft.defaultUnit
@@ -213,6 +413,7 @@ export default function BulkAddItems() {
     setCart((prev) => [...prev, newItem]);
     
     setDraft(emptyDraft());
+    setIngredientSearchResults({});
     setSubCategories([]); 
     toast.success("Added to list");
   };
@@ -234,6 +435,17 @@ export default function BulkAddItems() {
       reorderLevel: row.reorderLevel ?? "",
       itemType: row.itemType || ItemType.NORMAL,
       defaultUnit: row.defaultUnit || "PCS",
+      isKotEnabled: row.isKotEnabled ?? false,
+      ingredients: Array.isArray(row.ingredients)
+        ? row.ingredients.map((ingredient) => ({
+            ingredientItemId: ingredient.ingredientItemId,
+            ingredientName: ingredient.ingredientName || "",
+            ingredientBarcode: ingredient.ingredientBarcode || "",
+            quantity: ingredient.quantity ?? "",
+            qtyUnit: ingredient.qtyUnit || "PCS",
+            search: ingredient.ingredientName || "",
+          }))
+        : [],
       branchIds: row.branchIds || [],
     });
 
@@ -241,8 +453,10 @@ export default function BulkAddItems() {
       loadSubCategories(row.categoryId);
     }
 
+    setIngredientSearchResults({});
     removeRow(tempId);
     setOpenGeneral(true);
+    setOpenRecipe((row.itemType || ItemType.NORMAL) === ItemType.RECIPE);
   };
 
   const saveAll = async () => {
@@ -260,6 +474,15 @@ export default function BulkAddItems() {
         reorderLevel: item.reorderLevel,
         imageUrl: item.imageUrl,
         itemType: item.itemType,
+        isKotEnabled: item.itemType === ItemType.RECIPE ? !!item.isKotEnabled : false,
+        ingredients:
+          item.itemType === ItemType.RECIPE
+            ? item.ingredients.map((ingredient) => ({
+                ingredientItemId: Number(ingredient.ingredientItemId),
+                quantity: Number(ingredient.quantity || 0),
+                qtyUnit: ingredient.qtyUnit,
+              }))
+            : [],
         defaultUnit: item.defaultUnit,
         ...(item.itemType === ItemType.SERVICE ? { branchIds: item.branchIds } : {}),
         active: item.active,
@@ -384,10 +607,12 @@ export default function BulkAddItems() {
                   <input
                     type="number"
                     min="0"
-                    className={`w-full border rounded-lg px-3 py-2 ${draft.itemType === ItemType.SERVICE ? "bg-gray-100 text-gray-400" : ""}`}
-                    value={draft.itemType === ItemType.SERVICE ? "0" : draft.reorderLevel}
+                    className={`w-full border rounded-lg px-3 py-2 ${
+                      draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE ? "bg-gray-100 text-gray-400" : ""
+                    }`}
+                    value={draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE ? "0" : draft.reorderLevel}
                     onChange={(e) => updateDraft("reorderLevel", e.target.value)}
-                    disabled={draft.itemType === ItemType.SERVICE}
+                    disabled={draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE}
                     placeholder="0"
                   />
                 </div>
@@ -441,10 +666,13 @@ export default function BulkAddItems() {
                       value={draft.itemType}
                       onChange={(e) => {
                         const val = e.target.value;
+                        setIngredientSearchResults({});
                         setDraft({
                            ...draft, 
                            itemType: val,
                            defaultUnit: val === ItemType.WEIGHT ? "KG" : val === ItemType.SERVICE ? "SERVICE" : "PCS",
+                           isKotEnabled: val === ItemType.RECIPE ? draft.isKotEnabled : false,
+                           ingredients: val === ItemType.RECIPE ? draft.ingredients : [],
                            branchIds: val === ItemType.SERVICE ? draft.branchIds : [],
                         });
                       }}
@@ -453,6 +681,7 @@ export default function BulkAddItems() {
                       <option value={ItemType.NORMAL}>{ItemTypeLabels.NORMAL}</option>
                       <option value={ItemType.WEIGHT}>{ItemTypeLabels.WEIGHT}</option>
                       <option value={ItemType.SERVICE}>{ItemTypeLabels.SERVICE}</option>
+                      <option value={ItemType.RECIPE}>{ItemTypeLabels.RECIPE}</option>
                     </select>
 
                     {draft.itemType === ItemType.WEIGHT && (
@@ -530,15 +759,155 @@ export default function BulkAddItems() {
                     </div>
                   </div>
                 )}
+
+                {draft.itemType === ItemType.RECIPE && (
+                  <div className="col-span-2 rounded-lg border border-rose-200 bg-rose-50 p-4">
+                    <label className="flex items-center justify-between gap-3 cursor-pointer">
+                      <div>
+                        <div className="text-sm font-medium text-slate-700">Send to Kitchen (KOT)</div>
+                        <p className="text-xs text-slate-500">Enable this when the item should appear on kitchen order tickets.</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={!!draft.isKotEnabled}
+                        onChange={(e) => updateDraft("isKotEnabled", e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
 
-              <div className="pt-2">
-                <Button onClick={addToList} className="w-full">
-                  + Add to List
-                </Button>
-              </div>
             </div>
           </AccordionSection>
+
+          {draft.itemType === ItemType.RECIPE && (
+            <AccordionSection
+              title="Recipe Ingredients"
+              subtitle="Search and add stock items used by this recipe"
+              badge={`${draft.ingredients.length} Items`}
+              isOpen={openRecipe}
+              onToggle={() => setOpenRecipe((v) => !v)}
+            >
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-slate-500">
+                    Search ingredients by name or barcode. Stock quantity is not shown here.
+                  </p>
+                  <Button type="button" onClick={addIngredientRow}>
+                    <Plus size={16} className="mr-2" />
+                    Add Ingredient
+                  </Button>
+                </div>
+
+                {draft.ingredients.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                    No ingredients added yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {draft.ingredients.map((ingredient, index) => (
+                      <div
+                        key={`${ingredient.ingredientItemId || "new"}-${index}`}
+                        className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px]"
+                      >
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
+                          <div className="relative">
+                            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                              type="text"
+                              value={ingredient.search || ""}
+                              onChange={(e) => searchIngredientItems(index, e.target.value)}
+                              onKeyDown={(e) => handleIngredientSearchKeyDown(index, e)}
+                              onBlur={() => window.setTimeout(() => clearIngredientSearchResults(index), 150)}
+                              placeholder="Scan barcode or type ingredient name..."
+                              className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            {(ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0) && (
+                              <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+                                {ingredientSearchResults[index]?.loading ? (
+                                  <div className="px-4 py-3 text-sm text-slate-500">Searching...</div>
+                                ) : (
+                                  ingredientSearchResults[index].items.map((option) => (
+                                    <button
+                                      key={option.id}
+                                      type="button"
+                                      onMouseDown={(e) => e.preventDefault()}
+                                      onClick={() => selectIngredientForRow(index, option)}
+                                      className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-blue-50 last:border-b-0"
+                                    >
+                                      <div className="min-w-0">
+                                        <div className="truncate font-medium text-slate-800">{option.name}</div>
+                                        <div className="text-xs text-slate-500">{option.barcode || "No barcode"}</div>
+                                      </div>
+                                      <div className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                                        {option.defaultUnit || "PCS"}
+                                      </div>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {ingredient.ingredientItemId && (
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                              <span className="rounded border border-slate-200 bg-white px-2 py-1">{ingredient.ingredientName}</span>
+                              {ingredient.ingredientBarcode && (
+                                <span className="rounded border border-slate-200 bg-white px-2 py-1">{ingredient.ingredientBarcode}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Qty</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.001"
+                            value={ingredient.quantity}
+                            onChange={(e) => updateIngredient(index, "quantity", e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Unit</label>
+                          <select
+                            value={ingredient.qtyUnit}
+                            onChange={(e) => updateIngredient(index, "qtyUnit", e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="PCS">PCS</option>
+                            <option value="KG">KG</option>
+                            <option value="G">G</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-end">
+                          <button
+                            type="button"
+                            onClick={() => removeIngredient(index)}
+                            className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"
+                            title="Remove ingredient"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </AccordionSection>
+          )}
+
+          <Card className="p-4">
+            <Button onClick={addToList} className="w-full">
+              + Add to List
+            </Button>
+          </Card>
         </div>
 
         <div className="col-span-12 lg:col-span-7">

@@ -1,44 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Building2, Printer, Save, Ticket, FileText } from 'lucide-react';
+import { Building2, Printer, Save, Ticket, FileText, ChefHat, Plus, Pencil, Trash2 } from 'lucide-react';
 
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import ReceiptTemplate from '../components/receipt/ReceiptTemplate';
+import InvoiceTemplate from '../components/invoice/InvoiceTemplate';
 import { useBranch } from '../context/BranchContext';
 import { useAuth } from '../context/AuthContext';
-import { formatCurrency, formatQuantityWithUnit } from '../utils/formatters';
 import {
   DEFAULT_RECEIPT_SETTINGS,
+  getReceiptSettingsDefaults,
   normalizeReceiptSettings,
   PRINT_TEMPLATE_TYPES,
   RECEIPT_SECTION_FIELDS,
 } from '../utils/receiptSettings';
 import { receiptSettingsAPI } from '../api/receiptSettings.api';
+import { diningTablesAPI } from '../api/diningTables.api';
 
-const DEMO_ITEMS = [
-  { name: 'White Rice', qty: 1.5, qtyUnit: 'KG', unitPrice: 240, lineTotal: 360 },
-  { name: 'Egg Pack', qty: 2, qtyUnit: 'PCS', unitPrice: 55, lineTotal: 110 },
-  { name: 'Delivery Charge', qty: 1, qtyUnit: 'SERVICE', unitPrice: 150, lineTotal: 150 },
-];
-
-const DEMO_ORDER = {
-  invoiceNo: 'INV-2026-000321',
-  createdAt: '2026-04-23T10:45:00',
-  cashierName: 'Nadee',
-  customerName: 'Walk-in Customer',
-  subTotal: 620,
-  billDiscount: 20,
-  grandTotal: 600,
-  paidAmount: 1000,
-  orderType: 'CASH',
-};
-
-const formatPreviewQty = (qty, unit) => formatQuantityWithUnit(qty, unit).replace(/\bSERVICE\b/g, 'S');
-
-const getPreviewLogoWidth = (settings) => `${Math.round((Number(settings.logoWidthPercent) / 100) * 220)}px`;
-
-const toSavePayload = (settings) => {
+const toSavePayload = (settings, templateType) => {
   const normalized = normalizeReceiptSettings(settings);
 
   return {
@@ -60,118 +41,140 @@ const toSavePayload = (settings) => {
     showThanksMessage: normalized.showThanksMessage,
     showCredits: true,
     logoWidthPercent: normalized.logoWidthPercent,
-    paperWidthMm: normalized.paperWidthMm,
+    paperWidthMm: templateType === PRINT_TEMPLATE_TYPES.A4 ? 210 : normalized.paperWidthMm,
     thanksMessage: normalized.thanksMessage,
     creditsLine1: normalized.creditsLine1,
     creditsLine2: normalized.creditsLine2,
   };
 };
 
-const ReceiptPreview = ({ branch, storeName, settings }) => {
-  const normalized = normalizeReceiptSettings(settings);
+const INITIAL_TABLE_FORM = {
+  id: null,
+  tableName: '',
+  status: 'AVAILABLE',
+};
+
+const ReceiptPreview = ({ branch, storeName, settings, templateType }) => {
+  const normalized = normalizeReceiptSettings({
+    ...settings,
+    paperWidthMm: templateType === PRINT_TEMPLATE_TYPES.A4 ? 210 : settings?.paperWidthMm,
+  });
+  const isKotPreview = templateType === PRINT_TEMPLATE_TYPES.KOT;
+  const isInvoicePreview = templateType === PRINT_TEMPLATE_TYPES.A4;
+  const previewPaperWidthPx = Math.round(normalized.paperWidthMm * 3.78);
+  const invoicePreviewScale = isInvoicePreview ? Math.min(1, 380 / previewPaperWidthPx) : 1;
+  const previewOrder = isKotPreview
+    ? {
+        invoiceNo: 'KOT-14',
+        createdAt: '2026-04-23T10:45:00',
+        cashierName: 'Nadee',
+        customerName: 'Nimal',
+        customerLabel: 'Customer',
+        subTitle: 'Kitchen Order Ticket',
+        saleMode: 'DINE IN',
+        tableName: 'Table 04',
+        subTotal: 0,
+        billDiscount: 0,
+        grandTotal: 0,
+        paidAmount: 0,
+        orderType: 'DINE_IN',
+      }
+    : {
+        invoiceNo: 'INV-2026-000321',
+        createdAt: '2026-04-23T10:45:00',
+        cashierName: 'Nadee',
+        customerName: 'Walk-in Customer',
+        customerPhone: '077 123 4567',
+        subTotal: 620,
+        billDiscount: 20,
+        grandTotal: 600,
+        paidAmount: 1000,
+        orderType: 'CASH',
+        saleMode: 'TAKEAWAY',
+      };
+  const previewItems = isKotPreview
+    ? [
+        { name: 'Chicken Fried Rice', qty: 2, qtyUnit: 'PCS', unitPrice: 0, lineTotal: 0 },
+        { name: 'Devilled Chicken', qty: 1, qtyUnit: 'PCS', unitPrice: 0, lineTotal: 0 },
+        { name: 'Lime Juice', qty: 3, qtyUnit: 'PCS', unitPrice: 0, lineTotal: 0 },
+      ]
+    : [
+        { name: 'White Rice', qty: 1.5, qtyUnit: 'KG', unitPrice: 240, lineTotal: 360 },
+        { name: 'Egg Pack', qty: 2, qtyUnit: 'PCS', unitPrice: 55, lineTotal: 110 },
+        { name: 'Delivery Charge', qty: 1, qtyUnit: 'SERVICE', unitPrice: 150, lineTotal: 150 },
+      ];
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] p-5 shadow-sm">
-      <div className="mx-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(148,163,184,0.18)]" style={{ maxWidth: 380 }}>
-        <div
-          className="mx-auto rounded-xl border border-dashed border-slate-300 bg-white p-4 font-mono text-slate-900"
-          style={{ width: '100%', maxWidth: `${Math.min(92, normalized.paperWidthMm * 1.28)}%` }}
-        >
-          <div className="text-center">
-            {normalized.showLogo && branch?.logo ? (
-              <div className="mb-3 flex justify-center">
-                <img
-                  src={branch.logo}
-                  alt="Branch logo"
-                  className="object-contain"
-                  style={{ width: getPreviewLogoWidth(normalized), maxWidth: '100%', maxHeight: '132px' }}
+      <div
+        className="mx-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(148,163,184,0.18)]"
+        style={{ maxWidth: `${previewPaperWidthPx + 40}px` }}
+      >
+        <div className="mx-auto overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white">
+          <div
+            style={
+              isInvoicePreview
+                ? {
+                    width: `${previewPaperWidthPx * invoicePreviewScale}px`,
+                    height: `${Math.round(1123 * invoicePreviewScale)}px`,
+                    overflow: 'hidden',
+                    margin: '0 auto',
+                  }
+                : {
+                    width: `${previewPaperWidthPx}px`,
+                    maxWidth: '100%',
+                    margin: '0 auto',
+                  }
+            }
+          >
+            <div
+              style={
+                isInvoicePreview
+                  ? {
+                      width: `${previewPaperWidthPx}px`,
+                      transform: `scale(${invoicePreviewScale})`,
+                      transformOrigin: 'top left',
+                    }
+                  : undefined
+              }
+            >
+              {isInvoicePreview ? (
+                <InvoiceTemplate
+                  settings={normalized}
+                  branchData={{
+                    name: branch?.name || 'Main Branch',
+                    address: branch?.address || '',
+                    phone: branch?.phone || '',
+                    logo: branch?.logo || '',
+                    cashierName: previewOrder.cashierName,
+                  }}
+                  storeName={storeName}
+                  orderData={previewOrder}
+                  items={previewItems}
+                  customerData={previewOrder.customerName ? { name: previewOrder.customerName, phone: previewOrder.customerPhone } : null}
+                  mode="print"
                 />
-              </div>
-            ) : null}
-            {normalized.showStoreName ? <h2 className="text-lg font-bold uppercase tracking-wide">{storeName}</h2> : null}
-            {normalized.showBranchName ? <p className="mt-1 text-sm font-semibold">Branch: {branch?.name || 'Main Branch'}</p> : null}
-            {normalized.showAddress && branch?.address ? <p className="mt-1 text-xs text-slate-600">Address: {branch.address}</p> : null}
-            {normalized.showPhone && branch?.phone ? <p className="mt-1 text-xs text-slate-600">Phone: {branch.phone}</p> : null}
-          </div>
-
-          <div className="my-3 border-b border-dashed border-slate-400" />
-
-          <div className="space-y-1 text-xs">
-            {normalized.showInvoiceNumber ? <p>Invoice: <b>{DEMO_ORDER.invoiceNo}</b></p> : null}
-            {normalized.showDateTime ? <p>Date: {new Date(DEMO_ORDER.createdAt).toLocaleString()}</p> : null}
-            {normalized.showCashier ? <p>Cashier: {DEMO_ORDER.cashierName}</p> : null}
-            {normalized.showCustomer ? <p>Customer: <b>{DEMO_ORDER.customerName}</b></p> : null}
-          </div>
-
-          {normalized.showItemTable ? (
-            <>
-              <div className="my-3 border-b border-dashed border-slate-400" />
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-dashed border-slate-300">
-                    <th className="pb-2 text-left">ITEM</th>
-                    <th className="pb-2 text-center">QTY</th>
-                    <th className="pb-2 text-right">AMOUNT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {DEMO_ITEMS.map((item) => (
-                    <tr key={item.name}>
-                      <td className="py-2 pr-2 align-top">
-                        <div className="font-semibold">{item.name}</div>
-                        <div className="text-[11px] text-slate-500">@ {formatCurrency(item.unitPrice)}</div>
-                      </td>
-                      <td className="py-2 text-center align-top">{formatPreviewQty(item.qty, item.qtyUnit)}</td>
-                      <td className="py-2 text-right align-top">{formatCurrency(item.lineTotal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          ) : null}
-
-          <div className="my-3 border-b border-dashed border-slate-400" />
-
-          <div className="ml-auto w-full max-w-[200px] text-xs">
-            {normalized.showSubtotal ? (
-              <div className="flex items-center justify-between py-1">
-                <span>Sub Total</span>
-                <span>{formatCurrency(DEMO_ORDER.subTotal)}</span>
-              </div>
-            ) : null}
-            {normalized.showDiscount ? (
-              <div className="flex items-center justify-between py-1">
-                <span>Discount</span>
-                <span>-{formatCurrency(DEMO_ORDER.billDiscount)}</span>
-              </div>
-            ) : null}
-            {normalized.showNetTotal ? (
-              <div className="flex items-center justify-between border-y border-dashed border-slate-400 py-2 text-sm font-bold">
-                <span>Net Total</span>
-                <span>{formatCurrency(DEMO_ORDER.grandTotal)}</span>
-              </div>
-            ) : null}
-            {normalized.showPaid ? (
-              <div className="flex items-center justify-between py-1">
-                <span>Paid</span>
-                <span>{formatCurrency(DEMO_ORDER.paidAmount)}</span>
-              </div>
-            ) : null}
-            {normalized.showBalance ? (
-              <div className="flex items-center justify-between py-1 font-bold">
-                <span>Balance</span>
-                <span>{formatCurrency(DEMO_ORDER.paidAmount - DEMO_ORDER.grandTotal)}</span>
-              </div>
-            ) : null}
-          </div>
-
-          {normalized.showThanksMessage ? (
-            <div className="mt-4 text-center text-xs font-semibold">{normalized.thanksMessage}</div>
-          ) : null}
-
-          <div className="mt-4 border-t border-slate-300 pt-3 text-center text-[11px]">
-            <div className="font-bold">{normalized.creditsLine1}</div>
-            <div className="mt-1 text-slate-600">{normalized.creditsLine2}</div>
+              ) : (
+                <ReceiptTemplate
+                  templateType={templateType}
+                  settings={normalized}
+                  branchData={{
+                    name: branch?.name || 'Main Branch',
+                    address: branch?.address || '',
+                    phone: branch?.phone || '',
+                    logo: branch?.logo || '',
+                    cashierName: previewOrder.cashierName,
+                  }}
+                  storeName={storeName}
+                  orderData={previewOrder}
+                  items={previewItems}
+                  customerData={previewOrder.customerName ? { name: previewOrder.customerName } : null}
+                  showTotals={!isKotPreview}
+                  showCredits
+                  mode="print"
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -190,13 +193,18 @@ const ReceiptSettingsPage = () => {
   );
 
   const [activeTemplate, setActiveTemplate] = useState(PRINT_TEMPLATE_TYPES.THERMAL);
-  const [form, setForm] = useState(DEFAULT_RECEIPT_SETTINGS);
+  const [form, setForm] = useState(getReceiptSettingsDefaults(PRINT_TEMPLATE_TYPES.THERMAL));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [tables, setTables] = useState([]);
+  const [tablesLoading, setTablesLoading] = useState(false);
+  const [tableSaving, setTableSaving] = useState(false);
+  const [tableDeletingId, setTableDeletingId] = useState(null);
+  const [tableForm, setTableForm] = useState(INITIAL_TABLE_FORM);
 
   useEffect(() => {
     if (branchSelectionRequired || !activeBranch?.id) {
-      setForm(normalizeReceiptSettings(DEFAULT_RECEIPT_SETTINGS));
+      setForm(getReceiptSettingsDefaults(activeTemplate));
       setLoading(false);
       return;
     }
@@ -205,11 +213,14 @@ const ReceiptSettingsPage = () => {
       try {
         setLoading(true);
         const response = await receiptSettingsAPI.getByBranch(activeBranch.id, activeTemplate);
-        setForm(normalizeReceiptSettings(response.data));
+        setForm(normalizeReceiptSettings({
+          ...response.data,
+          paperWidthMm: activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 210 : response.data?.paperWidthMm,
+        }));
       } catch (error) {
         console.error(error);
         toast.error('Failed to load receipt settings');
-        setForm(normalizeReceiptSettings(DEFAULT_RECEIPT_SETTINGS));
+        setForm(getReceiptSettingsDefaults(activeTemplate));
       } finally {
         setLoading(false);
       }
@@ -217,6 +228,31 @@ const ReceiptSettingsPage = () => {
 
     loadSettings();
   }, [activeBranch, activeTemplate, branchSelectionRequired]);
+
+  useEffect(() => {
+    if (branchSelectionRequired || !activeBranch?.id) {
+      setTables([]);
+      setTableForm(INITIAL_TABLE_FORM);
+      setTablesLoading(false);
+      return;
+    }
+
+    const loadTables = async () => {
+      try {
+        setTablesLoading(true);
+        const response = await diningTablesAPI.listByBranch(activeBranch.id);
+        setTables(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load dining tables');
+        setTables([]);
+      } finally {
+        setTablesLoading(false);
+      }
+    };
+
+    loadTables();
+  }, [activeBranch, branchSelectionRequired]);
 
   const updateField = (field, value) => {
     setForm((prev) => normalizeReceiptSettings({ ...prev, [field]: value }));
@@ -230,10 +266,13 @@ const ReceiptSettingsPage = () => {
 
     try {
       setSaving(true);
-      const payload = toSavePayload(form);
+      const payload = toSavePayload(form, activeTemplate);
       const response = await receiptSettingsAPI.updateByBranch(activeBranch.id, payload, activeTemplate);
-      setForm(normalizeReceiptSettings(response.data));
-      toast.success('Receipt layout saved');
+      setForm(normalizeReceiptSettings({
+        ...response.data,
+        paperWidthMm: activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 210 : response.data?.paperWidthMm,
+      }));
+      toast.success(activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 'Invoice layout saved' : 'Receipt layout saved');
     } catch (error) {
       console.error(error);
       toast.error(error?.response?.data?.message || 'Failed to save receipt settings');
@@ -243,7 +282,80 @@ const ReceiptSettingsPage = () => {
   };
 
   const handleReset = () => {
-    setForm(normalizeReceiptSettings(DEFAULT_RECEIPT_SETTINGS));
+    setForm(getReceiptSettingsDefaults(activeTemplate));
+  };
+
+  const resetTableForm = () => {
+    setTableForm(INITIAL_TABLE_FORM);
+  };
+
+  const handleSaveTable = async () => {
+    if (branchSelectionRequired || !activeBranch?.id) {
+      toast.error('Select a branch from the header first');
+      return;
+    }
+
+    if (!tableForm.tableName.trim()) {
+      toast.error('Table name is required');
+      return;
+    }
+
+    try {
+      setTableSaving(true);
+      if (tableForm.id) {
+        await diningTablesAPI.update(tableForm.id, {
+          tableName: tableForm.tableName.trim(),
+          status: tableForm.status,
+        });
+        toast.success('Dining table updated');
+      } else {
+        await diningTablesAPI.create({
+          branchId: activeBranch.id,
+          tableName: tableForm.tableName.trim(),
+          status: tableForm.status,
+        });
+        toast.success('Dining table added');
+      }
+
+      const response = await diningTablesAPI.listByBranch(activeBranch.id);
+      setTables(Array.isArray(response.data) ? response.data : []);
+      resetTableForm();
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || 'Failed to save dining table');
+    } finally {
+      setTableSaving(false);
+    }
+  };
+
+  const handleEditTable = (table) => {
+    setTableForm({
+      id: table.id,
+      tableName: table.tableName || '',
+      status: table.status || 'AVAILABLE',
+    });
+  };
+
+  const handleDeleteTable = async (tableId) => {
+    if (!activeBranch?.id) {
+      return;
+    }
+
+    try {
+      setTableDeletingId(tableId);
+      await diningTablesAPI.remove(tableId);
+      toast.success('Dining table deleted');
+      const response = await diningTablesAPI.listByBranch(activeBranch.id);
+      setTables(Array.isArray(response.data) ? response.data : []);
+      if (Number(tableForm.id) === Number(tableId)) {
+        resetTableForm();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || 'Failed to delete dining table');
+    } finally {
+      setTableDeletingId(null);
+    }
   };
 
   if (!branchOptions.length && !loading) {
@@ -266,7 +378,7 @@ const ReceiptSettingsPage = () => {
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Receipt Design</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Configure branch-wise thermal receipt layout now. Use the top branch selector to choose the branch. A4 invoice tab is reserved for the next step.
+            Configure branch-wise thermal receipt, full invoice, kitchen ticket, and dining table settings.
           </p>
         </div>
 
@@ -312,9 +424,24 @@ const ReceiptSettingsPage = () => {
                 </button>
                 <button
                   type="button"
-                  disabled
-                  className="inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-400"
-                  title="A4 invoice editor will use the same system later"
+                  onClick={() => setActiveTemplate(PRINT_TEMPLATE_TYPES.KOT)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                    activeTemplate === PRINT_TEMPLATE_TYPES.KOT
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <ChefHat size={16} />
+                  KOT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTemplate(PRINT_TEMPLATE_TYPES.A4)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                    activeTemplate === PRINT_TEMPLATE_TYPES.A4
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
                 >
                   <FileText size={16} />
                   Full Invoice
@@ -363,7 +490,7 @@ const ReceiptSettingsPage = () => {
                 </div>
               </Card>
 
-              <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="grid gap-6 lg:grid-cols-2">
                 <Card title="Logo & Paper">
                   <div className="space-y-5">
                     <div>
@@ -384,17 +511,32 @@ const ReceiptSettingsPage = () => {
                       </p>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-slate-700">Paper Width (mm)</label>
-                      <input
-                        type="number"
-                        min="48"
-                        max="80"
-                        value={form.paperWidthMm}
-                        onChange={(event) => updateField('paperWidthMm', Number(event.target.value))}
-                        className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                      />
-                    </div>
+                    {activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? (
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">Paper Size</label>
+                        <input
+                          value="A4 (210 mm)"
+                          disabled
+                          readOnly
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-slate-500"
+                        />
+                        <p className="mt-2 text-xs text-slate-500">
+                          Full invoice uses fixed A4 width. Other visible sections still follow your saved layout settings.
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">Paper Width (mm)</label>
+                        <input
+                          type="number"
+                          min="48"
+                          max="80"
+                          value={form.paperWidthMm}
+                          onChange={(event) => updateField('paperWidthMm', Number(event.target.value))}
+                          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        />
+                      </div>
+                    )}
                   </div>
                 </Card>
 
@@ -434,6 +576,99 @@ const ReceiptSettingsPage = () => {
                   </div>
                 </Card>
               </div>
+
+              <Card
+                title="Dining Tables"
+                action={tableForm.id ? (
+                  <Button variant="secondary" size="sm" onClick={resetTableForm}>
+                    Cancel Edit
+                  </Button>
+                ) : null}
+              >
+                {tablesLoading ? (
+                  <div className="py-10">
+                    <LoadingSpinner text="Loading dining tables..." />
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px_120px]">
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">Table Name</label>
+                        <input
+                          value={tableForm.tableName}
+                          onChange={(event) => setTableForm((prev) => ({ ...prev, tableName: event.target.value }))}
+                          placeholder="Table 01"
+                          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">Status</label>
+                        <select
+                          value={tableForm.status}
+                          onChange={(event) => setTableForm((prev) => ({ ...prev, status: event.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        >
+                          <option value="AVAILABLE">Available</option>
+                          <option value="OCCUPIED">Occupied</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-end">
+                        <Button onClick={handleSaveTable} disabled={tableSaving} className="w-full">
+                          <Plus size={16} className="mr-2" />
+                          {tableSaving ? 'Saving...' : tableForm.id ? 'Update' : 'Add'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {tables.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
+                          No dining tables added for this branch yet.
+                        </div>
+                      ) : (
+                        tables.map((table) => (
+                          <div key={table.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-base font-semibold text-slate-900">{table.tableName}</div>
+                                <div className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${
+                                  table.status === 'OCCUPIED'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-emerald-100 text-emerald-700'
+                                }`}>
+                                  {table.status}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditTable(table)}
+                                  className="rounded-lg bg-white p-2 text-slate-500 transition hover:text-blue-600"
+                                  title="Edit table"
+                                >
+                                  <Pencil size={15} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteTable(table.id)}
+                                  disabled={tableDeletingId === table.id}
+                                  className="rounded-lg bg-white p-2 text-slate-500 transition hover:text-red-600 disabled:opacity-50"
+                                  title="Delete table"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </Card>
             </>
           )}
         </div>
@@ -454,6 +689,7 @@ const ReceiptSettingsPage = () => {
               branch={activeBranch}
               storeName={user?.shopName || 'POS SYSTEM'}
               settings={form}
+              templateType={activeTemplate}
             />
           )}
         </div>

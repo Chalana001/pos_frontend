@@ -19,7 +19,10 @@ const Cart = ({
   loading,
   onAddCustomer,
   onUpdateQtyUnit,
-  focusSearch
+  focusSearch,
+  cartSummary,
+  footerActions,
+  checkoutLabel = "Checkout (F9)",
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
 
@@ -80,7 +83,10 @@ const Cart = ({
           <div className="bg-blue-600 text-white p-2 rounded-lg">
             <Receipt size={18} />
           </div>
-          <h2 className="font-bold text-slate-800">Current Order</h2>
+          <div>
+            <h2 className="font-bold text-slate-800">Current Order</h2>
+            {cartSummary ? <div className="mt-0.5 text-[11px] font-medium text-slate-500">{cartSummary}</div> : null}
+          </div>
         </div>
         <span className="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-bold">
           {items.length} Items
@@ -308,12 +314,18 @@ const Cart = ({
           </span>
         </div>
 
+        {footerActions ? (
+          <div className="grid gap-2">
+            {footerActions}
+          </div>
+        ) : null}
+
         <Button
           onClick={onCheckout}
           disabled={items.length === 0 || loading}
           className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-all active:scale-95"
         >
-          {loading ? "Processing..." : "Checkout (F9)"}
+          {loading ? "Processing..." : checkoutLabel}
         </Button>
       </div>
     </div>

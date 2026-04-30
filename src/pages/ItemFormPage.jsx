@@ -1,18 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
-import Modal from "../components/common/Modal"; 
-import CustomSelect from "../components/common/CustomSelect"; 
+import Modal from "../components/common/Modal";
+import CustomSelect from "../components/common/CustomSelect";
 
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api";
 import { useBranch } from "../context/BranchContext";
-import { ItemType, ItemTypeLabels } from "../utils/constants"; // 🟢 Constant එක Import කළා
+import { ItemType, ItemTypeLabels } from "../utils/constants";
 
-import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon, ChefHat, Search, Trash2 } from "lucide-react";
 
 const Section = ({ title, open, onToggle, right, children }) => {
   return (
@@ -33,6 +33,15 @@ const Section = ({ title, open, onToggle, right, children }) => {
   );
 };
 
+const buildEmptyIngredient = () => ({
+  ingredientItemId: "",
+  ingredientName: "",
+  ingredientBarcode: "",
+  quantity: "",
+  qtyUnit: "PCS",
+  search: "",
+});
+
 const ItemFormPage = ({ mode }) => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -42,6 +51,7 @@ const ItemFormPage = ({ mode }) => {
   const [loadingItem, setLoadingItem] = useState(false);
 
   const [secGeneral, setSecGeneral] = useState(true);
+  const [secRecipe, setSecRecipe] = useState(true);
   const [secLabels, setSecLabels] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -53,14 +63,18 @@ const ItemFormPage = ({ mode }) => {
     sellingPrice: "",
     reorderLevel: "",
     imageUrl: "",
-    itemType: ItemType.NORMAL, // 🟢 Default අගය
+    itemType: ItemType.NORMAL,
     defaultUnit: "PCS",
+    isKotEnabled: false,
+    ingredients: [],
     branchIds: [],
     active: true,
   });
 
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
+  const [ingredientSearchResults, setIngredientSearchResults] = useState({});
+  const ingredientSearchRequestRef = useRef({});
 
   const [showCatModal, setShowCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
@@ -124,6 +138,17 @@ const ItemFormPage = ({ mode }) => {
           imageUrl: item.imageUrl ?? "",
           itemType: item.itemType || ItemType.NORMAL,
           defaultUnit: item.defaultUnit ?? "PCS",
+          isKotEnabled: item.isKotEnabled ?? false,
+          ingredients: Array.isArray(item.ingredients)
+            ? item.ingredients.map((ingredient) => ({
+                ingredientItemId: ingredient.ingredientItemId,
+                ingredientName: ingredient.ingredientName || "",
+                ingredientBarcode: ingredient.ingredientBarcode || "",
+                quantity: ingredient.quantity ?? "",
+                qtyUnit: ingredient.qtyUnit || "PCS",
+                search: ingredient.ingredientName || "",
+              }))
+            : [],
           branchIds: item.branchIds ?? [],
           active: item.active ?? true,
         });
@@ -150,21 +175,21 @@ const ItemFormPage = ({ mode }) => {
     setFormData((prev) => ({
       ...prev,
       branchIds: prev.branchIds.includes(branchId)
-        ? prev.branchIds.filter((id) => id !== branchId)
+        ? prev.branchIds.filter((branchValue) => branchValue !== branchId)
         : [...prev.branchIds, branchId],
     }));
   };
 
   const submitNewCategory = async () => {
     if (!newCatName.trim()) return toast.error("Category name is required");
-    
+
     setSavingCat(true);
     try {
       const res = await categoriesAPI.create({ name: newCatName.trim() });
       toast.success("Category created!");
       await loadCategories();
-      handleCategoryChange(res.data.id); 
-      
+      handleCategoryChange(res.data.id);
+
       setShowCatModal(false);
       setNewCatName("");
     } catch (e) {
@@ -176,7 +201,7 @@ const ItemFormPage = ({ mode }) => {
 
   const submitNewSubCategory = async () => {
     if (!newSubCatName.trim()) return toast.error("Sub-category name is required");
-    
+
     setSavingSubCat(true);
     try {
       const res = await categoriesAPI.createSubCategory({
@@ -185,8 +210,8 @@ const ItemFormPage = ({ mode }) => {
       });
       toast.success("Sub-category created!");
       await loadSubCategories(formData.categoryId);
-      setFormData((prev) => ({ ...prev, subCategoryId: res.data.id })); 
-      
+      setFormData((prev) => ({ ...prev, subCategoryId: res.data.id }));
+
       setShowSubCatModal(false);
       setNewSubCatName("");
     } catch (e) {
@@ -194,6 +219,155 @@ const ItemFormPage = ({ mode }) => {
     } finally {
       setSavingSubCat(false);
     }
+  };
+
+  const addIngredientRow = () => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: [...prev.ingredients, buildEmptyIngredient()],
+    }));
+  };
+
+  const updateIngredient = (index, field, value) => {
+    setFormData((prev) => {
+      const nextIngredients = [...prev.ingredients];
+      const nextRow = { ...nextIngredients[index], [field]: value };
+
+      nextIngredients[index] = nextRow;
+      return {
+        ...prev,
+        ingredients: nextIngredients,
+      };
+    });
+  };
+
+  const clearIngredientSearchResults = (index) => {
+    setIngredientSearchResults((prev) => {
+      if (!prev[index]) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const searchIngredientItems = async (index, query) => {
+    setFormData((prev) => {
+      const nextIngredients = [...prev.ingredients];
+      const currentRow = nextIngredients[index];
+      const isSameSelectedItem = query.trim() === (currentRow?.ingredientName || "").trim();
+
+      nextIngredients[index] = {
+        ...currentRow,
+        search: query,
+        ingredientItemId: isSameSelectedItem ? currentRow.ingredientItemId : "",
+        ingredientName: isSameSelectedItem ? currentRow.ingredientName : "",
+        ingredientBarcode: isSameSelectedItem ? currentRow.ingredientBarcode : "",
+      };
+
+      return {
+        ...prev,
+        ingredients: nextIngredients,
+      };
+    });
+
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      clearIngredientSearchResults(index);
+      return;
+    }
+
+    const requestId = (ingredientSearchRequestRef.current[index] || 0) + 1;
+    ingredientSearchRequestRef.current[index] = requestId;
+
+    setIngredientSearchResults((prev) => ({
+      ...prev,
+      [index]: { loading: true, items: [] },
+    }));
+
+    try {
+      const res = await itemsAPI.search(trimmedQuery);
+      const itemsArray = Array.isArray(res.data) ? res.data : [];
+      const filteredItems = itemsArray.filter(
+        (item) =>
+          (item.itemType === ItemType.NORMAL || item.itemType === ItemType.WEIGHT) &&
+          item.active !== false &&
+          Number(item.id) !== Number(id)
+      );
+
+      if (ingredientSearchRequestRef.current[index] !== requestId) {
+        return;
+      }
+
+      setIngredientSearchResults((prev) => ({
+        ...prev,
+        [index]: { loading: false, items: filteredItems },
+      }));
+    } catch (error) {
+      if (ingredientSearchRequestRef.current[index] !== requestId) {
+        return;
+      }
+
+      setIngredientSearchResults((prev) => ({
+        ...prev,
+        [index]: { loading: false, items: [] },
+      }));
+    }
+  };
+
+  const selectIngredientForRow = (index, ingredientItem) => {
+    setFormData((prev) => {
+      const nextIngredients = [...prev.ingredients];
+      nextIngredients[index] = {
+        ...nextIngredients[index],
+        ingredientItemId: ingredientItem.id,
+        ingredientName: ingredientItem.name,
+        ingredientBarcode: ingredientItem.barcode || "",
+        qtyUnit: ingredientItem.defaultUnit || (ingredientItem.itemType === ItemType.WEIGHT ? "KG" : "PCS"),
+        search: ingredientItem.name,
+      };
+
+      return {
+        ...prev,
+        ingredients: nextIngredients,
+      };
+    });
+
+    clearIngredientSearchResults(index);
+  };
+
+  const handleIngredientSearchKeyDown = (index, event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+
+    const searchValue = formData.ingredients[index]?.search?.trim();
+    const resultItems = ingredientSearchResults[index]?.items || [];
+
+    if (!searchValue || resultItems.length === 0) {
+      toast.error("Ingredient not found");
+      return;
+    }
+
+    const exactMatch = resultItems.find(
+      (item) =>
+        item.barcode?.toLowerCase() === searchValue.toLowerCase() ||
+        item.name?.toLowerCase() === searchValue.toLowerCase()
+    );
+
+    selectIngredientForRow(index, exactMatch || resultItems[0]);
+  };
+
+  const removeIngredient = (index) => {
+    clearIngredientSearchResults(index);
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, ingredientIndex) => ingredientIndex !== index),
+    }));
   };
 
   const submitItem = async () => {
@@ -209,18 +383,42 @@ const ItemFormPage = ({ mode }) => {
       return;
     }
 
+    if (formData.itemType === ItemType.RECIPE && formData.ingredients.length === 0) {
+      toast.error("Add at least one ingredient for the recipe");
+      setSecRecipe(true);
+      return;
+    }
+
+    if (
+      formData.itemType === ItemType.RECIPE &&
+      formData.ingredients.some((ingredient) => !ingredient.ingredientItemId || Number(ingredient.quantity || 0) <= 0)
+    ) {
+      toast.error("Select each ingredient from search and enter a valid quantity");
+      setSecRecipe(true);
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // 🟢 weightItem ඉවත් කළා, itemType යවනවා
       const payload = {
         name: formData.name.trim(),
         barcode: formData.barcode.trim(),
         subCategoryId: Number(formData.subCategoryId),
         costPrice: Number(formData.costPrice || 0),
         sellingPrice: Number(formData.sellingPrice || 0),
-        reorderLevel: formData.itemType === ItemType.SERVICE ? 0 : Number(formData.reorderLevel || 0),
+        reorderLevel: formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE
+          ? 0
+          : Number(formData.reorderLevel || 0),
         imageUrl: formData.imageUrl?.trim() || null,
         itemType: formData.itemType,
+        isKotEnabled: formData.itemType === ItemType.RECIPE ? !!formData.isKotEnabled : false,
+        ingredients: formData.itemType === ItemType.RECIPE
+          ? formData.ingredients.map((ingredient) => ({
+              ingredientItemId: Number(ingredient.ingredientItemId),
+              quantity: Number(ingredient.quantity || 0),
+              qtyUnit: ingredient.qtyUnit,
+            }))
+          : [],
         defaultUnit:
           formData.itemType === ItemType.WEIGHT
             ? formData.defaultUnit
@@ -247,14 +445,14 @@ const ItemFormPage = ({ mode }) => {
   };
 
   const addLabel = () => {
-    const v = labelInput.trim();
-    if (!v) return;
-    if (labels.includes(v)) return setLabelInput("");
-    setLabels((prev) => [...prev, v]);
+    const value = labelInput.trim();
+    if (!value) return;
+    if (labels.includes(value)) return setLabelInput("");
+    setLabels((prev) => [...prev, value]);
     setLabelInput("");
   };
 
-  const removeLabel = (v) => setLabels((prev) => prev.filter((x) => x !== v));
+  const removeLabel = (value) => setLabels((prev) => prev.filter((label) => label !== value));
 
   return (
     <div className="space-y-6">
@@ -317,7 +515,7 @@ const ItemFormPage = ({ mode }) => {
               <Section
                 title="General Information"
                 open={secGeneral}
-                onToggle={() => setSecGeneral((v) => !v)}
+                onToggle={() => setSecGeneral((value) => !value)}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
@@ -340,7 +538,7 @@ const ItemFormPage = ({ mode }) => {
                     />
                   </div>
 
-                  <div className="relative z-20"> 
+                  <div className="relative z-20">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
                     <div className="flex gap-2">
                       <CustomSelect
@@ -355,12 +553,12 @@ const ItemFormPage = ({ mode }) => {
                     </div>
                   </div>
 
-                  <div className="relative z-10"> 
+                  <div className="relative z-10">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Sub Category *</label>
                     <div className="flex gap-2">
                       <CustomSelect
                         value={formData.subCategoryId}
-                        onChange={(val) => setFormData({ ...formData, subCategoryId: val })}
+                        onChange={(value) => setFormData({ ...formData, subCategoryId: value })}
                         options={subCategories}
                         placeholder="Select Sub Category"
                         disabled={!formData.categoryId}
@@ -377,19 +575,20 @@ const ItemFormPage = ({ mode }) => {
                     </div>
                   </div>
 
-                  {/* 🟢 Dropdown with Enum */}
                   <div className="md:col-span-2 flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-2">
                       <label className="text-sm font-medium text-slate-700">Item Type:</label>
                       <select
                         value={formData.itemType}
                         onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData({ 
-                            ...formData, 
-                            itemType: val, 
-                            defaultUnit: val === ItemType.WEIGHT ? "KG" : val === ItemType.SERVICE ? "SERVICE" : "PCS",
-                            branchIds: val === ItemType.SERVICE ? formData.branchIds : [],
+                          const value = e.target.value;
+                          setFormData({
+                            ...formData,
+                            itemType: value,
+                            defaultUnit: value === ItemType.WEIGHT ? "KG" : value === ItemType.SERVICE ? "SERVICE" : "PCS",
+                            isKotEnabled: value === ItemType.RECIPE ? formData.isKotEnabled : false,
+                            ingredients: value === ItemType.RECIPE ? formData.ingredients : [],
+                            branchIds: value === ItemType.SERVICE ? formData.branchIds : [],
                           });
                         }}
                         className="border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -397,6 +596,7 @@ const ItemFormPage = ({ mode }) => {
                         <option value={ItemType.NORMAL}>{ItemTypeLabels.NORMAL}</option>
                         <option value={ItemType.WEIGHT}>{ItemTypeLabels.WEIGHT}</option>
                         <option value={ItemType.SERVICE}>{ItemTypeLabels.SERVICE}</option>
+                        <option value={ItemType.RECIPE}>{ItemTypeLabels.RECIPE}</option>
                       </select>
                     </div>
 
@@ -414,6 +614,23 @@ const ItemFormPage = ({ mode }) => {
                       </div>
                     )}
                   </div>
+
+                  {formData.itemType === ItemType.RECIPE && (
+                    <div className="md:col-span-2 rounded-xl border border-rose-200 bg-rose-50 p-4">
+                      <label className="flex items-center justify-between gap-3 cursor-pointer">
+                        <div>
+                          <div className="text-sm font-medium text-slate-700">Send to Kitchen (KOT)</div>
+                          <p className="text-xs text-slate-500">Enable this when the item should appear on kitchen order tickets.</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={!!formData.isKotEnabled}
+                          onChange={(e) => setFormData({ ...formData, isKotEnabled: e.target.checked })}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </label>
+                    </div>
+                  )}
 
                   {formData.itemType === ItemType.SERVICE && (
                     <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -451,10 +668,12 @@ const ItemFormPage = ({ mode }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Cost Price {formData.itemType === ItemType.WEIGHT && "(per 1 KG)"}
+                      Cost Price {formData.itemType === ItemType.WEIGHT && "(per 1 KG)"}
                     </label>
                     <input
-                      type="number" min="0" step="0.01"
+                      type="number"
+                      min="0"
+                      step="0.01"
                       value={formData.costPrice}
                       onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -463,10 +682,12 @@ const ItemFormPage = ({ mode }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Selling Price {formData.itemType === ItemType.WEIGHT && "(per 1 KG)"}
+                      Selling Price {formData.itemType === ItemType.WEIGHT && "(per 1 KG)"}
                     </label>
                     <input
-                      type="number" min="0" step="0.01"
+                      type="number"
+                      min="0"
+                      step="0.01"
                       value={formData.sellingPrice}
                       onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -476,18 +697,140 @@ const ItemFormPage = ({ mode }) => {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Reorder Level</label>
                     <input
-                      type="number" min="0"
-                      value={formData.itemType === ItemType.SERVICE ? "0" : formData.reorderLevel}
+                      type="number"
+                      min="0"
+                      value={formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE ? "0" : formData.reorderLevel}
                       onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
-                      disabled={formData.itemType === ItemType.SERVICE}
-                      className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${formData.itemType === ItemType.SERVICE ? "bg-slate-100 text-slate-400 border-slate-200" : "border-slate-300"}`}
-                      title={formData.itemType === ItemType.SERVICE ? "Services do not have a reorder level" : ""}
+                      disabled={formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE}
+                      className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE
+                          ? "bg-slate-100 text-slate-400 border-slate-200"
+                          : "border-slate-300"
+                      }`}
                     />
                   </div>
                 </div>
               </Section>
 
-              <Section title="Label and Certificate" open={secLabels} onToggle={() => setSecLabels((v) => !v)}>
+              {formData.itemType === ItemType.RECIPE && (
+                <Section
+                  title="Recipe Ingredients"
+                  open={secRecipe}
+                  onToggle={() => setSecRecipe((value) => !value)}
+                  right={<ChefHat size={18} className="text-rose-500" />}
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm text-slate-500">
+                        Select the stock items that should be deducted when this food item is sold.
+                      </p>
+                      <Button type="button" onClick={addIngredientRow}>
+                        <Plus size={16} className="mr-2" />
+                        Add Ingredient
+                      </Button>
+                    </div>
+
+                    {formData.ingredients.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                        No ingredients added yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {formData.ingredients.map((ingredient, index) => (
+                          <div key={`${ingredient.ingredientItemId || "new"}-${index}`} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px]">
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
+                              <div className="relative">
+                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                  type="text"
+                                  value={ingredient.search || ""}
+                                  onChange={(e) => searchIngredientItems(index, e.target.value)}
+                                  onKeyDown={(e) => handleIngredientSearchKeyDown(index, e)}
+                                  onBlur={() => window.setTimeout(() => clearIngredientSearchResults(index), 150)}
+                                  placeholder="Scan barcode or type ingredient name..."
+                                  className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                {(ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0) && (
+                                  <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+                                    {ingredientSearchResults[index]?.loading ? (
+                                      <div className="px-4 py-3 text-sm text-slate-500">Searching...</div>
+                                    ) : (
+                                      ingredientSearchResults[index].items.map((option) => (
+                                        <button
+                                          key={option.id}
+                                          type="button"
+                                          onMouseDown={(e) => e.preventDefault()}
+                                          onClick={() => selectIngredientForRow(index, option)}
+                                          className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-blue-50 last:border-b-0"
+                                        >
+                                          <div className="min-w-0">
+                                            <div className="truncate font-medium text-slate-800">{option.name}</div>
+                                            <div className="text-xs text-slate-500">{option.barcode || "No barcode"}</div>
+                                          </div>
+                                          <div className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                                            {option.defaultUnit || "PCS"}
+                                          </div>
+                                        </button>
+                                      ))
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {ingredient.ingredientItemId && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                  <span className="rounded border border-slate-200 bg-white px-2 py-1">{ingredient.ingredientName}</span>
+                                  {ingredient.ingredientBarcode && (
+                                    <span className="rounded border border-slate-200 bg-white px-2 py-1">{ingredient.ingredientBarcode}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-slate-700">Qty</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.001"
+                                value={ingredient.quantity}
+                                onChange={(e) => updateIngredient(index, "quantity", e.target.value)}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-slate-700">Unit</label>
+                              <select
+                                value={ingredient.qtyUnit}
+                                onChange={(e) => updateIngredient(index, "qtyUnit", e.target.value)}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="PCS">PCS</option>
+                                <option value="KG">KG</option>
+                                <option value="G">G</option>
+                              </select>
+                            </div>
+
+                            <div className="flex items-end">
+                              <button
+                                type="button"
+                                onClick={() => removeIngredient(index)}
+                                className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"
+                                title="Remove ingredient"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Section>
+              )}
+
+              <Section title="Label and Certificate" open={secLabels} onToggle={() => setSecLabels((value) => !value)}>
                 <div className="space-y-4">
                   <div className="flex gap-2">
                     <input
@@ -503,10 +846,10 @@ const ItemFormPage = ({ mode }) => {
                   </div>
                   {labels.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {labels.map((l) => (
-                        <div key={l} className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm">
-                          {l}
-                          <button type="button" onClick={() => removeLabel(l)} className="text-slate-500 hover:text-slate-800">
+                      {labels.map((label) => (
+                        <div key={label} className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm">
+                          {label}
+                          <button type="button" onClick={() => removeLabel(label)} className="text-slate-500 hover:text-slate-800">
                             <X size={16} />
                           </button>
                         </div>

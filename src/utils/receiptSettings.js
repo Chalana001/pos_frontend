@@ -1,6 +1,7 @@
 export const PRINT_TEMPLATE_TYPES = {
   THERMAL: 'THERMAL',
   A4: 'A4',
+  KOT: 'KOT',
 };
 
 export const DEFAULT_RECEIPT_SETTINGS = {
@@ -45,6 +46,13 @@ export const normalizeReceiptSettings = (settings) => {
     thanksMessage: (merged.thanksMessage || DEFAULT_RECEIPT_SETTINGS.thanksMessage).trim(),
   };
 };
+
+export const getReceiptSettingsDefaults = (templateType = PRINT_TEMPLATE_TYPES.THERMAL) =>
+  normalizeReceiptSettings({
+    ...DEFAULT_RECEIPT_SETTINGS,
+    templateType,
+    paperWidthMm: templateType === PRINT_TEMPLATE_TYPES.A4 ? 210 : DEFAULT_RECEIPT_SETTINGS.paperWidthMm,
+  });
 
 export const RECEIPT_SECTION_FIELDS = [
   { key: 'showLogo', label: 'Shop Logo' },

@@ -3,6 +3,11 @@ export const ORDER_TYPES = {
   CREDIT: 'CREDIT',
 };
 
+export const SALE_MODES = {
+  TAKEAWAY: 'TAKEAWAY',
+  DINE_IN: 'DINE_IN',
+};
+
 export const DISCOUNT_TYPES = {
   NONE: 'NONE',
   FIXED: 'FIXED',
@@ -12,13 +17,15 @@ export const DISCOUNT_TYPES = {
 export const ItemType = {
     NORMAL: "NORMAL",
     WEIGHT: "WEIGHT",
-    SERVICE: "SERVICE"
+    SERVICE: "SERVICE",
+    RECIPE: "RECIPE",
 };
 
 export const ItemTypeLabels = {
     NORMAL: "Normal Item (Stock Managed)",
     WEIGHT: "Weight Based (KG/G)",
-    SERVICE: "Service / Non-Stock"
+    SERVICE: "Service / Non-Stock",
+    RECIPE: "Recipe / Food Item",
 };
 
 export const MeasurementUnit = {

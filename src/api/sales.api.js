@@ -12,6 +12,10 @@ export const salesAPI = {
     return await api.get(`/orders/${id}`);
   },
 
+  downloadInvoicePdf: async (invoiceNo) => {
+    return await api.get(`/orders/${invoiceNo}/invoice.pdf`, { responseType: 'blob' });
+  },
+
   // Create new order (POS)
   create: async (data) => {
     return await api.post("/orders", data);

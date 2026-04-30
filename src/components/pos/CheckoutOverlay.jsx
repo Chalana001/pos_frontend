@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { X, Banknote, CreditCard, Printer, CheckCircle2 } from "lucide-react";
+import { X, Banknote, CreditCard, Printer, CheckCircle2, FileText } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { ORDER_TYPES } from "../../utils/constants";
 import Button from "../common/Button";
@@ -13,7 +13,9 @@ const CheckoutOverlay = ({
   paidAmount, 
   setPaidAmount, 
   onPlaceOrder, 
-  loading 
+  loading,
+  printFullInvoice,
+  setPrintFullInvoice,
 }) => {
   const inputRef = useRef(null);
 
@@ -114,6 +116,24 @@ const CheckoutOverlay = ({
               </p>
             </div>
           )}
+
+          <label className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <input
+              type="checkbox"
+              checked={!!printFullInvoice}
+              onChange={(event) => setPrintFullInvoice?.(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <div>
+              <div className="flex items-center gap-2 text-sm font-bold uppercase text-slate-700">
+                <FileText size={16} />
+                Full Invoice
+              </div>
+              <p className="mt-1 text-sm text-slate-500">
+                Print an additional professional A4 invoice after this sale is confirmed.
+              </p>
+            </div>
+          </label>
         </div>
 
         {/* Action Button */}

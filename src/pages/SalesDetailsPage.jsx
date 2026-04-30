@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { salesAPI } from "../api/sales.api"; 
 import { receiptSettingsAPI } from "../api/receiptSettings.api";
+import { openPdfBlob } from "../utils/pdf";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
@@ -99,6 +100,18 @@ const SalesDetailsPage = () => {
     printRef.current.printOrder(orderData, cartItems, storeName, shiftData, customerData, receiptSettings);
   };
 
+  const handlePrintFullInvoice = async () => {
+    if (!sale) return;
+
+    try {
+      const response = await salesAPI.downloadInvoicePdf(sale.invoiceNo);
+      openPdfBlob(response.data, `${sale.invoiceNo}.pdf`);
+    } catch (error) {
+      console.error("Failed to open invoice PDF", error);
+      toast.error(error?.response?.data?.message || "Failed to open invoice PDF");
+    }
+  };
+
   // 🟢 1. Open Modal
   const handleCancelClick = () => {
     setCancelReason(""); 
@@ -166,6 +179,13 @@ const SalesDetailsPage = () => {
                 disabled={isCanceled} 
             >
                 <Printer size={18} className="mr-2" /> Print Receipt
+            </Button>
+            <Button
+                className="bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm"
+                onClick={handlePrintFullInvoice}
+                disabled={isCanceled}
+            >
+                <Printer size={18} className="mr-2" /> Full Invoice PDF
             </Button>
         </div>
       </div>
