@@ -54,6 +54,18 @@ api.interceptors.response.use(
           isHandlingUnauthorized = false;
         }, 500);
       }
+    } else if (status === 403 && !getToken()) {
+      if (!isHandlingUnauthorized) {
+        isHandlingUnauthorized = true;
+        clearAuth();
+        notifyAuthExpired();
+        if (window.location.pathname !== '/login') {
+          window.location.replace('/login');
+        }
+        window.setTimeout(() => {
+          isHandlingUnauthorized = false;
+        }, 500);
+      }
     } else if (status === 402) {
       console.warn('Subscription Expired! Redirecting to plans...');
       toast.error('Subscription Expired! Please renew your plan.');

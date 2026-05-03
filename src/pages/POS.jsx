@@ -28,6 +28,9 @@ const isWeightItem = (item) =>
   item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
 
 const isUnlimitedStockItem = (item) =>
+  item?.itemType === ItemType.SERVICE;
+
+const isBatchlessItem = (item) =>
   item?.itemType === ItemType.SERVICE || item?.itemType === ItemType.RECIPE;
 
 const toBaseQuantity = (quantity, unit, weightItem = false) => {
@@ -143,6 +146,11 @@ const POS = () => {
     [pendingOrders]
   );
 
+  const stockItemLookup = useMemo(
+    () => new Map((allItems || []).map((item) => [Number(item.id), item])),
+    [allItems]
+  );
+
   const selectedTable = useMemo(
     () => diningTables.find((table) => Number(table.id) === Number(selectedTableId)) || null,
     [diningTables, selectedTableId]
@@ -151,6 +159,41 @@ const POS = () => {
   const currentSessionKey = saleMode === SALE_MODES.DINE_IN && selectedTable
     ? `DINE_IN_TABLE_${selectedTable.id}`
     : "TAKEAWAY";
+
+  const getRecipeAvailableQty = (item) => {
+    const ingredients = Array.isArray(item?.ingredients) ? item.ingredients : [];
+    if (ingredients.length === 0) {
+      return 0;
+    }
+
+    let maxRecipeQty = Infinity;
+
+    for (const ingredient of ingredients) {
+      const ingredientItem = stockItemLookup.get(Number(ingredient.ingredientItemId));
+      const ingredientStock = Number(ingredientItem?.availableBaseQty ?? 0);
+      const requiredQty = Number(ingredient?.baseQuantity ?? 0);
+
+      if (ingredientStock <= 0 || requiredQty <= 0) {
+        return 0;
+      }
+
+      maxRecipeQty = Math.min(maxRecipeQty, Math.floor(ingredientStock / requiredQty));
+    }
+
+    return Number.isFinite(maxRecipeQty) ? Math.max(0, maxRecipeQty) : 0;
+  };
+
+  const getSellableStockBaseQty = (item, batchData = null) => {
+    if (item?.itemType === ItemType.SERVICE) {
+      return Infinity;
+    }
+
+    if (item?.itemType === ItemType.RECIPE) {
+      return getRecipeAvailableQty(item);
+    }
+
+    return Number(batchData ? batchData.qty : (item?.availableBaseQty ?? 0));
+  };
 
   useEffect(() => {
     if (searchInputRef.current && !loadingShift && myShift) {
@@ -302,7 +345,7 @@ const POS = () => {
       defaultUnit: sourceItem?.defaultUnit || qtyUnit,
       discountType: pendingItem.discountType || DISCOUNT_TYPES.NONE,
       discountValue: Number(pendingItem.discountValue || 0),
-      stockBaseQty: isUnlimitedStockItem(sourceItem) ? Infinity : Number(sourceItem?.availableBaseQty ?? 0),
+      stockBaseQty: getSellableStockBaseQty(sourceItem || pendingItem),
       image: sourceItem?.imageUrl,
       isKotEnabled: !!sourceItem?.isKotEnabled,
     };
@@ -459,7 +502,7 @@ const POS = () => {
       return;
     }
 
-    if (isUnlimitedStockItem(item)) {
+    if (isBatchlessItem(item)) {
       processAddToCart(item, item.sellingPrice || 0, 1, null);
       return;
     }
@@ -487,13 +530,11 @@ const POS = () => {
 
     const defaultUnit = item.defaultUnit || "PCS";
     const qtyToAdd = isWeight ? getInitialWeightQuantity(defaultUnit) : qty;
-    const stockBaseQty = unlimitedStockItem
-      ? Infinity
-      : Number(batchData ? batchData.qty : (item.availableBaseQty ?? 0));
+    const stockBaseQty = getSellableStockBaseQty(item, batchData);
     const requestedBaseQty = isWeight ? toBaseQuantity(qtyToAdd, defaultUnit, true) : qtyToAdd;
 
     if (!unlimitedStockItem && stockBaseQty < requestedBaseQty) {
-      toast.error(`Insufficient stock! Available: ${formatStockDisplay(item, batchData)}`);
+      toast.error(item.itemType === ItemType.RECIPE ? "Item is Out of Stock!" : `Insufficient stock! Available: ${formatStockDisplay(item, batchData)}`);
       if (searchInputRef.current) searchInputRef.current.focus();
       return;
     }
@@ -514,7 +555,7 @@ const POS = () => {
         : nextQty;
 
       if (!unlimitedStockItem && nextBaseQty > currentItem.stockBaseQty) {
-        toast.error(`Low stock. Available: ${formatStockDisplay(item, batchData)}`);
+        toast.error(item.itemType === ItemType.RECIPE ? "Low stock." : `Low stock. Available: ${formatStockDisplay(item, batchData)}`);
         if (searchInputRef.current) searchInputRef.current.focus();
         return;
       }
@@ -571,7 +612,7 @@ const POS = () => {
       const itemToAdd = exactMatch || filteredItems[0];
 
       if (itemToAdd) {
-        const stockQty = Number(itemToAdd.availableBaseQty ?? 0);
+        const stockQty = getSellableStockBaseQty(itemToAdd);
 
         if (!isUnlimitedStockItem(itemToAdd) && stockQty <= 0) {
           toast.error("Item is Out of Stock!");
@@ -1137,7 +1178,7 @@ const POS = () => {
               <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-4 lg:gap-3 xl:grid-cols-5 2xl:grid-cols-6">
                 {filteredItems.map((item) => {
                   const unlimitedStockItem = isUnlimitedStockItem(item);
-                  const stockQty = Number(item.availableBaseQty ?? item.availableQty ?? 0);
+                  const stockQty = getSellableStockBaseQty(item);
                   const isOutOfStock = !unlimitedStockItem && stockQty <= 0;
                   const stockLabel = item.itemType === ItemType.RECIPE ? "Recipe" : formatStockDisplay(item);
 
@@ -1154,7 +1195,7 @@ const POS = () => {
                       <div className="absolute top-1 right-1 lg:top-2 lg:right-2 flex flex-col items-end gap-1">
                         {item.itemType === ItemType.SERVICE ? (
                           <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-purple-50 text-purple-600 text-[8px] lg:text-[10px] font-bold rounded border border-purple-100 uppercase">Service</span>
-                        ) : item.itemType === ItemType.RECIPE ? (
+                        ) : item.itemType === ItemType.RECIPE && !isOutOfStock ? (
                           <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-rose-50 text-rose-600 text-[8px] lg:text-[10px] font-bold rounded border border-rose-100 uppercase">
                             {item.isKotEnabled ? "Recipe • KOT" : "Recipe"}
                           </span>

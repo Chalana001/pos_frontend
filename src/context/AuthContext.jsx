@@ -33,12 +33,16 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check if user is already logged in
     const currentUser = getUser();
-    if (currentUser) {
+    const token = getToken();
+
+    if (currentUser && token) {
       setUserState(currentUser);
-      if (getToken()) {
-        fetchAndStoreSubscription(currentUser);
-      }
+      fetchAndStoreSubscription(currentUser);
+    } else if (currentUser || token) {
+      clearAuth();
+      setUserState(null);
     }
+
     setLoading(false);
   }, [fetchAndStoreSubscription]);
 
@@ -91,7 +95,7 @@ export const AuthProvider = ({ children }) => {
     user,
     login,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !!getToken(),
     loading,
     planLoading,
   };

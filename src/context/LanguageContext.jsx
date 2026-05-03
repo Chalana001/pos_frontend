@@ -5,9 +5,14 @@ const STORAGE_KEY = 'pos_language';
 const LanguageContext = createContext(null);
 const nodeTextCache = new WeakMap();
 
+const hasTranslationOptOut = (node) => {
+  const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+  return !!element?.closest?.("[data-no-auto-translate='true']");
+};
+
 const shouldSkipNode = (node) => {
   const parentTag = node.parentElement?.tagName;
-  return parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA';
+  return parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA' || hasTranslationOptOut(node);
 };
 
 const getAttributeCacheKey = (attribute) => `i18nOriginal${attribute.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^([a-z])/, (_, letter) => letter.toUpperCase())}`;
@@ -34,6 +39,10 @@ const translateDom = (root, language, textCache) => {
 
   const elements = root.nodeType === Node.ELEMENT_NODE ? [root, ...root.querySelectorAll('*')] : [];
   elements.forEach((element) => {
+    if (hasTranslationOptOut(element)) {
+      return;
+    }
+
     ['placeholder', 'title', 'aria-label'].forEach((attribute) => {
       const currentValue = element.getAttribute(attribute);
       if (!currentValue) {
@@ -66,6 +75,10 @@ export const LanguageProvider = ({ children }) => {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === Node.TEXT_NODE) {
+            if (shouldSkipNode(node)) {
+              return;
+            }
+
             const original = nodeTextCache.get(node) ?? node.textContent;
             nodeTextCache.set(node, original);
             const translated = translateText(language, original);
@@ -81,6 +94,10 @@ export const LanguageProvider = ({ children }) => {
         });
 
         if (mutation.type === 'characterData' && mutation.target?.nodeType === Node.TEXT_NODE) {
+          if (shouldSkipNode(mutation.target)) {
+            return;
+          }
+
           const original = nodeTextCache.get(mutation.target) ?? mutation.target.textContent;
           nodeTextCache.set(mutation.target, original);
           const translated = translateText(language, original);

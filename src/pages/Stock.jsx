@@ -56,6 +56,7 @@ const getDisplayUnit = (entity, fallbackUnit = "") =>
 
 const formatQtyWithUnit = (value, unit) => (unit ? `${formatQty(value)} ${unit}` : formatQty(value));
 
+
 const adjustmentTypeOptions = [
   { value: ADJUSTMENT_TYPES.EXPIRED, label: "Expired" },
   { value: ADJUSTMENT_TYPES.DAMAGED, label: "Damaged" },
@@ -295,16 +296,11 @@ const Stock = () => {
       {
         header: "Quantity",
         render: (item) => {
-          // ✅ displayQuantity එක තියෙනවා නම් ඒක ගන්නවා, නැත්නම් totalQuantity ගන්නවා
           const displayQty = getDisplayQty(item, item.totalQuantity ?? 0);
-          
-          // ✅ අගට Unit එක එකතු කරනවා (ex: " KG", " PCS")
           const displayUnit = getDisplayUnit(item, item.defaultUnit);
-          
           const isLow = (item.totalQuantity ?? 0) <= 0;
-          
           return (
-            <span className={`font-semibold ${isLow ? "text-red-600" : "text-slate-800"}`}>
+            <span className={"font-semibold " + (isLow ? "text-red-600" : "text-slate-800")}>
               {formatQtyWithUnit(displayQty, displayUnit)}
               {isLow && <AlertTriangle size={14} className="inline ml-1 text-red-500" />}
             </span>
@@ -316,7 +312,7 @@ const Stock = () => {
         render: (item) => {
           const qty = item.totalQuantity ?? 0;
           return (
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${qty > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+            <span className={"px-2 py-1 rounded-full text-xs font-medium " + (qty > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
               {qty > 0 ? "In Stock" : "Out of Stock"}
             </span>
           );
@@ -633,3 +629,7 @@ const Stock = () => {
 };
 
 export default Stock;
+
+
+
+

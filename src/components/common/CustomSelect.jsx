@@ -59,7 +59,7 @@ const CustomSelect = ({
   };
 
   return (
-    <div className={`relative w-full ${className}`} ref={dropdownRef}>
+    <div className={`relative w-full ${className}`} ref={dropdownRef} data-no-auto-translate="true">
       <button
         type="button"
         disabled={disabled}
