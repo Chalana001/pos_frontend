@@ -6,7 +6,7 @@ import { useBranch } from "./BranchContext";
 const ShiftContext = createContext(null);
 
 export const ShiftProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isOnline, hasOnlineSession } = useAuth();
   const { selectedBranchId } = useBranch();
 
   const [activeShift, setActiveShift] = useState(null);
@@ -21,6 +21,12 @@ export const ShiftProvider = ({ children }) => {
     // 🔴 1. වෙනස: User සහ Role එක එනකම් අනිවාර්යයෙන්ම ඉන්නවා. 
     // (මේකෙන් තමයි /shifts/me 500 Error එක එන එක 100% ක් නවතින්නේ)
     if (!user || !user.role) {
+      setLoadingShift(false);
+      return;
+    }
+
+    if (!isOnline || !hasOnlineSession) {
+      setActiveShift(null);
       setLoadingShift(false);
       return;
     }
@@ -50,7 +56,7 @@ export const ShiftProvider = ({ children }) => {
     } finally {
       setLoadingShift(false);
     }
-  }, [isAdmin, selectedBranchId, user]);
+  }, [hasOnlineSession, isAdmin, isOnline, selectedBranchId, user]);
 
   useEffect(() => {
     refreshShift();

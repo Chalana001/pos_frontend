@@ -2,6 +2,8 @@ import api from './axios';
 
 export const ordersAPI = {
   create: (data) => api.post('/orders', data),
+  importOfflineSale: (data) => api.post('/orders/offline-import', data),
+  importOfflineSalesBulk: (rows) => api.post('/orders/offline-import/bulk', rows),
   
   getAll: (params) => api.get('/orders', { params }),
   

@@ -51,7 +51,7 @@ const Sidebar = () => {
   const isPurchaseRoute = location.pathname.startsWith("/purchases");
 
   // 🟢 අලුතින් එකතු කළ Sales Route Detection
-  const isSalesRoute = location.pathname.startsWith("/sales");
+  const isSalesRoute = location.pathname.startsWith("/sales") || location.pathname.startsWith("/offline-sales");
 
   // ✅ dropdown open states
   const [openItems, setOpenItems] = useState(false);
@@ -275,6 +275,18 @@ return (
                           }
                         >
                           {t("Sales History")}
+                        </NavLink>
+                      )}
+                      {hasPermission(role, "ACCESS_POS") && (
+                        <NavLink
+                          to="/offline-sales"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Offline Queue")}
                         </NavLink>
                       )}
                       

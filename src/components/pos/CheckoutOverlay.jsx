@@ -16,6 +16,7 @@ const CheckoutOverlay = ({
   loading,
   printFullInvoice,
   setPrintFullInvoice,
+  isOnline = true,
 }) => {
   const inputRef = useRef(null);
 
@@ -67,6 +68,7 @@ const CheckoutOverlay = ({
             </button>
             <button
               onClick={() => setOrderType(ORDER_TYPES.CREDIT)}
+              disabled={!isOnline}
               className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all ${
                 orderType === ORDER_TYPES.CREDIT 
                 ? 'border-amber-500 bg-amber-50 text-amber-500 shadow-md' 
@@ -121,6 +123,7 @@ const CheckoutOverlay = ({
             <input
               type="checkbox"
               checked={!!printFullInvoice}
+              disabled={!isOnline}
               onChange={(event) => setPrintFullInvoice?.(event.target.checked)}
               className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
@@ -130,7 +133,9 @@ const CheckoutOverlay = ({
                 Full Invoice
               </div>
               <p className="mt-1 text-sm text-slate-500">
-                Print an additional professional A4 invoice after this sale is confirmed.
+                {isOnline
+                  ? "Print an additional professional A4 invoice after this sale is confirmed."
+                  : "Full invoice printing is available only while online."}
               </p>
             </div>
           </label>

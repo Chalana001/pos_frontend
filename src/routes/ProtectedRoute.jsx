@@ -5,8 +5,8 @@ import { useLanguage } from '../context/LanguageContext';
 import { hasPermission } from '../utils/permissions';
 import { hasPlanFeature } from '../utils/subscriptionFeatures';
 
-const ProtectedRoute = ({ children, permission, feature }) => {
-  const { user, isAuthenticated, loading, planLoading } = useAuth();
+const ProtectedRoute = ({ children, permission, feature, requiresOnline = false }) => {
+  const { user, isAuthenticated, loading, planLoading, isOnline, hasOnlineSession } = useAuth();
   const { t } = useLanguage();
 
   if (loading || planLoading) {
@@ -19,6 +19,17 @@ const ProtectedRoute = ({ children, permission, feature }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requiresOnline && (!isOnline || !hasOnlineSession)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-slate-800 mb-3">{t("Online Connection Required")}</h1>
+          <p className="text-slate-600">{t("This page only works with an active online session.")}</p>
+        </div>
+      </div>
+    );
   }
 
   if (permission && !hasPermission(user.role, permission)) {

@@ -21,6 +21,7 @@ import KotPrinter from "../components/pos/KotPrinter";
 import { receiptSettingsAPI } from "../api/receiptSettings.api";
 import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
 import { openPdfBlob } from "../utils/pdf";
+import { addOfflineSale, cacheItemsForBranch, getCachedItemsForBranch } from "../offline/db";
 
 const GRAMS_PER_KILOGRAM = 1000;
 
@@ -95,8 +96,8 @@ const formatStockDisplay = (item, batch = null) =>
   `${formatQty(getStockDisplayQty(item, batch))} ${getStockDisplayUnit(item)}`;
 
 const POS = () => {
-  const { user } = useAuth();
-  const { selectedBranchId } = useBranch();
+  const { user, isOnline } = useAuth();
+  const { selectedBranchId, branches } = useBranch();
   const printRef = useRef(null);
   const kotPrintRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -140,6 +141,10 @@ const POS = () => {
   const resizeStateRef = useRef({ startX: 0, startWidth: 470 });
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const fallbackBranchId = isAdminUser ? (selectedBranchId || null) : (user?.branchId || null);
+  const effectiveBranchId = myShift?.branchId || fallbackBranchId;
+  const effectiveBranch = branches.find((branch) => Number(branch.id) === Number(effectiveBranchId)) || null;
+  const canSell = !!effectiveBranchId && (isOnline ? !!myShift : true);
 
   const pendingOrdersByTable = useMemo(
     () => Object.fromEntries((pendingOrders || []).map((pendingOrder) => [Number(pendingOrder.tableId), pendingOrder])),
@@ -196,10 +201,10 @@ const POS = () => {
   };
 
   useEffect(() => {
-    if (searchInputRef.current && !loadingShift && myShift) {
+    if (searchInputRef.current && !loadingShift && canSell) {
       searchInputRef.current.focus();
     }
-  }, [loadingShift, myShift]);
+  }, [canSell, loadingShift]);
 
   useEffect(() => {
     if (!isResizingPanels) {
@@ -366,6 +371,12 @@ const POS = () => {
   };
 
   const refreshDiningState = async (branchId, preserveSelectedId = selectedTableId) => {
+    if (!isOnline) {
+      setDiningTables([]);
+      setPendingOrders([]);
+      return;
+    }
+
     if (!branchId) {
       setDiningTables([]);
       setPendingOrders([]);
@@ -399,6 +410,18 @@ const POS = () => {
     const loadMyShift = async () => {
       try {
         setLoadingShift(true);
+        if (!isOnline) {
+          setMyShift(null);
+          if (fallbackBranchId) {
+            await fetchProducts(fallbackBranchId);
+          } else {
+            setAllItems([]);
+            setFilteredItems([]);
+            setCategories(["All"]);
+          }
+          return;
+        }
+
         let res;
 
         if (isAdminUser) {
@@ -426,10 +449,10 @@ const POS = () => {
     };
 
     loadMyShift();
-  }, [isAdminUser, selectedBranchId]);
+  }, [fallbackBranchId, isAdminUser, isOnline, selectedBranchId]);
 
   useEffect(() => {
-    if (!myShift?.branchId) {
+    if (!isOnline || !myShift?.branchId) {
       setReceiptSettings(null);
       setKotReceiptSettings(null);
       return;
@@ -451,18 +474,43 @@ const POS = () => {
     };
 
     loadReceiptSettings();
-  }, [myShift?.branchId]);
+  }, [isOnline, myShift?.branchId]);
 
   useEffect(() => {
-    if (saleMode === SALE_MODES.DINE_IN && myShift?.branchId) {
+    if (saleMode === SALE_MODES.DINE_IN && isOnline && myShift?.branchId) {
       refreshDiningState(myShift.branchId);
     }
-  }, [saleMode, myShift?.branchId]);
+  }, [isOnline, saleMode, myShift?.branchId]);
+
+  useEffect(() => {
+    if (!isOnline && saleMode === SALE_MODES.DINE_IN) {
+      setSaleMode(SALE_MODES.TAKEAWAY);
+      setSelectedTableId(null);
+      setDiningTables([]);
+      setPendingOrders([]);
+      toast.error("Connection lost. POS switched to takeaway-only offline mode.");
+    }
+  }, [isOnline, saleMode]);
 
   const fetchProducts = async (branchId) => {
+    if (!branchId) {
+      setAllItems([]);
+      setFilteredItems([]);
+      setCategories(["All"]);
+      return;
+    }
+
     try {
-      const response = await itemsAPI.searchForPos("", branchId);
-      let items = Array.isArray(response.data) ? response.data : [];
+      let items = [];
+
+      if (isOnline) {
+        const response = await itemsAPI.searchForPos("", branchId);
+        items = Array.isArray(response.data) ? response.data : [];
+        await cacheItemsForBranch(branchId, items);
+      } else {
+        items = await getCachedItemsForBranch(branchId);
+      }
+
       items = items.filter((item) => {
         if (item.itemType === ItemType.SERVICE || item.itemType === ItemType.RECIPE) return true;
         if (item.batches && item.batches.length > 0) return true;
@@ -477,7 +525,18 @@ const POS = () => {
       setCategories(uniqueCats);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load products");
+      const cachedItems = await getCachedItemsForBranch(branchId);
+      if (cachedItems.length > 0) {
+        setAllItems(cachedItems);
+        setFilteredItems(cachedItems);
+        setCategories(["All", ...new Set(cachedItems.map((item) => item.categoryName).filter(Boolean))]);
+        toast.error("Live refresh failed. Using cached items.");
+      } else {
+        setAllItems([]);
+        setFilteredItems([]);
+        setCategories(["All"]);
+        toast.error(isOnline ? "Failed to load products" : "No offline item cache for this branch");
+      }
     }
   };
 
@@ -497,8 +556,8 @@ const POS = () => {
   }, [activeCategory, searchQuery, allItems]);
 
   const addToCart = (item) => {
-    if (!myShift) {
-      toast.error("Please open a shift first!");
+    if (!canSell) {
+      toast.error(isOnline ? "Please open a shift first!" : "Offline POS is not ready for this branch");
       return;
     }
 
@@ -784,6 +843,11 @@ const POS = () => {
       return;
     }
 
+    if (!isOnline && nextMode === SALE_MODES.DINE_IN) {
+      toast.error("Dine-in is not available in offline mode");
+      return;
+    }
+
     if (saleMode === SALE_MODES.DINE_IN && selectedTableId && cartItems.length > 0) {
       try {
         await savePendingDraft(selectedTableId, { silent: true });
@@ -803,7 +867,7 @@ const POS = () => {
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return toast.error("Cart is empty");
-    if (!myShift) return toast.error("No active shift. Cannot checkout.");
+    if (!canSell) return toast.error(isOnline ? "No active shift. Cannot checkout." : "Offline POS is not ready.");
     if (saleMode === SALE_MODES.DINE_IN && !selectedTableId) return toast.error("Select a table before checkout");
 
     setPaidAmount(calculateTotal());
@@ -811,6 +875,11 @@ const POS = () => {
   };
 
   const handlePrintKot = async () => {
+    if (!isOnline) {
+      toast.error("KOT printing is unavailable in offline mode");
+      return;
+    }
+
     if (saleMode === SALE_MODES.DINE_IN && !selectedTableId) {
       toast.error("Select a table first");
       return;
@@ -880,13 +949,16 @@ const POS = () => {
     const kotItems = getKotEligibleItems(cartItems);
     const shouldPrintFullInvoice = printFullInvoice;
 
+    if (!effectiveBranchId) return toast.error("Select a branch before checkout");
     if (orderType === ORDER_TYPES.CASH && paidAmount < total) return toast.error("Insufficient amount");
     if (orderType === ORDER_TYPES.CREDIT && !customer) return toast.error("Select customer for credit");
+    if (!isOnline && orderType !== ORDER_TYPES.CASH) return toast.error("Offline mode supports cash sales only");
+    if (!isOnline && saleMode !== SALE_MODES.TAKEAWAY) return toast.error("Offline mode supports takeaway sales only");
 
     setLoading(true);
     try {
       const orderData = {
-        branchId: myShift.branchId,
+        branchId: effectiveBranchId,
         orderType,
         saleMode,
         tableId: saleMode === SALE_MODES.DINE_IN ? selectedTableId : null,
@@ -905,11 +977,55 @@ const POS = () => {
         note: "",
       };
 
+      if (!isOnline) {
+        const clientSaleId = window.crypto.randomUUID();
+        await addOfflineSale({
+          clientSaleId,
+          branchId: effectiveBranchId,
+          branchName: effectiveBranch?.name || myShift?.branchName || `Branch ${effectiveBranchId}`,
+          cashierUserId: user?.userId,
+          cashierName: user?.username || "Cashier",
+          total,
+          itemCount: cartItems.length,
+          customerName: customer?.name || "Walk-in Customer",
+          createdAt: new Date().toISOString(),
+          offlineSoldAt: new Date().toISOString(),
+          lastError: null,
+          itemsPreview: cartItems.map((item) => ({
+            itemId: item.itemId,
+            itemName: item.name,
+            batchId: item.batchId,
+            qty: item.qty,
+            qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : item.defaultUnit,
+          })),
+          payload: {
+            ...orderData,
+            clientSaleId,
+            offlineSoldAt: new Date().toISOString(),
+            items: cartItems.map((item) => ({
+              itemId: item.itemId,
+              batchId: item.batchId,
+              qty: item.qty,
+              qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
+              unitPrice: item.unitPrice,
+              discountType: item.discountType,
+              discountValue: item.discountValue,
+            })),
+          },
+        });
+        toast.success("Sale saved to offline queue");
+        clearCartState();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+        return;
+      }
+
       const response = await ordersAPI.create(orderData);
       toast.success(`Order ${response.data.invoiceNo} success!`);
 
       const storeName = user?.shopName || "POS SYSTEM";
-      const branchName = response.data.branchName || myShift?.branchName;
+      const branchName = response.data.branchName || myShift?.branchName || effectiveBranch?.name;
       const branchAddress = response.data.branchAddress || myShift?.branchAddress || "";
       const branchPhone = response.data.branchPhone || myShift?.branchPhone || "";
       const branchLogo = response.data.branchLogo || myShift?.branchLogo || "";
@@ -978,7 +1094,7 @@ const POS = () => {
         setSelectedTableId(null);
       }
 
-      await fetchProducts(myShift.branchId);
+      await fetchProducts(effectiveBranchId);
 
       clearCartState();
 
@@ -995,7 +1111,7 @@ const POS = () => {
   useKeyboard("F4", () => setShowCustomerSelect(true));
   useKeyboard("F9", handleCheckout);
   useKeyboard("F1", () => showPayment && setOrderType(ORDER_TYPES.CASH));
-  useKeyboard("F2", () => showPayment && setOrderType(ORDER_TYPES.CREDIT));
+  useKeyboard("F2", () => showPayment && isOnline && setOrderType(ORDER_TYPES.CREDIT));
 
   useKeyboard("Enter", () => {
     if (showPayment && !loading) handlePlaceOrder();
@@ -1012,8 +1128,10 @@ const POS = () => {
       : "Dine-In • Select a table"
     : "Takeaway / Quick Sale";
 
+  const branchLabel = myShift?.branchName || effectiveBranch?.name || effectiveBranchId;
+
   if (loadingShift) {
-    return <div className="h-full flex items-center justify-center"><LoadingSpinner text="Checking your shift..." /></div>;
+    return <div className="h-full flex items-center justify-center"><LoadingSpinner text={isOnline ? "Checking your shift..." : "Loading offline POS..."} /></div>;
   }
 
   return (
@@ -1025,8 +1143,11 @@ const POS = () => {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
               <div className="hidden sm:block lg:block">
                 <h1 className="text-sm lg:text-xl font-bold text-slate-800">
-                  New Sale {myShift ? `(Branch: ${myShift.branchName || myShift.branchId})` : ""}
+                  New Sale {branchLabel ? `(Branch: ${branchLabel})` : ""}
                 </h1>
+                {!isOnline ? (
+                  <p className="mt-1 text-xs font-medium text-amber-600">Offline mode active. Sales will stay in the local queue until you import them.</p>
+                ) : null}
               </div>
               <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
                 <div className="relative flex-1">
@@ -1038,7 +1159,7 @@ const POS = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    disabled={!myShift}
+                    disabled={!canSell}
                     className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs lg:text-sm disabled:opacity-50"
                   />
                 </div>
@@ -1060,6 +1181,7 @@ const POS = () => {
                 <button
                   type="button"
                   onClick={() => handleSaleModeChange(SALE_MODES.DINE_IN)}
+                  disabled={!isOnline}
                   className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     saleMode === SALE_MODES.DINE_IN ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
                   }`}
@@ -1150,7 +1272,7 @@ const POS = () => {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  disabled={!myShift}
+                  disabled={!canSell}
                   className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-[10px] lg:text-sm font-semibold transition-all ${
                     activeCategory === cat
                       ? "bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200"
@@ -1164,10 +1286,12 @@ const POS = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-1.5 lg:p-6 bg-slate-50">
-            {!myShift ? (
+            {!canSell ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400">
                 <Lock className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
-                <p className="text-sm lg:text-lg font-medium text-center">Open a shift to view items</p>
+                <p className="text-sm lg:text-lg font-medium text-center">
+                  {isOnline ? "Open a shift to view items" : "Select a branch online first to cache items for offline use"}
+                </p>
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400">
@@ -1229,7 +1353,7 @@ const POS = () => {
           </button>
         </div>
         <div
-          className={`w-full min-w-0 flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!myShift ? "opacity-50 pointer-events-none grayscale" : ""}`}
+          className={`w-full min-w-0 flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!canSell ? "opacity-50 pointer-events-none grayscale" : ""}`}
           style={{ width: `min(100%, ${cartPanelWidth}px)` }}
         >
           <Cart
@@ -1270,7 +1394,7 @@ const POS = () => {
                   <button
                     type="button"
                     onClick={handlePrintKot}
-                    disabled={printingKot || !hasKotItems || !canPrintKot}
+                    disabled={!isOnline || printingKot || !hasKotItems || !canPrintKot}
                     className="inline-flex h-[44px] items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChefHat size={16} />
@@ -1279,6 +1403,8 @@ const POS = () => {
                 </div>
                 {saleMode === SALE_MODES.DINE_IN && !selectedTableId ? (
                   <div className="text-[11px] text-slate-500">Select a table before saving or sending KOT.</div>
+                ) : !isOnline ? (
+                  <div className="text-[11px] text-slate-500">KOT printing is available only while online.</div>
                 ) : !hasKotItems ? (
                   <div className="text-[11px] text-slate-500">No KOT-enabled items in the cart.</div>
                 ) : !canPrintKot ? (
@@ -1291,7 +1417,7 @@ const POS = () => {
       </div>
 
       <CustomerSelect isOpen={showCustomerSelect} onClose={() => { setShowCustomerSelect(false); if (searchInputRef.current) searchInputRef.current.focus(); }} onSelectCustomer={setCustomer} />
-      <CheckoutOverlay isOpen={showPayment} onClose={() => { setShowPayment(false); if (searchInputRef.current) searchInputRef.current.focus(); }} total={calculateTotal()} orderType={orderType} setOrderType={setOrderType} paidAmount={paidAmount} setPaidAmount={setPaidAmount} onPlaceOrder={handlePlaceOrder} loading={loading} printFullInvoice={printFullInvoice} setPrintFullInvoice={setPrintFullInvoice} />
+      <CheckoutOverlay isOpen={showPayment} onClose={() => { setShowPayment(false); if (searchInputRef.current) searchInputRef.current.focus(); }} total={calculateTotal()} orderType={orderType} setOrderType={setOrderType} paidAmount={paidAmount} setPaidAmount={setPaidAmount} onPlaceOrder={handlePlaceOrder} loading={loading} printFullInvoice={printFullInvoice} setPrintFullInvoice={setPrintFullInvoice} isOnline={isOnline} />
       <BatchSelectModal isOpen={showBatchModal} onClose={() => { setShowBatchModal(false); if (searchInputRef.current) searchInputRef.current.focus(); }} onSelectBatch={handleBatchSelect} item={selectedBatchItem} />
       <ReceiptPrinter ref={printRef} />
       <KotPrinter ref={kotPrintRef} />

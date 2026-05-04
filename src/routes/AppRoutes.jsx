@@ -10,6 +10,7 @@ import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import POS from '../pages/POS';
+import OfflineSalesPage from '../pages/OfflineSalesPage';
 import SalesListPage from '../pages/SalesListPage';
 import SalesDetailsPage from '../pages/SalesDetailsPage';
 import ItemsPage from "../pages/ItemsPage";
@@ -44,7 +45,7 @@ const AppRoutes = () => {
       <Route path="/register" element={<Register />} />
 
       <Route path="/pricing" element={
-        <ProtectedRoute>
+        <ProtectedRoute requiresOnline>
           <SubscriptionPage />
         </ProtectedRoute>
       } />
@@ -60,42 +61,43 @@ const AppRoutes = () => {
       }>
         <Route index element={<Navigate to="/dashboard" replace />} />
         
-        <Route path="dashboard" element={<ProtectedRoute permission="VIEW_DASHBOARD"><Dashboard /></ProtectedRoute>} />
+        <Route path="dashboard" element={<ProtectedRoute permission="VIEW_DASHBOARD" requiresOnline><Dashboard /></ProtectedRoute>} />
         
         <Route path="pos" element={<ProtectedRoute permission="ACCESS_POS"><POS /></ProtectedRoute>} />
+        <Route path="offline-sales" element={<ProtectedRoute permission="ACCESS_POS"><OfflineSalesPage /></ProtectedRoute>} />
         
-        <Route path="sales" element={<ProtectedRoute permission="VIEW_SALES"><SalesListPage /></ProtectedRoute>} />
-        <Route path="sales/:id" element={<ProtectedRoute permission="VIEW_SALES"><SalesDetailsPage /></ProtectedRoute>} />
+        <Route path="sales" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline><SalesListPage /></ProtectedRoute>} />
+        <Route path="sales/:id" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline><SalesDetailsPage /></ProtectedRoute>} />
         
-        <Route path="items" element={<ProtectedRoute permission="VIEW_ITEMS"><ItemsPage /></ProtectedRoute>} />
-        <Route path="items/new" element={<ProtectedRoute permission="MANAGE_ITEMS"><ItemFormPage mode="create" /></ProtectedRoute>} />
-        <Route path="items/:id/edit" element={<ProtectedRoute permission="MANAGE_ITEMS"><ItemFormPage mode="edit" /></ProtectedRoute>} />
-        <Route path="items/bulk-add" element={<ProtectedRoute permission="MANAGE_ITEMS" feature="BULK_ITEMS"><BulkAddItems /></ProtectedRoute>} />
-        <Route path="items/print-barcodes" element={<ProtectedRoute permission="VIEW_ITEMS" feature="BARCODE_PRINT"><BarcodePrintPage /></ProtectedRoute>} />
+        <Route path="items" element={<ProtectedRoute permission="VIEW_ITEMS" requiresOnline><ItemsPage /></ProtectedRoute>} />
+        <Route path="items/new" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline><ItemFormPage mode="create" /></ProtectedRoute>} />
+        <Route path="items/:id/edit" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline><ItemFormPage mode="edit" /></ProtectedRoute>} />
+        <Route path="items/bulk-add" element={<ProtectedRoute permission="MANAGE_ITEMS" feature="BULK_ITEMS" requiresOnline><BulkAddItems /></ProtectedRoute>} />
+        <Route path="items/print-barcodes" element={<ProtectedRoute permission="VIEW_ITEMS" feature="BARCODE_PRINT" requiresOnline><BarcodePrintPage /></ProtectedRoute>} />
         
-        <Route path="customers" element={<ProtectedRoute permission="MANAGE_CUSTOMERS"><Customers /></ProtectedRoute>} />
-        <Route path="customers/new" element={<ProtectedRoute permission="MANAGE_CUSTOMERS"><CustomerFormPage mode="create" /></ProtectedRoute>} />
-        <Route path="customers/:id/edit" element={<ProtectedRoute permission="MANAGE_CUSTOMERS"><CustomerFormPage mode="edit" /></ProtectedRoute>} />
-        <Route path="customers/:id" element={<ProtectedRoute permission="MANAGE_CUSTOMERS"><CustomerViewPage /></ProtectedRoute>} />
+        <Route path="customers" element={<ProtectedRoute permission="MANAGE_CUSTOMERS" requiresOnline><Customers /></ProtectedRoute>} />
+        <Route path="customers/new" element={<ProtectedRoute permission="MANAGE_CUSTOMERS" requiresOnline><CustomerFormPage mode="create" /></ProtectedRoute>} />
+        <Route path="customers/:id/edit" element={<ProtectedRoute permission="MANAGE_CUSTOMERS" requiresOnline><CustomerFormPage mode="edit" /></ProtectedRoute>} />
+        <Route path="customers/:id" element={<ProtectedRoute permission="MANAGE_CUSTOMERS" requiresOnline><CustomerViewPage /></ProtectedRoute>} />
         
-        <Route path="shifts" element={<ProtectedRoute permission="MANAGE_SHIFTS"><Shifts /></ProtectedRoute>} />
-        <Route path="shifts/history" element={<ProtectedRoute permission="MANAGE_SHIFTS_HISTORY" feature="SHIFT_HISTORY"><ShiftHistory /></ProtectedRoute>} />
+        <Route path="shifts" element={<ProtectedRoute permission="MANAGE_SHIFTS" requiresOnline><Shifts /></ProtectedRoute>} />
+        <Route path="shifts/history" element={<ProtectedRoute permission="MANAGE_SHIFTS_HISTORY" feature="SHIFT_HISTORY" requiresOnline><ShiftHistory /></ProtectedRoute>} />
         
-        <Route path="expenses" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS"><Expenses /></ProtectedRoute>} />
-        <Route path="cash-drops" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS"><CashDrops /></ProtectedRoute>} />
+        <Route path="expenses" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline><Expenses /></ProtectedRoute>} />
+        <Route path="cash-drops" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline><CashDrops /></ProtectedRoute>} />
         
-        <Route path="stock" element={<ProtectedRoute permission="VIEW_STOCK"><Stock /></ProtectedRoute>} />
-        <Route path="stock/adjustments" element={<ProtectedRoute permission="ADJUST_STOCK"><StockAdjustments /></ProtectedRoute>} />
-        <Route path="stock/transfers" element={<ProtectedRoute permission="TRANSFER_STOCK" feature="STOCK_TRANSFERS"><StockTransfers /></ProtectedRoute>} />
+        <Route path="stock" element={<ProtectedRoute permission="VIEW_STOCK" requiresOnline><Stock /></ProtectedRoute>} />
+        <Route path="stock/adjustments" element={<ProtectedRoute permission="ADJUST_STOCK" requiresOnline><StockAdjustments /></ProtectedRoute>} />
+        <Route path="stock/transfers" element={<ProtectedRoute permission="TRANSFER_STOCK" feature="STOCK_TRANSFERS" requiresOnline><StockTransfers /></ProtectedRoute>} />
         
-        <Route path="purchases" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES"><Purchases /></ProtectedRoute>} />
-        <Route path="purchases/new" element={<ProtectedRoute permission="NEW_PURCHASE" feature="PURCHASES"><NewPurchase /></ProtectedRoute>} />
-        <Route path="purchases/:id" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES"><PurchaseDetailsPage /></ProtectedRoute>} />
+        <Route path="purchases" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline><Purchases /></ProtectedRoute>} />
+        <Route path="purchases/new" element={<ProtectedRoute permission="NEW_PURCHASE" feature="PURCHASES" requiresOnline><NewPurchase /></ProtectedRoute>} />
+        <Route path="purchases/:id" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline><PurchaseDetailsPage /></ProtectedRoute>} />
 
-        <Route path="reports" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS"><Reports /></ProtectedRoute>} />
-        <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES"><Branches /></ProtectedRoute>} />
-        <Route path="receipt-settings" element={<ProtectedRoute permission="MANAGE_BRANCHES"><ReceiptSettingsPage /></ProtectedRoute>} />
-        <Route path="users" element={<ProtectedRoute permission="MANAGE_USERS" feature="USER_MANAGEMENT"><Users /></ProtectedRoute>} />
+        <Route path="reports" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline><Reports /></ProtectedRoute>} />
+        <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline><Branches /></ProtectedRoute>} />
+        <Route path="receipt-settings" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline><ReceiptSettingsPage /></ProtectedRoute>} />
+        <Route path="users" element={<ProtectedRoute permission="MANAGE_USERS" feature="USER_MANAGEMENT" requiresOnline><Users /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
