@@ -4,6 +4,9 @@ import { useAuth } from "../../context/AuthContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { hasPermission } from "../../utils/permissions";
 import { hasPlanFeature } from "../../utils/subscriptionFeatures";
+import { BRAND_LOGO, BRAND_NAME } from "../../utils/branding";
+import { APP_VERSION } from "../../data/versionHistory";
+import { History } from "lucide-react";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -208,8 +211,8 @@ return (
         ${isOpen ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0`}
       >
         <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">{t("POS System")}</h1>
+          <div className="min-w-0">
+            <img src={BRAND_LOGO} alt={BRAND_NAME} className="h-16 w-auto max-w-[210px] object-contain" />
             <p className="text-sm text-slate-400 mt-1">{t(role)}</p>
           </div>
           <button
@@ -675,6 +678,20 @@ return (
         </nav>
 
         <div className="p-4 border-t border-slate-800">
+          <NavLink
+            to="/version-history"
+            className={({ isActive }) =>
+              `mb-3 flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`
+            }
+          >
+            <span className="flex items-center gap-2">
+              <History size={16} />
+              {t("Version History")}
+            </span>
+            <span className="text-xs text-slate-400">v{APP_VERSION}</span>
+          </NavLink>
           <div className="text-xs text-slate-400">
             {t(user?.branchId ? `Branch: #${user.branchId}` : "All Branches")}
           </div>

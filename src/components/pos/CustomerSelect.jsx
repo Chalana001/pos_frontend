@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { Search, UserPlus, User } from 'lucide-react';
 import { customersAPI } from '../../api/customers.api';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -13,7 +14,7 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '' });
+  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '', creditLimit: '' });
 
   useEffect(() => {
     if (isOpen) {
@@ -24,8 +25,8 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const response = await customersAPI.getAll();
-      setCustomers(response.data);
+      const response = await customersAPI.getAll({ active: true, size: 50 });
+      setCustomers(response.data?.content || response.data || []);
     } catch(e) { setCustomers([]) } finally { setLoading(false); }
   };
 
@@ -40,8 +41,12 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
   const handleAddCustomer = async (e) => {
     e.preventDefault();
     try {
-      const response = await customersAPI.create(newCustomer);
+      const response = await customersAPI.create({
+        ...newCustomer,
+        creditLimit: newCustomer.creditLimit === '' ? null : Number(newCustomer.creditLimit),
+      });
       onSelectCustomer(response.data);
+      toast.success("Customer added successfully");
       setShowAddForm(false);
       onClose();
     } catch (error) { console.error(error); }
@@ -63,6 +68,18 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
             <div>
               <label className="text-sm font-bold text-slate-700">Address</label>
               <textarea value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} className="input w-full mt-1" rows="3" />
+            </div>
+            <div>
+              <label className="text-sm font-bold text-slate-700">Credit Limit</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newCustomer.creditLimit}
+                onChange={e => setNewCustomer({...newCustomer, creditLimit: e.target.value})}
+                className="input w-full mt-1"
+                placeholder="0.00"
+              />
             </div>
           </div>
           <div className="flex gap-3 pt-2">

@@ -12,7 +12,7 @@ const LanguageSelector = ({ compact = false, className = '' }) => {
   ];
 
   return (
-    <div className={`flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 ${className}`}>
+    <div className={`flex h-11 min-w-[166px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm ${className}`}>
       <Languages size={compact ? 16 : 18} className="text-slate-500" />
       <CustomSelect
         value={language}
@@ -21,8 +21,8 @@ const LanguageSelector = ({ compact = false, className = '' }) => {
         valueKey="value"
         labelKey="label"
         placeholder={t('Language')}
-        className="min-w-[116px]"
-        buttonClassName={`border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0 ${compact ? 'min-h-[20px]' : ''}`}
+        className="min-w-0 flex-1"
+        buttonClassName="h-9 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0 hover:border-transparent"
         menuClassName="min-w-[140px]"
       />
     </div>

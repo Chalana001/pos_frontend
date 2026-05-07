@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Plus, TrendingDown, Calendar } from "lucide-react"; // 🚀 Calendar icon එක ගත්තා
+import { Plus, Search, TrendingDown } from "lucide-react";
 import { cashDropsAPI } from "../api/cashDrops.api";
 import { shiftsAPI } from "../api/shifts.api";
+import { usersAPI } from "../api/users.api";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { useShift } from "../context/ShiftContext";
@@ -12,6 +13,12 @@ import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import CustomSelect from "../components/common/CustomSelect";
+
+const toLocalDateTimeParam = (date, endOfDay = false) => {
+  if (!date) return undefined;
+  return `${date}T${endOfDay ? "23:59:59" : "00:00:00"}`;
+};
 
 const CashDrops = () => {
   const { user } = useAuth();
@@ -23,60 +30,146 @@ const CashDrops = () => {
     [user?.role]
   );
 
+  const currentShift = Array.isArray(activeShift) ? activeShift[0] : activeShift;
+  const hasOpenShift = currentShift?.status === "OPEN" || !!currentShift;
+  const today = new Date().toISOString().split("T")[0];
+
   const [cashDrops, setCashDrops] = useState([]);
+  const [summary, setSummary] = useState({ totalAmount: 0, dropCount: 0, averageAmount: 0 });
   const [loading, setLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-
-  // 🚀 Date Filter State (මුලින්ම අද දවස තෝරලා තියෙන්නේ)
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
-
+  const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
+  const [cashierId, setCashierId] = useState("ALL");
+  const [cashierOptions, setCashierOptions] = useState([{ value: "ALL", label: "All Users" }]);
+  const [page, setPage] = useState(0);
+  const [pageInput, setPageInput] = useState("1");
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [formData, setFormData] = useState({
     amount: "",
     reason: "",
   });
 
-  const currentShift = Array.isArray(activeShift) ? activeShift[0] : activeShift;
-  const hasOpenShift = currentShift?.status === "OPEN" || !!currentShift;
-
-  // 🚀 Date එක වෙනස් වෙද්දිත් ඔටෝ ඩේටා ලෝඩ් වෙන්න Dependency එකට Dates දැම්මා
   useEffect(() => {
-    fetchCashDrops();
+    const timer = setTimeout(() => {
+      fetchCashDrops();
+      fetchSummary();
+    }, 300);
+
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranchId, user?.role, startDate, endDate]); 
+  }, [selectedBranchId, user?.role, search, startDate, endDate, cashierId, page]);
+
+  useEffect(() => {
+    setPageInput(String(page + 1));
+  }, [page]);
+
+  useEffect(() => {
+    const loadCashiers = async () => {
+      if (!isAdmin) {
+        return;
+      }
+
+      const allOption = { value: "ALL", label: "All Users" };
+      try {
+        const branchId = selectedBranchId > 0 ? selectedBranchId : user?.branchId;
+        const response = await usersAPI.salesFilter(branchId ? { branchId } : {});
+        const options = (Array.isArray(response.data) ? response.data : []).map((cashier) => ({
+          value: String(cashier.id),
+          label: cashier.username || `User ${cashier.id}`,
+        }));
+
+        setCashierOptions([allOption, ...options]);
+        if (cashierId !== "ALL" && !options.some((option) => option.value === String(cashierId))) {
+          setCashierId("ALL");
+          setPage(0);
+        }
+      } catch (error) {
+        console.error("Failed to load cash drop users", error);
+        setCashierOptions([allOption]);
+      }
+    };
+
+    loadCashiers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, selectedBranchId, user?.branchId]);
+
+  const buildQueryParams = (includePaging = true) => {
+    const branchId = user?.role === "CASHIER" ? user?.branchId : selectedBranchId;
+    const params = {
+      branchId: branchId || 0,
+      from: toLocalDateTimeParam(startDate),
+      to: toLocalDateTimeParam(endDate, true),
+      search: search.trim() || undefined,
+      cashierUserId: cashierId !== "ALL" ? cashierId : undefined,
+    };
+
+    if (includePaging) {
+      params.page = page;
+      params.size = pageSize;
+    }
+
+    return params;
+  };
 
   const fetchCashDrops = async () => {
     setLoading(true);
-
     try {
-      // 🚀 තෝරපු දවස් දෙකට අදාළව හරියටම Time එක සෙට් කරනවා
-      const fromDate = new Date(startDate);
-      fromDate.setHours(0, 0, 0, 0);
-      const from = fromDate.toISOString();
-
-      const toDate = new Date(endDate);
-      toDate.setHours(23, 59, 59, 999);
-      const to = toDate.toISOString();
-
-      // Role එක අනුව Branch ID එක ගන්නවා (Admin නම් Context එකෙන්, Cashier නම් එයාගේම එක)
-      const branchId = user?.role === "CASHIER" ? user?.branchId : selectedBranchId;
-
-      // branchId එකක් නැත්නම් (e.g. Admin All branches තෝරලා තියෙනවා නම්) 0 විදිහට යවමු 
-      // එතකොට Backend එකේ Query එකේ IS NULL කොටසෙන් ඔක්කොම එනවා.
-      const queryBranchId = branchId || 0; 
-
-      const response = await cashDropsAPI.getAll({ branchId: queryBranchId, from, to });
-      
-      // 🔴 අලුත් වෙනස: Spring Boot Pagination වලින් එන නිසා data.content ගන්න ඕනේ
-      const dataList = response.data?.content || response.data || [];
-      setCashDrops(Array.isArray(dataList) ? dataList : []);
-
+      const response = await cashDropsAPI.getAll(buildQueryParams(true));
+      const content = response.data?.content || [];
+      setCashDrops(content);
+      setTotalPages(response.data?.totalPages || 0);
+      setTotalElements(response.data?.totalElements || content.length);
     } catch (err) {
       toast.error("Failed to fetch cash drops");
       setCashDrops([]);
+      setTotalPages(0);
+      setTotalElements(0);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const response = await cashDropsAPI.getSummary(buildQueryParams(false));
+      setSummary({
+        totalAmount: response.data?.totalAmount || 0,
+        dropCount: response.data?.dropCount || 0,
+        averageAmount: response.data?.averageAmount || 0,
+      });
+    } catch (error) {
+      console.error("Failed to fetch cash drop summary", error);
+      setSummary({ totalAmount: 0, dropCount: 0, averageAmount: 0 });
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const resetPage = () => setPage(0);
+
+  const clearFilters = () => {
+    setSearch("");
+    setStartDate(today);
+    setEndDate(today);
+    setCashierId("ALL");
+    setPage(0);
+  };
+
+  const goToPage = () => {
+    const requestedPage = Number(pageInput);
+    if (!Number.isInteger(requestedPage)) {
+      setPageInput(String(page + 1));
+      return;
+    }
+
+    const maxPage = totalPages > 0 ? totalPages : 1;
+    setPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
   };
 
   const handleSubmit = async (e) => {
@@ -87,9 +180,8 @@ const CashDrops = () => {
       return;
     }
 
-    const amount = parseFloat(formData.amount);
-
-    if (!amount || amount <= 0) {
+    const amount = Number(formData.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
       toast.error("Invalid amount");
       return;
     }
@@ -106,14 +198,14 @@ const CashDrops = () => {
       if (isAdmin) {
         await shiftsAPI.cashdropById(currentShift.id, payload);
       } else {
-        await shiftsAPI.addCashDropMine(payload); // මේක Cashier ගේ එක
+        await shiftsAPI.addCashDropMine(payload);
       }
 
       toast.success("Cash drop recorded successfully");
       handleCloseModal();
-
       refreshShift?.();
       fetchCashDrops();
+      fetchSummary();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to record cash drop");
     }
@@ -124,17 +216,19 @@ const CashDrops = () => {
     setFormData({ amount: "", reason: "" });
   };
 
-  const totalCashDrops = cashDrops.reduce(
-    (sum, drop) => sum + (drop.amount || 0),
-    0
-  );
-
   const columns = [
     {
       header: "Date & Time",
       render: (drop) => formatDateTime(drop.createdAt),
     },
-    { header: "Reason", accessor: "reason" },
+    {
+      header: "Reason",
+      render: (drop) => (
+        <span className="max-w-[340px] truncate block" title={drop.reason}>
+          {drop.reason}
+        </span>
+      ),
+    },
     {
       header: "Amount",
       render: (drop) => (
@@ -143,128 +237,184 @@ const CashDrops = () => {
         </span>
       ),
     },
-    { header: "Recorded By", accessor: "cashierName" }, // 🚀 Backend DTO එකේ cashierName කියලා එව්ව නිසා මේක හැදුවා
+    { header: "Recorded By", accessor: "cashierName" },
+    {
+      header: "Shift",
+      render: (drop) => <span className="text-slate-500">#{drop.shiftId}</span>,
+    },
   ];
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-slate-800">Cash Drops</h1>
-
-        <div className="flex items-center gap-4">
-          {/* 🚀 Date Filter UI කෑල්ල */}
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-            <Calendar size={18} className="text-slate-400" />
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                className="text-sm border-none bg-transparent focus:ring-0 text-slate-700 cursor-pointer outline-none"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-              <span className="text-slate-400 text-sm">to</span>
-              <input
-                type="date"
-                className="text-sm border-none bg-transparent focus:ring-0 text-slate-700 cursor-pointer outline-none"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Record Button */}
-          <Button 
-            onClick={() => setShowModal(true)} 
-            disabled={!hasOpenShift}
-            className={!hasOpenShift ? "opacity-50 cursor-not-allowed" : ""}
-          >
-            <Plus size={20} className="mr-2" />
-            Record Drop
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800">Cash Drops</h1>
+          <p className="text-sm text-slate-500 mt-1">Review recorded cash removals by date, user, and reason.</p>
         </div>
+
+        <Button
+          onClick={() => setShowModal(true)}
+          disabled={!hasOpenShift}
+          className={!hasOpenShift ? "opacity-50 cursor-not-allowed" : ""}
+        >
+          <Plus size={20} className="mr-2" />
+          Record Drop
+        </Button>
       </div>
 
       {!hasOpenShift && (
         <Card>
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm font-medium text-yellow-800">
-              ⚠️ No active shift. Please open a shift to view and record cash drops.
+              No active shift. History is available, but recording a new cash drop requires an open shift.
             </p>
           </div>
         </Card>
       )}
 
-      {/* Wrapper Div */}
-      <div className={`space-y-6 transition-all duration-300 ${!hasOpenShift && user?.role === 'CASHIER' ? 'opacity-40 grayscale pointer-events-none select-none' : ''}`}>
-        
-        {/* STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-slate-600 mb-2">
-                  Total Drop Amount
-                </h3>
-                <p className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(totalCashDrops)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <TrendingDown className="text-blue-600" size={24} />
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <h3 className="text-sm font-medium text-slate-600 mb-2">
-              Number of Drops
-            </h3>
-            <p className="text-2xl font-bold text-slate-800">
-              {cashDrops.length}
-            </p>
-          </Card>
-
-          <Card>
-            <h3 className="text-sm font-medium text-slate-600 mb-2">
-              Average Drop
-            </h3>
-            <p className="text-2xl font-bold text-slate-800">
-              {formatCurrency(
-                cashDrops.length > 0 ? totalCashDrops / cashDrops.length : 0
-              )}
-            </p>
-          </Card>
-        </div>
-
-        {/* TABLE */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
-          {loading ? (
-            <div className="py-12">
-              <LoadingSpinner size="lg" text="Loading cash drops..." />
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-slate-600 mb-2">Total Drop Amount</h3>
+              <p className="text-2xl font-bold text-blue-600">
+                {summaryLoading ? formatCurrency(0) : formatCurrency(summary.totalAmount)}
+              </p>
             </div>
-          ) : (
-            <Table columns={columns} data={cashDrops} />
-          )}
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <TrendingDown className="text-blue-600" size={24} />
+            </div>
+          </div>
         </Card>
 
+        <Card>
+          <h3 className="text-sm font-medium text-slate-600 mb-2">Number of Drops</h3>
+          <p className="text-2xl font-bold text-slate-800">
+            {summaryLoading ? "0" : summary.dropCount}
+          </p>
+        </Card>
+
+        <Card>
+          <h3 className="text-sm font-medium text-slate-600 mb-2">Average Drop</h3>
+          <p className="text-2xl font-bold text-slate-800">
+            {summaryLoading ? formatCurrency(0) : formatCurrency(summary.averageAmount)}
+          </p>
+        </Card>
       </div>
 
-      {/* MODAL */}
+      <Card className="p-0 overflow-hidden">
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+          <div className={`grid grid-cols-1 gap-3 ${isAdmin ? "xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_auto]" : "xl:grid-cols-[minmax(260px,1fr)_180px_180px_auto]"} xl:items-center`}>
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  resetPage();
+                }}
+                placeholder="Search reason..."
+                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                resetPage();
+              }}
+              className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                resetPage();
+              }}
+              className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            {isAdmin && (
+              <CustomSelect
+                value={cashierId}
+                onChange={(value) => {
+                  setCashierId(value);
+                  resetPage();
+                }}
+                options={cashierOptions}
+                valueKey="value"
+                labelKey="label"
+                placeholder="All Users"
+                buttonClassName="h-[42px]"
+              />
+            )}
+
+            <Button type="button" variant="secondary" onClick={clearFilters} className="h-[42px] px-4 text-sm" disabled={loading || summaryLoading}>
+              Clear
+            </Button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="py-12">
+            <LoadingSpinner size="lg" text="Loading cash drops..." />
+          </div>
+        ) : (
+          <Table columns={columns} data={cashDrops} />
+        )}
+
+        <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
+          <span className="text-sm text-slate-500">
+            Showing {cashDrops.length} of {totalElements} cash drops. Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
+          </span>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button disabled={page === 0 || loading} onClick={() => setPage(page - 1)} variant="secondary" className="px-3 py-1 text-sm">
+              Prev
+            </Button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Go to</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    goToPage();
+                  }
+                }}
+                className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <Button type="button" variant="secondary" onClick={goToPage} disabled={loading} className="px-3 py-1 text-sm">
+                Go
+              </Button>
+            </div>
+            <Button disabled={page >= totalPages - 1 || loading} onClick={() => setPage(page + 1)} variant="secondary" className="px-3 py-1 text-sm">
+              Next
+            </Button>
+          </div>
+        </div>
+      </Card>
+
       <Modal
         isOpen={showModal}
         onClose={handleCloseModal}
         title="Record Cash Drop"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Form fields same as before... */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Amount *
             </label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={formData.amount}
               onChange={(e) =>
                 setFormData({ ...formData, amount: e.target.value })

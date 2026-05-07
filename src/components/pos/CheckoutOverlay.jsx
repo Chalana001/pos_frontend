@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { X, Banknote, CreditCard, Printer, CheckCircle2, FileText } from "lucide-react";
+import { X, Banknote, CreditCard, Printer, CheckCircle2, FileText, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { ORDER_TYPES } from "../../utils/constants";
 import Button from "../common/Button";
@@ -17,8 +17,20 @@ const CheckoutOverlay = ({
   printFullInvoice,
   setPrintFullInvoice,
   isOnline = true,
+  customer = null,
+  errorMessage = "",
 }) => {
   const inputRef = useRef(null);
+  const normalizedTotal = Number.isFinite(Number(total)) ? Number(total) : 0;
+  const normalizedPaidAmount = Number.isFinite(Number(paidAmount)) ? Number(paidAmount) : 0;
+  const hasCreditLimit = customer?.creditLimit !== null
+    && customer?.creditLimit !== undefined
+    && customer?.creditLimit !== ""
+    && Number.isFinite(Number(customer.creditLimit));
+  const currentDue = Number(customer?.dueAmount || 0);
+  const creditLimit = hasCreditLimit ? Number(customer.creditLimit) : null;
+  const projectedDue = currentDue + normalizedTotal;
+  const availableCredit = hasCreditLimit ? Math.max(0, creditLimit - currentDue) : null;
 
   useEffect(() => {
     if (isOpen) {
@@ -28,55 +40,56 @@ const CheckoutOverlay = ({
 
   if (!isOpen) return null;
 
-  const changeAmount = paidAmount - total;
-  const isEnough = paidAmount >= total || orderType === ORDER_TYPES.CREDIT;
+  const changeAmount = normalizedPaidAmount - normalizedTotal;
+  const isEnough = normalizedPaidAmount >= normalizedTotal || orderType === ORDER_TYPES.CREDIT;
+  const canConfirm = isEnough && !errorMessage;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm">
       <div className="w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         
         {/* Header */}
-        <div className="p-6 border-b flex items-center justify-between bg-slate-50">
+        <div className="p-5 border-b flex items-center justify-between bg-slate-50">
           <div>
-            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Finalize Sale</h2>
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Finalize Sale</h2>
             <p className="text-slate-500 text-sm font-medium">Select payment method and confirm</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-            <X size={24} />
+            <X size={22} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+        <div className="flex-1 overflow-y-auto p-5 space-y-6">
           {/* Total Display */}
-          <div className="bg-blue-600 p-8 rounded-3xl text-center shadow-xl shadow-blue-100">
+          <div className="bg-blue-600 px-6 py-7 rounded-2xl text-center shadow-lg shadow-blue-100">
             <p className="text-blue-100 text-sm font-bold uppercase tracking-widest mb-1">Total Payable</p>
-            <h1 className="text-5xl font-black text-white">{formatCurrency(total)}</h1>
+            <h1 className="text-4xl font-black text-white">{formatCurrency(normalizedTotal)}</h1>
           </div>
 
           {/* Payment Methods */}
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setOrderType(ORDER_TYPES.CASH)}
-              className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all ${
+              className={`flex min-h-[122px] flex-col items-center justify-center gap-2.5 p-5 rounded-xl border-2 transition-all ${
                 orderType === ORDER_TYPES.CASH 
                 ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md' 
                 : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
               }`}
             >
-              <Banknote size={32} />
-              <span className="font-bold text-lg">Cash (F1)</span>
+              <Banknote size={28} />
+              <span className="font-bold text-base">Cash (F1)</span>
             </button>
             <button
               onClick={() => setOrderType(ORDER_TYPES.CREDIT)}
               disabled={!isOnline}
-              className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all ${
+              className={`flex min-h-[122px] flex-col items-center justify-center gap-2.5 p-5 rounded-xl border-2 transition-all ${
                 orderType === ORDER_TYPES.CREDIT 
                 ? 'border-amber-500 bg-amber-50 text-amber-500 shadow-md' 
                 : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
               }`}
             >
-              <CreditCard size={32} />
-              <span className="font-bold text-lg">Credit (F2)</span>
+              <CreditCard size={28} />
+              <span className="font-bold text-base">Credit (F2)</span>
             </button>
           </div>
 
@@ -85,25 +98,25 @@ const CheckoutOverlay = ({
             <div className="space-y-4 animate-in fade-in zoom-in duration-200">
               <label className="block text-sm font-black text-slate-700 uppercase">Cash Received</label>
               <div className="relative">
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl font-bold text-slate-400">Rs.</span>
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">Rs.</span>
                 <input
                   ref={inputRef}
                   type="number"
-                  value={paidAmount || ""}
+                  value={normalizedPaidAmount || ""}
                   onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl py-6 pl-16 pr-6 text-4xl font-black text-slate-800 focus:border-blue-600 focus:bg-white outline-none transition-all"
+                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-5 pl-16 pr-6 text-3xl font-black text-slate-800 focus:border-blue-600 focus:bg-white outline-none transition-all"
                   placeholder="0.00"
                 />
               </div>
 
               {/* Change Calculation */}
-              <div className={`p-6 rounded-2xl border-2 flex justify-between items-center ${
+              <div className={`px-5 py-4 rounded-xl border-2 flex justify-between items-center ${
                 changeAmount >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'
               }`}>
                 <span className="font-bold text-slate-600">
                   {changeAmount >= 0 ? "Change to Return" : "Still Balance"}
                 </span>
-                <span className={`text-3xl font-black ${changeAmount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <span className={`text-2xl font-black ${changeAmount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {formatCurrency(Math.abs(changeAmount))}
                 </span>
               </div>
@@ -111,15 +124,49 @@ const CheckoutOverlay = ({
           )}
 
           {orderType === ORDER_TYPES.CREDIT && (
-            <div className="bg-amber-50 border-2 border-amber-100 p-6 rounded-2xl flex gap-4 items-start animate-in slide-in-from-bottom duration-300">
-              <CheckCircle2 className="text-amber-500 shrink-0" size={24} />
-              <p className="text-amber-800 text-sm font-medium leading-relaxed">
-                This order will be saved as a <b>Credit Sale</b>. Please ensure the customer is selected before proceeding.
-              </p>
+            <div className="bg-amber-50 border-2 border-amber-100 p-5 rounded-xl space-y-4 animate-in slide-in-from-bottom duration-300">
+              <div className="flex gap-4 items-start">
+                <CheckCircle2 className="text-amber-500 shrink-0" size={24} />
+                <p className="text-amber-800 text-sm font-medium leading-relaxed">
+                  This order will be saved as a <b>Credit Sale</b>. Please ensure the customer is selected before proceeding.
+                </p>
+              </div>
+
+              {customer && (
+                <div className="rounded-lg border border-amber-200 bg-white/70 p-3 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-500">Customer</span>
+                    <span className="font-bold text-slate-800 text-right">{customer.name}</span>
+                  </div>
+                  <div className="mt-2 flex justify-between gap-3">
+                    <span className="text-slate-500">Current Due</span>
+                    <span className="font-semibold text-slate-800">{formatCurrency(currentDue)}</span>
+                  </div>
+                  <div className="mt-2 flex justify-between gap-3">
+                    <span className="text-slate-500">Credit Limit</span>
+                    <span className="font-semibold text-slate-800">
+                      {hasCreditLimit ? formatCurrency(creditLimit) : "No limit set"}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex justify-between gap-3">
+                    <span className="text-slate-500">{hasCreditLimit ? "Available" : "Projected Due"}</span>
+                    <span className="font-semibold text-slate-800">
+                      {hasCreditLimit ? formatCurrency(availableCredit) : formatCurrency(projectedDue)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          <label className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          {errorMessage && (
+            <div className="rounded-xl border-2 border-red-100 bg-red-50 p-4 flex gap-3 items-start">
+              <AlertTriangle className="mt-0.5 shrink-0 text-red-600" size={20} />
+              <p className="text-sm font-semibold leading-relaxed text-red-700">{errorMessage}</p>
+            </div>
+          )}
+
+          <label className="flex items-start gap-4 rounded-xl border border-slate-200 bg-slate-50 p-[18px]">
             <input
               type="checkbox"
               checked={!!printFullInvoice}
@@ -142,19 +189,19 @@ const CheckoutOverlay = ({
         </div>
 
         {/* Action Button */}
-        <div className="p-6 bg-slate-50 border-t">
+        <div className="p-5 bg-slate-50 border-t">
           <Button
             onClick={onPlaceOrder}
-            disabled={loading || !isEnough}
-            className={`w-full py-6 rounded-2xl text-xl font-black flex items-center justify-center gap-3 shadow-xl transition-all active:scale-[0.98] ${
-              loading || !isEnough ? 'bg-slate-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
+            disabled={loading || !canConfirm}
+            className={`w-full h-[52px] rounded-xl text-base font-black flex items-center justify-center gap-3 shadow-md transition-all active:scale-[0.98] ${
+              loading || !canConfirm ? 'bg-slate-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
             }`}
           >
             {loading ? (
               "Processing..."
             ) : (
               <>
-                <Printer size={24} />
+                <Printer size={20} />
                 CONFIRM & PRINT
               </>
             )}

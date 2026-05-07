@@ -1,9 +1,10 @@
 import api from './axios';
 
 export const customersAPI = {
-  getAll: () => api.get('/customers'),
+  getAll: (params = {}) => api.get('/customers/page', { params }),
+  getList: (params = {}) => api.get('/customers', { params }),
   
-  search: (query) => api.get('/customers/search', { params: { query } }),
+  search: (name) => api.get('/customers/search', { params: { name } }),
 
   getById: (id) => api.get(`/customers/${id}`),
   

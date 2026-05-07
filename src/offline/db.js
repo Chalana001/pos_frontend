@@ -13,6 +13,15 @@ class PosOfflineDatabase extends Dexie {
       offlineSales: "clientSaleId, branchId, cashierUserId, createdAt",
       appMeta: "key",
     });
+
+    this.version(2).stores({
+      cachedItems: "[branchId+itemId], branchId, itemId, syncedAt",
+      cachedBranches: "id, active",
+      cachedUsers: "userId, username, lastSyncedAt",
+      cachedReceiptSettings: "[branchId+templateType], branchId, templateType, syncedAt",
+      offlineSales: "clientSaleId, branchId, cashierUserId, createdAt",
+      appMeta: "key",
+    });
   }
 }
 
@@ -59,6 +68,23 @@ export const getCachedItemsForBranch = async (branchId) => {
   if (!branchId) return [];
   const rows = await offlineDb.cachedItems.where("branchId").equals(branchId).toArray();
   return rows.map((row) => row.data);
+};
+
+export const cacheReceiptSettings = async (branchId, templateType, settings) => {
+  if (!branchId || !templateType || !settings) return;
+
+  await offlineDb.cachedReceiptSettings.put({
+    branchId: Number(branchId),
+    templateType,
+    syncedAt: new Date().toISOString(),
+    data: settings,
+  });
+};
+
+export const getCachedReceiptSettings = async (branchId, templateType) => {
+  if (!branchId || !templateType) return null;
+  const row = await offlineDb.cachedReceiptSettings.get([Number(branchId), templateType]);
+  return row?.data || null;
 };
 
 export const saveCachedUser = async (userRecord) => {

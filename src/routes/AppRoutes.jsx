@@ -22,9 +22,11 @@ import CustomerFormPage from "../pages/CustomerFormPage";
 import CustomerViewPage from "../pages/CustomerViewPage";
 import Shifts from '../pages/Shifts';
 import ShiftHistory from '../pages/ShiftHistory';
+import ShiftDetailsPage from '../pages/ShiftDetailsPage';
 import Expenses from '../pages/Expenses';
 import CashDrops from '../pages/CashDrops';
 import Stock from '../pages/Stock';
+import StockItemDetailsPage from '../pages/StockItemDetailsPage';
 import StockAdjustments from '../pages/StockAdjustments';
 import StockTransfers from '../pages/StockTransfers';
 import Purchases from "../pages/PurchaseListPage";
@@ -35,6 +37,7 @@ import Branches from "../pages/Branches";
 import ReceiptSettingsPage from '../pages/ReceiptSettingsPage';
 import Users from '../pages/Users';
 import SubscriptionPage from '../pages/SubscriptionPage';
+import VersionHistoryPage from '../pages/VersionHistoryPage';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -82,11 +85,13 @@ const AppRoutes = () => {
         
         <Route path="shifts" element={<ProtectedRoute permission="MANAGE_SHIFTS" requiresOnline><Shifts /></ProtectedRoute>} />
         <Route path="shifts/history" element={<ProtectedRoute permission="MANAGE_SHIFTS_HISTORY" feature="SHIFT_HISTORY" requiresOnline><ShiftHistory /></ProtectedRoute>} />
+        <Route path="shifts/history/:id" element={<ProtectedRoute permission="MANAGE_SHIFTS_HISTORY" feature="SHIFT_HISTORY" requiresOnline><ShiftDetailsPage /></ProtectedRoute>} />
         
         <Route path="expenses" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline><Expenses /></ProtectedRoute>} />
         <Route path="cash-drops" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline><CashDrops /></ProtectedRoute>} />
         
         <Route path="stock" element={<ProtectedRoute permission="VIEW_STOCK" requiresOnline><Stock /></ProtectedRoute>} />
+        <Route path="stock/item/:id" element={<ProtectedRoute permission="VIEW_STOCK" requiresOnline><StockItemDetailsPage /></ProtectedRoute>} />
         <Route path="stock/adjustments" element={<ProtectedRoute permission="ADJUST_STOCK" requiresOnline><StockAdjustments /></ProtectedRoute>} />
         <Route path="stock/transfers" element={<ProtectedRoute permission="TRANSFER_STOCK" feature="STOCK_TRANSFERS" requiresOnline><StockTransfers /></ProtectedRoute>} />
         
@@ -98,6 +103,7 @@ const AppRoutes = () => {
         <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline><Branches /></ProtectedRoute>} />
         <Route path="receipt-settings" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline><ReceiptSettingsPage /></ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute permission="MANAGE_USERS" feature="USER_MANAGEMENT" requiresOnline><Users /></ProtectedRoute>} />
+        <Route path="version-history" element={<VersionHistoryPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

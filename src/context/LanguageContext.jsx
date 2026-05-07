@@ -17,7 +17,7 @@ const shouldSkipNode = (node) => {
 
 const getAttributeCacheKey = (attribute) => `i18nOriginal${attribute.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()).replace(/^([a-z])/, (_, letter) => letter.toUpperCase())}`;
 
-const translateDom = (root, language, textCache) => {
+const translateDom = (root, language, textCache, translatedTextNodes = null) => {
   if (!root) {
     return;
   }
@@ -31,6 +31,7 @@ const translateDom = (root, language, textCache) => {
       textCache.set(currentNode, original);
       const nextText = translateText(language, original);
       if (currentNode.textContent !== nextText) {
+        translatedTextNodes?.add(currentNode);
         currentNode.textContent = nextText;
       }
     }
@@ -67,7 +68,9 @@ export const LanguageProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEY, language);
     document.documentElement.lang = language === LANGUAGES.SI ? 'si' : 'en';
 
-    const applyTranslations = (root = document.body) => translateDom(root, language, nodeTextCache);
+    const translatedTextNodes = new WeakSet();
+    const applyTranslations = (root = document.body, trackMutations = false) =>
+      translateDom(root, language, nodeTextCache, trackMutations ? translatedTextNodes : null);
 
     applyTranslations();
 
@@ -79,29 +82,36 @@ export const LanguageProvider = ({ children }) => {
               return;
             }
 
-            const original = nodeTextCache.get(node) ?? node.textContent;
+            const original = node.textContent;
             nodeTextCache.set(node, original);
             const translated = translateText(language, original);
             if (node.textContent !== translated) {
+              translatedTextNodes.add(node);
               node.textContent = translated;
             }
             return;
           }
 
           if (node.nodeType === Node.ELEMENT_NODE) {
-            applyTranslations(node);
+            applyTranslations(node, true);
           }
         });
 
         if (mutation.type === 'characterData' && mutation.target?.nodeType === Node.TEXT_NODE) {
+          if (translatedTextNodes.has(mutation.target)) {
+            translatedTextNodes.delete(mutation.target);
+            return;
+          }
+
           if (shouldSkipNode(mutation.target)) {
             return;
           }
 
-          const original = nodeTextCache.get(mutation.target) ?? mutation.target.textContent;
+          const original = mutation.target.textContent;
           nodeTextCache.set(mutation.target, original);
           const translated = translateText(language, original);
           if (mutation.target.textContent !== translated) {
+            translatedTextNodes.add(mutation.target);
             mutation.target.textContent = translated;
           }
         }

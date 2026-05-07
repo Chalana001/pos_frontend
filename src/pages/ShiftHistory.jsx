@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { RefreshCcw, User, Calendar, Tag } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { RefreshCcw, User, Calendar, Tag, ChevronRight } from "lucide-react";
 import { shiftsAPI } from "../api/shifts.api";
+import { usersAPI } from "../api/users.api";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext"; 
 import { formatCurrency, formatDateTime } from "../utils/formatters";
@@ -10,14 +12,17 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect"; // 🟢 Custom Select එක Import කළා
 
 const ShiftHistory = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { selectedBranchId } = useBranch();
   const isAdmin = user?.role === "ADMIN" || user?.role === "MANAGER";
 
   const [shifts, setShifts] = useState([]);
+  const [cashierOptions, setCashierOptions] = useState([{ value: "", label: "All Cashiers" }]);
   const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState(0);
+  const [pageInput, setPageInput] = useState("1");
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
 
@@ -61,10 +66,54 @@ const ShiftHistory = () => {
     fetchShifts();
   }, [fetchShifts]);
 
+  useEffect(() => {
+    setPageInput(String(page + 1));
+  }, [page]);
+
+  useEffect(() => {
+    const loadCashiers = async () => {
+      if (!isAdmin) {
+        return;
+      }
+
+      const allOption = { value: "", label: "All Cashiers" };
+      try {
+        const branchId = selectedBranchId > 0 ? selectedBranchId : user?.branchId;
+        const response = await usersAPI.salesFilter(branchId ? { branchId } : {});
+        const options = (Array.isArray(response.data) ? response.data : []).map((cashier) => ({
+          value: String(cashier.id),
+          label: cashier.username || `User ${cashier.id}`,
+        }));
+        setCashierOptions([allOption, ...options]);
+        if (filters.cashierId && !options.some((option) => option.value === String(filters.cashierId))) {
+          setFilters((prev) => ({ ...prev, cashierId: "" }));
+          setPage(0);
+        }
+      } catch (error) {
+        console.error("Failed to load cashier filter users:", error);
+        setCashierOptions([allOption]);
+      }
+    };
+
+    loadCashiers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, selectedBranchId, user?.branchId]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
     setPage(0);
+  };
+
+  const goToPage = () => {
+    const requestedPage = Number(pageInput);
+    if (!Number.isInteger(requestedPage)) {
+      setPageInput(String(page + 1));
+      return;
+    }
+
+    const maxPage = totalPages > 0 ? totalPages : 1;
+    setPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
   };
 
   return (
@@ -100,9 +149,19 @@ const ShiftHistory = () => {
           {isAdmin && (
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-500 flex items-center gap-1 uppercase">
-                <User size={14} /> Cashier ID
+                <User size={14} /> Cashier
               </label>
-              <input type="number" name="cashierId" placeholder="User ID" value={filters.cashierId} onChange={handleInputChange} className="input w-full" />
+              <CustomSelect
+                value={filters.cashierId}
+                onChange={(val) => {
+                  setFilters((prev) => ({ ...prev, cashierId: val }));
+                  setPage(0);
+                }}
+                options={cashierOptions}
+                valueKey="value"
+                labelKey="label"
+                placeholder="All Cashiers"
+              />
             </div>
           )}
 
@@ -138,11 +197,16 @@ const ShiftHistory = () => {
                   <th className="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider text-right">In Drawer</th>
                   <th className="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider text-right">Difference</th>
                   <th className="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Notes</th>
+                  <th className="p-4 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {shifts.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr
+                    key={s.id}
+                    className="hover:bg-blue-50/70 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/shifts/history/${s.id}`)}
+                  >
                     <td className="p-4">
                       <p className="text-sm font-medium text-slate-800">{formatDateTime(s.openedAt)}</p>
                       <p className="text-[10px] text-slate-400 font-mono uppercase">
@@ -151,8 +215,8 @@ const ShiftHistory = () => {
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-slate-700">ID: {s.cashierUserId}</span>
-                        <span className="text-[10px] text-slate-500 uppercase">Branch: #{s.branchId}</span>
+                        <span className="text-sm font-semibold text-slate-700">{s.cashierName || `User ${s.cashierUserId}`}</span>
+                        <span className="text-[10px] text-slate-500 uppercase">{s.branchName || `Branch #${s.branchId}`}</span>
                       </div>
                     </td>
                     <td className="p-4">
@@ -176,6 +240,9 @@ const ShiftHistory = () => {
                         {s.closeNote || s.openNote || "—"}
                       </p>
                     </td>
+                    <td className="p-4 text-right text-slate-400">
+                      <ChevronRight size={18} className="inline-block" />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -187,11 +254,11 @@ const ShiftHistory = () => {
             </div>
           )}
           
-          <div className="flex justify-between items-center p-4 bg-slate-50 border-t">
+          <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
             <span className="text-sm text-slate-500">
               Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <Button 
                 disabled={page === 0 || loading} 
                 onClick={() => setPage(page - 1)} 
@@ -200,6 +267,25 @@ const ShiftHistory = () => {
               >
                 Prev
               </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500">Go to</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      goToPage();
+                    }
+                  }}
+                  className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Button type="button" variant="secondary" onClick={goToPage} disabled={loading} className="px-3 py-1 text-sm">
+                  Go
+                </Button>
+              </div>
               <Button 
                 disabled={page >= totalPages - 1 || loading} 
                 onClick={() => setPage(page + 1)} 

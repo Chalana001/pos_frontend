@@ -127,6 +127,21 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Credit Limit
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.creditLimit}
+              onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
+              className="input"
+              placeholder="0.00"
+            />
+          </div>
+
           {/* Address */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">

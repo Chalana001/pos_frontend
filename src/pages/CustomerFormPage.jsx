@@ -17,11 +17,11 @@ const CustomerFormPage = ({ mode }) => {
     name: "",
     phone: "",
     address: "",
+    creditLimit: "",
     email: "",
     imageUrl: "",
   });
 
-  // ✅ load for edit
   useEffect(() => {
     const load = async () => {
       if (mode !== "edit") return;
@@ -35,6 +35,7 @@ const CustomerFormPage = ({ mode }) => {
           name: c.name ?? "",
           phone: c.phone ?? "",
           address: c.address ?? "",
+          creditLimit: c.creditLimit ?? "",
           email: c.email ?? "",
           imageUrl: c.imageUrl ?? "",
         });
@@ -58,16 +59,15 @@ const CustomerFormPage = ({ mode }) => {
         name: formData.name.trim(),
         phone: formData.phone.trim(),
         address: formData.address?.trim() || null,
-        email: formData.email?.trim() || null,
-        imageUrl: formData.imageUrl?.trim() || null,
+        creditLimit: formData.creditLimit === "" ? null : Number(formData.creditLimit),
       };
 
       if (mode === "edit") {
         await customersAPI.update(id, payload);
-        toast.success("Customer updated ✅");
+        toast.success("Customer updated");
       } else {
         await customersAPI.create(payload);
-        toast.success("Customer created ✅");
+        toast.success("Customer created");
       }
 
       navigate("/customers");

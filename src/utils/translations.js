@@ -51,7 +51,7 @@ const exactTranslations = {
     "You don't have permission to access this page.": 'මෙම පිටුවට ප්‍රවේශ වීමට ඔබට අවසර නොමැත.',
     'Package Restricted': 'පැකේජ සීමාව',
     'Your current package does not include this feature.': 'ඔබගේ වත්මන් පැකේජයට මෙම පහසුකම ඇතුළත් නොවේ.',
-    'POS System': 'POS පද්ධතිය',
+    'ZenSys POS': 'ZenSys POS',
     'Sign in to your account': 'ඔබගේ ගිණුමට පිවිසෙන්න',
     Username: 'පරිශීලක නාමය',
     Password: 'මුරපදය',

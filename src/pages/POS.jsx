@@ -21,7 +21,15 @@ import KotPrinter from "../components/pos/KotPrinter";
 import { receiptSettingsAPI } from "../api/receiptSettings.api";
 import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
 import { openPdfBlob } from "../utils/pdf";
-import { addOfflineSale, cacheItemsForBranch, getCachedItemsForBranch } from "../offline/db";
+import PanelResizeHandle from "../components/common/PanelResizeHandle";
+import { BRAND_NAME_UPPER } from "../utils/branding";
+import {
+  addOfflineSale,
+  cacheItemsForBranch,
+  cacheReceiptSettings,
+  getCachedItemsForBranch,
+  getCachedReceiptSettings,
+} from "../offline/db";
 
 const GRAMS_PER_KILOGRAM = 1000;
 
@@ -95,13 +103,28 @@ const getStockDisplayUnit = (item) => (isWeightItem(item) ? "KG" : (item.default
 const formatStockDisplay = (item, batch = null) =>
   `${formatQty(getStockDisplayQty(item, batch))} ${getStockDisplayUnit(item)}`;
 
+const buildOfflineInvoiceNo = (clientSaleId) =>
+  `OFF-${String(clientSaleId || "").replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+
+const getApiErrorMessage = (error, fallback = "Failed") =>
+  error?.response?.data?.message || error?.response?.data?.detail || fallback;
+
+const CART_MODES = {
+  ONLINE: "ONLINE",
+  QUEUE: "QUEUE",
+};
+
+const getCartDraftKey = (userId, branchId) =>
+  userId && branchId ? `pos-active-cart-v1:${userId}:${branchId}` : null;
+
 const POS = () => {
-  const { user, isOnline } = useAuth();
+  const { user, isOnline, hasOnlineSession, isOfflineSession } = useAuth();
   const { selectedBranchId, branches } = useBranch();
   const printRef = useRef(null);
   const kotPrintRef = useRef(null);
   const searchInputRef = useRef(null);
   const kotPrintedQuantitiesRef = useRef({});
+  const hydratedCartDraftKeysRef = useRef(new Set());
 
   const [myShift, setMyShift] = useState(null);
   const [loadingShift, setLoadingShift] = useState(true);
@@ -121,9 +144,11 @@ const POS = () => {
   const [customer, setCustomer] = useState(null);
   const [orderType, setOrderType] = useState(ORDER_TYPES.CASH);
   const [saleMode, setSaleMode] = useState(SALE_MODES.TAKEAWAY);
+  const [cartMode, setCartMode] = useState(null);
   const [billDiscount, setBillDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
+  const [paymentError, setPaymentError] = useState("");
   const [receiptSettings, setReceiptSettings] = useState(null);
   const [kotReceiptSettings, setKotReceiptSettings] = useState(null);
   const [printFullInvoice, setPrintFullInvoice] = useState(false);
@@ -141,10 +166,19 @@ const POS = () => {
   const resizeStateRef = useRef({ startX: 0, startWidth: 470 });
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const canUseServer = isOnline && hasOnlineSession && !isOfflineSession;
+  const activeCartMode = cartItems.length > 0
+    ? (cartMode || (canUseServer ? CART_MODES.ONLINE : CART_MODES.QUEUE))
+    : null;
+  const queueCartActive = activeCartMode === CART_MODES.QUEUE;
+  const shouldUseServerForCheckout = activeCartMode
+    ? activeCartMode === CART_MODES.ONLINE && canUseServer
+    : canUseServer;
   const fallbackBranchId = isAdminUser ? (selectedBranchId || null) : (user?.branchId || null);
   const effectiveBranchId = myShift?.branchId || fallbackBranchId;
   const effectiveBranch = branches.find((branch) => Number(branch.id) === Number(effectiveBranchId)) || null;
-  const canSell = !!effectiveBranchId && (isOnline ? !!myShift : true);
+  const canSell = !!effectiveBranchId && (queueCartActive || (canUseServer ? !!myShift : true));
+  const cartDraftKey = getCartDraftKey(user?.userId || user?.id, effectiveBranchId);
 
   const pendingOrdersByTable = useMemo(
     () => Object.fromEntries((pendingOrders || []).map((pendingOrder) => [Number(pendingOrder.tableId), pendingOrder])),
@@ -207,6 +241,82 @@ const POS = () => {
   }, [canSell, loadingShift]);
 
   useEffect(() => {
+    if (!cartDraftKey || hydratedCartDraftKeysRef.current.has(cartDraftKey)) {
+      return;
+    }
+
+    hydratedCartDraftKeysRef.current.add(cartDraftKey);
+    if (cartItems.length > 0) {
+      return;
+    }
+
+    try {
+      const rawDraft = localStorage.getItem(cartDraftKey);
+      if (!rawDraft) {
+        return;
+      }
+
+      const draft = JSON.parse(rawDraft);
+      if (!Array.isArray(draft.cartItems) || draft.cartItems.length === 0) {
+        localStorage.removeItem(cartDraftKey);
+        return;
+      }
+
+      setCartItems(draft.cartItems);
+      setCustomer(draft.customer || null);
+      setBillDiscount(Number(draft.billDiscount || 0));
+      setOrderType(draft.orderType || ORDER_TYPES.CASH);
+      setPaidAmount(Number(draft.paidAmount || 0));
+      setSaleMode(draft.saleMode || SALE_MODES.TAKEAWAY);
+      setCartMode(draft.cartMode || CART_MODES.QUEUE);
+    } catch {
+      localStorage.removeItem(cartDraftKey);
+    }
+  }, [cartDraftKey, cartItems.length]);
+
+  useEffect(() => {
+    if (!cartDraftKey || !hydratedCartDraftKeysRef.current.has(cartDraftKey)) {
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      localStorage.removeItem(cartDraftKey);
+      return;
+    }
+
+    localStorage.setItem(
+      cartDraftKey,
+      JSON.stringify({
+        cartItems,
+        customer,
+        billDiscount,
+        orderType,
+        paidAmount,
+        saleMode,
+        cartMode: activeCartMode || cartMode || (canUseServer ? CART_MODES.ONLINE : CART_MODES.QUEUE),
+        savedAt: new Date().toISOString(),
+      })
+    );
+  }, [
+    activeCartMode,
+    billDiscount,
+    canUseServer,
+    cartDraftKey,
+    cartItems,
+    cartMode,
+    customer,
+    orderType,
+    paidAmount,
+    saleMode,
+  ]);
+
+  useEffect(() => {
+    if (showPayment) {
+      setPaymentError("");
+    }
+  }, [showPayment, orderType, customer?.id, cartItems, billDiscount, paidAmount]);
+
+  useEffect(() => {
     if (!isResizingPanels) {
       return undefined;
     }
@@ -243,28 +353,69 @@ const POS = () => {
   };
 
   const calculateItemBaseTotal = (item) => {
-    if (!item.qty || item.qty <= 0) return 0;
+    const qty = Number(item?.qty || 0);
+    if (!Number.isFinite(qty) || qty <= 0) return 0;
 
-    if (item.weightItem && item.qtyUnit === "G") {
-      return item.qty * item.perGramPrice;
+    const unitPrice = Number(item?.unitPrice || 0);
+    const perGramPrice = Number(item?.perGramPrice || 0);
+
+    if (item?.weightItem && item?.qtyUnit === "G") {
+      return qty * (Number.isFinite(perGramPrice) ? perGramPrice : 0);
     }
 
-    return item.qty * item.unitPrice;
+    return qty * (Number.isFinite(unitPrice) ? unitPrice : 0);
   };
 
   const calculateTotal = () => {
     let total = 0;
     cartItems.forEach((item) => {
       let itemTotal = calculateItemBaseTotal(item);
+      const discountValue = Number(item?.discountValue || 0);
 
       if (item.discountType === DISCOUNT_TYPES.FIXED) {
-        itemTotal -= item.discountValue;
+        itemTotal -= discountValue;
       } else if (item.discountType === DISCOUNT_TYPES.PERCENT) {
-        itemTotal -= (itemTotal * item.discountValue) / 100;
+        itemTotal -= (itemTotal * discountValue) / 100;
       }
-      total += Math.max(0, itemTotal);
+
+      total += Math.max(0, Number.isFinite(itemTotal) ? itemTotal : 0);
     });
-    return Math.max(0, total - billDiscount);
+
+    const normalizedBillDiscount = toNonNegativeNumber(billDiscount);
+    return Math.max(0, total - normalizedBillDiscount);
+  };
+
+  const getCreditLimitValidationMessage = (total = calculateTotal()) => {
+    if (orderType !== ORDER_TYPES.CREDIT) {
+      return "";
+    }
+
+    if (!customer) {
+      return "Select customer for credit sale";
+    }
+
+    if (customer.active === false) {
+      return "Cannot create credit sale for inactive customer";
+    }
+
+    if (customer.creditLimit === null || customer.creditLimit === undefined || customer.creditLimit === "") {
+      return "";
+    }
+
+    const limit = Number(customer.creditLimit);
+    if (!Number.isFinite(limit)) {
+      return "";
+    }
+
+    const currentDue = Number(customer.dueAmount || 0);
+    const projectedDue = currentDue + Number(total || 0);
+
+    if (projectedDue > limit) {
+      const availableCredit = Math.max(0, limit - currentDue);
+      return `Credit limit exceeded. Available: ${formatCurrency(availableCredit)}, sale: ${formatCurrency(total)}, limit: ${formatCurrency(limit)}`;
+    }
+
+    return "";
   };
 
   const getCartLineKey = (item) => `${item.itemId}-${item.batchId ?? "NA"}`;
@@ -314,6 +465,7 @@ const POS = () => {
     delete kotPrintedQuantitiesRef.current[currentSessionKey];
     setCartItems([]);
     setCustomer(null);
+    setCartMode(null);
     setBillDiscount(0);
     setOrderType(ORDER_TYPES.CASH);
     setPaidAmount(0);
@@ -327,6 +479,7 @@ const POS = () => {
   const clearSelectedTableDraft = () => {
     setCartItems([]);
     setCustomer(null);
+    setCartMode(null);
     setBillDiscount(0);
   };
 
@@ -358,6 +511,7 @@ const POS = () => {
 
   const applyPendingOrderToCart = (pendingOrder) => {
     setCartItems(Array.isArray(pendingOrder?.items) ? pendingOrder.items.map(mapPendingItemToCartItem) : []);
+    setCartMode(CART_MODES.ONLINE);
     setBillDiscount(Number(pendingOrder?.billDiscount || 0));
     setCustomer(
       pendingOrder?.customerId
@@ -371,7 +525,7 @@ const POS = () => {
   };
 
   const refreshDiningState = async (branchId, preserveSelectedId = selectedTableId) => {
-    if (!isOnline) {
+    if (!canUseServer) {
       setDiningTables([]);
       setPendingOrders([]);
       return;
@@ -410,7 +564,7 @@ const POS = () => {
     const loadMyShift = async () => {
       try {
         setLoadingShift(true);
-        if (!isOnline) {
+        if (!canUseServer) {
           setMyShift(null);
           if (fallbackBranchId) {
             await fetchProducts(fallbackBranchId);
@@ -449,10 +603,12 @@ const POS = () => {
     };
 
     loadMyShift();
-  }, [fallbackBranchId, isAdminUser, isOnline, selectedBranchId]);
+  }, [canUseServer, fallbackBranchId, isAdminUser, selectedBranchId]);
 
   useEffect(() => {
-    if (!isOnline || !myShift?.branchId) {
+    const receiptBranchId = myShift?.branchId || effectiveBranchId;
+
+    if (!receiptBranchId) {
       setReceiptSettings(null);
       setKotReceiptSettings(null);
       return;
@@ -460,37 +616,58 @@ const POS = () => {
 
     const loadReceiptSettings = async () => {
       try {
-        const [thermalResponse, kotResponse] = await Promise.all([
-          receiptSettingsAPI.getByBranch(myShift.branchId, PRINT_TEMPLATE_TYPES.THERMAL),
-          receiptSettingsAPI.getByBranch(myShift.branchId, PRINT_TEMPLATE_TYPES.KOT),
+        if (canUseServer) {
+          const [thermalResponse, kotResponse] = await Promise.all([
+            receiptSettingsAPI.getByBranch(receiptBranchId, PRINT_TEMPLATE_TYPES.THERMAL),
+            receiptSettingsAPI.getByBranch(receiptBranchId, PRINT_TEMPLATE_TYPES.KOT),
+          ]);
+
+          setReceiptSettings(thermalResponse.data);
+          setKotReceiptSettings(kotResponse.data);
+
+          await Promise.all([
+            cacheReceiptSettings(receiptBranchId, PRINT_TEMPLATE_TYPES.THERMAL, thermalResponse.data),
+            cacheReceiptSettings(receiptBranchId, PRINT_TEMPLATE_TYPES.KOT, kotResponse.data),
+          ]);
+          return;
+        }
+
+        const [cachedThermalSettings, cachedKotSettings] = await Promise.all([
+          getCachedReceiptSettings(receiptBranchId, PRINT_TEMPLATE_TYPES.THERMAL),
+          getCachedReceiptSettings(receiptBranchId, PRINT_TEMPLATE_TYPES.KOT),
         ]);
-        setReceiptSettings(thermalResponse.data);
-        setKotReceiptSettings(kotResponse.data);
+
+        setReceiptSettings(cachedThermalSettings);
+        setKotReceiptSettings(cachedKotSettings);
       } catch (error) {
         console.error("Failed to load receipt settings", error);
-        setReceiptSettings(null);
-        setKotReceiptSettings(null);
+        const [cachedThermalSettings, cachedKotSettings] = await Promise.all([
+          getCachedReceiptSettings(receiptBranchId, PRINT_TEMPLATE_TYPES.THERMAL),
+          getCachedReceiptSettings(receiptBranchId, PRINT_TEMPLATE_TYPES.KOT),
+        ]);
+        setReceiptSettings(cachedThermalSettings);
+        setKotReceiptSettings(cachedKotSettings);
       }
     };
 
     loadReceiptSettings();
-  }, [isOnline, myShift?.branchId]);
+  }, [canUseServer, effectiveBranchId, myShift?.branchId]);
 
   useEffect(() => {
-    if (saleMode === SALE_MODES.DINE_IN && isOnline && myShift?.branchId) {
+    if (saleMode === SALE_MODES.DINE_IN && canUseServer && myShift?.branchId) {
       refreshDiningState(myShift.branchId);
     }
-  }, [isOnline, saleMode, myShift?.branchId]);
+  }, [canUseServer, saleMode, myShift?.branchId]);
 
   useEffect(() => {
-    if (!isOnline && saleMode === SALE_MODES.DINE_IN) {
+    if (!canUseServer && saleMode === SALE_MODES.DINE_IN) {
       setSaleMode(SALE_MODES.TAKEAWAY);
       setSelectedTableId(null);
       setDiningTables([]);
       setPendingOrders([]);
-      toast.error("Connection lost. POS switched to takeaway-only offline mode.");
+      toast.error("POS switched to takeaway-only queue mode.");
     }
-  }, [isOnline, saleMode]);
+  }, [canUseServer, saleMode]);
 
   const fetchProducts = async (branchId) => {
     if (!branchId) {
@@ -503,7 +680,7 @@ const POS = () => {
     try {
       let items = [];
 
-      if (isOnline) {
+      if (canUseServer) {
         const response = await itemsAPI.searchForPos("", branchId);
         items = Array.isArray(response.data) ? response.data : [];
         await cacheItemsForBranch(branchId, items);
@@ -535,7 +712,7 @@ const POS = () => {
         setAllItems([]);
         setFilteredItems([]);
         setCategories(["All"]);
-        toast.error(isOnline ? "Failed to load products" : "No offline item cache for this branch");
+        toast.error(canUseServer ? "Failed to load products" : "No offline item cache for this branch");
       }
     }
   };
@@ -557,7 +734,7 @@ const POS = () => {
 
   const addToCart = (item) => {
     if (!canSell) {
-      toast.error(isOnline ? "Please open a shift first!" : "Offline POS is not ready for this branch");
+      toast.error(canUseServer ? "Please open a shift first!" : "POS queue mode is not ready for this branch");
       return;
     }
 
@@ -583,6 +760,10 @@ const POS = () => {
   };
 
   const processAddToCart = (item, price, qty, batchData = null) => {
+    if (cartItems.length === 0 && !cartMode) {
+      setCartMode(canUseServer ? CART_MODES.ONLINE : CART_MODES.QUEUE);
+    }
+
     const unlimitedStockItem = isUnlimitedStockItem(item);
     const isWeight = isWeightItem(item);
     const batchId = batchData ? batchData.batchId : (item.batches?.[0]?.batchId || null);
@@ -719,7 +900,11 @@ const POS = () => {
 
   const updateUnitPrice = (index, newPrice) => {
     const newItems = [...cartItems];
-    newItems[index].unitPrice = toNonNegativeNumber(newPrice);
+    const nextUnitPrice = toNonNegativeNumber(newPrice);
+    newItems[index].unitPrice = nextUnitPrice;
+    if (newItems[index].weightItem) {
+      newItems[index].perGramPrice = getPerGramPrice(nextUnitPrice, true);
+    }
     setCartItems(newItems);
   };
 
@@ -843,8 +1028,8 @@ const POS = () => {
       return;
     }
 
-    if (!isOnline && nextMode === SALE_MODES.DINE_IN) {
-      toast.error("Dine-in is not available in offline mode");
+    if ((!canUseServer || queueCartActive) && nextMode === SALE_MODES.DINE_IN) {
+      toast.error("Dine-in is not available while the current sale is in queue mode");
       return;
     }
 
@@ -867,16 +1052,17 @@ const POS = () => {
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return toast.error("Cart is empty");
-    if (!canSell) return toast.error(isOnline ? "No active shift. Cannot checkout." : "Offline POS is not ready.");
+    if (!canSell) return toast.error(canUseServer ? "No active shift. Cannot checkout." : "POS queue mode is not ready.");
     if (saleMode === SALE_MODES.DINE_IN && !selectedTableId) return toast.error("Select a table before checkout");
 
+    setPaymentError("");
     setPaidAmount(calculateTotal());
     setShowPayment(true);
   };
 
   const handlePrintKot = async () => {
-    if (!isOnline) {
-      toast.error("KOT printing is unavailable in offline mode");
+    if (!canUseServer || queueCartActive) {
+      toast.error("KOT printing is unavailable while the current sale is in queue mode");
       return;
     }
 
@@ -928,7 +1114,7 @@ const POS = () => {
       kotPrintRef.current.printKot(
         kotMeta,
         pendingKotItems,
-        user?.shopName || "POS SYSTEM",
+        user?.shopName || BRAND_NAME_UPPER,
         myShift,
         kotReceiptSettings
       );
@@ -948,12 +1134,19 @@ const POS = () => {
     const subTotal = cartItems.reduce((acc, item) => acc + calculateItemBaseTotal(item), 0);
     const kotItems = getKotEligibleItems(cartItems);
     const shouldPrintFullInvoice = printFullInvoice;
+    const failCheckout = (message) => {
+      setPaymentError(message);
+      toast.error(message);
+    };
 
-    if (!effectiveBranchId) return toast.error("Select a branch before checkout");
-    if (orderType === ORDER_TYPES.CASH && paidAmount < total) return toast.error("Insufficient amount");
-    if (orderType === ORDER_TYPES.CREDIT && !customer) return toast.error("Select customer for credit");
-    if (!isOnline && orderType !== ORDER_TYPES.CASH) return toast.error("Offline mode supports cash sales only");
-    if (!isOnline && saleMode !== SALE_MODES.TAKEAWAY) return toast.error("Offline mode supports takeaway sales only");
+    setPaymentError("");
+
+    if (!effectiveBranchId) return failCheckout("Select a branch before checkout");
+    if (orderType === ORDER_TYPES.CASH && paidAmount < total) return failCheckout("Insufficient amount");
+    const creditLimitMessage = getCreditLimitValidationMessage(total);
+    if (creditLimitMessage) return failCheckout(creditLimitMessage);
+    if (!shouldUseServerForCheckout && orderType !== ORDER_TYPES.CASH) return failCheckout("Queue mode supports cash sales only");
+    if (!shouldUseServerForCheckout && saleMode !== SALE_MODES.TAKEAWAY) return failCheckout("Queue mode supports takeaway sales only");
 
     setLoading(true);
     try {
@@ -977,19 +1170,52 @@ const POS = () => {
         note: "",
       };
 
-      if (!isOnline) {
+      if (!shouldUseServerForCheckout) {
         const clientSaleId = window.crypto.randomUUID();
+        const soldAt = new Date().toISOString();
+        const storeName = user?.shopName || BRAND_NAME_UPPER;
+        const branchName = effectiveBranch?.name || myShift?.branchName || `Branch ${effectiveBranchId}`;
+        const branchAddress = effectiveBranch?.address || myShift?.branchAddress || "";
+        const branchPhone = effectiveBranch?.phone || myShift?.branchPhone || "";
+        const branchLogo = effectiveBranch?.logoUrl || myShift?.branchLogo || "";
+        const cashierName = user?.name || user?.username || "Cashier";
+        const customerName = customer?.name || "Walk-in Customer";
+        const offlineInvoiceNo = buildOfflineInvoiceNo(clientSaleId);
+        const receiptOrderData = {
+          orderId: clientSaleId,
+          invoiceNo: offlineInvoiceNo,
+          subTotal,
+          billDiscount,
+          netTotal: total,
+          paidAmount,
+          orderType,
+          saleMode,
+          customerName,
+          customerPhone: customer?.phone || "",
+          createdAt: soldAt,
+          branchName,
+          branchAddress,
+          branchPhone,
+          branchLogo,
+          cashierName,
+          note: "Offline queued sale",
+        };
+        const receiptCartItems = cartItems.map((item) => ({
+          ...item,
+          lineTotal: calculateItemBaseTotal(item),
+        }));
+
         await addOfflineSale({
           clientSaleId,
           branchId: effectiveBranchId,
-          branchName: effectiveBranch?.name || myShift?.branchName || `Branch ${effectiveBranchId}`,
+          branchName,
           cashierUserId: user?.userId,
-          cashierName: user?.username || "Cashier",
+          cashierName,
           total,
           itemCount: cartItems.length,
-          customerName: customer?.name || "Walk-in Customer",
-          createdAt: new Date().toISOString(),
-          offlineSoldAt: new Date().toISOString(),
+          customerName,
+          createdAt: soldAt,
+          offlineSoldAt: soldAt,
           lastError: null,
           itemsPreview: cartItems.map((item) => ({
             itemId: item.itemId,
@@ -998,10 +1224,24 @@ const POS = () => {
             qty: item.qty,
             qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : item.defaultUnit,
           })),
+          printPayload: {
+            orderData: receiptOrderData,
+            cartItems: receiptCartItems,
+            storeName,
+            customerData: customer,
+            shiftData: {
+              branchName,
+              branchAddress,
+              branchPhone,
+              branchLogo,
+              cashierName,
+            },
+            receiptSettings: receiptSettings || null,
+          },
           payload: {
             ...orderData,
             clientSaleId,
-            offlineSoldAt: new Date().toISOString(),
+            offlineSoldAt: soldAt,
             items: cartItems.map((item) => ({
               itemId: item.itemId,
               batchId: item.batchId,
@@ -1013,6 +1253,24 @@ const POS = () => {
             })),
           },
         });
+
+        if (printRef.current) {
+          printRef.current.printOrder(
+            receiptOrderData,
+            receiptCartItems,
+            storeName,
+            {
+              branchName,
+              branchAddress,
+              branchPhone,
+              branchLogo,
+              cashierName,
+            },
+            customer,
+            receiptSettings
+          );
+        }
+
         toast.success("Sale saved to offline queue");
         clearCartState();
         if (searchInputRef.current) {
@@ -1024,7 +1282,7 @@ const POS = () => {
       const response = await ordersAPI.create(orderData);
       toast.success(`Order ${response.data.invoiceNo} success!`);
 
-      const storeName = user?.shopName || "POS SYSTEM";
+      const storeName = user?.shopName || BRAND_NAME_UPPER;
       const branchName = response.data.branchName || myShift?.branchName || effectiveBranch?.name;
       const branchAddress = response.data.branchAddress || myShift?.branchAddress || "";
       const branchPhone = response.data.branchPhone || myShift?.branchPhone || "";
@@ -1102,7 +1360,9 @@ const POS = () => {
         searchInputRef.current.focus();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed");
+      const message = getApiErrorMessage(error, "Failed");
+      setPaymentError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -1111,7 +1371,7 @@ const POS = () => {
   useKeyboard("F4", () => setShowCustomerSelect(true));
   useKeyboard("F9", handleCheckout);
   useKeyboard("F1", () => showPayment && setOrderType(ORDER_TYPES.CASH));
-  useKeyboard("F2", () => showPayment && isOnline && setOrderType(ORDER_TYPES.CREDIT));
+  useKeyboard("F2", () => showPayment && shouldUseServerForCheckout && setOrderType(ORDER_TYPES.CREDIT));
 
   useKeyboard("Enter", () => {
     if (showPayment && !loading) handlePlaceOrder();
@@ -1129,9 +1389,12 @@ const POS = () => {
     : "Takeaway / Quick Sale";
 
   const branchLabel = myShift?.branchName || effectiveBranch?.name || effectiveBranchId;
+  const checkoutTotal = calculateTotal();
+  const checkoutCreditError = getCreditLimitValidationMessage(checkoutTotal);
+  const checkoutError = paymentError || checkoutCreditError;
 
-  if (loadingShift) {
-    return <div className="h-full flex items-center justify-center"><LoadingSpinner text={isOnline ? "Checking your shift..." : "Loading offline POS..."} /></div>;
+  if (loadingShift && cartItems.length === 0) {
+    return <div className="h-full flex items-center justify-center"><LoadingSpinner text={canUseServer ? "Checking your shift..." : "Loading POS queue mode..."} /></div>;
   }
 
   return (
@@ -1145,8 +1408,10 @@ const POS = () => {
                 <h1 className="text-sm lg:text-xl font-bold text-slate-800">
                   New Sale {branchLabel ? `(Branch: ${branchLabel})` : ""}
                 </h1>
-                {!isOnline ? (
-                  <p className="mt-1 text-xs font-medium text-amber-600">Offline mode active. Sales will stay in the local queue until you import them.</p>
+                {!shouldUseServerForCheckout ? (
+                  <p className="mt-1 text-xs font-medium text-amber-600">
+                    Queue mode active. This sale will stay local until you import it.
+                  </p>
                 ) : null}
               </div>
               <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
@@ -1181,7 +1446,7 @@ const POS = () => {
                 <button
                   type="button"
                   onClick={() => handleSaleModeChange(SALE_MODES.DINE_IN)}
-                  disabled={!isOnline}
+                  disabled={!canUseServer || queueCartActive}
                   className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     saleMode === SALE_MODES.DINE_IN ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
                   }`}
@@ -1290,7 +1555,7 @@ const POS = () => {
               <div className="h-full flex flex-col items-center justify-center text-slate-400">
                 <Lock className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
                 <p className="text-sm lg:text-lg font-medium text-center">
-                  {isOnline ? "Open a shift to view items" : "Select a branch online first to cache items for offline use"}
+                  {canUseServer ? "Open a shift to view items" : "Select a branch online first to cache items for queue mode"}
                 </p>
               </div>
             ) : filteredItems.length === 0 ? (
@@ -1342,16 +1607,11 @@ const POS = () => {
             )}
           </div>
         </div>
-        <div className="hidden lg:flex lg:w-3 lg:flex-shrink-0 lg:items-stretch">
-          <button
-            type="button"
-            aria-label="Resize panels"
-            onMouseDown={handleResizeStart}
-            className={`group flex w-full cursor-col-resize items-center justify-center rounded-full bg-transparent outline-none transition ${isResizingPanels ? "opacity-100" : "opacity-70 hover:opacity-100"}`}
-          >
-            <span className={`h-full w-[3px] rounded-full transition ${isResizingPanels ? "bg-blue-500" : "bg-slate-200 group-hover:bg-slate-300"}`} />
-          </button>
-        </div>
+        <PanelResizeHandle
+          onMouseDown={handleResizeStart}
+          isResizing={isResizingPanels}
+          minHeightClassName="min-h-full"
+        />
         <div
           className={`w-full min-w-0 flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!canSell ? "opacity-50 pointer-events-none grayscale" : ""}`}
           style={{ width: `min(100%, ${cartPanelWidth}px)` }}
@@ -1365,8 +1625,6 @@ const POS = () => {
             onRemoveItem={removeItem}
             onInlineDiscount={handleInlineDiscount}
             onUpdateQtyUnit={updateQtyUnit}
-            total={calculateTotal()}
-            subTotal={cartItems.reduce((acc, item) => acc + calculateItemBaseTotal(item), 0)}
             billDiscount={billDiscount}
             setBillDiscount={setBillDiscount}
             onCheckout={handleCheckout}
@@ -1383,7 +1641,7 @@ const POS = () => {
                       type="button"
                       onClick={() => savePendingDraft()}
                       disabled={savingDraft || !selectedTableId || cartItems.length === 0}
-                      className="inline-flex h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-[40px] items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Save size={16} />
                       {savingDraft ? "Saving..." : "Save Draft"}
@@ -1394,8 +1652,8 @@ const POS = () => {
                   <button
                     type="button"
                     onClick={handlePrintKot}
-                    disabled={!isOnline || printingKot || !hasKotItems || !canPrintKot}
-                    className="inline-flex h-[44px] items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!canUseServer || queueCartActive || printingKot || !hasKotItems || !canPrintKot}
+                    className="inline-flex h-[40px] items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ChefHat size={16} />
                     {printingKot ? "Printing..." : "Print KOT"}
@@ -1403,8 +1661,8 @@ const POS = () => {
                 </div>
                 {saleMode === SALE_MODES.DINE_IN && !selectedTableId ? (
                   <div className="text-[11px] text-slate-500">Select a table before saving or sending KOT.</div>
-                ) : !isOnline ? (
-                  <div className="text-[11px] text-slate-500">KOT printing is available only while online.</div>
+                ) : !canUseServer || queueCartActive ? (
+                  <div className="text-[11px] text-slate-500">KOT printing is available only for server-mode sales.</div>
                 ) : !hasKotItems ? (
                   <div className="text-[11px] text-slate-500">No KOT-enabled items in the cart.</div>
                 ) : !canPrintKot ? (
@@ -1417,7 +1675,22 @@ const POS = () => {
       </div>
 
       <CustomerSelect isOpen={showCustomerSelect} onClose={() => { setShowCustomerSelect(false); if (searchInputRef.current) searchInputRef.current.focus(); }} onSelectCustomer={setCustomer} />
-      <CheckoutOverlay isOpen={showPayment} onClose={() => { setShowPayment(false); if (searchInputRef.current) searchInputRef.current.focus(); }} total={calculateTotal()} orderType={orderType} setOrderType={setOrderType} paidAmount={paidAmount} setPaidAmount={setPaidAmount} onPlaceOrder={handlePlaceOrder} loading={loading} printFullInvoice={printFullInvoice} setPrintFullInvoice={setPrintFullInvoice} isOnline={isOnline} />
+      <CheckoutOverlay
+        isOpen={showPayment}
+        onClose={() => { setShowPayment(false); setPaymentError(""); if (searchInputRef.current) searchInputRef.current.focus(); }}
+        total={checkoutTotal}
+        orderType={orderType}
+        setOrderType={setOrderType}
+        paidAmount={paidAmount}
+        setPaidAmount={setPaidAmount}
+        onPlaceOrder={handlePlaceOrder}
+        loading={loading}
+        printFullInvoice={printFullInvoice}
+        setPrintFullInvoice={setPrintFullInvoice}
+        isOnline={shouldUseServerForCheckout}
+        customer={customer}
+        errorMessage={checkoutError}
+      />
       <BatchSelectModal isOpen={showBatchModal} onClose={() => { setShowBatchModal(false); if (searchInputRef.current) searchInputRef.current.focus(); }} onSelectBatch={handleBatchSelect} item={selectedBatchItem} />
       <ReceiptPrinter ref={printRef} />
       <KotPrinter ref={kotPrintRef} />

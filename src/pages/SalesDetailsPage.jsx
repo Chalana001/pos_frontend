@@ -15,6 +15,7 @@ import {
 import { toast } from "react-hot-toast"; // 🟢 Toast එක Import කළා
 import { hasPermission } from "../utils/permissions";
 import { hasPlanFeature } from "../utils/subscriptionFeatures";
+import { BRAND_NAME_UPPER } from "../utils/branding";
 
 const SalesDetailsPage = () => {
   const { id } = useParams(); 
@@ -89,7 +90,7 @@ const SalesDetailsPage = () => {
       lineTotal: item.lineTotal 
     }));
 
-    const storeName = user?.shopName || "POS SYSTEM"; 
+    const storeName = user?.shopName || BRAND_NAME_UPPER; 
     
     const shiftData = {
       cashierName: sale.cashierName || (sale.cashierUserId ? `Cashier #${sale.cashierUserId}` : "Cashier")
@@ -221,6 +222,11 @@ const SalesDetailsPage = () => {
             <div className="mt-3 text-xs text-slate-500 font-mono flex items-center gap-2">
                <CreditCard size={14}/> 
                Payment: <span className="font-semibold text-slate-700">{sale.orderType || 'CASH'}</span>
+            </div>
+
+            <div className="mt-2 text-xs text-slate-500 font-mono flex items-center gap-2">
+               <User size={14}/>
+               Sold By: <span className="font-semibold text-slate-700">{sale.cashierName || "Unknown"}</span>
             </div>
             
             {/* 🔴 Cancel Reason display update */}

@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
-import { ShoppingCart, Lock, User, Eye, EyeOff, CloudOff } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, CloudOff } from 'lucide-react';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { ROLES } from '../utils/permissions';
 import LanguageSelector from '../components/layout/LanguageSelector';
 import { useLanguage } from '../context/LanguageContext';
+import { BRAND_NAME } from '../utils/branding';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -73,10 +74,7 @@ const Login = () => {
       </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4 shadow-lg">
-            <ShoppingCart className="text-blue-600" size={32} />
-          </div>
-          <h1 className="text-4xl font-bold text-white mb-2">{t('POS System')}</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">{BRAND_NAME}</h1>
           <p className="text-blue-100">
             {isOnline ? t('Sign in to your account') : t('Offline access to POS')}
           </p>

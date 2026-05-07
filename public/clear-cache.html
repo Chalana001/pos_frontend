@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reset POS Cache</title>
+    <style>
+      body {
+        align-items: center;
+        background: #f8fafc;
+        color: #0f172a;
+        display: flex;
+        font-family: Arial, sans-serif;
+        justify-content: center;
+        margin: 0;
+        min-height: 100vh;
+      }
+
+      main {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        max-width: 420px;
+        padding: 24px;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0 0 8px;
+      }
+
+      p {
+        color: #475569;
+        line-height: 1.5;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Resetting POS Cache</h1>
+      <p>Please wait. The app will reload after the old service worker and cached files are removed.</p>
+    </main>
+
+    <script>
+      async function resetCache() {
+        if ("serviceWorker" in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+
+        if ("caches" in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+        }
+
+        window.location.replace("/");
+      }
+
+      resetCache().catch((error) => {
+        document.querySelector("p").textContent = error?.message || "Failed to reset cache.";
+      });
+    </script>
+  </body>
+</html>

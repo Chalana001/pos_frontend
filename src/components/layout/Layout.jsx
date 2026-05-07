@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import VersionUpdateDialog from '../version/VersionUpdateDialog';
 
 const Layout = () => {
   return (
@@ -15,6 +16,7 @@ const Layout = () => {
           <Outlet />
         </main>
       </div>
+      <VersionUpdateDialog />
     </div>
   );
 };

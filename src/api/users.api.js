@@ -7,6 +7,8 @@ export const usersAPI = {
   // GET /users
   list: () => api.get("/users"),
 
+  salesFilter: (params = {}) => api.get("/users/sales-filter", { params }),
+
   // GET /users/{id}
   getById: (id) => api.get(`/users/${id}`),
 

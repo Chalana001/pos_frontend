@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { ShoppingCart, Lock, User, UserPlus } from 'lucide-react';
+import { Lock, User, UserPlus } from 'lucide-react';
 import Button from '../components/common/Button';
+import { BRAND_NAME } from '../utils/branding';
 import api from '../api/axios'; // ඔයා හදපු axios instance එක
 
 const Register = () => {
@@ -47,10 +48,7 @@ const Register = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4 shadow-lg">
-            <ShoppingCart className="text-blue-600" size={32} />
-          </div>
-          <h1 className="text-4xl font-bold text-white mb-2">POS System</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">{BRAND_NAME}</h1>
           <p className="text-blue-100">Create your admin account</p>
         </div>
 

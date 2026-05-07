@@ -36,7 +36,7 @@ export const MeasurementUnit = {
 };
 
 export const EXPENSE_CATEGORIES = {
-    TEA_AND_SNACKS: "TEA_AND_SNACKS",
+    TEA: "TEA",
     LUNCH: "LUNCH",
     STAFF_MEALS: "STAFF_MEALS",
 

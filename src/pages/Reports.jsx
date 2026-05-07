@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { 
   FileText, Download, TrendingUp, 
@@ -22,25 +22,74 @@ import { useBranch } from "../context/BranchContext";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
+const formatDateInput = (date) =>
+  new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+const datePresetOptions = [
+  { id: 'today', label: 'Today' },
+  { id: 'thisMonth', label: 'This Month' },
+  { id: 'lastMonth', label: 'Last Month' },
+  { id: 'thisYear', label: 'This Year' },
+  { id: 'custom', label: 'Custom' },
+];
+
+const productRankOptions = [
+  { value: 'REVENUE', label: 'Revenue' },
+  { value: 'QUANTITY', label: 'Quantity' },
+  { value: 'PROFIT', label: 'Profit' },
+];
+
+const productTypeOptions = [
+  { value: 'ALL', label: 'All Types' },
+  { value: 'NORMAL', label: 'Normal' },
+  { value: 'WEIGHT', label: 'Weight' },
+  { value: 'SERVICE', label: 'Service' },
+  { value: 'RECIPE', label: 'Recipe' },
+];
+
+const productLimitOptions = [10, 20, 50];
+
+const getPresetDateRange = (type) => {
+  const now = new Date();
+  let from = new Date(now);
+  let to = new Date(now);
+
+  if (type === 'thisMonth') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (type === 'lastMonth') {
+    from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    to = new Date(now.getFullYear(), now.getMonth(), 0);
+  } else if (type === 'thisYear') {
+    from = new Date(now.getFullYear(), 0, 1);
+  }
+
+  return { from: formatDateInput(from), to: formatDateInput(to) };
+};
+
 const Reports = () => {
   const [activeTab, setActiveTab] = useState('sales'); 
   const [loading, setLoading] = useState(false);
   
   const [reportData, setReportData] = useState(null);       
+  const [loadedTab, setLoadedTab] = useState(null);
   const [profitSummary, setProfitSummary] = useState(null); 
   const [salesTrend, setSalesTrend] = useState({ data: [], type: 'DAILY' });
 
   const { selectedBranchId } = useBranch();
   
   // 🚀 Default Dates (YYYY-MM-DD)
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(1)).toISOString().split('T')[0], 
-    to: new Date().toISOString().split('T')[0],
+  const [datePreset, setDatePreset] = useState('thisMonth');
+  const [dateRange, setDateRange] = useState(() => getPresetDateRange('thisMonth'));
+  const [filterVersion, setFilterVersion] = useState(0);
+  const [productFilters, setProductFilters] = useState({
+    rankBy: 'REVENUE',
+    itemType: 'ALL',
+    limit: 10,
   });
 
   const reportRef = useRef(null);
 
-  const setQuickDate = (type) => {
+  const setQuickDateOld = (type) => {
     const now = new Date();
     let from = new Date();
     let to = new Date();
@@ -67,9 +116,59 @@ const Reports = () => {
     toast.success(`Date filter applied: ${type.replace(/([A-Z])/g, ' $1').trim()}`);
   };
 
+  const setQuickDate = (type) => {
+    setDatePreset(type);
+    setReportData(null);
+    setLoadedTab(null);
+    setLoading(true);
+    if (type !== 'custom') {
+      setDateRange(getPresetDateRange(type));
+    }
+    setFilterVersion((version) => version + 1);
+  };
+
+  const activeDateLabel = useMemo(
+    () => datePresetOptions.find((option) => option.id === datePreset)?.label || 'Custom',
+    [datePreset]
+  );
+
+  const handleCustomDateChange = (field, value) => {
+    setDatePreset('custom');
+    setReportData(null);
+    setLoadedTab(null);
+    setLoading(true);
+    setDateRange((prev) => ({ ...prev, [field]: value }));
+    setFilterVersion((version) => version + 1);
+  };
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setReportData(null);
+    setLoadedTab(null);
+    setLoading(true);
+  };
+
+  const handleProductFilterChange = (field, value) => {
+    setProductFilters((prev) => ({
+      ...prev,
+      [field]: field === 'limit' ? Number(value) : value,
+    }));
+    setReportData(null);
+    setLoadedTab(null);
+    setLoading(true);
+    setFilterVersion((version) => version + 1);
+  };
+
+  const formatQty = (value, unit) => {
+    const numeric = Number(value || 0);
+    const formatted = Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, '');
+    return unit ? `${formatted} ${unit}` : formatted;
+  };
+
   const generateReport = async (type) => {
     setLoading(true);
     setReportData(null); 
+    setLoadedTab(null);
     setProfitSummary(null);
     setSalesTrend({ data: [], type: 'DAILY' }); 
     
@@ -103,7 +202,12 @@ const Reports = () => {
           break;
           
         case 'topSelling':
-          response = await reportsAPI.topSelling({ ...params, limit: 10 });
+          response = await reportsAPI.topSelling({
+            ...params,
+            rankBy: productFilters.rankBy,
+            itemType: productFilters.itemType !== 'ALL' ? productFilters.itemType : undefined,
+            limit: productFilters.limit,
+          });
           break;
           
         case 'profit':
@@ -140,7 +244,9 @@ const Reports = () => {
           return;
       }
       
-      setReportData(response.data);
+      const arrayReportTypes = ['topSelling', 'profit', 'topCustomers', 'topSuppliers', 'lowStock', 'creditDue'];
+      setReportData(arrayReportTypes.includes(type) ? (Array.isArray(response.data) ? response.data : []) : response.data);
+      setLoadedTab(type);
     } catch (error) {
       console.error(error);
       toast.error('Failed to generate report');
@@ -148,6 +254,15 @@ const Reports = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      generateReport(activeTab);
+    }, 250);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, dateRange.from, dateRange.to, filterVersion, productFilters.itemType, productFilters.limit, productFilters.rankBy, selectedBranchId]);
 
   const exportToPDF = async () => {
     if (!reportRef.current) return;
@@ -313,54 +428,104 @@ const Reports = () => {
     </div>
   )};
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-6 p-4">
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-           <div>
-               <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Analytics</h1>
-               <p className="text-slate-500">Insights & Performance Reports</p>
-           </div>
-           
-           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
-               <input 
-                  type="date" value={dateRange.from}
-                  onChange={(e) => setDateRange(prev => ({...prev, from: e.target.value}))}
-                  className="px-3 py-2 rounded-lg text-sm border-none focus:ring-0 text-slate-600 outline-none"
-               />
-               <span className="self-center text-slate-300">to</span>
-               <input 
-                  type="date" value={dateRange.to}
-                  onChange={(e) => setDateRange(prev => ({...prev, to: e.target.value}))}
-                  className="px-3 py-2 rounded-lg text-sm border-none focus:ring-0 text-slate-600 outline-none"
-               />
-               <button 
-                  onClick={() => generateReport(activeTab)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 ml-2 shadow-sm"
-               >
-                 Run Report
-               </button>
-           </div>
-        </div>
+  const hasActiveReportData = !!reportData && loadedTab === activeTab;
 
-        <div className="flex gap-2">
-           {['today', 'thisMonth', 'lastMonth', 'thisYear'].map(type => (
-               <button 
-                 key={type}
-                 onClick={() => setQuickDate(type)}
-                 className="text-xs bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1 rounded-full text-slate-600 font-medium transition-colors"
-               >
-                 {type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-               </button>
-           ))}
+  return (
+    <div className="space-y-6 pb-10">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-800">Analytics</h1>
+          <p className="mt-1 text-sm text-slate-500">Insights and performance reports.</p>
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+          <Calendar size={16} className="text-slate-400" />
+          {activeDateLabel}
+          <span className="text-slate-300">|</span>
+          <span className="font-medium text-slate-500">{dateRange.from} to {dateRange.to}</span>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6 border-b border-slate-200 pb-2">
+      <Card className="overflow-visible p-0">
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div className="flex flex-wrap gap-2">
+              {datePresetOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setQuickDate(option.id)}
+                  className={`h-[38px] rounded-xl border px-3 text-sm font-semibold transition-colors ${
+                    datePreset === option.id
+                      ? 'border-blue-200 bg-blue-600 text-white shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:ml-auto">
+              <input
+                type="date"
+                value={dateRange.from}
+                onChange={(e) => handleCustomDateChange('from', e.target.value)}
+                className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="hidden text-sm text-slate-400 sm:inline">to</span>
+              <input
+                type="date"
+                value={dateRange.to}
+                onChange={(e) => handleCustomDateChange('to', e.target.value)}
+                className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          {activeTab === 'topSelling' && (
+            <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 xl:flex-row xl:items-center">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Product Performance</p>
+                <p className="mt-1 text-sm text-slate-500">Rank products by revenue, quantity, or profit.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:ml-auto xl:w-[620px]">
+                <select
+                  value={productFilters.rankBy}
+                  onChange={(e) => handleProductFilterChange('rankBy', e.target.value)}
+                  className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {productRankOptions.map((option) => (
+                    <option key={option.value} value={option.value}>Rank: {option.label}</option>
+                  ))}
+                </select>
+                <select
+                  value={productFilters.itemType}
+                  onChange={(e) => handleProductFilterChange('itemType', e.target.value)}
+                  className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {productTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <select
+                  value={productFilters.limit}
+                  onChange={(e) => handleProductFilterChange('limit', e.target.value)}
+                  className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {productLimitOptions.map((limit) => (
+                    <option key={limit} value={limit}>Top {limit}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
         {[
           { id: 'sales', label: 'Sales Summary', icon: TrendingUp },
           { id: 'profit', label: 'Profit Analysis', icon: DollarSign },
-          { id: 'topSelling', label: 'Top Products', icon: BarChart3 },
+          { id: 'topSelling', label: 'Product Performance', icon: BarChart3 },
           { id: 'topCustomers', label: 'Top Customers', icon: Users },
           { id: 'topSuppliers', label: 'Top Suppliers', icon: Truck },
           { id: 'lowStock', label: 'Low Stock', icon: AlertCircle },
@@ -368,7 +533,7 @@ const Reports = () => {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id); generateReport(tab.id); }}
+            onClick={() => handleTabChange(tab.id)}
             className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all text-sm ${
               activeTab === tab.id 
                 ? 'bg-blue-600 text-white shadow-md' 
@@ -385,11 +550,11 @@ const Reports = () => {
           <div className="h-64 flex items-center justify-center">
             <LoadingSpinner size="lg" text="Analyzing data..." />
           </div>
-        ) : !reportData && !loading ? (
+        ) : !hasActiveReportData && !loading ? (
            <div className="text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
               <PieIcon size={48} className="mx-auto text-slate-300 mb-4" />
-              <h3 className="text-lg font-medium text-slate-600">Ready to Analyze</h3>
-              <p className="text-slate-400">Select a report type and click "Run Report".</p>
+              <h3 className="text-lg font-medium text-slate-600">Loading Report</h3>
+              <p className="text-slate-400">Choose a report type or date range to refresh the data.</p>
            </div>
         ) : (
           <div className="space-y-6">
@@ -402,7 +567,7 @@ const Reports = () => {
                 </Button>
              </div>
 
-             <div ref={reportRef} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+             <div ref={reportRef} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="mb-8 border-b border-slate-100 pb-4 flex justify-between items-end">
                    <div>
                       <h2 className="text-2xl font-bold text-slate-800 capitalize">{activeTab.replace(/([A-Z])/g, ' $1').trim()} Report</h2>
@@ -415,30 +580,38 @@ const Reports = () => {
                    </div>
                 </div>
 
-                {activeTab === 'sales' && <SalesReport data={reportData} trendData={salesTrend} />}
+                {activeTab === 'sales' && hasActiveReportData && <SalesReport data={reportData} trendData={salesTrend} />}
                 
-                {activeTab === 'topSelling' && (
+                {activeTab === 'topSelling' && hasActiveReportData && (
                    <div className="space-y-6">
                       <Card className="h-[400px]">
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart layout="vertical" data={reportData.slice(0, 10)} margin={{ top:5, right:30, left:40, bottom:5 }}>
+                          <BarChart layout="vertical" data={reportData.slice(0, productFilters.limit)} margin={{ top:5, right:30, left:40, bottom:5 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis type="number" />
                             <YAxis dataKey="itemName" type="category" width={150} tick={{fontSize:12}} />
-                            <Tooltip formatter={(value) => formatCurrency(value)} />
-                            <Bar dataKey="revenue" fill="#8884d8" radius={[0,4,4,0]}>
+                            <Tooltip formatter={(value) => productFilters.rankBy === 'QUANTITY' ? value : formatCurrency(value)} />
+                            <Bar dataKey={productFilters.rankBy === 'QUANTITY' ? 'qtySold' : productFilters.rankBy === 'PROFIT' ? 'profit' : 'revenue'} fill="#8884d8" radius={[0,4,4,0]}>
                               {reportData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       </Card>
-                      <Card title="Details">
+                      <Card title="Product Performance Details">
                          <Table 
                             columns={[
                                {header:'#', render:(_,i)=>i+1}, 
-                               {header:'Item', accessor:'itemName'}, 
-                               {header:'Qty Sold', accessor:'qtySold'}, 
-                               {header:'Revenue', render:(i)=>formatCurrency(i.revenue)}
+                               {header:'Item', render:(i)=>(
+                                  <div>
+                                    <p className="font-semibold text-slate-800">{i.itemName}</p>
+                                    <p className="text-xs text-slate-500">{i.itemType || 'UNKNOWN'}</p>
+                                  </div>
+                               )}, 
+                               {header:'Qty Sold', render:(i)=>formatQty(i.qtySold, i.qtyUnit)}, 
+                               {header:'Revenue', render:(i)=>formatCurrency(i.revenue)},
+                               {header:'Cost', render:(i)=>formatCurrency(i.cost)},
+                               {header:'Profit', render:(i)=><span className="font-bold text-green-600">{formatCurrency(i.profit)}</span>},
+                               {header:'Margin', render:(i)=>`${Number(i.marginPercent || 0).toFixed(1)}%`}
                             ]} 
                             data={reportData} 
                          />
@@ -446,21 +619,21 @@ const Reports = () => {
                    </div>
                 )}
                 
-                {activeTab === 'profit' && <ProfitReport data={reportData} summary={profitSummary} />}
+                {activeTab === 'profit' && hasActiveReportData && <ProfitReport data={reportData} summary={profitSummary} />}
                 
-                {activeTab === 'topCustomers' && (
+                {activeTab === 'topCustomers' && hasActiveReportData && (
                   <Card title="Loyal Customers">
                     <Table columns={[{header:'Rank', render:(_,i)=>i+1}, {header:'Name', accessor:'customerName'}, {header:'Phone', accessor:'phone'}, {header:'Orders', accessor:'orderCount'}, {header:'Spent', render:(i)=><span className="font-bold text-blue-600">{formatCurrency(i.totalSpent)}</span>}]} data={reportData} />
                   </Card>
                 )}
 
-                {activeTab === 'topSuppliers' && (
+                {activeTab === 'topSuppliers' && hasActiveReportData && (
                   <Card title="Top Suppliers">
                     <Table columns={[{header:'Rank', render:(_,i)=>i+1}, {header:'Name', accessor:'supplierName'}, {header:'Phone', accessor:'contactNo'}, {header:'Purchases', accessor:'purchaseCount'}, {header:'Paid', render:(i)=><span className="font-bold text-red-600">{formatCurrency(i.totalPurchased)}</span>}]} data={reportData} />
                   </Card>
                 )}
 
-                {activeTab === 'creditDue' && (
+                {activeTab === 'creditDue' && hasActiveReportData && (
                   <Card title="Credit Due List">
                     {/* 🚀 API එකෙන් phone එවන්නේ නැති නිසා Table එකෙන් අයින් කළා */}
                     <Table columns={[
@@ -470,7 +643,7 @@ const Reports = () => {
                   </Card>
                 )}
 
-                {activeTab === 'lowStock' && (
+                {activeTab === 'lowStock' && hasActiveReportData && (
                    <Card title="Low Stock Alerts">
                      {/* 🚀 API එකෙන් එවන totalQty දැම්මා */}
                      <Table columns={[

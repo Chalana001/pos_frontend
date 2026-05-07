@@ -21,6 +21,12 @@ export const shiftsAPI = {
   cashdropById: (shiftId, data) =>
     api.post(`/shifts/${shiftId}/cashdrop`, data),
 
+  getById: (shiftId) => api.get(`/shifts/${shiftId}`),
+
+  getOrders: (shiftId, params = {}) => api.get(`/shifts/${shiftId}/orders`, { params }),
+
+  getExpenses: (shiftId, params = {}) => api.get(`/shifts/${shiftId}/expenses`, { params }),
+
   forceCloseByBranch: (branchId, data) =>
     api.post("/shifts/force-close", data, { params: { branchId } }),
 

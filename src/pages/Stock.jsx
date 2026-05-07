@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Search, Package, AlertTriangle, Settings2, ArrowRightLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { stockAPI } from "../api/stock.api";
 import { itemsAPI } from "../api/items.api";
+import { categoriesAPI } from "../api/categories.api";
 import api from '../api/axios';
 
 import { useAuth } from "../context/AuthContext";
@@ -56,7 +58,6 @@ const getDisplayUnit = (entity, fallbackUnit = "") =>
 
 const formatQtyWithUnit = (value, unit) => (unit ? `${formatQty(value)} ${unit}` : formatQty(value));
 
-
 const adjustmentTypeOptions = [
   { value: ADJUSTMENT_TYPES.EXPIRED, label: "Expired" },
   { value: ADJUSTMENT_TYPES.DAMAGED, label: "Damaged" },
@@ -70,14 +71,32 @@ const weightUnitOptions = [
   { value: "KG", label: "Kilograms (KG)" },
 ];
 
+const stockStatusOptions = [
+  { value: "ALL", label: "All Stock" },
+  { value: "REORDER", label: "Reorder Level" },
+  { value: "OUT_OF_STOCK", label: "Out of Stock" },
+  { value: "IN_STOCK", label: "In Stock" },
+];
+
 const Stock = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { selectedBranchId } = useBranch();
 
   const [stockItems, setStockItems] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [stockValue, setStockValue] = useState(0);
+  const [reorderAlertCount, setReorderAlertCount] = useState(0);
+  const [outOfStockCount, setOutOfStockCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingCounts, setLoadingCounts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [branches, setBranches] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+  const [stockStatus, setStockStatus] = useState("ALL");
+  const [categoryId, setCategoryId] = useState("");
+  const [subCategoryId, setSubCategoryId] = useState("");
 
   const [page, setPage] = useState(0);
   const [pageSize] = useState(10);
@@ -108,16 +127,41 @@ const Stock = () => {
   });
 
   useEffect(() => {
-    const fetchBranches = async () => {
+    const fetchInitialFilters = async () => {
       try {
-        const res = await api.get('/branches');
-        setBranches(res.data || []);
+        const [branchRes, categoryRes] = await Promise.all([
+          api.get('/branches'),
+          categoriesAPI.getAll(),
+        ]);
+        setBranches(branchRes.data || []);
+        setCategories(categoryRes.data || []);
       } catch (error) {
-        toast.error("Failed to load branches");
+        toast.error("Failed to load stock filters");
       }
     };
-    fetchBranches();
+    fetchInitialFilters();
   }, []);
+
+  useEffect(() => {
+    if (!categoryId) {
+      setSubCategories([]);
+      setSubCategoryId("");
+      return;
+    }
+
+    const fetchSubCategories = async () => {
+      try {
+        const response = await categoriesAPI.getSubCategories(categoryId);
+        setSubCategories(response.data || []);
+      } catch (error) {
+        setSubCategories([]);
+        setSubCategoryId("");
+        toast.error("Failed to load sub categories");
+      }
+    };
+
+    fetchSubCategories();
+  }, [categoryId]);
 
   const fetchStock = async () => {
     setLoading(true);
@@ -125,6 +169,9 @@ const Stock = () => {
       const currentBranchId = selectedBranchId || 0;
       const response = await stockAPI.getByBranch(currentBranchId, {
         search: searchQuery,
+        stockStatus,
+        categoryId: categoryId || undefined,
+        subCategoryId: subCategoryId || undefined,
         page: page,
         size: pageSize
       });
@@ -132,41 +179,87 @@ const Stock = () => {
       const itemsArray = response.data.content ? response.data.content : (Array.isArray(response.data) ? response.data : []);
       setStockItems(itemsArray);
       setTotalPages(response.data.totalPages || 0);
+      setTotalItems(response.data.totalElements || itemsArray.length);
+      const valueResponse = await stockAPI.getValue(currentBranchId, {
+        search: searchQuery,
+        stockStatus,
+        categoryId: categoryId || undefined,
+        subCategoryId: subCategoryId || undefined,
+      });
+      setStockValue(Number(valueResponse.data?.stockValue || 0));
     } catch (error) {
       toast.error("Failed to fetch stock");
       setStockItems([]);
+      setTotalItems(0);
+      setStockValue(0);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStockCounts = async () => {
+    setLoadingCounts(true);
+    try {
+      const currentBranchId = selectedBranchId || 0;
+      const baseParams = {
+        search: searchQuery,
+        categoryId: categoryId || undefined,
+        subCategoryId: subCategoryId || undefined,
+        page: 0,
+        size: 1,
+      };
+      const [reorderRes, outRes] = await Promise.all([
+        stockAPI.getByBranch(currentBranchId, { ...baseParams, stockStatus: "REORDER" }),
+        stockAPI.getByBranch(currentBranchId, { ...baseParams, stockStatus: "OUT_OF_STOCK" }),
+      ]);
+      setReorderAlertCount(reorderRes.data.totalElements || 0);
+      setOutOfStockCount(outRes.data.totalElements || 0);
+    } catch (error) {
+      setReorderAlertCount(0);
+      setOutOfStockCount(0);
+    } finally {
+      setLoadingCounts(false);
     }
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchStock();
+      fetchStockCounts();
     }, 500);
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranchId, searchQuery, page]);
+  }, [selectedBranchId, searchQuery, stockStatus, categoryId, subCategoryId, page]);
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
     setPage(0);
   };
 
-  const lowStockItems = useMemo(() => {
-    return stockItems.filter((item) => (item?.totalQuantity ?? 0) <= 0);
-  }, [stockItems]);
+  const handleStockStatusChange = (value) => {
+    setStockStatus(value);
+    setPage(0);
+  };
 
-  const totalValue = useMemo(() => {
-    return stockItems.reduce((sum, item) => {
-      const qty = item?.itemType === "WEIGHT"
-        ? Number(item?.totalQuantity ?? 0) / 1000
-        : getDisplayQty(item, item?.totalQuantity ?? 0);
-      const cost = item?.costPrice ?? 0;
-      return sum + qty * cost;
-    }, 0);
-  }, [stockItems]);
+  const handleCategoryChange = (value) => {
+    setCategoryId(value);
+    setSubCategoryId("");
+    setPage(0);
+  };
+
+  const handleSubCategoryChange = (value) => {
+    setSubCategoryId(value);
+    setPage(0);
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStockStatus("ALL");
+    setCategoryId("");
+    setSubCategoryId("");
+    setPage(0);
+  };
 
   const loadItemBatches = async (item, setFormState) => {
     setSelectedItem(item);
@@ -231,6 +324,7 @@ const Stock = () => {
       toast.success('Stock adjusted successfully');
       setShowAdjustModal(false);
       fetchStock();
+      fetchStockCounts();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Adjustment failed');
     } finally {
@@ -279,6 +373,7 @@ const Stock = () => {
       toast.success('Stock transferred successfully');
       setShowTransferModal(false);
       fetchStock();
+      fetchStockCounts();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Transfer failed');
     } finally {
@@ -291,6 +386,7 @@ const Stock = () => {
       { header: "Item ID", accessor: "itemId" },
       { header: "Barcode", render: (item) => <span>{item.barcode ?? "-"}</span> },
       { header: "Name", render: (item) => <span className="font-medium text-slate-800">{item.itemName ?? "-"}</span> },
+      { header: "Category", render: (item) => <span>{item.categoryName || item.subCategoryName || "-"}</span> },
       { header: "Cost", render: (item) => <span>LKR {Number(item.costPrice || 0).toFixed(2)}</span> },
       { header: "Selling", render: (item) => <span>LKR {Number(item.sellingPrice || 0).toFixed(2)}</span> },
       {
@@ -311,9 +407,11 @@ const Stock = () => {
         header: "Status",
         render: (item) => {
           const qty = item.totalQuantity ?? 0;
+          const reorderLevel = item.reorderLevel ?? 0;
+          const isReorder = qty <= reorderLevel;
           return (
-            <span className={"px-2 py-1 rounded-full text-xs font-medium " + (qty > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
-              {qty > 0 ? "In Stock" : "Out of Stock"}
+            <span className={"px-2 py-1 rounded-full text-xs font-medium " + (qty <= 0 ? "bg-red-100 text-red-800" : isReorder ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800")}>
+              {qty <= 0 ? "Out of Stock" : isReorder ? "Reorder" : "In Stock"}
             </span>
           );
         },
@@ -325,7 +423,10 @@ const Stock = () => {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => handleOpenAdjust(item)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenAdjust(item);
+              }}
               className="flex items-center gap-1 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border-none"
             >
               <Settings2 size={16} /> Adjust
@@ -333,7 +434,10 @@ const Stock = () => {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => handleOpenTransfer(item)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenTransfer(item);
+              }}
               className="flex items-center gap-1 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 border-none"
               disabled={(item.totalQuantity ?? 0) <= 0}
             >
@@ -358,6 +462,22 @@ const Stock = () => {
       label: branch.name,
     }));
 
+  const categoryOptions = [
+    { value: "", label: "All Categories" },
+    ...categories.map((category) => ({
+      value: String(category.id),
+      label: category.name,
+    })),
+  ];
+
+  const subCategoryOptions = [
+    { value: "", label: "All Sub Categories" },
+    ...subCategories.map((subCategory) => ({
+      value: String(subCategory.id),
+      label: subCategory.name,
+    })),
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -368,8 +488,8 @@ const Stock = () => {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-slate-600 mb-2">Total Items (Current Page)</h3>
-              <p className="text-2xl font-bold text-slate-800">{stockItems.length}</p>
+              <h3 className="text-sm font-medium text-slate-600 mb-2">Total Items</h3>
+              <p className="text-2xl font-bold text-slate-800">{totalItems}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <Package className="text-blue-600" size={24} />
@@ -380,32 +500,77 @@ const Stock = () => {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-slate-600 mb-2">Out of Stock (Current Page)</h3>
-              <p className="text-2xl font-bold text-red-600">{lowStockItems.length}</p>
+              <h3 className="text-sm font-medium text-slate-600 mb-2">Reorder Alerts</h3>
+              <div className="flex items-end gap-3">
+                <p className="text-2xl font-bold text-amber-600">
+                  {loadingCounts ? "..." : reorderAlertCount}
+                </p>
+                {outOfStockCount > 0 && (
+                  <span className="mb-1 text-xs font-semibold text-red-600">{outOfStockCount} out</span>
+                )}
+              </div>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="text-red-600" size={24} />
+            <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+              <AlertTriangle className="text-amber-600" size={24} />
             </div>
           </div>
         </Card>
 
         <Card>
-          <h3 className="text-sm font-medium text-slate-600 mb-2">Stock Value (Current Page)</h3>
-          <p className="text-2xl font-bold text-green-600">LKR {Number(totalValue).toFixed(2)}</p>
+          <h3 className="text-sm font-medium text-slate-600 mb-2">Stock Value</h3>
+          <p className="text-2xl font-bold text-green-600">LKR {Number(stockValue).toFixed(2)}</p>
         </Card>
       </div>
 
       <Card className="p-0 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearch}
-              placeholder="Search by name, barcode, or ID..."
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all shadow-sm"
+        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(260px,1fr)_180px_220px_220px_auto] xl:items-center">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearch}
+                placeholder="Search name, barcode, category, or ID..."
+                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <CustomSelect
+              value={stockStatus}
+              onChange={handleStockStatusChange}
+              options={stockStatusOptions}
+              valueKey="value"
+              labelKey="label"
+              placeholder="Stock Status"
+              buttonClassName="h-[42px]"
             />
+            <CustomSelect
+              value={categoryId}
+              onChange={handleCategoryChange}
+              options={categoryOptions}
+              valueKey="value"
+              labelKey="label"
+              placeholder="All Categories"
+              buttonClassName="h-[42px]"
+            />
+            <CustomSelect
+              value={subCategoryId}
+              onChange={handleSubCategoryChange}
+              options={subCategoryOptions}
+              valueKey="value"
+              labelKey="label"
+              placeholder="All Sub Categories"
+              disabled={!categoryId}
+              buttonClassName="h-[42px]"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={clearFilters}
+              className="h-[42px] px-4 text-sm"
+            >
+              Clear
+            </Button>
           </div>
         </div>
 
@@ -414,7 +579,11 @@ const Stock = () => {
             <LoadingSpinner size="lg" text="Loading stock..." />
           </div>
         ) : (
-          <Table columns={columns} data={stockItems} />
+          <Table
+            columns={columns}
+            data={stockItems}
+            onRowClick={(item) => navigate(`/stock/item/${item.itemId}`)}
+          />
         )}
 
         <div className="flex justify-between items-center p-4 bg-slate-50 border-t">

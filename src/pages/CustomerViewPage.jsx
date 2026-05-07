@@ -7,7 +7,7 @@ import Button from "../components/common/Button";
 import Modal from "../components/common/Modal"; // 👈 Modal එක import කරගන්න
 
 import { customersAPI } from "../api/customers.api";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, formatDate } from "../utils/formatters";
 
 import CustomerNotesTab from "../components/customers/CustomerNotesTab";
 import CustomerOrdersTab from "../components/customers/CustomerOrdersTab";
@@ -163,8 +163,14 @@ const CustomerViewPage = () => {
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs text-slate-500">Added Date</div>
+                    <div className="text-xl font-bold mt-1 text-slate-800">
+                      {customer?.createdAt ? formatDate(customer.createdAt) : "-"}
+                    </div>
+                  </div>
+
                   {/* Due Amount Box (මෙතන තමයි Pay Now button එක දාන්නේ) */}
                   <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="text-xs text-slate-500">Due Amount</div>

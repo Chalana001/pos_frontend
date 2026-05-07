@@ -18,6 +18,7 @@ import {
   RECEIPT_SECTION_FIELDS,
 } from '../utils/receiptSettings';
 import { receiptSettingsAPI } from '../api/receiptSettings.api';
+import { BRAND_NAME_UPPER } from '../utils/branding';
 import { diningTablesAPI } from '../api/diningTables.api';
 
 const toSavePayload = (settings, templateType) => {
@@ -711,7 +712,7 @@ const ReceiptSettingsPage = () => {
           ) : (
             <ReceiptPreview
               branch={activeBranch}
-              storeName={user?.shopName || 'POS SYSTEM'}
+              storeName={user?.shopName || BRAND_NAME_UPPER}
               settings={form}
               templateType={activeTemplate}
             />

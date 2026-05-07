@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Clock, User, Store } from "lucide-react"; 
 import { shiftsAPI } from "../api/shifts.api";
@@ -22,6 +22,10 @@ const Shifts = () => {
     () => user?.role === "ADMIN" || user?.role === "MANAGER",
     [user?.role]
   );
+
+  useEffect(() => {
+    refreshShift?.();
+  }, [refreshShift]);
 
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);

@@ -79,6 +79,9 @@ export const AuthProvider = ({ children }) => {
           setAuthMode("online");
           setUserState(currentUser);
           await fetchAndStoreSubscription(currentUser);
+        } else if (offlineSessionUser) {
+          setUserState(offlineSessionUser);
+          setAuthMode("offline");
         } else if (currentUser || token) {
           clearAuth();
           setUserState(null);

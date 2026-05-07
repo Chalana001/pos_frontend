@@ -18,14 +18,16 @@ const BranchSelector = () => {
   };
 
   return (
-    <div className="relative ml-14 flex items-center gap-2 xl:ml-0">
-      <Building2 size={20} className="hidden shrink-0 text-slate-500 sm:block" />
-      <div className="z-20 w-40">
+    <div className="relative z-20 flex h-11 min-w-[190px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm">
+      <Building2 size={18} className="shrink-0 text-slate-500" />
+      <div className="min-w-0 flex-1">
         <CustomSelect
           value={selectedBranchId}
           onChange={handleManualChange}
           options={branches}
           placeholder={t("Select Branch")}
+          buttonClassName="h-9 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0 hover:border-transparent"
+          menuClassName="min-w-[190px]"
         />
       </div>
     </div>
