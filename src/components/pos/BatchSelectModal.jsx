@@ -36,18 +36,27 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
         <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
           {item.batches && item.batches.length > 0 ? (
             item.batches.map((batch) => {
+              const availableQty = Number(batch.qty || 0);
+              const isAvailable = availableQty > 0;
               const displayQty = isWeightItem(item)
-                ? Number(batch.qty ?? 0) / 1000
+                ? availableQty / 1000
                 : Number(batch.displayQty ?? batch.qty ?? 0);
               const displayUnit = isWeightItem(item) ? "KG" : (batch.displayUnit ?? item.defaultUnit ?? "");
 
               return (
                 <button
                   key={batch.batchId}
-                  onClick={() => onSelectBatch(batch)}
-                  className="group w-full flex items-center justify-between p-4 border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50/30 hover:shadow-md transition-all text-left relative overflow-hidden"
+                  onClick={() => isAvailable && onSelectBatch(batch)}
+                  disabled={!isAvailable}
+                  className={`group w-full flex items-center justify-between p-4 border rounded-xl transition-all text-left relative overflow-hidden ${
+                    isAvailable
+                      ? "border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 hover:shadow-md"
+                      : "border-red-100 bg-red-50/40 cursor-not-allowed opacity-80"
+                  }`}
                 >
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-transparent group-hover:bg-blue-500 transition-all"></div>
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 transition-all ${
+                    isAvailable ? "bg-transparent group-hover:bg-blue-500" : "bg-red-300"
+                  }`}></div>
 
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
@@ -71,11 +80,13 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
                   </div>
 
                   <div className="text-right">
-                    <div className="text-xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                    <div className={`text-xl font-bold transition-colors ${
+                      isAvailable ? "text-slate-800 group-hover:text-blue-600" : "text-slate-500"
+                    }`}>
                       {formatCurrency(batch.price)}
                     </div>
                     <div className="text-xs font-semibold text-slate-400 mt-1">
-                      <span className={batch.qty > 0 ? "text-emerald-600" : "text-red-500"}>
+                      <span className={isAvailable ? "text-emerald-600" : "text-red-500"}>
                         {displayUnit ? `${formatQty(displayQty)} ${displayUnit}` : formatQty(displayQty)}
                       </span>{" "}
                       Available
@@ -94,7 +105,7 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
 
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-center">
           <p className="text-xs text-slate-400">
-            Please verify the price and batch number on the physical product.
+            Batches are listed oldest first. Please verify the price and batch number on the physical product.
           </p>
         </div>
       </div>

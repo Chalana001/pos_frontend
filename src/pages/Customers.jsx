@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Plus, Edit, Search, Eye } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { customersAPI } from "../api/customers.api";
@@ -122,28 +122,6 @@ const CustomersListPage = () => {
         </span>
       ),
     },
-    {
-      header: "Actions",
-      render: (c) => (
-        <div className="flex gap-2">
-          <button
-            onClick={() => navigate(`/customers/${c.id}`)}
-            className="p-1 text-slate-700 hover:text-slate-900"
-            title="View"
-          >
-            <Eye size={18} />
-          </button>
-
-          <button
-            onClick={() => navigate(`/customers/${c.id}/edit`)}
-            className="p-1 text-blue-600 hover:text-blue-800"
-            title="Edit"
-          >
-            <Edit size={18} />
-          </button>
-        </div>
-      ),
-    },
   ], [navigate]);
 
   return (
@@ -225,7 +203,7 @@ const CustomersListPage = () => {
             <LoadingSpinner size="lg" text="Loading customers..." />
           </div>
         ) : (
-          <Table columns={columns} data={customers} />
+          <Table columns={columns} data={customers} onRowClick={(customer) => navigate(`/customers/${customer.id}`)} />
         )}
 
         <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">

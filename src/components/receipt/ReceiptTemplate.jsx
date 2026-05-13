@@ -241,7 +241,11 @@ const ReceiptTemplate = ({
   const billDiscount = Number(orderData?.billDiscount ?? 0);
   const grandTotal = Number(orderData?.netTotal ?? orderData?.grandTotal ?? 0);
   const paidAmount = Number(orderData?.paidAmount ?? 0);
-  const orderType = orderData?.orderType || 'CASH';
+  const dueAmount = Math.max(0, Number(orderData?.dueAmount ?? 0));
+  const paymentMethod = (orderData?.paymentMethod || 'CASH').replace('_', ' ');
+  const orderType = dueAmount > 0 && paidAmount > 0
+    ? `${paymentMethod} + CREDIT`
+    : (dueAmount > 0 ? 'CREDIT' : paymentMethod);
 
   return (
     <div style={{ ...styles.page, pageBreakAfter: mode === 'print' && showContinued ? 'always' : 'auto' }}>
@@ -377,6 +381,12 @@ const ReceiptTemplate = ({
               <div style={{ ...styles.totalRow, fontWeight: 700 }}>
                 <span>Balance</span>
                 <span>{formatCurrency(paidAmount - grandTotal)}</span>
+              </div>
+            ) : null}
+            {normalized.showDueAmount && dueAmount > 0 ? (
+              <div style={{ ...styles.totalRow, fontWeight: 700 }}>
+                <span>Credit Due</span>
+                <span>{formatCurrency(dueAmount)}</span>
               </div>
             ) : null}
           </div>

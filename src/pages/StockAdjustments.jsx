@@ -149,7 +149,7 @@ const StockAdjustments = () => {
       {
         header: "Type",
         render: (adj) => {
-          const positiveTypes = ["FOUND", "MANUAL"];
+          const positiveTypes = ["FOUND", "NEW_STOCK", "MANUAL"];
           const positive = positiveTypes.includes(adj.type);
           return (
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${positive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>

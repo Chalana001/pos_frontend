@@ -8,6 +8,7 @@ import AccordionSection from "../components/items/BulkItemForm";
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api"; 
 import { useBranch } from "../context/BranchContext";
+import { useAuth } from "../context/AuthContext";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { ItemType, ItemTypeLabels } from "../utils/constants"; // 🟢 Constant එක Import කළා
 
@@ -38,6 +39,18 @@ const itemTypeOptions = [
   { value: ItemType.RECIPE, label: ItemTypeLabels.RECIPE },
 ];
 
+const getAllowedItemTypeOptions = (planName) => {
+  if (planName === "FREE" || planName === "MONTHLY_DEMO") {
+    return itemTypeOptions.filter((option) => option.value === ItemType.NORMAL);
+  }
+  if (["STANDARD", "MONTHLY_LITE", "YEARLY_LITE", "MONTHLY_BASIC"].includes(planName)) {
+    return itemTypeOptions.filter((option) =>
+      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.SERVICE].includes(option.value)
+    );
+  }
+  return itemTypeOptions;
+};
+
 const weightUnitOptions = [
   { value: "KG", label: "KG" },
   { value: "G", label: "G" },
@@ -67,6 +80,8 @@ const emptyDraft = () => ({
 
 export default function BulkAddItems() {
   const { branches: availableBranches } = useBranch();
+  const { user } = useAuth();
+  const allowedItemTypeOptions = useMemo(() => getAllowedItemTypeOptions(user?.planName), [user?.planName]);
   const [draft, setDraft] = useState(emptyDraft());
   const [cart, setCart] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -693,7 +708,7 @@ export default function BulkAddItems() {
                            branchIds: val === ItemType.SERVICE ? draft.branchIds : [],
                         });
                       }}
-                      options={itemTypeOptions}
+                      options={allowedItemTypeOptions}
                       valueKey="value"
                       labelKey="label"
                       className="w-[190px]"

@@ -29,6 +29,48 @@ import {
   ResponsiveContainer
 } from "recharts";
 
+const useCountUp = (value, duration = 950) => {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const target = Number(value || 0);
+    if (!Number.isFinite(target)) {
+      setDisplayValue(0);
+      return undefined;
+    }
+
+    let frameId;
+    const startTime = performance.now();
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      setDisplayValue(target * easeOutCubic(progress));
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(tick);
+      } else {
+        setDisplayValue(target);
+      }
+    };
+
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [value, duration]);
+
+  return displayValue;
+};
+
+const AnimatedValue = ({ value, type = "number" }) => {
+  const animated = useCountUp(value);
+
+  if (type === "currency") {
+    return formatCurrency(animated);
+  }
+
+  return Math.round(animated).toLocaleString("en-LK");
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -141,19 +183,19 @@ const Dashboard = () => {
   }
 
   const stats = [
-    { title: "Today's Sales", value: formatCurrency(kpis?.todaySales || 0), icon: DollarSign, color: "bg-blue-500", change: "+12.5%" },
-    { title: "Cash Sales", value: formatCurrency(kpis?.cashSales || 0), icon: TrendingUp, color: "bg-green-500" },
-    { title: "Credit Sales", value: formatCurrency(kpis?.creditSales || 0), icon: CreditCard, color: "bg-orange-500" },
-    { title: "Total Orders", value: kpis?.todayOrders || 0, icon: ShoppingCart, color: "bg-purple-500" },
-    { title: "Expenses", value: formatCurrency(kpis?.todayExpenses || 0), icon: TrendingDown, color: "bg-red-500" },
-    { title: "Cash Drops", value: formatCurrency(kpis?.todayCashDrops || 0), icon: Package, color: "bg-indigo-500" },
-    { title: "Low Stock Items", value: kpis?.lowStockCount || 0, icon: AlertTriangle, color: "bg-yellow-500" },
-    { title: "Credit Due", value: formatCurrency(kpis?.totalDue || 0), icon: Users, color: "bg-pink-500" },
+    { title: "Today's Sales", value: kpis?.todaySales || 0, type: "currency", icon: DollarSign, color: "bg-blue-500", change: "+12.5%" },
+    { title: "Cash Sales", value: kpis?.cashSales || 0, type: "currency", icon: TrendingUp, color: "bg-green-500" },
+    { title: "Credit Sales", value: kpis?.creditSales || 0, type: "currency", icon: CreditCard, color: "bg-orange-500" },
+    { title: "Total Orders", value: kpis?.todayOrders || 0, type: "number", icon: ShoppingCart, color: "bg-purple-500" },
+    { title: "Expenses", value: kpis?.todayExpenses || 0, type: "currency", icon: TrendingDown, color: "bg-red-500" },
+    { title: "Cash Drops", value: kpis?.todayCashDrops || 0, type: "currency", icon: Package, color: "bg-indigo-500" },
+    { title: "Low Stock Items", value: kpis?.lowStockCount || 0, type: "number", icon: AlertTriangle, color: "bg-yellow-500" },
+    { title: "Credit Due", value: kpis?.totalDue || 0, type: "currency", icon: Users, color: "bg-pink-500" },
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="dashboard-rise-in flex items-center justify-between" style={{ animationDelay: "40ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
         <div className="text-sm text-slate-500">
           {new Date().toLocaleDateString("en-LK", {
@@ -166,26 +208,37 @@ const Dashboard = () => {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card key={index} className="hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">{stat.title}</p>
-                  <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
-                  {stat.change && <p className="text-sm text-green-600 mt-1">{stat.change}</p>}
+            <div
+              key={stat.title}
+              className="dashboard-card-in"
+              style={{ animationDelay: `${120 + index * 70}ms` }}
+            >
+              <Card className="dashboard-premium-card dashboard-soft-glow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-600 mb-1">{stat.title}</p>
+                    <p className="text-2xl font-bold text-slate-800 tabular-nums">
+                      <AnimatedValue value={stat.value} type={stat.type} />
+                    </p>
+                    {stat.change && <p className="text-sm text-green-600 mt-1">{stat.change}</p>}
+                  </div>
+                  <div
+                    className={`${stat.color} dashboard-icon-pop w-12 h-12 rounded-xl flex items-center justify-center shadow-sm`}
+                    style={{ animationDelay: `${260 + index * 70}ms` }}
+                  >
+                    <Icon className="text-white" size={24} />
+                  </div>
                 </div>
-                <div className={`${stat.color} w-12 h-12 rounded-xl flex items-center justify-center shadow-sm`}>
-                  <Icon className="text-white" size={24} />
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           );
         })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <div className="lg:col-span-2">
-          <Card>
+        <div className="dashboard-card-in lg:col-span-2" style={{ animationDelay: "760ms" }}>
+          <Card className="dashboard-premium-card">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-slate-800">Sales Overview</h2>
               
@@ -209,7 +262,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="h-[300px] w-full relative">
+            <div className="dashboard-chart-in h-[300px] w-full relative" style={{ animationDelay: "920ms" }}>
               {chartLoading && (
                 <div className="absolute inset-0 z-10 bg-white/60 flex items-center justify-center rounded-lg">
                    <LoadingSpinner size="sm" />
@@ -280,12 +333,13 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        <div className="lg:col-span-1">
-          <Card title="Quick Actions" className="h-full">
+        <div className="dashboard-card-in lg:col-span-1" style={{ animationDelay: "860ms" }}>
+          <Card title="Quick Actions" className="h-full dashboard-premium-card">
             <div className="grid grid-cols-2 gap-4 mt-2">
               <button
                 onClick={() => navigate("/pos")}
-                className="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all text-left group"
+                className="dashboard-rise-in p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all text-left group hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-100"
+                style={{ animationDelay: "960ms" }}
               >
                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
                   <ShoppingCart className="text-blue-600" size={20} />
@@ -295,7 +349,8 @@ const Dashboard = () => {
               
               <button
                 onClick={() => navigate("/stock")}
-                className="p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-all text-left group"
+                className="dashboard-rise-in p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-all text-left group hover:-translate-y-1 hover:shadow-lg hover:shadow-green-100"
+                style={{ animationDelay: "1040ms" }}
               >
                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
                   <Package className="text-green-600" size={20} />
@@ -305,7 +360,8 @@ const Dashboard = () => {
               
               <button
                 onClick={() => navigate("/customers?add=1")}
-                className="p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all text-left group"
+                className="dashboard-rise-in p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all text-left group hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-100"
+                style={{ animationDelay: "1120ms" }}
               >
                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
                   <Users className="text-purple-600" size={20} />
@@ -315,7 +371,8 @@ const Dashboard = () => {
               
               <button
                 onClick={() => navigate("/reports")}
-                className="p-4 bg-orange-50 hover:bg-orange-100 rounded-xl transition-all text-left group"
+                className="dashboard-rise-in p-4 bg-orange-50 hover:bg-orange-100 rounded-xl transition-all text-left group hover:-translate-y-1 hover:shadow-lg hover:shadow-orange-100"
+                style={{ animationDelay: "1200ms" }}
               >
                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
                   <DollarSign className="text-orange-600" size={20} />

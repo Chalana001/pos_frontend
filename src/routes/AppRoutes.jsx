@@ -32,6 +32,9 @@ import StockTransfers from '../pages/StockTransfers';
 import Purchases from "../pages/PurchaseListPage";
 import NewPurchase from "../pages/PurchaseFormPage";
 import PurchaseDetailsPage from "../pages/PurchaseDetailsPage";
+import SuppliersPage from "../pages/SuppliersPage";
+import SupplierViewPage from "../pages/SupplierViewPage";
+import SupplierFormPage from "../pages/SupplierFormPage";
 import Reports from '../pages/Reports';
 import Branches from "../pages/Branches";
 import ReceiptSettingsPage from '../pages/ReceiptSettingsPage';
@@ -90,14 +93,17 @@ const AppRoutes = () => {
         <Route path="expenses" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline><Expenses /></ProtectedRoute>} />
         <Route path="cash-drops" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline><CashDrops /></ProtectedRoute>} />
         
-        <Route path="stock" element={<ProtectedRoute permission="VIEW_STOCK" requiresOnline><Stock /></ProtectedRoute>} />
-        <Route path="stock/item/:id" element={<ProtectedRoute permission="VIEW_STOCK" requiresOnline><StockItemDetailsPage /></ProtectedRoute>} />
-        <Route path="stock/adjustments" element={<ProtectedRoute permission="ADJUST_STOCK" requiresOnline><StockAdjustments /></ProtectedRoute>} />
+        <Route path="stock" element={<ProtectedRoute permission="VIEW_STOCK" feature="STOCK_LEVELS" requiresOnline><Stock /></ProtectedRoute>} />
+        <Route path="stock/item/:id" element={<ProtectedRoute permission="VIEW_STOCK" feature="STOCK_LEVELS" requiresOnline><StockItemDetailsPage /></ProtectedRoute>} />
+        <Route path="stock/adjustments" element={<ProtectedRoute permission="ADJUST_STOCK" feature="STOCK_LEVELS" requiresOnline><StockAdjustments /></ProtectedRoute>} />
         <Route path="stock/transfers" element={<ProtectedRoute permission="TRANSFER_STOCK" feature="STOCK_TRANSFERS" requiresOnline><StockTransfers /></ProtectedRoute>} />
         
         <Route path="purchases" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline><Purchases /></ProtectedRoute>} />
         <Route path="purchases/new" element={<ProtectedRoute permission="NEW_PURCHASE" feature="PURCHASES" requiresOnline><NewPurchase /></ProtectedRoute>} />
         <Route path="purchases/:id" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline><PurchaseDetailsPage /></ProtectedRoute>} />
+        <Route path="suppliers" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline><SuppliersPage /></ProtectedRoute>} />
+        <Route path="suppliers/new" element={<ProtectedRoute permission="NEW_PURCHASE" feature="PURCHASES" requiresOnline><SupplierFormPage /></ProtectedRoute>} />
+        <Route path="suppliers/:id" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline><SupplierViewPage /></ProtectedRoute>} />
 
         <Route path="reports" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline><Reports /></ProtectedRoute>} />
         <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline><Branches /></ProtectedRoute>} />

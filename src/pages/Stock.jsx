@@ -63,8 +63,19 @@ const adjustmentTypeOptions = [
   { value: ADJUSTMENT_TYPES.DAMAGED, label: "Damaged" },
   { value: ADJUSTMENT_TYPES.LOST, label: "Lost" },
   { value: ADJUSTMENT_TYPES.FOUND, label: "Found" },
+  { value: ADJUSTMENT_TYPES.NEW_STOCK, label: "New Stock" },
   { value: ADJUSTMENT_TYPES.MANUAL, label: "Manual" },
 ];
+
+const adjustmentDirectionOptions = [
+  { value: "ADD", label: "+ Add" },
+  { value: "REMOVE", label: "- Remove" },
+];
+
+const getDefaultAdjustmentDirection = (type) =>
+  [ADJUSTMENT_TYPES.EXPIRED, ADJUSTMENT_TYPES.DAMAGED, ADJUSTMENT_TYPES.LOST].includes(type)
+    ? "REMOVE"
+    : "ADD";
 
 const weightUnitOptions = [
   { value: "G", label: "Grams (G)" },
@@ -112,6 +123,7 @@ const Stock = () => {
   const [adjustFormData, setAdjustFormData] = useState({
     batchId: '',
     type: ADJUSTMENT_TYPES.MANUAL,
+    direction: getDefaultAdjustmentDirection(ADJUSTMENT_TYPES.MANUAL),
     qty: '',
     qtyUnit: 'KG', 
     reason: '',
@@ -294,6 +306,7 @@ const Stock = () => {
     setAdjustFormData({
       batchId: '',
       type: ADJUSTMENT_TYPES.MANUAL,
+      direction: getDefaultAdjustmentDirection(ADJUSTMENT_TYPES.MANUAL),
       qty: '',
       qtyUnit: isWeightItem(item) ? (item.defaultUnit || "KG") : "KG",
       reason: '',
@@ -317,6 +330,7 @@ const Stock = () => {
         branchId: currentBranchId,
         itemId: selectedItem.itemId,
         batchId: parseInt(adjustFormData.batchId),
+        direction: adjustFormData.direction,
         qty: weightItem ? parseFloat(adjustFormData.qty) : parseInt(adjustFormData.qty),
         qtyUnit: weightItem ? adjustFormData.qtyUnit : undefined,
       });
@@ -383,7 +397,6 @@ const Stock = () => {
 
   const columns = useMemo(
     () => [
-      { header: "Item ID", accessor: "itemId" },
       { header: "Barcode", render: (item) => <span>{item.barcode ?? "-"}</span> },
       { header: "Name", render: (item) => <span className="font-medium text-slate-800">{item.itemName ?? "-"}</span> },
       { header: "Category", render: (item) => <span>{item.categoryName || item.subCategoryName || "-"}</span> },
@@ -531,7 +544,7 @@ const Stock = () => {
                 type="text"
                 value={searchQuery}
                 onChange={handleSearch}
-                placeholder="Search name, barcode, category, or ID..."
+                placeholder="Search name, barcode, or category..."
                 className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -646,7 +659,11 @@ const Stock = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Adjustment Type *</label>
                 <CustomSelect
                   value={adjustFormData.type}
-                  onChange={(value) => setAdjustFormData({ ...adjustFormData, type: value })}
+                  onChange={(value) => setAdjustFormData({
+                    ...adjustFormData,
+                    type: value,
+                    direction: getDefaultAdjustmentDirection(value),
+                  })}
                   options={adjustmentTypeOptions}
                   valueKey="value"
                   labelKey="label"
@@ -657,13 +674,22 @@ const Stock = () => {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Quantity *</label>
                 <div className="flex gap-2">
+                  <CustomSelect
+                    value={adjustFormData.direction}
+                    onChange={(value) => setAdjustFormData({ ...adjustFormData, direction: value })}
+                    options={adjustmentDirectionOptions}
+                    valueKey="value"
+                    labelKey="label"
+                    className="w-[118px] shrink-0"
+                    buttonClassName="h-[42px] rounded-lg"
+                  />
                   <input
                     type="number"
                     step={isWeightItem(selectedItem) ? (adjustFormData.qtyUnit === "G" ? "1" : "0.1") : "1"}
                     value={adjustFormData.qty}
                     onChange={(e) => setAdjustFormData({ ...adjustFormData, qty: e.target.value })}
                     className="flex-1 p-2 border border-slate-300 rounded-lg w-full"
-                    placeholder="e.g., -5 to remove, +5 to add"
+                    placeholder="Enter quantity"
                     required
                   />
                   {isWeightItem(selectedItem) && (

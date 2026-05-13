@@ -3,6 +3,14 @@ import { X, Banknote, CreditCard, Printer, CheckCircle2, FileText, AlertTriangle
 import { formatCurrency } from "../../utils/formatters";
 import { ORDER_TYPES } from "../../utils/constants";
 import Button from "../common/Button";
+import CustomSelect from "../common/CustomSelect";
+
+const paymentMethodOptions = [
+  { value: "CASH", label: "Cash" },
+  { value: "CARD", label: "Card" },
+  { value: "BANK", label: "Bank" },
+  { value: "CHEQUE", label: "Cheque" },
+];
 
 const CheckoutOverlay = ({ 
   isOpen, 
@@ -12,6 +20,8 @@ const CheckoutOverlay = ({
   setOrderType, 
   paidAmount, 
   setPaidAmount, 
+  paymentMethod = "CASH",
+  setPaymentMethod,
   onPlaceOrder, 
   loading,
   printFullInvoice,
@@ -21,15 +31,21 @@ const CheckoutOverlay = ({
   errorMessage = "",
 }) => {
   const inputRef = useRef(null);
-  const normalizedTotal = Number.isFinite(Number(total)) ? Number(total) : 0;
-  const normalizedPaidAmount = Number.isFinite(Number(paidAmount)) ? Number(paidAmount) : 0;
+  const roundToRupee = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return 0;
+    }
+    return Math.max(0, Math.round(parsed + Number.EPSILON));
+  };
+  const normalizedTotal = roundToRupee(total);
+  const normalizedPaidAmount = roundToRupee(paidAmount);
   const hasCreditLimit = customer?.creditLimit !== null
     && customer?.creditLimit !== undefined
     && customer?.creditLimit !== ""
     && Number.isFinite(Number(customer.creditLimit));
   const currentDue = Number(customer?.dueAmount || 0);
   const creditLimit = hasCreditLimit ? Number(customer.creditLimit) : null;
-  const projectedDue = currentDue + normalizedTotal;
   const availableCredit = hasCreditLimit ? Math.max(0, creditLimit - currentDue) : null;
 
   useEffect(() => {
@@ -41,8 +57,16 @@ const CheckoutOverlay = ({
   if (!isOpen) return null;
 
   const changeAmount = normalizedPaidAmount - normalizedTotal;
-  const isEnough = normalizedPaidAmount >= normalizedTotal || orderType === ORDER_TYPES.CREDIT;
-  const canConfirm = isEnough && !errorMessage;
+  const creditDueAmount = orderType === ORDER_TYPES.CREDIT
+    ? normalizedTotal
+    : Math.max(0, normalizedTotal - normalizedPaidAmount);
+  const projectedDue = currentDue + creditDueAmount;
+  const isMixedPayment = orderType === ORDER_TYPES.CASH && creditDueAmount > 0;
+  const needsCustomer = orderType === ORDER_TYPES.CREDIT || isMixedPayment;
+  const canConfirm = !errorMessage
+    && (orderType === ORDER_TYPES.CASH
+      ? (normalizedPaidAmount >= normalizedTotal || (isOnline && !!customer))
+      : (isOnline && !!customer));
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm">
@@ -102,10 +126,21 @@ const CheckoutOverlay = ({
                 <input
                   ref={inputRef}
                   type="number"
+                  step="1"
                   value={normalizedPaidAmount || ""}
-                  onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setPaidAmount(roundToRupee(e.target.value))}
                   className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-5 pl-16 pr-6 text-3xl font-black text-slate-800 focus:border-blue-600 focus:bg-white outline-none transition-all"
                   placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-black text-slate-700 uppercase">Payment Method</label>
+                <CustomSelect
+                  value={paymentMethod}
+                  onChange={(nextValue) => setPaymentMethod?.(nextValue)}
+                  options={paymentMethodOptions}
+                  buttonClassName="border-2 border-slate-200 px-4 py-3 font-bold focus:ring-blue-100"
                 />
               </div>
 
@@ -114,12 +149,43 @@ const CheckoutOverlay = ({
                 changeAmount >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'
               }`}>
                 <span className="font-bold text-slate-600">
-                  {changeAmount >= 0 ? "Change to Return" : "Still Balance"}
+                  {changeAmount >= 0 ? "Change to Return" : "Credit Due"}
                 </span>
                 <span className={`text-2xl font-black ${changeAmount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {formatCurrency(Math.abs(changeAmount))}
                 </span>
               </div>
+
+              {isMixedPayment && (
+                <div className="rounded-xl border-2 border-amber-100 bg-amber-50 p-4 space-y-3">
+                  <div className="flex gap-3 items-start">
+                    <CreditCard className="mt-0.5 shrink-0 text-amber-600" size={20} />
+                    <p className="text-sm font-semibold leading-relaxed text-amber-800">
+                      This will be saved as cash plus customer credit. Select a customer before confirming.
+                    </p>
+                  </div>
+                  {customer && (
+                    <div className="rounded-lg border border-amber-200 bg-white/70 p-3 text-sm">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-slate-500">Customer</span>
+                        <span className="font-bold text-slate-800 text-right">{customer.name}</span>
+                      </div>
+                      <div className="mt-2 flex justify-between gap-3">
+                        <span className="text-slate-500">Current Due</span>
+                        <span className="font-semibold text-slate-800">{formatCurrency(currentDue)}</span>
+                      </div>
+                      <div className="mt-2 flex justify-between gap-3">
+                        <span className="text-slate-500">New Credit</span>
+                        <span className="font-semibold text-amber-700">{formatCurrency(creditDueAmount)}</span>
+                      </div>
+                      <div className="mt-2 flex justify-between gap-3">
+                        <span className="text-slate-500">Projected Due</span>
+                        <span className="font-semibold text-slate-800">{formatCurrency(projectedDue)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -156,6 +222,15 @@ const CheckoutOverlay = ({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {needsCustomer && !customer && !errorMessage && (
+            <div className="rounded-xl border-2 border-amber-100 bg-amber-50 p-4 flex gap-3 items-start">
+              <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={20} />
+              <p className="text-sm font-semibold leading-relaxed text-amber-800">
+                Select a customer to save the remaining balance as credit.
+              </p>
             </div>
           )}
 

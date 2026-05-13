@@ -20,6 +20,7 @@ import {
 import { receiptSettingsAPI } from '../api/receiptSettings.api';
 import { BRAND_NAME_UPPER } from '../utils/branding';
 import { diningTablesAPI } from '../api/diningTables.api';
+import { hasPlanFeature } from '../utils/subscriptionFeatures';
 
 const toSavePayload = (settings, templateType) => {
   const normalized = normalizeReceiptSettings(settings);
@@ -42,6 +43,7 @@ const toSavePayload = (settings, templateType) => {
     showNetTotal: normalized.showNetTotal,
     showPaid: normalized.showPaid,
     showBalance: normalized.showBalance,
+    showDueAmount: normalized.showDueAmount,
     showThanksMessage: normalized.showThanksMessage,
     showCredits: true,
     logoWidthPercent: normalized.logoWidthPercent,
@@ -98,8 +100,9 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType }) => {
         subTotal: 620,
         billDiscount: 20,
         grandTotal: 600,
-        paidAmount: 1000,
-        orderType: 'CASH',
+        paidAmount: 400,
+        dueAmount: 200,
+        orderType: 'CASH + CREDIT',
         saleMode: 'TAKEAWAY',
       };
   const previewItems = isKotPreview
@@ -195,6 +198,7 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType }) => {
 const ReceiptSettingsPage = () => {
   const { user } = useAuth();
   const { branches, selectedBranchId } = useBranch();
+  const canUseDining = hasPlanFeature(user?.planName, 'DINING_TABLES');
   const branchOptions = useMemo(() => branches.filter((branch) => Number(branch.id) !== 0), [branches]);
   const branchSelectionRequired = !selectedBranchId || Number(selectedBranchId) === 0;
   const activeBranch = useMemo(
@@ -240,7 +244,7 @@ const ReceiptSettingsPage = () => {
   }, [activeBranch, activeTemplate, branchSelectionRequired]);
 
   useEffect(() => {
-    if (branchSelectionRequired || !activeBranch?.id) {
+    if (!canUseDining || branchSelectionRequired || !activeBranch?.id) {
       setTables([]);
       setTableForm(INITIAL_TABLE_FORM);
       setTablesLoading(false);
@@ -262,7 +266,7 @@ const ReceiptSettingsPage = () => {
     };
 
     loadTables();
-  }, [activeBranch, branchSelectionRequired]);
+  }, [activeBranch, branchSelectionRequired, canUseDining]);
 
   const updateField = (field, value) => {
     setForm((prev) => normalizeReceiptSettings({ ...prev, [field]: value }));
@@ -300,6 +304,10 @@ const ReceiptSettingsPage = () => {
   };
 
   const handleSaveTable = async () => {
+    if (!canUseDining) {
+      toast.error('Tables are not available in this package');
+      return;
+    }
     if (branchSelectionRequired || !activeBranch?.id) {
       toast.error('Select a branch from the header first');
       return;
@@ -602,6 +610,7 @@ const ReceiptSettingsPage = () => {
                 </Card>
               </div>
 
+              {canUseDining && (
               <Card
                 title="Dining Tables"
                 action={tableForm.id ? (
@@ -694,6 +703,7 @@ const ReceiptSettingsPage = () => {
                   </div>
                 )}
               </Card>
+              )}
             </>
           )}
         </div>

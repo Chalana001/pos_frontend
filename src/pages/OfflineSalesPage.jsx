@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Button from "../components/common/Button";
+import CustomSelect from "../components/common/CustomSelect";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter";
 import { itemsAPI } from "../api/items.api";
@@ -41,6 +42,9 @@ const isBatchTracked = (cachedItem) =>
   cachedItem && cachedItem.itemType !== "SERVICE" && cachedItem.itemType !== "RECIPE";
 
 const hasShiftData = (value) => (Array.isArray(value) ? value.length > 0 : Boolean(value));
+
+const sortBatchesForFifo = (batches = []) =>
+  [...batches].sort((left, right) => Number(left?.batchId || 0) - Number(right?.batchId || 0));
 
 const normalizeImportErrorMessage = (message) => {
   const source = String(message || "").trim();
@@ -126,11 +130,12 @@ const buildInventoryState = (items = []) =>
           itemType: item.itemType,
           defaultUnit: item.defaultUnit,
           aggregateQty,
-          batches: (Array.isArray(item.batches) ? item.batches : []).map((batch) => ({
-            batchId: Number(batch.batchId),
-            qty: Number(batch.qty || 0),
-            qtyUnit: batch.qtyUnit || item.defaultUnit,
-          })),
+          batches: sortBatchesForFifo(Array.isArray(item.batches) ? item.batches : [])
+            .map((batch) => ({
+              batchId: Number(batch.batchId),
+              qty: Number(batch.qty || 0),
+              qtyUnit: batch.qtyUnit || item.defaultUnit,
+            })),
         },
       ];
     })
@@ -671,6 +676,7 @@ const OfflineSalesPage = () => {
       billDiscount: Number(row.payload?.billDiscount || 0),
       netTotal: Number(row.total || 0),
       paidAmount: Number(row.total || 0),
+      paymentMethod: row.payload?.paymentMethod || "CASH",
       orderType: row.payload?.orderType || "CASH",
       saleMode: row.payload?.saleMode || "TAKEAWAY",
       customerName: fallbackCustomerName,
@@ -960,7 +966,9 @@ const OfflineSalesPage = () => {
                 <div className="mt-4 space-y-3">
                   {displayItems.map((item, index) => {
                     const cachedItem = branchLookup.get(Number(item.itemId));
-                    const batchOptions = Array.isArray(cachedItem?.batches) ? cachedItem.batches : [];
+                    const batchOptions = sortBatchesForFifo(
+                      Array.isArray(cachedItem?.batches) ? cachedItem.batches : []
+                    );
                     const needsChoice = isBatchTracked(cachedItem) && batchOptions.length > 1;
                     const itemIssue = issuesByIndex.get(index);
 
@@ -995,21 +1003,18 @@ const OfflineSalesPage = () => {
                               <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">
                                 Batch Selection
                               </label>
-                              <select
+                              <CustomSelect
                                 value={item.batchId || ""}
-                                onChange={(event) =>
-                                  updateBatchSelection(row, index, event.target.value)
-                                }
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                              >
-                                <option value="">Auto / oldest batch</option>
-                                {batchOptions.map((batch) => (
-                                  <option key={batch.batchId} value={batch.batchId}>
-                                    Batch {batch.batchId} | {batch.qty}{" "}
-                                    {batch.qtyUnit || cachedItem?.defaultUnit || ""}
-                                  </option>
-                                ))}
-                              </select>
+                                onChange={(nextValue) => updateBatchSelection(row, index, nextValue)}
+                                options={[
+                                  { value: "", label: "Auto FIFO / oldest batch" },
+                                  ...batchOptions.map((batch) => ({
+                                    value: batch.batchId,
+                                    label: `Batch ${batch.batchId} | ${batch.qty} ${batch.qtyUnit || cachedItem?.defaultUnit || ""}`,
+                                  })),
+                                ]}
+                                buttonClassName="rounded-lg py-2"
+                              />
                             </div>
                           ) : (
                             <div className="text-xs font-medium text-slate-500">

@@ -5,17 +5,35 @@ import { receiptSettingsAPI } from "../api/receiptSettings.api";
 import { openPdfBlob } from "../utils/pdf";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
+import CustomSelect from "../components/common/CustomSelect";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
 import { useAuth } from "../context/AuthContext"; 
 import { formatQuantityWithUnit } from "../utils/formatters";
 import { 
   ArrowLeft, Printer, Calendar, User, 
-  CreditCard, Package, Ban 
+  CreditCard, Package, Ban, Wallet 
 } from "lucide-react";
 import { toast } from "react-hot-toast"; // 🟢 Toast එක Import කළා
 import { hasPermission } from "../utils/permissions";
 import { hasPlanFeature } from "../utils/subscriptionFeatures";
 import { BRAND_NAME_UPPER } from "../utils/branding";
+
+const paymentMethodOptions = [
+  { value: "CASH", label: "Cash" },
+  { value: "BANK", label: "Bank" },
+  { value: "CHEQUE", label: "Cheque" },
+  { value: "CARD", label: "Card" },
+];
+
+const getPaymentLabel = (sale) => {
+  const paidAmount = Number(sale?.paidAmount || 0);
+  const dueAmount = Number(sale?.dueAmount || 0);
+  const method = (sale?.paymentMethod || "CASH").replace("_", " ");
+
+  if (paidAmount > 0 && dueAmount > 0) return `${method} + Credit`;
+  if (dueAmount > 0) return "Credit";
+  return sale?.orderType === "CREDIT" ? "Credit" : method;
+};
 
 const SalesDetailsPage = () => {
   const { id } = useParams(); 
@@ -31,6 +49,11 @@ const SalesDetailsPage = () => {
   // 🟢 Modal එකට අදාළ States 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentNote, setPaymentNote] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const printRef = useRef(null);
 
@@ -72,6 +95,8 @@ const SalesDetailsPage = () => {
       billDiscount: sale.billDiscount,
       netTotal: sale.grandTotal, 
       paidAmount: sale.paidAmount,
+      dueAmount: sale.dueAmount,
+      paymentMethod: sale.paymentMethod,
       orderType: sale.orderType || 'CASH',
       branchName: sale.branchName,
       branchAddress: sale.branchAddress,
@@ -113,6 +138,44 @@ const SalesDetailsPage = () => {
     }
   };
 
+  const handleOpenPayment = () => {
+    setPaymentAmount(String(Math.max(0, Number(sale?.dueAmount || 0))));
+    setPaymentMethod("CASH");
+    setPaymentNote("");
+    setShowPaymentModal(true);
+  };
+
+  const executeSalePayment = async () => {
+    const amount = Number(paymentAmount || 0);
+    const saleDue = Number(sale?.dueAmount || 0);
+
+    if (!amount || amount <= 0) {
+      toast.error("Payment amount is required");
+      return;
+    }
+    if (amount > saleDue) {
+      toast.error("Payment amount cannot exceed this sale due amount");
+      return;
+    }
+
+    try {
+      setPaymentLoading(true);
+      await salesAPI.recordPayment(sale.invoiceNo, {
+        amount,
+        paymentMethod,
+        note: paymentNote || `Payment for sale ${sale.invoiceNo}`,
+      });
+      toast.success("Sale payment recorded");
+      setShowPaymentModal(false);
+      await loadData();
+    } catch (error) {
+      console.error("Failed to record sale payment", error);
+      toast.error(error.response?.data?.message || "Failed to record sale payment");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
   // 🟢 1. Open Modal
   const handleCancelClick = () => {
     setCancelReason(""); 
@@ -148,9 +211,11 @@ const SalesDetailsPage = () => {
   const canCancelOrder =
     hasPermission(user?.role, "CANCEL_ORDERS") &&
     hasPlanFeature(user?.planName, "ORDER_CANCEL");
+  const saleDue = Number(sale.dueAmount || 0);
+  const canPaySale = !isCanceled && sale.customerId && saleDue > 0;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+    <div className="space-y-6 pb-20">
       
       {/* 🖨️ Hidden Receipt Printer Component */}
       <ReceiptPrinter ref={printRef} />
@@ -162,6 +227,15 @@ const SalesDetailsPage = () => {
         </Button>
         
         <div className="flex gap-3">
+            {canPaySale && (
+                <Button
+                    className="bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm"
+                    onClick={handleOpenPayment}
+                >
+                    <Wallet size={18} className="mr-2 text-slate-500" />
+                    Pay Due
+                </Button>
+            )}
             {/* 🟢 Cancel Button (Updated Design) */}
             {!isCanceled && canCancelOrder && (
                 <Button 
@@ -209,7 +283,7 @@ const SalesDetailsPage = () => {
                     </span>
                 ) : (
                     <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                        {sale.orderType === 'CREDIT' ? 'CREDIT' : 'PAID'}
+                        {getPaymentLabel(sale)}
                     </span>
                 )}
             </div>
@@ -221,7 +295,7 @@ const SalesDetailsPage = () => {
             
             <div className="mt-3 text-xs text-slate-500 font-mono flex items-center gap-2">
                <CreditCard size={14}/> 
-               Payment: <span className="font-semibold text-slate-700">{sale.orderType || 'CASH'}</span>
+               Payment: <span className="font-semibold text-slate-700">{getPaymentLabel(sale)}</span>
             </div>
 
             <div className="mt-2 text-xs text-slate-500 font-mono flex items-center gap-2">
@@ -253,6 +327,20 @@ const SalesDetailsPage = () => {
                 <div className="text-xs text-slate-500 uppercase font-bold">Grand Total</div>
                 <div className={`text-2xl font-bold ${isCanceled ? 'text-slate-500 line-through' : 'text-green-600'}`}>
                     {sale.grandTotal?.toLocaleString(undefined, {minimumFractionDigits: 2})} <span className="text-sm text-slate-500">LKR</span>
+                </div>
+                <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-sm">
+                    <div className="flex justify-between gap-8">
+                        <span className="text-slate-500">Paid</span>
+                        <span className="font-semibold text-emerald-700">
+                            {(sale.paidAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} LKR
+                        </span>
+                    </div>
+                    <div className="flex justify-between gap-8">
+                        <span className="text-slate-500">Due</span>
+                        <span className={`font-semibold ${(sale.dueAmount || 0) > 0 ? 'text-red-600' : 'text-slate-500'}`}>
+                            {(sale.dueAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} LKR
+                        </span>
+                    </div>
                 </div>
             </div>
           </div>
@@ -315,6 +403,82 @@ const SalesDetailsPage = () => {
             </div>
         )}
       </Card>
+
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-3 text-blue-600">
+              <div className="p-2 bg-blue-50 rounded-full">
+                <Wallet size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800">Sale Due Payment</h3>
+            </div>
+
+            <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Invoice Due</span>
+                <span className="font-bold text-red-600">
+                  {saleDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} LKR
+                </span>
+              </div>
+              <div className="mt-1 flex justify-between">
+                <span className="text-slate-500">Customer</span>
+                <span className="font-semibold text-slate-700">{sale.customerName}</span>
+              </div>
+              <div className="mt-1 flex justify-between">
+                <span className="text-slate-500">Invoice</span>
+                <span className="font-semibold text-slate-700">{sale.invoiceNo}</span>
+              </div>
+            </div>
+
+            <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Amount</label>
+            <input
+              type="number"
+              min="0"
+              max={saleDue}
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount(e.target.value)}
+              className="mb-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+              autoFocus
+            />
+
+            <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Method</label>
+            <CustomSelect
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+              options={paymentMethodOptions}
+              className="mb-4"
+              buttonClassName="py-2 focus:ring-blue-100"
+            />
+
+            <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Note</label>
+            <textarea
+              rows="2"
+              value={paymentNote}
+              onChange={(e) => setPaymentNote(e.target.value)}
+              className="mb-6 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+              placeholder="Optional note"
+            />
+
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setShowPaymentModal(false)}
+                disabled={paymentLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-blue-600 text-white hover:bg-blue-700"
+                onClick={executeSalePayment}
+                disabled={paymentLoading}
+              >
+                {paymentLoading ? "Processing..." : "Confirm Payment"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* --- 🟢 BEAUTIFUL CANCEL MODAL (BLUE & SLATE THEME) --- */}
       {showCancelModal && (

@@ -70,6 +70,7 @@ export const ADJUSTMENT_TYPES = {
   DAMAGED: 'DAMAGED',
   LOST: 'LOST',
   FOUND: 'FOUND',
+  NEW_STOCK: 'NEW_STOCK',
   MANUAL: 'MANUAL',
 };
 

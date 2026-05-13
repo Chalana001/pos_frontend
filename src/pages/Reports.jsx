@@ -18,6 +18,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Table from '../components/common/Table';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import CustomSelect from '../components/common/CustomSelect';
 import { useBranch } from "../context/BranchContext";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
@@ -48,6 +49,10 @@ const productTypeOptions = [
 ];
 
 const productLimitOptions = [10, 20, 50];
+const productLimitSelectOptions = productLimitOptions.map((limit) => ({
+  value: String(limit),
+  label: `Top ${limit}`,
+}));
 
 const getPresetDateRange = (type) => {
   const now = new Date();
@@ -488,33 +493,24 @@ const Reports = () => {
                 <p className="mt-1 text-sm text-slate-500">Rank products by revenue, quantity, or profit.</p>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:ml-auto xl:w-[620px]">
-                <select
+                <CustomSelect
                   value={productFilters.rankBy}
-                  onChange={(e) => handleProductFilterChange('rankBy', e.target.value)}
-                  className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {productRankOptions.map((option) => (
-                    <option key={option.value} value={option.value}>Rank: {option.label}</option>
-                  ))}
-                </select>
-                <select
+                  onChange={(nextValue) => handleProductFilterChange('rankBy', nextValue)}
+                  options={productRankOptions.map((option) => ({ ...option, label: `Rank: ${option.label}` }))}
+                  buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-blue-100"
+                />
+                <CustomSelect
                   value={productFilters.itemType}
-                  onChange={(e) => handleProductFilterChange('itemType', e.target.value)}
-                  className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {productTypeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-                <select
+                  onChange={(nextValue) => handleProductFilterChange('itemType', nextValue)}
+                  options={productTypeOptions}
+                  buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-blue-100"
+                />
+                <CustomSelect
                   value={productFilters.limit}
-                  onChange={(e) => handleProductFilterChange('limit', e.target.value)}
-                  className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {productLimitOptions.map((limit) => (
-                    <option key={limit} value={limit}>Top {limit}</option>
-                  ))}
-                </select>
+                  onChange={(nextValue) => handleProductFilterChange('limit', nextValue)}
+                  options={productLimitSelectOptions}
+                  buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-blue-100"
+                />
               </div>
             </div>
           )}

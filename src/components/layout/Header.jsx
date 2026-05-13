@@ -34,6 +34,9 @@ import { APP_VERSION } from '../../data/versionHistory';
 
 const formatPlanName = (name) => {
   const labels = {
+    FREE: 'Free',
+    STANDARD: 'Standard',
+    PRO: 'Pro',
     MONTHLY_LITE: 'Lite Monthly',
     YEARLY_LITE: 'Lite Yearly',
     MONTHLY_PRO: 'Pro Monthly',

@@ -311,7 +311,7 @@ const ItemsPage = () => {
                 type="text"
                 value={searchQuery}
                 onChange={handleSearch}
-                placeholder="Search name, barcode, category, or ID..."
+                placeholder="Search name, barcode, or category..."
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

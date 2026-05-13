@@ -23,12 +23,14 @@ import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
 import { openPdfBlob } from "../utils/pdf";
 import PanelResizeHandle from "../components/common/PanelResizeHandle";
 import { BRAND_NAME_UPPER } from "../utils/branding";
+import { hasPlanFeature } from "../utils/subscriptionFeatures";
 import {
   addOfflineSale,
   cacheItemsForBranch,
   cacheReceiptSettings,
   getCachedItemsForBranch,
   getCachedReceiptSettings,
+  getFreeLocalSalesSummary,
 } from "../offline/db";
 
 const GRAMS_PER_KILOGRAM = 1000;
@@ -37,7 +39,7 @@ const isWeightItem = (item) =>
   item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
 
 const isUnlimitedStockItem = (item) =>
-  item?.itemType === ItemType.SERVICE;
+  item?.itemType === ItemType.SERVICE || item?.stockUnmanaged === true;
 
 const isBatchlessItem = (item) =>
   item?.itemType === ItemType.SERVICE || item?.itemType === ItemType.RECIPE;
@@ -66,7 +68,7 @@ const fromBaseQuantity = (baseQuantity, unit, weightItem = false) => {
 
 const getWeightStep = (unit) => (unit === "G" ? 100 : 0.1);
 
-const getInitialWeightQuantity = (unit) => getWeightStep(unit);
+const getInitialWeightQuantity = (unit) => (unit === "G" ? 100 : 1);
 
 const getPerGramPrice = (configuredPrice, weightItem = false) => {
   const numeric = Number(configuredPrice);
@@ -148,6 +150,7 @@ const POS = () => {
   const [billDiscount, setBillDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentError, setPaymentError] = useState("");
   const [receiptSettings, setReceiptSettings] = useState(null);
   const [kotReceiptSettings, setKotReceiptSettings] = useState(null);
@@ -160,6 +163,7 @@ const POS = () => {
   const [loadingDraft, setLoadingDraft] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [printingKot, setPrintingKot] = useState(false);
+  const [freeLocalSalesSummary, setFreeLocalSalesSummary] = useState({ count: 0, total: 0 });
   const [, setKotStateVersion] = useState(0);
   const [cartPanelWidth, setCartPanelWidth] = useState(470);
   const [isResizingPanels, setIsResizingPanels] = useState(false);
@@ -167,17 +171,20 @@ const POS = () => {
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
   const canUseServer = isOnline && hasOnlineSession && !isOfflineSession;
+  const isFreeStockUnmanagedPlan = user?.planName === "FREE" || user?.planName === "MONTHLY_DEMO";
+  const isFreeLocalSalesPlan = isFreeStockUnmanagedPlan;
+  const canUseDining = hasPlanFeature(user?.planName, "DINING_TABLES");
   const activeCartMode = cartItems.length > 0
-    ? (cartMode || (canUseServer ? CART_MODES.ONLINE : CART_MODES.QUEUE))
+    ? (cartMode || (canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE))
     : null;
   const queueCartActive = activeCartMode === CART_MODES.QUEUE;
   const shouldUseServerForCheckout = activeCartMode
-    ? activeCartMode === CART_MODES.ONLINE && canUseServer
-    : canUseServer;
+    ? activeCartMode === CART_MODES.ONLINE && canUseServer && !isFreeLocalSalesPlan
+    : canUseServer && !isFreeLocalSalesPlan;
   const fallbackBranchId = isAdminUser ? (selectedBranchId || null) : (user?.branchId || null);
   const effectiveBranchId = myShift?.branchId || fallbackBranchId;
   const effectiveBranch = branches.find((branch) => Number(branch.id) === Number(effectiveBranchId)) || null;
-  const canSell = !!effectiveBranchId && (queueCartActive || (canUseServer ? !!myShift : true));
+  const canSell = !!effectiveBranchId && (isFreeLocalSalesPlan || queueCartActive || (canUseServer ? !!myShift : true));
   const cartDraftKey = getCartDraftKey(user?.userId || user?.id, effectiveBranchId);
 
   const pendingOrdersByTable = useMemo(
@@ -267,6 +274,7 @@ const POS = () => {
       setBillDiscount(Number(draft.billDiscount || 0));
       setOrderType(draft.orderType || ORDER_TYPES.CASH);
       setPaidAmount(Number(draft.paidAmount || 0));
+      setPaymentMethod(draft.paymentMethod || "CASH");
       setSaleMode(draft.saleMode || SALE_MODES.TAKEAWAY);
       setCartMode(draft.cartMode || CART_MODES.QUEUE);
     } catch {
@@ -292,8 +300,9 @@ const POS = () => {
         billDiscount,
         orderType,
         paidAmount,
+        paymentMethod,
         saleMode,
-        cartMode: activeCartMode || cartMode || (canUseServer ? CART_MODES.ONLINE : CART_MODES.QUEUE),
+        cartMode: activeCartMode || cartMode || (canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE),
         savedAt: new Date().toISOString(),
       })
     );
@@ -305,8 +314,10 @@ const POS = () => {
     cartItems,
     cartMode,
     customer,
+    isFreeLocalSalesPlan,
     orderType,
     paidAmount,
+    paymentMethod,
     saleMode,
   ]);
 
@@ -315,6 +326,17 @@ const POS = () => {
       setPaymentError("");
     }
   }, [showPayment, orderType, customer?.id, cartItems, billDiscount, paidAmount]);
+
+  useEffect(() => {
+    if (!isFreeLocalSalesPlan) {
+      setFreeLocalSalesSummary({ count: 0, total: 0 });
+      return;
+    }
+
+    getFreeLocalSalesSummary()
+      .then(setFreeLocalSalesSummary)
+      .catch(() => setFreeLocalSalesSummary({ count: 0, total: 0 }));
+  }, [isFreeLocalSalesPlan]);
 
   useEffect(() => {
     if (!isResizingPanels) {
@@ -352,6 +374,14 @@ const POS = () => {
     return parsed;
   };
 
+  const roundToRupee = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return 0;
+    }
+    return Math.max(0, Math.round(parsed + Number.EPSILON));
+  };
+
   const calculateItemBaseTotal = (item) => {
     const qty = Number(item?.qty || 0);
     if (!Number.isFinite(qty) || qty <= 0) return 0;
@@ -382,12 +412,24 @@ const POS = () => {
     });
 
     const normalizedBillDiscount = toNonNegativeNumber(billDiscount);
-    return Math.max(0, total - normalizedBillDiscount);
+    return roundToRupee(total - normalizedBillDiscount);
+  };
+
+  const getCheckoutCreditAmount = (total = calculateTotal()) => {
+    const normalizedTotal = roundToRupee(total || 0);
+    const normalizedPaidAmount = roundToRupee(paidAmount || 0);
+    return orderType === ORDER_TYPES.CREDIT
+      ? normalizedTotal
+      : Math.max(0, normalizedTotal - normalizedPaidAmount);
   };
 
   const getCreditLimitValidationMessage = (total = calculateTotal()) => {
-    if (orderType !== ORDER_TYPES.CREDIT) {
-      return "";
+    const creditAmount = getCheckoutCreditAmount(total);
+
+    if (creditAmount <= 0) return "";
+
+    if (isFreeLocalSalesPlan) {
+      return "FREE plan supports fully paid local cash sales only";
     }
 
     if (!customer) {
@@ -408,11 +450,11 @@ const POS = () => {
     }
 
     const currentDue = Number(customer.dueAmount || 0);
-    const projectedDue = currentDue + Number(total || 0);
+    const projectedDue = currentDue + creditAmount;
 
     if (projectedDue > limit) {
       const availableCredit = Math.max(0, limit - currentDue);
-      return `Credit limit exceeded. Available: ${formatCurrency(availableCredit)}, sale: ${formatCurrency(total)}, limit: ${formatCurrency(limit)}`;
+      return `Credit limit exceeded. Available: ${formatCurrency(availableCredit)}, credit: ${formatCurrency(creditAmount)}, limit: ${formatCurrency(limit)}`;
     }
 
     return "";
@@ -469,6 +511,7 @@ const POS = () => {
     setBillDiscount(0);
     setOrderType(ORDER_TYPES.CASH);
     setPaidAmount(0);
+    setPaymentMethod("CASH");
     setPrintFullInvoice(false);
     setShowPayment(false);
     if (!preserveSaleMode) {
@@ -654,20 +697,20 @@ const POS = () => {
   }, [canUseServer, effectiveBranchId, myShift?.branchId]);
 
   useEffect(() => {
-    if (saleMode === SALE_MODES.DINE_IN && canUseServer && myShift?.branchId) {
+    if (saleMode === SALE_MODES.DINE_IN && canUseServer && canUseDining && myShift?.branchId) {
       refreshDiningState(myShift.branchId);
     }
-  }, [canUseServer, saleMode, myShift?.branchId]);
+  }, [canUseDining, canUseServer, saleMode, myShift?.branchId]);
 
   useEffect(() => {
-    if (!canUseServer && saleMode === SALE_MODES.DINE_IN) {
+    if ((!canUseServer || !canUseDining) && saleMode === SALE_MODES.DINE_IN) {
       setSaleMode(SALE_MODES.TAKEAWAY);
       setSelectedTableId(null);
       setDiningTables([]);
       setPendingOrders([]);
-      toast.error("POS switched to takeaway-only queue mode.");
+      toast.error(canUseDining ? "POS switched to takeaway-only queue mode." : "Tables are not available in this package.");
     }
-  }, [canUseServer, saleMode]);
+  }, [canUseDining, canUseServer, saleMode]);
 
   const fetchProducts = async (branchId) => {
     if (!branchId) {
@@ -693,7 +736,10 @@ const POS = () => {
         if (item.batches && item.batches.length > 0) return true;
         if (item.availableQty !== undefined && item.availableQty !== null) return true;
         return false;
-      });
+      }).map((item) => ({
+        ...item,
+        stockUnmanaged: isFreeStockUnmanagedPlan && item.itemType !== ItemType.SERVICE && item.itemType !== ItemType.RECIPE,
+      }));
 
       setAllItems(items);
       setFilteredItems(items);
@@ -704,9 +750,13 @@ const POS = () => {
       console.error(error);
       const cachedItems = await getCachedItemsForBranch(branchId);
       if (cachedItems.length > 0) {
-        setAllItems(cachedItems);
-        setFilteredItems(cachedItems);
-        setCategories(["All", ...new Set(cachedItems.map((item) => item.categoryName).filter(Boolean))]);
+        const localItems = cachedItems.map((item) => ({
+          ...item,
+          stockUnmanaged: isFreeStockUnmanagedPlan && item.itemType !== ItemType.SERVICE && item.itemType !== ItemType.RECIPE,
+        }));
+        setAllItems(localItems);
+        setFilteredItems(localItems);
+        setCategories(["All", ...new Set(localItems.map((item) => item.categoryName).filter(Boolean))]);
         toast.error("Live refresh failed. Using cached items.");
       } else {
         setAllItems([]);
@@ -761,7 +811,7 @@ const POS = () => {
 
   const processAddToCart = (item, price, qty, batchData = null) => {
     if (cartItems.length === 0 && !cartMode) {
-      setCartMode(canUseServer ? CART_MODES.ONLINE : CART_MODES.QUEUE);
+      setCartMode(canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE);
     }
 
     const unlimitedStockItem = isUnlimitedStockItem(item);
@@ -823,6 +873,7 @@ const POS = () => {
           discountType: DISCOUNT_TYPES.NONE,
           discountValue: 0,
           stockBaseQty,
+          stockUnmanaged: !!item.stockUnmanaged,
           image: item.imageUrl,
           isKotEnabled: !!item.isKotEnabled,
         },
@@ -926,13 +977,8 @@ const POS = () => {
     const newItems = [...cartItems];
     const item = newItems[index];
 
-    if (item.qtyUnit === "KG" && unit === "G") {
-      item.qty = item.qty * 1000;
-    } else if (item.qtyUnit === "G" && unit === "KG") {
-      item.qty = item.qty / 1000;
-    }
-
     item.qtyUnit = unit;
+    item.qty = getInitialWeightQuantity(unit);
     setCartItems(newItems);
   };
 
@@ -1028,6 +1074,11 @@ const POS = () => {
       return;
     }
 
+    if (!canUseDining && nextMode === SALE_MODES.DINE_IN) {
+      toast.error("Tables are not available in this package");
+      return;
+    }
+
     if ((!canUseServer || queueCartActive) && nextMode === SALE_MODES.DINE_IN) {
       toast.error("Dine-in is not available while the current sale is in queue mode");
       return;
@@ -1052,11 +1103,12 @@ const POS = () => {
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return toast.error("Cart is empty");
-    if (!canSell) return toast.error(canUseServer ? "No active shift. Cannot checkout." : "POS queue mode is not ready.");
+    if (!canSell) return toast.error(canUseServer && !isFreeLocalSalesPlan ? "No active shift. Cannot checkout." : "POS queue mode is not ready.");
     if (saleMode === SALE_MODES.DINE_IN && !selectedTableId) return toast.error("Select a table before checkout");
 
     setPaymentError("");
     setPaidAmount(calculateTotal());
+    setPaymentMethod("CASH");
     setShowPayment(true);
   };
 
@@ -1142,9 +1194,11 @@ const POS = () => {
     setPaymentError("");
 
     if (!effectiveBranchId) return failCheckout("Select a branch before checkout");
-    if (orderType === ORDER_TYPES.CASH && paidAmount < total) return failCheckout("Insufficient amount");
+    const creditAmount = getCheckoutCreditAmount(total);
+    if (creditAmount > 0 && !customer) return failCheckout("Select customer for credit sale");
     const creditLimitMessage = getCreditLimitValidationMessage(total);
     if (creditLimitMessage) return failCheckout(creditLimitMessage);
+    if (!shouldUseServerForCheckout && creditAmount > 0) return failCheckout("Queue mode supports fully paid cash sales only");
     if (!shouldUseServerForCheckout && orderType !== ORDER_TYPES.CASH) return failCheckout("Queue mode supports cash sales only");
     if (!shouldUseServerForCheckout && saleMode !== SALE_MODES.TAKEAWAY) return failCheckout("Queue mode supports takeaway sales only");
 
@@ -1158,6 +1212,7 @@ const POS = () => {
         customerId: customer ? customer.id : null,
         billDiscount,
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
+        paymentMethod: orderType === ORDER_TYPES.CASH ? paymentMethod : "CREDIT",
         items: cartItems.map((item) => ({
           itemId: item.itemId,
           batchId: item.batchId,
@@ -1188,7 +1243,9 @@ const POS = () => {
           billDiscount,
           netTotal: total,
           paidAmount,
+          paymentMethod: orderData.paymentMethod,
           orderType,
+          dueAmount: creditAmount,
           saleMode,
           customerName,
           customerPhone: customer?.phone || "",
@@ -1198,7 +1255,7 @@ const POS = () => {
           branchPhone,
           branchLogo,
           cashierName,
-          note: "Offline queued sale",
+          note: isFreeLocalSalesPlan ? "Local FREE sale" : "Offline queued sale",
         };
         const receiptCartItems = cartItems.map((item) => ({
           ...item,
@@ -1207,6 +1264,7 @@ const POS = () => {
 
         await addOfflineSale({
           clientSaleId,
+          localOnly: isFreeLocalSalesPlan,
           branchId: effectiveBranchId,
           branchName,
           cashierUserId: user?.userId,
@@ -1253,6 +1311,9 @@ const POS = () => {
             })),
           },
         });
+        if (isFreeLocalSalesPlan) {
+          setFreeLocalSalesSummary(await getFreeLocalSalesSummary());
+        }
 
         if (printRef.current) {
           printRef.current.printOrder(
@@ -1271,7 +1332,7 @@ const POS = () => {
           );
         }
 
-        toast.success("Sale saved to offline queue");
+        toast.success(isFreeLocalSalesPlan ? "Sale saved locally" : "Sale saved to offline queue");
         clearCartState();
         if (searchInputRef.current) {
           searchInputRef.current.focus();
@@ -1297,9 +1358,13 @@ const POS = () => {
         invoiceNo: response.data.invoiceNo,
         subTotal,
         billDiscount,
-        netTotal: total,
-        paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : total,
-        orderType,
+        netTotal: response.data.grandTotal ?? total,
+        paidAmount: response.data.paidAmount ?? (orderType === ORDER_TYPES.CASH ? paidAmount : 0),
+        dueAmount: response.data.dueAmount ?? creditAmount,
+        paymentMethod: response.data.paymentMethod || orderData.paymentMethod,
+        orderType: response.data.dueAmount > 0 && response.data.paidAmount > 0
+          ? "CASH + CREDIT"
+          : (response.data.orderType || orderType),
         saleMode,
         tableName: resolvedTableName,
         customerName,
@@ -1398,7 +1463,7 @@ const POS = () => {
   }
 
   return (
-    <div className="flex h-full gap-1.5 lg:gap-4 bg-slate-100 p-1.5 lg:p-4 font-sans text-slate-800 flex-col overflow-y-auto lg:overflow-hidden">
+    <div className="flex h-full gap-1.5 lg:gap-4 bg-slate-100 p-1.5 lg:p-4 font-sans text-slate-800 flex-col overflow-y-auto lg:overflow-hidden custom-scrollbar">
       <div className="flex flex-col lg:flex-row flex-1 gap-1.5 lg:gap-4 lg:overflow-hidden lg:h-full">
         <div className="flex min-w-0 flex-col h-[55vh] flex-shrink-0 lg:h-full lg:flex-1 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
 
@@ -1409,8 +1474,10 @@ const POS = () => {
                   New Sale {branchLabel ? `(Branch: ${branchLabel})` : ""}
                 </h1>
                 {!shouldUseServerForCheckout ? (
-                  <p className="mt-1 text-xs font-medium text-amber-600">
-                    Queue mode active. This sale will stay local until you import it.
+              <p className="mt-1 text-xs font-medium text-amber-600">
+                    {isFreeLocalSalesPlan
+                      ? `FREE package active. Today local: ${formatCurrency(freeLocalSalesSummary.total)} (${freeLocalSalesSummary.count})`
+                      : "Queue mode active. This sale will stay local until you import it."}
                   </p>
                 ) : null}
               </div>
@@ -1446,7 +1513,7 @@ const POS = () => {
                 <button
                   type="button"
                   onClick={() => handleSaleModeChange(SALE_MODES.DINE_IN)}
-                  disabled={!canUseServer || queueCartActive}
+                  disabled={!canUseServer || !canUseDining || queueCartActive}
                   className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
                     saleMode === SALE_MODES.DINE_IN ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
                   }`}
@@ -1550,7 +1617,7 @@ const POS = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-1.5 lg:p-6 bg-slate-50">
+          <div className="flex-1 overflow-y-auto p-1.5 lg:p-6 bg-slate-50 custom-scrollbar">
             {!canSell ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400">
                 <Lock className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
@@ -1569,7 +1636,11 @@ const POS = () => {
                   const unlimitedStockItem = isUnlimitedStockItem(item);
                   const stockQty = getSellableStockBaseQty(item);
                   const isOutOfStock = !unlimitedStockItem && stockQty <= 0;
-                  const stockLabel = item.itemType === ItemType.RECIPE ? "Recipe" : formatStockDisplay(item);
+                  const stockLabel = item.stockUnmanaged
+                    ? "Available"
+                    : item.itemType === ItemType.RECIPE
+                      ? "Recipe"
+                      : formatStockDisplay(item);
 
                   return (
                     <div
@@ -1683,6 +1754,8 @@ const POS = () => {
         setOrderType={setOrderType}
         paidAmount={paidAmount}
         setPaidAmount={setPaidAmount}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
         onPlaceOrder={handlePlaceOrder}
         loading={loading}
         printFullInvoice={printFullInvoice}

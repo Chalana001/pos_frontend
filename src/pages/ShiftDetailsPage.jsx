@@ -9,6 +9,16 @@ import { formatCurrency, formatDateTime } from "../utils/formatters";
 
 const formatCategoryLabel = (value) => value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 
+const getPaymentLabel = (sale) => {
+  const paidAmount = Number(sale?.paidAmount || 0);
+  const dueAmount = Number(sale?.dueAmount || 0);
+  const method = (sale?.paymentMethod || "CASH").replace("_", " ");
+
+  if (paidAmount > 0 && dueAmount > 0) return `${method} + Credit`;
+  if (dueAmount > 0) return "Credit";
+  return sale?.orderType === "CREDIT" ? "Credit" : method;
+};
+
 const ShiftDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -210,7 +220,7 @@ const ShiftDetailsPage = () => {
                     <td className="p-4 font-medium text-slate-700">{sale.customerName || "Walk-in Customer"}</td>
                     <td className="p-4 text-center">
                       <span className="px-2 py-1 rounded text-xs font-semibold bg-slate-100 text-slate-700">
-                        {sale.orderType || "CASH"}
+                        {getPaymentLabel(sale)}
                       </span>
                     </td>
                     <td className="p-4 text-center">

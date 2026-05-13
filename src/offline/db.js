@@ -33,9 +33,29 @@ const emitOfflineSalesChanged = () => {
   }
 };
 
+const isLocalOnlySale = (sale) => sale?.localOnly === true;
+
+const getLocalDateKey = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export const OFFLINE_EVENTS = {
   OFFLINE_SALES_CHANGED: OFFLINE_SALES_EVENT,
 };
+
+const sortBatchesForFifo = (batches) =>
+  Array.isArray(batches)
+    ? [...batches].sort((left, right) => Number(left?.batchId || 0) - Number(right?.batchId || 0))
+    : [];
+
+const normalizeCachedItem = (item) => ({
+  ...item,
+  batches: sortBatchesForFifo(item?.batches),
+});
 
 export const cacheBranches = async (branches) => {
   await offlineDb.cachedBranches.clear();
@@ -57,7 +77,7 @@ export const cacheItemsForBranch = async (branchId, items) => {
           branchId,
           itemId: Number(item.id),
           syncedAt: new Date().toISOString(),
-          data: item,
+          data: normalizeCachedItem(item),
         }))
       );
     }
@@ -67,7 +87,7 @@ export const cacheItemsForBranch = async (branchId, items) => {
 export const getCachedItemsForBranch = async (branchId) => {
   if (!branchId) return [];
   const rows = await offlineDb.cachedItems.where("branchId").equals(branchId).toArray();
-  return rows.map((row) => row.data);
+  return rows.map((row) => normalizeCachedItem(row.data));
 };
 
 export const cacheReceiptSettings = async (branchId, templateType, settings) => {
@@ -115,9 +135,41 @@ export const addOfflineSale = async (saleRecord) => {
 };
 
 export const getOfflineSales = async () =>
-  offlineDb.offlineSales.orderBy("createdAt").reverse().toArray();
+  (await offlineDb.offlineSales.orderBy("createdAt").reverse().toArray()).filter((row) => !isLocalOnlySale(row));
 
-export const getOfflineSalesCount = async () => offlineDb.offlineSales.count();
+export const getOfflineSalesCount = async () =>
+  (await offlineDb.offlineSales.toArray()).filter((row) => !isLocalOnlySale(row)).length;
+
+export const getFreeLocalSalesSummary = async () => {
+  const todayKey = getLocalDateKey();
+  const rows = (await offlineDb.offlineSales.toArray()).filter((row) =>
+    isLocalOnlySale(row) && String(row.createdAt || "").startsWith(todayKey)
+  );
+
+  return {
+    count: rows.length,
+    total: rows.reduce((sum, row) => sum + Number(row.total || 0), 0),
+  };
+};
+
+export const clearFreeLocalSalesIfNewDay = async () => {
+  const todayKey = getLocalDateKey();
+  const metaKey = "freeLocalSalesLastClearDate";
+  const meta = await offlineDb.appMeta.get(metaKey);
+  if (meta?.value === todayKey) {
+    return false;
+  }
+
+  const localRows = (await offlineDb.offlineSales.toArray()).filter(isLocalOnlySale);
+  if (localRows.length > 0) {
+    await offlineDb.offlineSales.bulkDelete(localRows.map((row) => row.clientSaleId));
+  }
+  await offlineDb.appMeta.put({ key: metaKey, value: todayKey });
+  if (localRows.length > 0) {
+    emitOfflineSalesChanged();
+  }
+  return localRows.length > 0;
+};
 
 export const updateOfflineSale = async (clientSaleId, patch) => {
   await offlineDb.offlineSales.update(clientSaleId, patch);

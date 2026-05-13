@@ -3,6 +3,9 @@ import api from '../api/axios';
 
 const formatPlanName = (name) => {
   const labels = {
+    FREE: 'Free',
+    STANDARD: 'Standard',
+    PRO: 'Pro',
     MONTHLY_LITE: 'Lite Monthly',
     YEARLY_LITE: 'Lite Yearly',
     MONTHLY_PRO: 'Pro Monthly',
@@ -80,7 +83,7 @@ const SubscriptionPage = () => {
 
         <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Available Packages</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((plan) => {
             const isActivePlan = mySubscription?.plan?.id === plan.id;
 

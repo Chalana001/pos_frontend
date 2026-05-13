@@ -32,6 +32,69 @@
   .card {
     @apply bg-white rounded-xl shadow-sm border border-slate-200 p-6;
   }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .custom-scrollbar-dark {
+    scrollbar-width: thin;
+    scrollbar-color: #64748b transparent;
+  }
+
+  .custom-scrollbar-dark::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .custom-scrollbar-dark::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar-dark::-webkit-scrollbar-thumb {
+    background: #64748b;
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+
+  .custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Print styles */
@@ -60,6 +123,179 @@
 
 .scan-effect {
   animation: scan-line 2s ease-in-out infinite;
+}
+
+@keyframes dashboard-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes dashboard-soft-glow {
+  0%, 100% {
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.05);
+  }
+  50% {
+    box-shadow: 0 18px 42px rgb(37 99 235 / 0.16);
+  }
+}
+
+@keyframes dashboard-icon-pop {
+  0% {
+    transform: scale(0.72) rotate(-8deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes dashboard-chart-draw {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-rise-in {
+  animation: dashboard-rise-in 620ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dashboard-card-in {
+  opacity: 0;
+  animation: dashboard-rise-in 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dashboard-premium-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.dashboard-premium-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 0%, rgb(255 255 255 / 0.52) 42%, transparent 62%);
+  transform: translateX(-125%);
+  transition: transform 680ms ease;
+}
+
+.dashboard-premium-card:hover {
+  transform: translateY(-3px);
+  border-color: rgb(191 219 254);
+  box-shadow: 0 18px 38px rgb(15 23 42 / 0.10);
+}
+
+.dashboard-premium-card:hover::before {
+  transform: translateX(125%);
+}
+
+.dashboard-icon-pop {
+  animation: dashboard-icon-pop 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dashboard-soft-glow {
+  animation: dashboard-soft-glow 2.8s ease-in-out 900ms 1;
+}
+
+.dashboard-chart-in {
+  animation: dashboard-chart-draw 780ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes table-row-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #root table tbody tr {
+    animation: table-row-reveal 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  #root table tbody tr:nth-child(1) { animation-delay: 20ms; }
+  #root table tbody tr:nth-child(2) { animation-delay: 45ms; }
+  #root table tbody tr:nth-child(3) { animation-delay: 70ms; }
+  #root table tbody tr:nth-child(4) { animation-delay: 95ms; }
+  #root table tbody tr:nth-child(5) { animation-delay: 120ms; }
+  #root table tbody tr:nth-child(6) { animation-delay: 145ms; }
+  #root table tbody tr:nth-child(7) { animation-delay: 170ms; }
+  #root table tbody tr:nth-child(8) { animation-delay: 195ms; }
+  #root table tbody tr:nth-child(9) { animation-delay: 220ms; }
+  #root table tbody tr:nth-child(10) { animation-delay: 245ms; }
+  #root table tbody tr:nth-child(n + 11) { animation-delay: 270ms; }
+}
+
+#root table tbody tr {
+  transition: background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+#root table tbody tr:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 3px 0 0 rgb(37 99 235 / 0.55);
+}
+
+@keyframes custom-select-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes custom-select-option-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .custom-select-menu {
+    transform-origin: top;
+    animation: custom-select-menu-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .custom-select-option {
+    animation: custom-select-option-in 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .custom-select-option:nth-child(1) { animation-delay: 15ms; }
+  .custom-select-option:nth-child(2) { animation-delay: 30ms; }
+  .custom-select-option:nth-child(3) { animation-delay: 45ms; }
+  .custom-select-option:nth-child(4) { animation-delay: 60ms; }
+  .custom-select-option:nth-child(5) { animation-delay: 75ms; }
+  .custom-select-option:nth-child(n + 6) { animation-delay: 90ms; }
 }
 
 @media print {

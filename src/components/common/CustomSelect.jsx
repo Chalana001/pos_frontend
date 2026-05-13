@@ -4,13 +4,13 @@ import { Check, ChevronDown } from "lucide-react";
 const getOptionValue = (option, valueKey) => {
   if (option == null) return "";
   if (typeof option !== "object") return option;
-  return option[valueKey];
+  return option[valueKey] ?? option.value;
 };
 
 const getOptionLabel = (option, labelKey) => {
   if (option == null) return "";
   if (typeof option !== "object") return option;
-  return option[labelKey];
+  return option[labelKey] ?? option.label;
 };
 
 const CustomSelect = ({
@@ -81,7 +81,7 @@ const CustomSelect = ({
 
       {isOpen && !disabled && (
         <div
-          className={`absolute left-0 top-full z-40 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-slate-100 bg-white py-1.5 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200 ${menuClassName}`}
+          className={`custom-select-menu absolute left-0 top-full z-40 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-slate-100 bg-white py-1.5 shadow-lg ${menuClassName}`}
         >
           {normalizedOptions.length === 0 ? (
             <div className="px-4 py-2 text-center text-sm text-slate-500">{emptyMessage}</div>
@@ -93,7 +93,7 @@ const CustomSelect = ({
                   key={`${option.value}-${option.label}`}
                   type="button"
                   onClick={() => handleSelect(option.value)}
-                  className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 ${
+                  className={`custom-select-option flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 ${
                     isSelected ? "bg-blue-50/50 font-bold text-blue-700" : "font-medium text-slate-700"
                   } ${optionClassName}`}
                 >

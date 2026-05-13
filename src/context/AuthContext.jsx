@@ -12,7 +12,7 @@ import {
 } from "../utils/auth";
 import { authAPI } from "../api/auth.api";
 import api from "../api/axios";
-import { getLastCachedUser, saveCachedUser } from "../offline/db";
+import { clearFreeLocalSalesIfNewDay, getLastCachedUser, saveCachedUser } from "../offline/db";
 import { createLocalPinRecord, verifyLocalPin } from "../offline/pin";
 import useNetworkStatus from "../hooks/useNetworkStatus";
 
@@ -48,6 +48,9 @@ export const AuthProvider = ({ children }) => {
       const updatedUser = { ...baseUser, planName, subscriptionValidUntil, planBillingCycle };
       setUser(updatedUser);
       setUserState(updatedUser);
+      if (planName === "FREE" || planName === "MONTHLY_DEMO") {
+        await clearFreeLocalSalesIfNewDay();
+      }
       await syncCachedUser(updatedUser);
       return updatedUser;
     } catch {
@@ -80,6 +83,9 @@ export const AuthProvider = ({ children }) => {
           setUserState(currentUser);
           await fetchAndStoreSubscription(currentUser);
         } else if (offlineSessionUser) {
+          if (offlineSessionUser.planName === "FREE" || offlineSessionUser.planName === "MONTHLY_DEMO") {
+            await clearFreeLocalSalesIfNewDay();
+          }
           setUserState(offlineSessionUser);
           setAuthMode("offline");
         } else if (currentUser || token) {
@@ -91,6 +97,9 @@ export const AuthProvider = ({ children }) => {
           setAuthMode(null);
         }
       } else if (offlineSessionUser) {
+        if (offlineSessionUser.planName === "FREE" || offlineSessionUser.planName === "MONTHLY_DEMO") {
+          await clearFreeLocalSalesIfNewDay();
+        }
         setUserState(offlineSessionUser);
         setAuthMode("offline");
       } else {
@@ -182,6 +191,9 @@ export const AuthProvider = ({ children }) => {
     };
 
     setOfflineSessionUser(offlineUser);
+    if (offlineUser.planName === "FREE" || offlineUser.planName === "MONTHLY_DEMO") {
+      await clearFreeLocalSalesIfNewDay();
+    }
     setUserState(offlineUser);
     setAuthMode("offline");
     return offlineUser;

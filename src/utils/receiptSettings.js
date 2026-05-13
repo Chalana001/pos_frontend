@@ -23,6 +23,7 @@ export const DEFAULT_RECEIPT_SETTINGS = {
   showNetTotal: true,
   showPaid: true,
   showBalance: true,
+  showDueAmount: true,
   showThanksMessage: true,
   showCredits: true,
   logoWidthPercent: 78,
@@ -76,6 +77,7 @@ export const RECEIPT_SECTION_FIELDS = [
   { key: 'showNetTotal', label: 'Net Total' },
   { key: 'showPaid', label: 'Paid' },
   { key: 'showBalance', label: 'Balance' },
+  { key: 'showDueAmount', label: 'Credit Due' },
   { key: 'showThanksMessage', label: 'Thanks Message' },
   { key: 'showCredits', label: 'Credits', locked: true },
 ];

@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
+import CustomSelect from "../components/common/CustomSelect";
 import Modal from "../components/common/Modal"; // 👈 Modal එක import කරගන්න
 
 import { customersAPI } from "../api/customers.api";
@@ -11,6 +12,13 @@ import { formatCurrency, formatDate } from "../utils/formatters";
 
 import CustomerNotesTab from "../components/customers/CustomerNotesTab";
 import CustomerOrdersTab from "../components/customers/CustomerOrdersTab";
+
+const paymentMethodOptions = [
+  { value: "CASH", label: "Cash" },
+  { value: "CARD", label: "Card" },
+  { value: "BANK", label: "Bank" },
+  { value: "CHEQUE", label: "Cheque" },
+];
 
 const CustomerViewPage = () => {
   const navigate = useNavigate();
@@ -23,6 +31,7 @@ const CustomerViewPage = () => {
   // Payment States 👈 අලුතින් එකතු කරපු ඒවා
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   // caching tabs
@@ -73,11 +82,12 @@ const CustomerViewPage = () => {
     setPaymentLoading(true);
     try {
       // payment method එක "CASH" විදිහට hardcode කරලා යවනවා (ඕන නම් dropdown එකක් දාන්නත් පුළුවන්)
-      await customersAPI.recordPayment(id, { amount, paymentMethod: "CASH" });
+      await customersAPI.recordPayment(id, { amount, paymentMethod });
       
       toast.success("Payment recorded successfully!");
       setShowPaymentModal(false);
       setPaymentAmount("");
+      setPaymentMethod("CASH");
       
       // ✅ Payment එක success වුණාම customer data ටික ආයේ අරන් due amount එක අප්ඩේට් කරනවා
       fetchCustomer(); 
@@ -283,6 +293,18 @@ const CustomerViewPage = () => {
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-1">
+              Payment Method
+            </label>
+            <CustomSelect
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+              options={paymentMethodOptions}
+              buttonClassName="px-4 py-3 font-semibold focus:ring-blue-100"
+            />
           </div>
 
           <div className="flex gap-3 pt-4">

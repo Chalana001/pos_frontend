@@ -37,6 +37,25 @@ const totalOperatorOptions = [
   { value: "LESS_THAN", label: "Total <" },
 ];
 
+const getPaymentLabel = (sale) => {
+  const paidAmount = Number(sale?.paidAmount || 0);
+  const dueAmount = Number(sale?.dueAmount || 0);
+  const method = (sale?.paymentMethod || "CASH").replace("_", " ");
+
+  if (paidAmount > 0 && dueAmount > 0) return `${method} + Credit`;
+  if (dueAmount > 0) return "Credit";
+  return sale?.orderType === "CREDIT" ? "Credit" : method;
+};
+
+const getPaymentBadgeClass = (sale) => {
+  const paidAmount = Number(sale?.paidAmount || 0);
+  const dueAmount = Number(sale?.dueAmount || 0);
+
+  if (paidAmount > 0 && dueAmount > 0) return "bg-amber-100 text-amber-700";
+  if (dueAmount > 0) return "bg-red-100 text-red-700";
+  return "bg-emerald-100 text-emerald-700";
+};
+
 const formatInputDate = (date) =>
   new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split("T")[0];
 
@@ -214,7 +233,7 @@ const SalesListPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-6 pb-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Sales History</h1>
@@ -358,14 +377,16 @@ const SalesListPage = () => {
                 <th className="p-4 text-center">Status</th>
                 <th className="p-4 text-center">Payment</th>
                 <th className="p-4 text-right">Grand Total</th>
+                <th className="p-4 text-right">Paid</th>
+                <th className="p-4 text-right">Due</th>
                 <th className="p-4 w-10"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan="8" className="p-6 text-center text-slate-500">Loading...</td></tr>
+                <tr><td colSpan="10" className="p-6 text-center text-slate-500">Loading...</td></tr>
               ) : data.length === 0 ? (
-                <tr><td colSpan="8" className="p-6 text-center text-slate-500">No records found.</td></tr>
+                <tr><td colSpan="10" className="p-6 text-center text-slate-500">No records found.</td></tr>
               ) : (
                 data.map((sale) => (
                   <tr
@@ -395,12 +416,18 @@ const SalesListPage = () => {
                       </span>
                     </td>
                     <td className="p-4 text-center">
-                      <span className="px-2 py-1 rounded text-xs font-semibold bg-slate-100 text-slate-700">
-                        {sale.orderType || "CASH"}
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${getPaymentBadgeClass(sale)}`}>
+                        {getPaymentLabel(sale)}
                       </span>
                     </td>
                     <td className="p-4 text-right font-bold text-slate-800 text-base sm:text-lg">
                       {formatCurrency(sale.grandTotal)}
+                    </td>
+                    <td className="p-4 text-right font-semibold text-emerald-700">
+                      {formatCurrency(sale.paidAmount || 0)}
+                    </td>
+                    <td className={`p-4 text-right font-semibold ${(sale.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-400"}`}>
+                      {formatCurrency(sale.dueAmount || 0)}
                     </td>
                     <td className="p-4 text-slate-400 text-right">
                       <ChevronRight size={18} className="inline-block" />

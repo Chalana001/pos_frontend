@@ -24,5 +24,10 @@ export const salesAPI = {
   // Cancel order 
   cancel: async (invoiceNo, data) => {
     return await api.post(`/orders/${invoiceNo}/cancel`, data);
+  },
+
+  // Record a payment against one sale/order invoice
+  recordPayment: async (invoiceNo, data) => {
+    return await api.post(`/orders/${invoiceNo}/payments`, data);
   }
 };

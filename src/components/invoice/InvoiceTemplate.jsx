@@ -300,7 +300,11 @@ const InvoiceTemplate = ({
   const billDiscount = Number(orderData?.billDiscount ?? 0);
   const grandTotal = Number(orderData?.netTotal ?? orderData?.grandTotal ?? 0);
   const paidAmount = Number(orderData?.paidAmount ?? 0);
-  const orderType = orderData?.orderType || 'CASH';
+  const dueAmount = Math.max(0, Number(orderData?.dueAmount ?? 0));
+  const paymentMethod = (orderData?.paymentMethod || 'CASH').replace('_', ' ');
+  const orderType = dueAmount > 0 && paidAmount > 0
+    ? `${paymentMethod} + CREDIT`
+    : (dueAmount > 0 ? 'CREDIT' : paymentMethod);
   const balance = Math.max(0, paidAmount - grandTotal);
   const noteText = orderData?.note || '';
   const hasNotes = noteText.trim().length > 0;
@@ -390,7 +394,7 @@ const InvoiceTemplate = ({
               ) : null}
               <div>
                 <span style={styles.label}>Status</span>
-                <div style={styles.value}>{orderType === 'CREDIT' ? 'Credit Sale' : 'Paid'}</div>
+                <div style={styles.value}>{dueAmount > 0 ? 'Partially Paid' : 'Paid'}</div>
               </div>
             </div>
           </div>
@@ -468,6 +472,12 @@ const InvoiceTemplate = ({
               <div style={{ ...styles.totalRow, fontWeight: 700 }}>
                 <span>Balance</span>
                 <span>{formatCurrency(balance)}</span>
+              </div>
+            ) : null}
+            {normalized.showDueAmount && dueAmount > 0 ? (
+              <div style={{ ...styles.totalRow, fontWeight: 700 }}>
+                <span>Credit Due</span>
+                <span>{formatCurrency(dueAmount)}</span>
               </div>
             ) : null}
           </div>

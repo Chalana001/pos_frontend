@@ -10,6 +10,7 @@ import CustomSelect from "../components/common/CustomSelect";
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api";
 import { useBranch } from "../context/BranchContext";
+import { useAuth } from "../context/AuthContext";
 import { ItemType, ItemTypeLabels } from "../utils/constants";
 
 import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon, ChefHat, Search, Trash2 } from "lucide-react";
@@ -49,6 +50,18 @@ const itemTypeOptions = [
   { value: ItemType.RECIPE, label: ItemTypeLabels.RECIPE },
 ];
 
+const getAllowedItemTypeOptions = (planName) => {
+  if (planName === "FREE" || planName === "MONTHLY_DEMO") {
+    return itemTypeOptions.filter((option) => option.value === ItemType.NORMAL);
+  }
+  if (["STANDARD", "MONTHLY_LITE", "YEARLY_LITE", "MONTHLY_BASIC"].includes(planName)) {
+    return itemTypeOptions.filter((option) =>
+      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.SERVICE].includes(option.value)
+    );
+  }
+  return itemTypeOptions;
+};
+
 const weightUnitOptions = [
   { value: "KG", label: "KG" },
   { value: "G", label: "G" },
@@ -64,6 +77,8 @@ const ItemFormPage = ({ mode }) => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { branches: availableBranches } = useBranch();
+  const { user } = useAuth();
+  const allowedItemTypeOptions = useMemo(() => getAllowedItemTypeOptions(user?.planName), [user?.planName]);
 
   const [submitting, setSubmitting] = useState(false);
   const [loadingItem, setLoadingItem] = useState(false);
@@ -608,7 +623,7 @@ const ItemFormPage = ({ mode }) => {
                             branchIds: value === ItemType.SERVICE ? formData.branchIds : [],
                           });
                         }}
-                        options={itemTypeOptions}
+                        options={allowedItemTypeOptions}
                         valueKey="value"
                         labelKey="label"
                         className="w-[190px]"

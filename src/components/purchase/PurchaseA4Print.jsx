@@ -76,6 +76,9 @@ const PurchaseA4Print = forwardRef((props, ref) => {
             .grand-total-box { float: right; width: 300px; background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; border-radius: 6px; margin-top: 10px; page-break-inside: avoid; }
             .grand-total-box .title { font-size: 12px; color: #3b82f6; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
             .grand-total-box .amount { font-size: 20px; color: #1e3a8a; font-weight: bold; text-align: right; }
+            .total-row { display: flex; justify-content: space-between; border-top: 1px solid #bfdbfe; margin-top: 8px; padding-top: 8px; font-size: 12px; }
+            .due { color: #dc2626; font-weight: bold; }
+            .paid { color: #047857; font-weight: bold; }
             
             .clearfix::after { content: ""; clear: both; display: table; }
             
@@ -106,6 +109,9 @@ const PurchaseA4Print = forwardRef((props, ref) => {
               <div class="grand-total-box">
                   <div class="title">Grand Total</div>
                   <div class="amount">LKR ${purchase.grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
+                  <div class="total-row"><span>Supplier Discount</span><span>LKR ${Number(purchase.discountAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                  <div class="total-row"><span>Paid</span><span class="paid">LKR ${Number(purchase.paidAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                  <div class="total-row"><span>Supplier Due</span><span class="due">LKR ${Number(purchase.dueAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
               </div>
           </div>
 

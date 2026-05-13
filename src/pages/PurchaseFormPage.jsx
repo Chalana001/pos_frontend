@@ -12,6 +12,7 @@ import { purchasesAPI } from "../api/purchases.api";
 import { Plus, Trash2, Save, Copy, Search } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { ItemType } from "../utils/constants";
+import { formatCurrency } from "../utils/formatters";
 
 const isWeightItem = (item) =>
   item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
@@ -19,6 +20,13 @@ const isWeightItem = (item) =>
 const weightUnitOptions = [
   { value: "G", label: "G" },
   { value: "KG", label: "KG" },
+];
+
+const paymentMethodOptions = [
+  { value: "CASH", label: "Cash" },
+  { value: "CARD", label: "Card" },
+  { value: "BANK", label: "Bank" },
+  { value: "CHEQUE", label: "Cheque" },
 ];
 
 const PurchaseFormPage = () => {
@@ -36,6 +44,9 @@ const PurchaseFormPage = () => {
   const [supplierId, setSupplierId] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [discountAmount, setDiscountAmount] = useState("");
+  const [paidAmount, setPaidAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [selectionPanelWidth, setSelectionPanelWidth] = useState(null);
@@ -293,6 +304,12 @@ const PurchaseFormPage = () => {
   const handleSubmit = async () => {
     if (!supplierId) return toast.error("Please select a Supplier");
     if (cartItems.length === 0) return toast.error("No items in the list");
+    const normalizedDiscountAmount = Number(discountAmount || 0);
+    const normalizedPaidAmount = Number(paidAmount || 0);
+    if (normalizedDiscountAmount < 0) return toast.error("Discount amount cannot be negative");
+    if (normalizedDiscountAmount > subtotal) return toast.error("Discount amount cannot exceed subtotal");
+    if (normalizedPaidAmount < 0) return toast.error("Paid amount cannot be negative");
+    if (normalizedPaidAmount > grandTotal) return toast.error("Paid amount cannot exceed grand total");
 
     const branchesMap = {};
 
@@ -320,6 +337,9 @@ const PurchaseFormPage = () => {
       supplierId: Number(supplierId),
       // 🟢 වෙනස් කරපු තැන: invoiceNo හිස් නම් null යවනවා 
       invoiceNo: invoiceNo ? invoiceNo : null,
+      discountAmount: normalizedDiscountAmount,
+      paidAmount: normalizedPaidAmount,
+      paymentMethod,
       branches: branchesPayload
     };
 
@@ -333,7 +353,11 @@ const PurchaseFormPage = () => {
     }
   };
 
-  const grandTotal = cartItems.reduce((acc, curr) => acc + curr.lineTotal, 0);
+  const subtotal = cartItems.reduce((acc, curr) => acc + curr.lineTotal, 0);
+  const normalizedDiscountAmount = Math.max(0, Number(discountAmount || 0));
+  const grandTotal = Math.max(0, subtotal - normalizedDiscountAmount);
+  const normalizedPaidAmount = Math.max(0, Number(paidAmount || 0));
+  const dueAmount = Math.max(0, grandTotal - normalizedPaidAmount);
 
   return (
     <div className="space-y-6 pb-10">
@@ -344,13 +368,21 @@ const PurchaseFormPage = () => {
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-right shadow-sm">
           <p className="text-sm font-medium text-slate-500">Grand Total</p>
-          <p className="text-2xl font-bold text-green-600">{grandTotal.toLocaleString()} LKR</p>
+          <p className="text-2xl font-bold text-green-600">{formatCurrency(grandTotal)}</p>
+          {normalizedDiscountAmount > 0 ? (
+            <p className="mt-1 text-xs font-semibold text-slate-500">
+              Subtotal {formatCurrency(subtotal)} - Discount {formatCurrency(normalizedDiscountAmount)}
+            </p>
+          ) : null}
+          <p className={`mt-1 text-sm font-semibold ${dueAmount > 0 ? "text-red-600" : "text-emerald-600"}`}>
+            Supplier Due: {formatCurrency(dueAmount)}
+          </p>
         </div>
       </div>
 
       <Card className="p-0 overflow-visible">
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
             {/* Supplier Select */}
             <div>
               <label className="label-text">Supplier</label>
@@ -382,6 +414,53 @@ const PurchaseFormPage = () => {
             <div>
               <label className="label-text">Date</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input w-full" />
+            </div>
+            <div>
+              <label className="label-text">Supplier Discount</label>
+              <input
+                type="number"
+                min="0"
+                max={subtotal || 0}
+                value={discountAmount}
+                onChange={(e) => setDiscountAmount(e.target.value)}
+                className="input w-full text-right"
+                placeholder="0.00"
+              />
+              <p className="mt-1 text-xs text-slate-500">Discount given on this invoice.</p>
+            </div>
+            <div>
+              <label className="label-text">Paid to Supplier</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max={grandTotal || 0}
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  className="input w-full text-right"
+                  placeholder="0.00"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setPaidAmount(String(grandTotal))}
+                  disabled={cartItems.length === 0}
+                  className="shrink-0 px-3"
+                >
+                  Full
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                Balance will be added to supplier payable.
+              </p>
+            </div>
+            <div>
+              <label className="label-text">Payment Method</label>
+              <CustomSelect
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                options={paymentMethodOptions}
+              />
             </div>
           </div>
         </div>
@@ -556,7 +635,13 @@ const PurchaseFormPage = () => {
                   <h3 className="text-lg font-semibold text-slate-800">Purchase Items List</h3>
                   <p className="text-sm text-slate-500">{cartItems.length} rows added</p>
                 </div>
-                <p className="text-sm font-semibold text-slate-700">Total: {grandTotal.toLocaleString()} LKR</p>
+                <div className="text-right text-sm">
+                  <p className="font-medium text-slate-500">Subtotal: {formatCurrency(subtotal)}</p>
+                  <p className="font-semibold text-slate-700">Total: {formatCurrency(grandTotal)}</p>
+                  <p className={dueAmount > 0 ? "font-semibold text-red-600" : "font-medium text-emerald-600"}>
+                    Due: {formatCurrency(dueAmount)}
+                  </p>
+                </div>
               </div>
             </div>
             <div className="flex-1 overflow-x-auto">
