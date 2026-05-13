@@ -535,8 +535,8 @@ export default function BulkAddItems() {
   const totalLines = cart.length;
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="page-enter space-y-5 p-6">
+      <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "80ms" }}>
         <h1 className="text-2xl font-semibold">Bulk Add Items</h1>
 
         <div className="flex gap-2">
@@ -933,7 +933,7 @@ export default function BulkAddItems() {
             </AccordionSection>
           )}
 
-          <Card className="p-4">
+          <Card className="sales-panel-enter sales-panel-hover p-4" style={{ animationDelay: "180ms" }}>
             <Button onClick={addToList} className="w-full">
               + Add to List
             </Button>
@@ -941,7 +941,7 @@ export default function BulkAddItems() {
         </div>
 
         <div className="col-span-12 lg:col-span-7">
-          <Card className="p-4 space-y-4">
+          <Card className="sales-panel-enter p-4 space-y-4" style={{ animationDelay: "130ms" }}>
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold">Items List</h2>
@@ -952,11 +952,11 @@ export default function BulkAddItems() {
             </div>
 
             {cart.length === 0 ? (
-              <div className="border rounded-lg p-8 text-center text-gray-500">
+              <div className="rounded-lg border p-8 text-center text-gray-500">
                 No items added yet. Add items from the form.
               </div>
             ) : (
-              <div className="overflow-auto border rounded-lg">
+              <div className="overflow-auto rounded-lg border">
                 <table className="min-w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr className="text-left">

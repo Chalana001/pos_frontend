@@ -59,7 +59,7 @@ const CustomSelect = ({
   };
 
   return (
-    <div className={`relative w-full ${className}`} ref={dropdownRef} data-no-auto-translate="true">
+    <div className={`relative w-full overflow-visible ${className}`} ref={dropdownRef} data-no-auto-translate="true">
       <button
         type="button"
         disabled={disabled}
@@ -81,7 +81,7 @@ const CustomSelect = ({
 
       {isOpen && !disabled && (
         <div
-          className={`custom-select-menu absolute left-0 top-full z-40 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-slate-100 bg-white py-1.5 shadow-lg ${menuClassName}`}
+          className={`custom-select-menu absolute left-0 top-full z-[120] mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-slate-100 bg-white py-1.5 shadow-lg ${menuClassName}`}
         >
           {normalizedOptions.length === 0 ? (
             <div className="px-4 py-2 text-center text-sm text-slate-500">{emptyMessage}</div>

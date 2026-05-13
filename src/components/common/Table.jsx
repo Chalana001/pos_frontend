@@ -2,26 +2,26 @@ import React from 'react';
 
 const Table = ({ columns, data, onRowClick }) => {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200">
-        <thead className="bg-slate-50">
+    <div className="app-table-wrap">
+      <table className="app-table min-w-full">
+        <thead className="app-table-head">
           <tr>
             {columns.map((column, index) => (
               <th
                 key={index}
-                className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider"
+                className="app-table-head-cell"
               >
                 {column.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-slate-200">
+        <tbody className="app-table-body">
           {data.length === 0 ? (
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-6 py-8 text-center text-slate-500"
+                className="app-table-empty"
               >
                 No data available
               </td>
@@ -31,10 +31,10 @@ const Table = ({ columns, data, onRowClick }) => {
               <tr
                 key={rowIndex}
                 onClick={() => onRowClick?.(row)}
-                className={onRowClick ? 'hover:bg-slate-50 cursor-pointer' : ''}
+                className={onRowClick ? 'app-table-row-clickable' : ''}
               >
                 {columns.map((column, colIndex) => (
-                  <td key={colIndex} className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                  <td key={colIndex} className="app-table-cell whitespace-nowrap text-slate-900">
                     {column.render ? column.render(row) : row[column.accessor]}
                   </td>
                 ))}

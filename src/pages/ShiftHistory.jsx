@@ -9,6 +9,7 @@ import { formatCurrency, formatDateTime } from "../utils/formatters";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import TablePagination from "../components/common/TablePagination";
 import CustomSelect from "../components/common/CustomSelect"; // 🟢 Custom Select එක Import කළා
 
 const ShiftHistory = () => {
@@ -117,8 +118,8 @@ const ShiftHistory = () => {
   };
 
   return (
-    <div className="space-y-6 p-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="page-enter space-y-6 p-4">
+      <div className="page-section-enter flex flex-col justify-between gap-4 md:flex-row md:items-center" style={{ animationDelay: "40ms" }}>
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Shifts Audit Log</h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -130,8 +131,8 @@ const ShiftHistory = () => {
         </Button>
       </div>
 
-      <Card className="bg-white border-slate-200 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card className="sales-panel-enter sales-panel-hover border-slate-200 bg-white shadow-sm" style={{ animationDelay: "90ms" }}>
+        <div className="inventory-filter-bar grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" style={{ animationDelay: "130ms" }}>
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 flex items-center gap-1 uppercase">
               <Calendar size={14} /> From Date
@@ -186,10 +187,10 @@ const ShiftHistory = () => {
       {loading ? (
         <LoadingSpinner text="Fetching detailed records..." />
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-200">
+        <div className="sales-panel-enter overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" style={{ animationDelay: "130ms" }}>
+          <div className="app-table-wrap">
+            <table className="app-table">
+              <thead className="app-table-head">
                 <tr>
                   <th className="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Timing</th>
                   <th className="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Cashier Details</th>
@@ -254,48 +255,16 @@ const ShiftHistory = () => {
             </div>
           )}
           
-          <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
-            <span className="text-sm text-slate-500">
-              Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
-            </span>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button 
-                disabled={page === 0 || loading} 
-                onClick={() => setPage(page - 1)} 
-                variant="secondary" 
-                className="px-3 py-1 text-sm"
-              >
-                Prev
-              </Button>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">Go to</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={pageInput}
-                  onChange={(e) => setPageInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      goToPage();
-                    }
-                  }}
-                  className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <Button type="button" variant="secondary" onClick={goToPage} disabled={loading} className="px-3 py-1 text-sm">
-                  Go
-                </Button>
-              </div>
-              <Button 
-                disabled={page >= totalPages - 1 || loading} 
-                onClick={() => setPage(page + 1)} 
-                variant="secondary" 
-                className="px-3 py-1 text-sm"
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <TablePagination
+            summary={`Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+            page={page}
+            pageInput={pageInput}
+            totalPages={totalPages}
+            loading={loading}
+            onPageChange={setPage}
+            onPageInputChange={setPageInput}
+            onGoToPage={goToPage}
+          />
         </div>
       )}
     </div>

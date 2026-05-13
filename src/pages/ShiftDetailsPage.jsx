@@ -5,6 +5,7 @@ import { shiftsAPI } from "../api/shifts.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
 
 const formatCategoryLabel = (value) => value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
@@ -139,8 +140,8 @@ const ShiftDetailsPage = () => {
   }
 
   return (
-    <div className="space-y-6 p-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="page-enter space-y-6 p-4">
+      <div className="page-section-enter flex flex-col justify-between gap-4 md:flex-row md:items-center" style={{ animationDelay: "40ms" }}>
         <div>
           <Button variant="secondary" onClick={() => navigate("/shifts/history")} className="mb-4">
             <ArrowLeft size={18} className="mr-2" /> Back to Shift History
@@ -155,24 +156,24 @@ const ShiftDetailsPage = () => {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "90ms" }}>
           <div className="text-xs text-slate-500 flex items-center gap-2 uppercase font-bold">
             <User size={14} /> Cashier
           </div>
           <div className="mt-2 text-lg font-bold text-slate-800">{shift.cashierName || `User ${shift.cashierUserId}`}</div>
         </Card>
-        <Card className="p-4">
+        <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "130ms" }}>
           <div className="text-xs text-slate-500 flex items-center gap-2 uppercase font-bold">
             <Clock size={14} /> Opened
           </div>
           <div className="mt-2 text-sm font-bold text-slate-800">{formatDateTime(shift.openedAt)}</div>
         </Card>
-        <Card className="p-4">
+        <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "170ms" }}>
           <div className="text-xs text-slate-500 uppercase font-bold">Cash Sales</div>
           <div className="mt-2 text-lg font-bold text-green-600">{formatCurrency(shift.cashSales || 0)}</div>
         </Card>
-        <Card className="p-4">
+        <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "210ms" }}>
           <div className="text-xs text-slate-500 uppercase font-bold">Difference</div>
           <div className={`mt-2 text-lg font-bold ${
             (shift.cashDifference || 0) < 0 ? "text-red-600" : (shift.cashDifference || 0) > 0 ? "text-blue-600" : "text-slate-700"
@@ -182,7 +183,7 @@ const ShiftDetailsPage = () => {
         </Card>
       </div>
 
-      <Card className="p-0 overflow-hidden border border-slate-200">
+      <Card className="sales-panel-enter overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "130ms" }}>
         <div className="flex items-center justify-between p-4 border-b bg-slate-50">
           <div>
             <h2 className="text-lg font-bold text-slate-800">Sales in This Shift</h2>
@@ -190,9 +191,9 @@ const ShiftDetailsPage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-100 text-slate-600 uppercase font-semibold border-b">
+        <div className="app-table-wrap">
+          <table className="app-table whitespace-nowrap">
+            <thead className="app-table-head">
               <tr>
                 <th className="p-4">Date</th>
                 <th className="p-4">Invoice No</th>
@@ -243,41 +244,19 @@ const ShiftDetailsPage = () => {
           </table>
         </div>
 
-        <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
-          <span className="text-sm text-slate-500">
-            Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button disabled={page === 0 || salesLoading} onClick={() => setPage(page - 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Prev
-            </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Go to</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={pageInput}
-                onChange={(e) => setPageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    goToPage();
-                  }
-                }}
-                className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Button type="button" variant="secondary" onClick={goToPage} disabled={salesLoading} className="px-3 py-1 text-sm">
-                Go
-              </Button>
-            </div>
-            <Button disabled={page >= totalPages - 1 || salesLoading} onClick={() => setPage(page + 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          summary={`Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          page={page}
+          pageInput={pageInput}
+          totalPages={totalPages}
+          loading={salesLoading}
+          onPageChange={setPage}
+          onPageInputChange={setPageInput}
+          onGoToPage={goToPage}
+        />
       </Card>
 
-      <Card className="p-0 overflow-hidden border border-slate-200">
+      <Card className="sales-panel-enter overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "170ms" }}>
         <div className="flex items-center justify-between p-4 border-b bg-slate-50">
           <div>
             <h2 className="text-lg font-bold text-slate-800">Expenses in This Shift</h2>
@@ -285,9 +264,9 @@ const ShiftDetailsPage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-100 text-slate-600 uppercase font-semibold border-b">
+        <div className="app-table-wrap">
+          <table className="app-table whitespace-nowrap">
+            <thead className="app-table-head">
               <tr>
                 <th className="p-4">Date</th>
                 <th className="p-4">Category</th>
@@ -322,38 +301,16 @@ const ShiftDetailsPage = () => {
           </table>
         </div>
 
-        <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
-          <span className="text-sm text-slate-500">
-            Page {expensesPage + 1} of {expensesTotalPages === 0 ? 1 : expensesTotalPages}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button disabled={expensesPage === 0 || expensesLoading} onClick={() => setExpensesPage(expensesPage - 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Prev
-            </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Go to</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={expensesPageInput}
-                onChange={(e) => setExpensesPageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    goToExpensesPage();
-                  }
-                }}
-                className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Button type="button" variant="secondary" onClick={goToExpensesPage} disabled={expensesLoading} className="px-3 py-1 text-sm">
-                Go
-              </Button>
-            </div>
-            <Button disabled={expensesPage >= expensesTotalPages - 1 || expensesLoading} onClick={() => setExpensesPage(expensesPage + 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          summary={`Page ${expensesPage + 1} of ${expensesTotalPages === 0 ? 1 : expensesTotalPages}`}
+          page={expensesPage}
+          pageInput={expensesPageInput}
+          totalPages={expensesTotalPages}
+          loading={expensesLoading}
+          onPageChange={setExpensesPage}
+          onPageInputChange={setExpensesPageInput}
+          onGoToPage={goToExpensesPage}
+        />
       </Card>
     </div>
   );

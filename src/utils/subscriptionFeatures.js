@@ -127,6 +127,20 @@ export const PLAN_FEATURES = {
   },
 };
 
+const SINGLE_BRANCH_PLANS = new Set([
+  "FREE",
+  "STANDARD",
+  "MONTHLY_DEMO",
+  "MONTHLY_LITE",
+  "MONTHLY_BASIC",
+  "YEARLY_LITE",
+]);
+
+export const isSingleBranchPlan = (planName) => {
+  if (!planName) return false;
+  return SINGLE_BRANCH_PLANS.has(planName);
+};
+
 export const hasPlanFeature = (planName, feature) => {
   if (!feature) return true;
   if (!planName) return true;

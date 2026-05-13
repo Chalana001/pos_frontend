@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-
-import Card from "../components/common/Card";
-import Button from "../components/common/Button";
-import CustomSelect from "../components/common/CustomSelect";
-import Modal from "../components/common/Modal"; // 👈 Modal එක import කරගන්න
+import { useNavigate, useParams } from "react-router-dom";
 
 import { customersAPI } from "../api/customers.api";
-import { formatCurrency, formatDate } from "../utils/formatters";
-
+import Button from "../components/common/Button";
+import Card from "../components/common/Card";
+import CustomSelect from "../components/common/CustomSelect";
+import Modal from "../components/common/Modal";
 import CustomerNotesTab from "../components/customers/CustomerNotesTab";
 import CustomerOrdersTab from "../components/customers/CustomerOrdersTab";
+import { formatCurrency, formatDate } from "../utils/formatters";
 
 const paymentMethodOptions = [
   { value: "CASH", label: "Cash" },
@@ -24,76 +22,71 @@ const CustomerViewPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const [tab, setTab] = useState("orders"); // orders | notes
+  const [tab, setTab] = useState("orders");
   const [loading, setLoading] = useState(false);
   const [customer, setCustomer] = useState(null);
-
-  // Payment States 👈 අලුතින් එකතු කරපු ඒවා
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentLoading, setPaymentLoading] = useState(false);
-
-  // caching tabs
   const [openedTabs, setOpenedTabs] = useState({
     orders: false,
     notes: false,
   });
 
   useEffect(() => {
+    const fetchCustomer = async () => {
+      setLoading(true);
+      try {
+        const res = await customersAPI.getById(id);
+        setCustomer(res.data);
+      } catch {
+        toast.error("Failed to load customer");
+        navigate("/customers");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchCustomer();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  const fetchCustomer = async () => {
-    setLoading(true);
-    try {
-      const res = await customersAPI.getById(id);
-      setCustomer(res.data);
-    } catch {
-      toast.error("Failed to load customer");
-      navigate("/customers");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onTabChange = (t) => {
-    setTab(t);
-    setOpenedTabs((prev) => ({ ...prev, [t]: true }));
-  };
+  }, [id, navigate]);
 
   useEffect(() => {
     setOpenedTabs((prev) => ({ ...prev, orders: true }));
   }, []);
 
-  // 👈 Payment එක handle කරන Function එක
-  const handlePaymentSubmit = async (e) => {
-    e.preventDefault();
+  const onTabChange = (nextTab) => {
+    setTab(nextTab);
+    setOpenedTabs((prev) => ({ ...prev, [nextTab]: true }));
+  };
+
+  const refreshCustomer = async () => {
+    const res = await customersAPI.getById(id);
+    setCustomer(res.data);
+  };
+
+  const handlePaymentSubmit = async (event) => {
+    event.preventDefault();
     const amount = parseFloat(paymentAmount);
 
     if (!amount || amount <= 0) {
-      return toast.error("Please enter a valid amount");
+      toast.error("Please enter a valid amount");
+      return;
     }
-    if (amount > customer.dueAmount) {
-      return toast.error("Amount cannot exceed the total due amount");
+
+    if (amount > (customer?.dueAmount || 0)) {
+      toast.error("Amount cannot exceed the total due amount");
+      return;
     }
 
     setPaymentLoading(true);
     try {
-      // payment method එක "CASH" විදිහට hardcode කරලා යවනවා (ඕන නම් dropdown එකක් දාන්නත් පුළුවන්)
       await customersAPI.recordPayment(id, { amount, paymentMethod });
-      
       toast.success("Payment recorded successfully!");
       setShowPaymentModal(false);
       setPaymentAmount("");
       setPaymentMethod("CASH");
-      
-      // ✅ Payment එක success වුණාම customer data ටික ආයේ අරන් due amount එක අප්ඩේට් කරනවා
-      fetchCustomer(); 
-      
-      // පොඩි trick එකක්: orders tab එකේ තියෙන data ටිකත් refresh වෙන්න ඕනෙ නම් 
-      // ඔයාට orders tab එක re-mount කරන්න පුළුවන්, නැත්නම් page එක reload කරන්න පුළුවන්
+      await refreshCustomer();
     } catch (error) {
       toast.error(error.response?.data?.message || "Payment failed");
     } finally {
@@ -102,9 +95,8 @@ const CustomerViewPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "40ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">Customer Profile</h1>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => navigate("/customers")}>
@@ -114,51 +106,39 @@ const CustomerViewPage = () => {
         </div>
       </div>
 
-      <Card>
+      <Card className="sales-panel-enter" style={{ animationDelay: "90ms" }}>
         {loading ? (
           <div className="py-12 text-slate-600">Loading customer...</div>
         ) : (
           <div className="space-y-6">
-            {/* Top Summary */}
-            <div className="flex flex-col lg:flex-row gap-6">
-              {/* Image */}
+            <div className="flex flex-col gap-6 lg:flex-row">
               <div className="w-full lg:w-56">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
-                  <div className="aspect-[4/3] bg-slate-100 flex items-center justify-center">
+                <div
+                  className="profile-detail-card shell-panel shell-panel-hover overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+                  style={{ animationDelay: "130ms" }}
+                >
+                  <div className="flex aspect-[4/3] items-center justify-center bg-slate-100">
                     {customer?.imageUrl ? (
-                      <img
-                        src={customer.imageUrl}
-                        alt="customer"
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={customer.imageUrl} alt="customer" className="h-full w-full object-cover" />
                     ) : (
-                      <div className="text-sm text-slate-500 px-4 text-center">
-                        No image
-                      </div>
+                      <div className="px-4 text-center text-sm text-slate-500">No image</div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Details */}
-              <div className="flex-1">
+              <div className="page-section-enter flex-1" style={{ animationDelay: "170ms" }}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-xs text-slate-500">Customer ID: {id}</div>
-                    <div className="text-2xl font-bold text-slate-800 mt-1">
-                      {customer?.name || "—"}
-                    </div>
-                    <div className="text-sm text-slate-600 mt-1">
-                      {customer?.phone || "—"}
-                    </div>
+                    <div className="mt-1 text-2xl font-bold text-slate-800">{customer?.name || "—"}</div>
+                    <div className="mt-1 text-sm text-slate-600">{customer?.phone || "—"}</div>
                   </div>
 
                   <div>
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        customer?.active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        customer?.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                       }`}
                     >
                       {customer?.active ? "Active" : "Inactive"}
@@ -167,40 +147,42 @@ const CustomerViewPage = () => {
                 </div>
 
                 <div className="mt-4 text-sm text-slate-700">
-                  <div className="text-xs text-slate-500 mb-1">Address</div>
+                  <div className="mb-1 text-xs text-slate-500">Address</div>
                   <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                     {customer?.address || "—"}
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div
+                    className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4"
+                    style={{ animationDelay: "210ms" }}
+                  >
                     <div className="text-xs text-slate-500">Added Date</div>
-                    <div className="text-xl font-bold mt-1 text-slate-800">
+                    <div className="mt-1 text-xl font-bold text-slate-800">
                       {customer?.createdAt ? formatDate(customer.createdAt) : "-"}
                     </div>
                   </div>
 
-                  {/* Due Amount Box (මෙතන තමයි Pay Now button එක දාන්නේ) */}
-                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div
+                    className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4"
+                    style={{ animationDelay: "250ms" }}
+                  >
                     <div className="text-xs text-slate-500">Due Amount</div>
-                    <div className="flex items-center justify-between mt-1">
+                    <div className="mt-1 flex items-center justify-between">
                       <div
                         className={`text-xl font-bold ${
-                          (customer?.dueAmount || 0) > 0
-                            ? "text-red-600"
-                            : "text-slate-800"
+                          (customer?.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-800"
                         }`}
                       >
                         {formatCurrency(customer?.dueAmount || 0)}
                       </div>
-                      
-                      {/* ණය තියෙනවා නම් විතරක් Pay Now Button එක පෙන්නන්න */}
+
                       {(customer?.dueAmount || 0) > 0 && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={() => setShowPaymentModal(true)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                          className="border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
                         >
                           Pay Now
                         </Button>
@@ -208,9 +190,12 @@ const CustomerViewPage = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <div
+                    className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4"
+                    style={{ animationDelay: "290ms" }}
+                  >
                     <div className="text-xs text-slate-500">Credit Limit</div>
-                    <div className="text-xl font-bold mt-1 text-slate-800">
+                    <div className="mt-1 text-xl font-bold text-slate-800">
                       {formatCurrency(customer?.creditLimit || 0)}
                     </div>
                   </div>
@@ -218,32 +203,28 @@ const CustomerViewPage = () => {
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="flex gap-2 border-b border-slate-200 pb-2">
               <button
                 onClick={() => onTabChange("orders")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  tab === "orders"
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
+                className={`profile-tab-chip rounded-lg px-4 py-2 text-sm font-medium ${
+                  tab === "orders" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
                 }`}
+                style={{ animationDelay: "120ms" }}
               >
                 Orders
               </button>
 
               <button
                 onClick={() => onTabChange("notes")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                  tab === "notes"
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
+                className={`profile-tab-chip rounded-lg px-4 py-2 text-sm font-medium ${
+                  tab === "notes" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
                 }`}
+                style={{ animationDelay: "160ms" }}
               >
                 Notes
               </button>
             </div>
 
-            {/* Tab content */}
             {tab === "orders" ? (
               openedTabs.orders ? (
                 <CustomerOrdersTab customerId={id} />
@@ -259,36 +240,25 @@ const CustomerViewPage = () => {
         )}
       </Card>
 
-      {/* 👈 Payment Modal එක */}
-      <Modal 
-        isOpen={showPaymentModal} 
-        onClose={() => setShowPaymentModal(false)} 
-        title="Settle Due Amount"
-      >
-        <form onSubmit={handlePaymentSubmit} className="p-6 space-y-4">
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center mb-4">
-            <span className="text-sm text-slate-600 font-medium">Total Due Amount</span>
-            <span className="text-lg font-bold text-red-600">
-              {formatCurrency(customer?.dueAmount || 0)}
-            </span>
+      <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Settle Due Amount">
+        <form onSubmit={handlePaymentSubmit} className="space-y-4 p-6">
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <span className="text-sm font-medium text-slate-600">Total Due Amount</span>
+            <span className="text-lg font-bold text-red-600">{formatCurrency(customer?.dueAmount || 0)}</span>
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">
-              Payment Amount
-            </label>
+            <label className="mb-1 block text-sm font-bold text-slate-700">Payment Amount</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">
-                Rs.
-              </span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-500">Rs.</span>
               <input
                 type="number"
                 step="0.01"
                 min="1"
                 max={customer?.dueAmount}
                 value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-semibold"
+                onChange={(event) => setPaymentAmount(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 font-semibold outline-none transition-all focus:ring-2 focus:ring-blue-500"
                 placeholder="0.00"
                 required
               />
@@ -296,9 +266,7 @@ const CustomerViewPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1">
-              Payment Method
-            </label>
+            <label className="mb-1 block text-sm font-bold text-slate-700">Payment Method</label>
             <CustomSelect
               value={paymentMethod}
               onChange={setPaymentMethod}
@@ -318,7 +286,7 @@ const CustomerViewPage = () => {
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
               disabled={paymentLoading}
             >
               {paymentLoading ? "Processing..." : "Confirm Payment"}
@@ -326,7 +294,6 @@ const CustomerViewPage = () => {
           </div>
         </form>
       </Modal>
-
     </div>
   );
 };

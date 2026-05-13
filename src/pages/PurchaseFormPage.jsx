@@ -360,13 +360,13 @@ const PurchaseFormPage = () => {
   const dueAmount = Math.max(0, grandTotal - normalizedPaidAmount);
 
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="page-enter space-y-6 pb-10">
+      <div className="page-section-enter flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ animationDelay: "40ms" }}>
         <div>
           <h1 className="text-3xl font-bold text-slate-800">New Purchase</h1>
           <p className="mt-1 text-sm text-slate-500">Add supplier invoice items and distribute stock by branch.</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-right shadow-sm">
+        <div className="purchase-summary-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white px-5 py-3 text-right shadow-sm" style={{ animationDelay: "90ms" }}>
           <p className="text-sm font-medium text-slate-500">Grand Total</p>
           <p className="text-2xl font-bold text-green-600">{formatCurrency(grandTotal)}</p>
           {normalizedDiscountAmount > 0 ? (
@@ -380,8 +380,8 @@ const PurchaseFormPage = () => {
         </div>
       </div>
 
-      <Card className="p-0 overflow-visible">
-        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+      <Card className="sales-panel-enter overflow-visible p-0" style={{ animationDelay: "120ms" }}>
+        <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "150ms" }}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
             {/* Supplier Select */}
             <div>
@@ -468,10 +468,10 @@ const PurchaseFormPage = () => {
 
       <div ref={panelsContainerRef} className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         <div
-          className="w-full min-w-0 flex-shrink-0 space-y-4"
-          style={{ width: selectionPanelWidth ? `min(100%, ${selectionPanelWidth}px, 50%)` : "50%" }}
+          className="purchase-split-panel w-full min-w-0 flex-shrink-0 space-y-4"
+          style={{ width: selectionPanelWidth ? `min(100%, ${selectionPanelWidth}px, 50%)` : "50%", animationDelay: "190ms" }}
         >
-          <Card className="p-0 overflow-visible">
+          <Card className="sales-panel-enter overflow-visible p-0" style={{ animationDelay: "180ms" }}>
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <h3 className="text-lg font-semibold text-slate-800">Select Item</h3>
               <p className="mt-1 text-sm text-slate-500">Search item, then enter branch quantities and prices.</p>
@@ -490,14 +490,15 @@ const PurchaseFormPage = () => {
                   autoFocus
                 />
                 {searchResults.length > 0 && (
-                  <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-100 bg-white py-1 shadow-xl">
-                    {searchResults.map((item) => {
+                  <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-100 bg-white py-1 shadow-xl custom-scrollbar">
+                    {searchResults.map((item, index) => {
                       return (
                         <button
                           type="button"
                           key={item.id}
                           onClick={() => selectItem(item)}
-                          className="flex w-full items-center justify-between gap-3 border-b border-slate-50 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-slate-50"
+                          className="purchase-line-card flex w-full items-center justify-between gap-3 border-b border-slate-50 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-slate-50"
+                          style={{ animationDelay: `${70 + Math.min(index, 5) * 35}ms` }}
                         >
                           <div className="min-w-0">
                             <div className="truncate font-medium text-slate-800">{item.name}</div>
@@ -514,8 +515,8 @@ const PurchaseFormPage = () => {
               </div>
 
               {selectedItem && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="page-section-enter" style={{ animationDelay: "220ms" }}>
+                  <div className="purchase-summary-card mb-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3" style={{ animationDelay: "250ms" }}>
                     <div className="min-w-0">
                       <div className="truncate font-bold text-slate-800">{selectedItem.name}</div>
                       <div className="truncate text-xs text-slate-500">{selectedItem.barcode}</div>
@@ -525,7 +526,7 @@ const PurchaseFormPage = () => {
                     </button>
                   </div>
 
-                  <div className="max-h-[520px] overflow-auto rounded-xl border border-slate-200">
+                  <div className="custom-scrollbar max-h-[520px] overflow-auto rounded-xl border border-slate-200">
                     <table className="w-full min-w-[760px] text-left text-sm">
                       <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase text-slate-500">
                         <tr>
@@ -627,8 +628,8 @@ const PurchaseFormPage = () => {
 
         <PanelResizeHandle onMouseDown={handleResizeStart} isResizing={isResizingPanels} />
 
-        <div className="min-w-0 flex-1 space-y-4">
-          <Card className="flex min-h-[520px] flex-col overflow-hidden p-0">
+        <div className="purchase-split-panel min-w-0 flex-1 space-y-4" style={{ animationDelay: "230ms" }}>
+          <Card className="sales-panel-enter flex min-h-[520px] flex-col overflow-hidden p-0" style={{ animationDelay: "260ms" }}>
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -644,7 +645,7 @@ const PurchaseFormPage = () => {
                 </div>
               </div>
             </div>
-            <div className="flex-1 overflow-x-auto">
+            <div className="custom-scrollbar flex-1 overflow-x-auto">
               <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="border-b bg-white text-slate-500">
                   <tr>
@@ -666,7 +667,11 @@ const PurchaseFormPage = () => {
                     </tr>
                   ) : (
                     cartItems.map((item, index) => (
-                      <tr key={item.uniqueId} className="group transition-colors hover:bg-slate-50">
+                      <tr
+                        key={item.uniqueId}
+                        className="purchase-line-card group transition-colors hover:bg-slate-50"
+                        style={{ animationDelay: `${80 + Math.min(index, 6) * 35}ms` }}
+                      >
                         <td className="p-3">
                           <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700">
                             {item.branchName}
@@ -696,7 +701,7 @@ const PurchaseFormPage = () => {
             </div>
           </Card>
 
-          <div className="flex justify-end">
+          <div className="page-section-enter flex justify-end" style={{ animationDelay: "300ms" }}>
             <Button
               onClick={handleSubmit}
               size="lg"

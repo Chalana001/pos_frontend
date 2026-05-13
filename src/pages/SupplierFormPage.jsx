@@ -81,8 +81,8 @@ const SupplierFormPage = () => {
   };
 
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="page-enter space-y-6 pb-10">
+      <div className="page-section-enter flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ animationDelay: "40ms" }}>
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Add Supplier</h1>
           <p className="mt-1 text-sm text-slate-500">Create a supplier profile for purchases and payable tracking.</p>
@@ -92,13 +92,13 @@ const SupplierFormPage = () => {
         </Button>
       </div>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="sales-panel-enter overflow-hidden p-0" style={{ animationDelay: "90ms" }}>
         <form onSubmit={handleSubmit}>
           <div className="border-b border-slate-100 bg-slate-50/50 p-4">
             <h2 className="text-lg font-bold text-slate-800">Supplier Details</h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
+          <div className="page-section-enter grid grid-cols-1 gap-4 p-6 md:grid-cols-2" style={{ animationDelay: "130ms" }}>
             <div>
               <label className="label-text">Supplier Name *</label>
               <input
@@ -151,7 +151,7 @@ const SupplierFormPage = () => {
             <h2 className="text-lg font-bold text-slate-800">Bank Details</h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
+          <div className="page-section-enter grid grid-cols-1 gap-4 p-6 md:grid-cols-2" style={{ animationDelay: "180ms" }}>
             <div>
               <label className="label-text">Bank Name</label>
               <input value={formData.bankName} onChange={(event) => updateField("bankName", event.target.value)} className="input w-full" />

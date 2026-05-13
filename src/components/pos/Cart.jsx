@@ -109,8 +109,8 @@ const Cart = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+    <div className="flex h-full flex-col bg-white">
+      <div className="page-section-enter flex items-center justify-between border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "120ms" }}>
         <div className="flex items-center gap-2">
           <div className="bg-blue-600 text-white p-2 rounded-lg">
             <Receipt size={18} />
@@ -125,7 +125,7 @@ const Cart = ({
         </span>
       </div>
 
-      <div className="px-4 py-3 border-b border-slate-50">
+      <div className="page-section-enter border-b border-slate-50 px-4 py-3" style={{ animationDelay: "180ms" }}>
         {customer ? (
           <div className="flex items-center justify-between bg-blue-50 p-2 rounded-xl border border-blue-100">
             <div className="flex items-center gap-3">
@@ -153,7 +153,7 @@ const Cart = ({
       </div>
 
       {/* --- Items List --- */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+      <div className="custom-scrollbar flex-1 overflow-y-auto p-4 space-y-3">
         {cartItems.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale">
             <Receipt size={64} className="mb-4" />
@@ -166,7 +166,7 @@ const Cart = ({
               : 1;
 
             return (
-              <div key={index} className="relative group overflow-hidden bg-white border border-slate-100 rounded-xl hover:border-blue-200 transition-all shadow-sm">
+              <div key={index} style={{ animationDelay: `${220 + index * 38}ms` }} className="sales-cart-item sales-panel-hover relative group overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm hover:border-blue-200 transition-all">
                 <div className="p-3 flex items-center gap-3">
                   <div className="flex-1">
                     <h4 className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</h4>
@@ -283,7 +283,7 @@ const Cart = ({
                 </div>
 
                 {editingIndex === index && (
-                  <div className="bg-slate-50 border-t border-slate-100 p-3 animate-in slide-in-from-top duration-200">
+                  <div className="page-section-enter border-t border-slate-100 bg-slate-50 p-3" style={{ animationDelay: "20ms" }}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Item Discount</span>
                       <button onClick={() => setEditingIndex(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
@@ -318,7 +318,7 @@ const Cart = ({
         )}
       </div>
 
-      <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
+      <div className="page-section-enter space-y-3 border-t border-slate-200 bg-slate-50 p-4" style={{ animationDelay: "260ms" }}>
         <div className="space-y-2">
           <div className="flex justify-between text-slate-500 text-sm">
             <span>Subtotal</span>

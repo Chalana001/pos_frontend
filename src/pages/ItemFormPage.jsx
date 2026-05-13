@@ -17,11 +17,11 @@ import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon, ChefHat, Search
 
 const Section = ({ title, open, onToggle, right, children }) => {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div className="shell-panel shell-panel-hover overflow-hidden rounded-xl border border-slate-200 bg-white">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-5 py-4 bg-slate-50 hover:bg-slate-100 transition"
+        className="flex w-full items-center justify-between bg-slate-50 px-5 py-4 transition hover:bg-slate-100"
       >
         <h3 className="font-semibold text-slate-800">{title}</h3>
         <div className="flex items-center gap-3">
@@ -29,7 +29,7 @@ const Section = ({ title, open, onToggle, right, children }) => {
           {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
         </div>
       </button>
-      {open && <div className="p-5">{children}</div>}
+      {open && <div className="page-section-enter p-5">{children}</div>}
     </div>
   );
 };
@@ -488,20 +488,20 @@ const ItemFormPage = ({ mode }) => {
   const removeLabel = (value) => setLabels((prev) => prev.filter((label) => label !== value));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "80ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">
           {mode === "edit" ? "Edit Item" : "Add New Item"}
         </h1>
       </div>
 
-      <Card>
+      <Card className="sales-panel-enter" style={{ animationDelay: "130ms" }}>
         {loadingItem ? (
           <div className="py-12 text-slate-600">Loading item...</div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-1">
-              <div className="rounded-xl border border-slate-200 bg-white overflow-hidden h-full">
+              <div className="shell-panel shell-panel-hover h-full overflow-hidden rounded-xl border border-slate-200 bg-white">
                 <div className="px-5 py-4 bg-slate-50 border-b">
                   <h3 className="font-semibold text-slate-800 flex items-center gap-2">
                     <ImageIcon size={18} />
@@ -769,7 +769,7 @@ const ItemFormPage = ({ mode }) => {
                     ) : (
                       <div className="space-y-3">
                         {formData.ingredients.map((ingredient, index) => (
-                          <div key={`${ingredient.ingredientItemId || "new"}-${index}`} className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px]">
+                          <div key={`${ingredient.ingredientItemId || "new"}-${index}`} style={{ animationDelay: `${140 + index * 40}ms` }} className="sales-cart-item grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px]">
                             <div>
                               <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
                               <div className="relative">

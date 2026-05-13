@@ -107,10 +107,10 @@ const BarcodePrintPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-enter space-y-6">
       
       {/* --- Header Section --- */}
-      <div className="flex items-center justify-between gap-4 print:hidden">
+      <div className="page-section-enter flex items-center justify-between gap-4 print:hidden" style={{ animationDelay: "80ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">Print Barcodes</h1>
         <Button onClick={handlePrint} disabled={printList.length === 0 || loading}>
           <Printer size={18} className="mr-2" />
@@ -118,13 +118,13 @@ const BarcodePrintPage = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:hidden">
+      <div className="grid grid-cols-1 gap-6 print:hidden md:grid-cols-3">
         
         {/* --- Left Column: Search & Load Recent --- */}
         <div className="md:col-span-1 space-y-6">
           
           {/* 🔴 අලුත් Card එක: Load Recent Items */}
-          <Card>
+          <Card className="sales-panel-enter sales-panel-hover" style={{ animationDelay: "130ms" }}>
             <h3 className="text-sm font-medium text-slate-600 mb-3">Load Recent Items</h3>
             <div className="flex gap-2">
               <input
@@ -152,7 +152,7 @@ const BarcodePrintPage = () => {
           </Card>
 
           {/* Search Card */}
-          <Card>
+          <Card className="sales-panel-enter sales-panel-hover" style={{ animationDelay: "180ms" }}>
             <h3 className="text-sm font-medium text-slate-600 mb-3">Add Items to Print</h3>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -166,9 +166,9 @@ const BarcodePrintPage = () => {
 
             {/* Search Results Dropdown */}
             {searchResults.length > 0 && (
-              <div className="mt-2 border border-slate-200 rounded-lg overflow-hidden shadow-sm divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+              <div className="mt-2 max-h-[300px] overflow-y-auto rounded-lg border border-slate-200 shadow-sm divide-y divide-slate-100 custom-scrollbar">
                 {searchResults.map(item => (
-                  <div key={item.id} className="p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div key={item.id} className="sales-cart-item flex items-center justify-between p-3 transition-colors hover:bg-slate-50">
                     <div className="overflow-hidden">
                       <p className="text-sm font-medium text-slate-800 truncate">{item.name}</p>
                       <p className="text-xs text-slate-500">{item.barcode}</p>
@@ -188,7 +188,7 @@ const BarcodePrintPage = () => {
 
         {/* --- Right Column: Print Cart --- */}
         <div className="md:col-span-2">
-          <Card>
+          <Card className="sales-panel-enter" style={{ animationDelay: "230ms" }}>
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
               <h3 className="text-sm font-medium text-slate-600">Print Queue</h3>
               <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
@@ -206,9 +206,9 @@ const BarcodePrintPage = () => {
                 <p>Queue is empty. Search or load items to print.</p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+              <div className="custom-scrollbar max-h-[500px] overflow-y-auto space-y-3 pr-2">
                 {printList.map((item) => (
-                  <div key={item.id} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 p-3 border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
+                  <div key={item.id} style={{ animationDelay: `${150 + printList.indexOf(item) * 35}ms` }} className="sales-cart-item sales-panel-hover flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 p-3 transition-colors hover:border-blue-300 sm:flex-nowrap">
                     
                     {/* Item Details */}
                     <div className="flex-1 min-w-0">

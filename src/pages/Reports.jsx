@@ -298,28 +298,28 @@ const Reports = () => {
     ];
 
     return (
-      <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="page-section-enter space-y-6" style={{ animationDelay: '40ms' }}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-blue-50 border-blue-100">
+          <Card className="admin-kpi-card bg-blue-50 border-blue-100" style={{ animationDelay: '80ms' }}>
             <h3 className="text-xs font-bold text-slate-500 uppercase">Total Sales</h3>
             <p className="text-2xl font-bold text-blue-700">{formatCurrency(data.totalSales)}</p>
           </Card>
-          <Card className="bg-green-50 border-green-100">
+          <Card className="admin-kpi-card bg-green-50 border-green-100" style={{ animationDelay: '120ms' }}>
              <h3 className="text-xs font-bold text-slate-500 uppercase">Cash Sales</h3>
              <p className="text-2xl font-bold text-green-700">{formatCurrency(data.cashSales)}</p>
           </Card>
-          <Card className="bg-orange-50 border-orange-100">
+          <Card className="admin-kpi-card bg-orange-50 border-orange-100" style={{ animationDelay: '160ms' }}>
              <h3 className="text-xs font-bold text-slate-500 uppercase">Credit Sales</h3>
              <p className="text-2xl font-bold text-orange-700">{formatCurrency(data.creditSales)}</p>
           </Card>
-          <Card className="bg-purple-50 border-purple-100">
+          <Card className="admin-kpi-card bg-purple-50 border-purple-100" style={{ animationDelay: '200ms' }}>
              <h3 className="text-xs font-bold text-slate-500 uppercase">Total Orders</h3>
              <p className="text-2xl font-bold text-purple-700">{data.totalOrders}</p>
           </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card title="Payment Split">
+          <Card className="admin-panel-card" title="Payment Split" style={{ animationDelay: '110ms' }}>
              <div className="h-[300px] flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -339,7 +339,7 @@ const Reports = () => {
              </div>
           </Card>
 
-          <Card title={`Sales Trend (${trendData.type === 'MONTHLY' ? 'Monthly' : 'Daily'})`}>
+          <Card className="admin-panel-card" title={`Sales Trend (${trendData.type === 'MONTHLY' ? 'Monthly' : 'Daily'})`} style={{ animationDelay: '150ms' }}>
              <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={trendData.data}>
@@ -386,23 +386,23 @@ const Reports = () => {
     const netProfit = summary?.netProfit || 0;
 
     return (
-    <div className="space-y-6 animate-in fade-in">
+    <div className="page-section-enter space-y-6" style={{ animationDelay: '40ms' }}>
        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-         <Card className="bg-blue-50 border-blue-100">
+         <Card className="admin-kpi-card bg-blue-50 border-blue-100" style={{ animationDelay: '80ms' }}>
            <h3 className="text-xs font-bold text-slate-500 uppercase">Gross Profit</h3>
            <p className="text-2xl font-bold text-blue-700">{formatCurrency(grossProfit)}</p>
          </Card>
-         <Card className="bg-red-50 border-red-100">
+         <Card className="admin-kpi-card bg-red-50 border-red-100" style={{ animationDelay: '120ms' }}>
            <h3 className="text-xs font-bold text-slate-500 uppercase">Less: Expenses</h3>
            <p className="text-2xl font-bold text-red-600">- {formatCurrency(totalExpenses)}</p>
          </Card>
-         <Card className="bg-emerald-50 border-emerald-100 shadow-sm ring-1 ring-emerald-200">
+         <Card className="admin-kpi-card bg-emerald-50 border-emerald-100 shadow-sm ring-1 ring-emerald-200" style={{ animationDelay: '160ms' }}>
            <h3 className="text-xs font-bold text-slate-500 uppercase">Net Profit (Final)</h3>
            <p className="text-3xl font-bold text-emerald-700">{formatCurrency(netProfit)}</p>
          </Card>
        </div>
 
-       <Card title="Profit Margin Analysis (Top 20 Items)">
+       <Card className="admin-panel-card" title="Profit Margin Analysis (Top 20 Items)" style={{ animationDelay: '110ms' }}>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.slice(0, 20)}>
@@ -418,7 +418,7 @@ const Reports = () => {
           </div>
        </Card>
 
-       <Card title="Detailed Profit Data">
+       <Card className="admin-panel-card" title="Detailed Profit Data" style={{ animationDelay: '150ms' }}>
          <Table 
             columns={[
               { header: 'Product', accessor: 'itemName' },
@@ -436,8 +436,8 @@ const Reports = () => {
   const hasActiveReportData = !!reportData && loadedTab === activeTab;
 
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="page-enter space-y-6 pb-10">
+      <div className="page-section-enter flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ animationDelay: '40ms' }}>
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-800">Analytics</h1>
           <p className="mt-1 text-sm text-slate-500">Insights and performance reports.</p>
@@ -450,8 +450,8 @@ const Reports = () => {
         </div>
       </div>
 
-      <Card className="overflow-visible p-0">
-        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+      <Card className="admin-panel-card overflow-visible p-0" style={{ animationDelay: '90ms' }}>
+        <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: '130ms' }}>
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="flex flex-wrap gap-2">
               {datePresetOptions.map((option) => (
@@ -517,7 +517,7 @@ const Reports = () => {
         </div>
       </Card>
 
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+      <div className="page-section-enter flex flex-wrap gap-2 border-b border-slate-200 pb-2" style={{ animationDelay: '120ms' }}>
         {[
           { id: 'sales', label: 'Sales Summary', icon: TrendingUp },
           { id: 'profit', label: 'Profit Analysis', icon: DollarSign },
@@ -530,11 +530,12 @@ const Reports = () => {
           <button
             key={tab.id}
             onClick={() => handleTabChange(tab.id)}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all text-sm ${
+            className={`report-tab-chip px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all text-sm ${
               activeTab === tab.id 
                 ? 'bg-blue-600 text-white shadow-md' 
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
+            style={{ animationDelay: `${90 + ['sales','profit','topSelling','topCustomers','topSuppliers','lowStock','creditDue'].indexOf(tab.id) * 35}ms` }}
           >
             <tab.icon size={16} /> {tab.label}
           </button>
@@ -554,7 +555,7 @@ const Reports = () => {
            </div>
         ) : (
           <div className="space-y-6">
-             <div className="flex justify-end gap-2 mb-4">
+             <div className="page-section-enter mb-4 flex justify-end gap-2" style={{ animationDelay: '80ms' }}>
                 <Button variant="outline" size="sm" onClick={exportChartAsImage}>
                    <PieIcon size={16} className="mr-2" /> Save Chart
                 </Button>
@@ -563,7 +564,7 @@ const Reports = () => {
                 </Button>
              </div>
 
-             <div ref={reportRef} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+             <div ref={reportRef} className="admin-panel-card rounded-xl border border-slate-200 bg-white p-5 shadow-sm" style={{ animationDelay: '120ms' }}>
                 <div className="mb-8 border-b border-slate-100 pb-4 flex justify-between items-end">
                    <div>
                       <h2 className="text-2xl font-bold text-slate-800 capitalize">{activeTab.replace(/([A-Z])/g, ' $1').trim()} Report</h2>

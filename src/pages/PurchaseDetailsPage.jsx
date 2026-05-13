@@ -141,11 +141,11 @@ const PurchaseDetailsPage = () => {
   const canPaySupplier = user?.role !== 'CASHIER' && !isCanceled && purchaseDue > 0;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+    <div className="page-enter mx-auto max-w-6xl space-y-6 pb-20">
       
       <PurchaseA4Print ref={printRef} />
 
-      <div className="flex justify-between items-center print:hidden">
+      <div className="page-section-enter print:hidden flex items-center justify-between" style={{ animationDelay: "40ms" }}>
         <Button variant="secondary" onClick={() => navigate("/purchases")}>
           <ArrowLeft size={18} className="mr-2" /> Back to History
         </Button>
@@ -183,7 +183,7 @@ const PurchaseDetailsPage = () => {
         </div>
       </div>
 
-      <Card className={`p-6 border-t-4 shadow-md transition-all ${isCanceled ? 'border-t-slate-400 bg-slate-50' : 'border-t-blue-600'}`}>
+      <Card className={`sales-panel-enter p-6 border-t-4 shadow-md transition-all ${isCanceled ? 'border-t-slate-400 bg-slate-50' : 'border-t-blue-600'}`} style={{ animationDelay: "90ms" }}>
         <div className="flex flex-col md:flex-row justify-between gap-6">
           
           <div>
@@ -262,18 +262,22 @@ const PurchaseDetailsPage = () => {
         </div>
       </Card>
 
-      <div className="flex items-center gap-4 py-2 opacity-70">
+      <div className="page-section-enter flex items-center gap-4 py-2 opacity-70" style={{ animationDelay: "130ms" }}>
         <div className="h-px bg-slate-300 flex-1"></div>
         <span className="text-slate-400 text-sm font-semibold uppercase">GRN Breakdown (By Branch)</span>
         <div className="h-px bg-slate-300 flex-1"></div>
       </div>
 
       <div className={`space-y-4 ${isCanceled ? 'opacity-70 grayscale-[30%]' : ''}`}>
-        {purchase.grnList && purchase.grnList.map((grn) => {
+        {purchase.grnList && purchase.grnList.map((grn, index) => {
             const isOpen = expandedGrnIds.includes(grn.id);
 
             return (
-                <div key={grn.id} className="bg-white border rounded-lg shadow-sm overflow-hidden transition-all duration-200">
+                <div
+                  key={grn.id}
+                  className="purchase-summary-card overflow-hidden rounded-lg border bg-white shadow-sm transition-all duration-200"
+                  style={{ animationDelay: `${170 + Math.min(index, 6) * 40}ms` }}
+                >
                     <div 
                         className={`p-4 flex flex-col md:flex-row justify-between items-center cursor-pointer hover:bg-slate-50 ${isOpen ? 'bg-slate-50 border-b' : ''}`}
                         onClick={() => toggleGrn(grn.id)}
@@ -304,16 +308,16 @@ const PurchaseDetailsPage = () => {
                     </div>
 
                     {isOpen && (
-                        <div className="animate-in fade-in slide-in-from-top-1 duration-200 bg-white">
+                        <div className="page-section-enter bg-white" style={{ animationDelay: "70ms" }}>
                              {!grn.items || grn.items.length === 0 ? (
                                 <div className="p-8 text-center text-slate-400">
                                     <Package size={32} className="mx-auto mb-2 opacity-50"/>
                                     No items found for this GRN.
                                 </div>
                              ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-slate-100/50 text-slate-500 uppercase font-semibold text-xs border-b">
+                                <div className="app-table-wrap">
+                                    <table className="app-table">
+                                        <thead className="app-table-head">
                                             <tr>
                                                 <th className="p-3 pl-6 w-10">#</th>
                                                 <th className="p-3">Item Name</th>
@@ -355,8 +359,8 @@ const PurchaseDetailsPage = () => {
 
       {/* --- 🟢 BEAUTIFUL CANCEL MODAL (BLUE & SLATE THEME) --- */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4 animate-in zoom-in-95 duration-200">
+        <div className="modal-overlay-enter fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+          <div className="modal-panel-enter shell-surface mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <div className="flex items-center gap-3 mb-3 text-emerald-600">
               <div className="p-2 bg-emerald-50 rounded-full">
                 <Wallet size={24} />
@@ -425,8 +429,8 @@ const PurchaseDetailsPage = () => {
       )}
 
       {showCancelModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 mx-4 animate-in zoom-in-95 duration-200">
+        <div className="modal-overlay-enter fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+          <div className="modal-panel-enter shell-surface mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             
             <div className="flex items-center gap-3 mb-3 text-blue-600">
               <div className="p-2 bg-blue-50 rounded-full">

@@ -171,8 +171,8 @@ const Dashboard = () => {
             })}
           </div>
         </div>
-        <Card>
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <Card className="page-section-enter shell-panel-hover" style={{ animationDelay: "120ms" }}>
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
             <p className="text-sm text-yellow-800">
               ⚠️ Please select a branch to view dashboard KPIs.
             </p>
@@ -213,7 +213,7 @@ const Dashboard = () => {
               className="dashboard-card-in"
               style={{ animationDelay: `${120 + index * 70}ms` }}
             >
-              <Card className="dashboard-premium-card dashboard-soft-glow">
+              <Card className="dashboard-premium-card dashboard-soft-glow shell-panel-hover">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-600 mb-1">{stat.title}</p>
@@ -238,7 +238,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <div className="dashboard-card-in lg:col-span-2" style={{ animationDelay: "760ms" }}>
-          <Card className="dashboard-premium-card">
+          <Card className="dashboard-premium-card shell-panel-hover">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-slate-800">Sales Overview</h2>
               
@@ -334,7 +334,7 @@ const Dashboard = () => {
         </div>
 
         <div className="dashboard-card-in lg:col-span-1" style={{ animationDelay: "860ms" }}>
-          <Card title="Quick Actions" className="h-full dashboard-premium-card">
+          <Card title="Quick Actions" className="h-full dashboard-premium-card shell-panel-hover">
             <div className="grid grid-cols-2 gap-4 mt-2">
               <button
                 onClick={() => navigate("/pos")}

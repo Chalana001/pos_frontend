@@ -709,8 +709,8 @@ const OfflineSalesPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div className="page-enter space-y-6">
+      <div className="sales-surface sales-panel-enter flex flex-col gap-4 rounded-xl p-5 lg:flex-row lg:items-center lg:justify-between" style={{ animationDelay: "80ms" }}>
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Offline Sales Queue</h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -767,15 +767,15 @@ const OfflineSalesPage = () => {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-slate-200 bg-white px-4 py-3" style={{ animationDelay: "120ms" }}>
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Queued</div>
           <div className="mt-2 text-2xl font-semibold text-slate-900">{rows.length}</div>
         </div>
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3" style={{ animationDelay: "170ms" }}>
           <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Ready</div>
           <div className="mt-2 text-2xl font-semibold text-emerald-800">{readyRows.length}</div>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-amber-200 bg-amber-50 px-4 py-3" style={{ animationDelay: "220ms" }}>
           <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
             Need Shift
           </div>
@@ -783,7 +783,7 @@ const OfflineSalesPage = () => {
             {rowsNeedingShift.length}
           </div>
         </div>
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-red-200 bg-red-50 px-4 py-3" style={{ animationDelay: "270ms" }}>
           <div className="text-xs font-semibold uppercase tracking-wide text-red-700">
             Stock Issues
           </div>
@@ -875,7 +875,8 @@ const OfflineSalesPage = () => {
             return (
               <div
                 key={row.clientSaleId}
-                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                style={{ animationDelay: `${140 + rows.indexOf(row) * 40}ms` }}
+                className="sales-queue-card sales-panel-hover rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>

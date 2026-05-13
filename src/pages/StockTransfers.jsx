@@ -10,6 +10,7 @@ import Button from "../components/common/Button";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import TablePagination from "../components/common/TablePagination";
 
 const transferStatusOptions = [
   { value: "ALL", label: "All Status" },
@@ -284,19 +285,20 @@ const StockTransfers = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter" style={{ animationDelay: "40ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">Stock Transfers</h1>
         <p className="mt-1 text-sm text-slate-500">Review branch-to-branch stock movements, receipts, and cancellations.</p>
       </div>
 
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="page-section-enter flex gap-2 border-b border-slate-200" style={{ animationDelay: "80ms" }}>
         <button
           type="button"
           onClick={() => setActiveTab("outgoing")}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`profile-tab-chip px-4 py-2 font-medium transition-colors ${
             activeTab === "outgoing" ? "border-b-2 border-blue-600 text-blue-600" : "text-slate-600 hover:text-slate-800"
           }`}
+          style={{ animationDelay: "110ms" }}
         >
           <ArrowRight size={18} className="mr-1 inline" />
           Outgoing
@@ -304,17 +306,18 @@ const StockTransfers = () => {
         <button
           type="button"
           onClick={() => setActiveTab("incoming")}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`profile-tab-chip px-4 py-2 font-medium transition-colors ${
             activeTab === "incoming" ? "border-b-2 border-blue-600 text-blue-600" : "text-slate-600 hover:text-slate-800"
           }`}
+          style={{ animationDelay: "150ms" }}
         >
           <ArrowLeft size={18} className="mr-1 inline" />
           Incoming
         </button>
       </div>
 
-      <Card className="overflow-hidden border border-slate-200 p-0">
-        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+      <Card className="sales-panel-enter sales-panel-hover overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "100ms" }}>
+        <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "140ms" }}>
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="relative w-full xl:min-w-[320px] xl:flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -384,43 +387,16 @@ const StockTransfers = () => {
           <Table columns={activeTab === "outgoing" ? outgoingColumns : incomingColumns} data={currentData} />
         )}
 
-        <div className="flex flex-col items-center justify-between gap-4 border-t bg-slate-50 p-4 lg:flex-row">
-          <span className="text-sm text-slate-500">
-            Page {currentPage + 1} of {currentTotalPages === 0 ? 1 : currentTotalPages} | Total: {currentTotalElements}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button disabled={currentPage === 0 || loading} onClick={() => setCurrentPage(currentPage - 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Prev
-            </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Go to</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={currentPageInput}
-                onChange={(e) => setCurrentPageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    goToPage();
-                  }
-                }}
-                className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Button type="button" variant="secondary" onClick={goToPage} disabled={loading} className="px-3 py-1 text-sm">
-                Go
-              </Button>
-            </div>
-            <Button
-              disabled={currentPage >= currentTotalPages - 1 || loading}
-              onClick={() => setCurrentPage(currentPage + 1)}
-              variant="secondary"
-              className="px-3 py-1 text-sm"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          summary={`Page ${currentPage + 1} of ${currentTotalPages === 0 ? 1 : currentTotalPages} | Total: ${currentTotalElements}`}
+          page={currentPage}
+          pageInput={currentPageInput}
+          totalPages={currentTotalPages}
+          loading={loading}
+          onPageChange={setCurrentPage}
+          onPageInputChange={setCurrentPageInput}
+          onGoToPage={goToPage}
+        />
       </Card>
     </div>
   );

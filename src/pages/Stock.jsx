@@ -20,6 +20,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import CustomSelect from "../components/common/CustomSelect";
+import TablePagination from "../components/common/TablePagination";
 
 const isWeightItem = (item) =>
   item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
@@ -110,8 +111,13 @@ const Stock = () => {
   const [subCategoryId, setSubCategoryId] = useState("");
 
   const [page, setPage] = useState(0);
+  const [pageInput, setPageInput] = useState("1");
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
+
+  useEffect(() => {
+    setPageInput(String(page + 1));
+  }, [page]);
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemBatches, setItemBatches] = useState([]);
@@ -271,6 +277,16 @@ const Stock = () => {
     setCategoryId("");
     setSubCategoryId("");
     setPage(0);
+  };
+
+  const goToPage = () => {
+    const requestedPage = Number(pageInput);
+    if (!Number.isInteger(requestedPage)) {
+      setPageInput(String(page + 1));
+      return;
+    }
+    const maxPage = totalPages > 0 ? totalPages : 1;
+    setPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
   };
 
   const loadItemBatches = async (item, setFormState) => {
@@ -492,13 +508,13 @@ const Stock = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "40ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">Stock Inventory</h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="inventory-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "90ms" }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-slate-600 mb-2">Total Items</h3>
@@ -510,7 +526,7 @@ const Stock = () => {
           </div>
         </Card>
 
-        <Card>
+        <Card className="inventory-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "130ms" }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-slate-600 mb-2">Reorder Alerts</h3>
@@ -529,14 +545,14 @@ const Stock = () => {
           </div>
         </Card>
 
-        <Card>
+        <Card className="inventory-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "170ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Stock Value</h3>
           <p className="text-2xl font-bold text-green-600">LKR {Number(stockValue).toFixed(2)}</p>
         </Card>
       </div>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+      <Card className="sales-panel-enter sales-panel-hover overflow-hidden p-0" style={{ animationDelay: "120ms" }}>
+        <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "150ms" }}>
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(260px,1fr)_180px_220px_220px_auto] xl:items-center">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
@@ -599,29 +615,16 @@ const Stock = () => {
           />
         )}
 
-        <div className="flex justify-between items-center p-4 bg-slate-50 border-t">
-          <span className="text-sm text-slate-500">
-            Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              disabled={page === 0 || loading}
-              onClick={() => setPage(page - 1)}
-              variant="secondary"
-              className="px-3 py-1 text-sm"
-            >
-              Prev
-            </Button>
-            <Button
-              disabled={page >= totalPages - 1 || loading}
-              onClick={() => setPage(page + 1)}
-              variant="secondary"
-              className="px-3 py-1 text-sm"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          summary={`Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          page={page}
+          pageInput={pageInput}
+          totalPages={totalPages}
+          loading={loading}
+          onPageChange={setPage}
+          onPageInputChange={setPageInput}
+          onGoToPage={goToPage}
+        />
       </Card>
 
       <Modal
@@ -629,12 +632,12 @@ const Stock = () => {
         onClose={() => setShowAdjustModal(false)}
         title={selectedItem ? `Adjust Stock: ${selectedItem.itemName}` : "Adjust Stock"}
       >
-        <form onSubmit={handleAdjustSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleAdjustSubmit} className="space-y-4 p-4">
           {loadingBatches ? (
             <div className="py-8"><LoadingSpinner text="Loading batches..." /></div>
           ) : (
             <>
-              <div>
+              <div className="page-section-enter" style={{ animationDelay: "70ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Batch *</label>
                 {itemBatches.length === 1 ? (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
@@ -655,7 +658,7 @@ const Stock = () => {
                 )}
               </div>
 
-              <div>
+              <div className="page-section-enter" style={{ animationDelay: "110ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Adjustment Type *</label>
                 <CustomSelect
                   value={adjustFormData.type}
@@ -671,7 +674,7 @@ const Stock = () => {
               </div>
 
               {/* ✅ Updated Quantity Input for Weight Items */}
-              <div>
+              <div className="page-section-enter" style={{ animationDelay: "150ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Quantity *</label>
                 <div className="flex gap-2">
                   <CustomSelect
@@ -705,7 +708,7 @@ const Stock = () => {
                 </div>
               </div>
 
-              <div>
+              <div className="page-section-enter" style={{ animationDelay: "190ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
                 <textarea
                   value={adjustFormData.reason}
@@ -715,7 +718,7 @@ const Stock = () => {
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="page-section-enter flex gap-2 pt-2" style={{ animationDelay: "230ms" }}>
                 <Button type="submit" className="flex-1" disabled={isSubmitting || itemBatches.length === 0}>
                   {isSubmitting ? "Processing..." : "Confirm Adjustment"}
                 </Button>
@@ -730,12 +733,12 @@ const Stock = () => {
         onClose={() => setShowTransferModal(false)}
         title={selectedItem ? `Transfer Stock: ${selectedItem.itemName}` : "Transfer Stock"}
       >
-        <form onSubmit={handleTransferSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleTransferSubmit} className="space-y-4 p-4">
           {loadingBatches ? (
             <div className="py-8"><LoadingSpinner text="Loading batches..." /></div>
           ) : (
             <>
-              <div>
+              <div className="page-section-enter" style={{ animationDelay: "70ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">From Batch *</label>
                 {itemBatches.length === 1 ? (
                   <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between">
@@ -756,7 +759,7 @@ const Stock = () => {
                 )}
               </div>
 
-              <div>
+              <div className="page-section-enter" style={{ animationDelay: "110ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">To Branch *</label>
                 <CustomSelect
                   value={transferFormData.toBranchId}
@@ -768,7 +771,7 @@ const Stock = () => {
                 />
               </div>
 
-              <div>
+              <div className="page-section-enter" style={{ animationDelay: "150ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Quantity to Transfer *</label>
                 <div className="flex gap-2">
                   <input
@@ -794,7 +797,7 @@ const Stock = () => {
                 </div>
               </div>
 
-              <div>
+              <div className="page-section-enter" style={{ animationDelay: "190ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Notes (Optional)</label>
                 <textarea
                   value={transferFormData.notes}
@@ -805,7 +808,7 @@ const Stock = () => {
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="page-section-enter flex gap-2 pt-2" style={{ animationDelay: "230ms" }}>
                 <Button
                   type="submit"
                   className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"

@@ -48,7 +48,7 @@ const SubscriptionPage = () => {
     }
   };
 
-  if (loading) return <div className="p-10 text-center">Loading plans...</div>;
+  if (loading) return <div className="page-enter p-10 text-center">Loading plans...</div>;
 
   const expireDate = mySubscription?.validUntil
     ? new Date(mySubscription.validUntil).toLocaleDateString('en-US', {
@@ -61,10 +61,10 @@ const SubscriptionPage = () => {
     : false;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="page-enter min-h-screen bg-gray-50 p-8">
       <div className="max-w-5xl mx-auto">
 
-        <div className={`p-6 rounded-lg mb-8 shadow-sm border-l-4 ${isExpired ? 'bg-red-50 border-red-500' : 'bg-yellow-50 border-yellow-500'}`}>
+        <div className={`admin-panel-card mb-8 rounded-lg border-l-4 p-6 shadow-sm ${isExpired ? 'bg-red-50 border-red-500' : 'bg-yellow-50 border-yellow-500'}`} style={{ animationDelay: '60ms' }}>
           <h2 className={`text-xl font-bold ${isExpired ? 'text-red-700' : 'text-yellow-800'}`}>
             {isExpired ? "Your Subscription Has Expired!" : "Subscription Status"}
           </h2>
@@ -81,18 +81,19 @@ const SubscriptionPage = () => {
           </p>
         </div>
 
-        <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Available Packages</h3>
+        <h3 className="page-section-enter mb-6 text-center text-2xl font-bold text-gray-800" style={{ animationDelay: '100ms' }}>Available Packages</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan) => {
+          {plans.map((plan, index) => {
             const isActivePlan = mySubscription?.plan?.id === plan.id;
 
             return (
               <div
                 key={plan.id}
-                className={`relative bg-white p-6 rounded-xl shadow-md border-2 transition-all ${
+                className={`admin-kpi-card relative rounded-xl border-2 bg-white p-6 shadow-md transition-all ${
                   isActivePlan ? 'border-blue-500 transform scale-105' : 'border-gray-200 hover:border-blue-300'
                 }`}
+                style={{ animationDelay: `${130 + Math.min(index, 5) * 40}ms` }}
               >
                 {isActivePlan && (
                   <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">

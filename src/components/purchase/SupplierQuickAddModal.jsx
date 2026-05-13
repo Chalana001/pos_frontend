@@ -41,8 +41,8 @@ const SupplierQuickAddModal = ({ isOpen, onClose, onCreated }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Quick Add Supplier">
-      <div className="space-y-4">
-        <div>
+      <div className="space-y-4 p-1">
+        <div className="page-section-enter" style={{ animationDelay: "60ms" }}>
           <label className="block text-sm font-medium text-gray-700">Supplier Name *</label>
           <input 
             className="input w-full mt-1" 
@@ -53,7 +53,7 @@ const SupplierQuickAddModal = ({ isOpen, onClose, onCreated }) => {
           />
         </div>
         
-        <div>
+        <div className="page-section-enter" style={{ animationDelay: "100ms" }}>
           <label className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
           <input 
             className="input w-full mt-1" 
@@ -63,7 +63,7 @@ const SupplierQuickAddModal = ({ isOpen, onClose, onCreated }) => {
           />
         </div>
 
-        <div>
+        <div className="page-section-enter" style={{ animationDelay: "140ms" }}>
           <label className="block text-sm font-medium text-gray-700">Address (Optional)</label>
           <textarea 
             className="input w-full mt-1" 
@@ -74,7 +74,7 @@ const SupplierQuickAddModal = ({ isOpen, onClose, onCreated }) => {
           />
         </div>
 
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="page-section-enter mt-4 flex justify-end gap-2" style={{ animationDelay: "180ms" }}>
           <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
           <Button onClick={handleSave} disabled={loading} className="bg-blue-600">
             {loading ? "Saving..." : "Save Supplier"}

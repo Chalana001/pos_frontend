@@ -14,6 +14,7 @@ import Modal from "../components/common/Modal";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import TablePagination from "../components/common/TablePagination";
 
 const toLocalDateTimeParam = (date, endOfDay = false) => {
   if (!date) return undefined;
@@ -245,8 +246,8 @@ const CashDrops = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex flex-col justify-between gap-4 sm:flex-row sm:items-center" style={{ animationDelay: "40ms" }}>
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Cash Drops</h1>
           <p className="text-sm text-slate-500 mt-1">Review recorded cash removals by date, user, and reason.</p>
@@ -263,7 +264,7 @@ const CashDrops = () => {
       </div>
 
       {!hasOpenShift && (
-        <Card>
+        <Card className="ops-alert-card" style={{ animationDelay: "90ms" }}>
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm font-medium text-yellow-800">
               No active shift. History is available, but recording a new cash drop requires an open shift.
@@ -273,7 +274,7 @@ const CashDrops = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "120ms" }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-slate-600 mb-2">Total Drop Amount</h3>
@@ -287,14 +288,14 @@ const CashDrops = () => {
           </div>
         </Card>
 
-        <Card>
+        <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "160ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Number of Drops</h3>
           <p className="text-2xl font-bold text-slate-800">
             {summaryLoading ? "0" : summary.dropCount}
           </p>
         </Card>
 
-        <Card>
+        <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "200ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Average Drop</h3>
           <p className="text-2xl font-bold text-slate-800">
             {summaryLoading ? formatCurrency(0) : formatCurrency(summary.averageAmount)}
@@ -302,8 +303,8 @@ const CashDrops = () => {
         </Card>
       </div>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+      <Card className="sales-panel-enter sales-panel-hover overflow-hidden p-0" style={{ animationDelay: "130ms" }}>
+        <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "170ms" }}>
           <div className={`grid grid-cols-1 gap-3 ${isAdmin ? "xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_auto]" : "xl:grid-cols-[minmax(260px,1fr)_180px_180px_auto]"} xl:items-center`}>
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
@@ -368,38 +369,16 @@ const CashDrops = () => {
           <Table columns={columns} data={cashDrops} />
         )}
 
-        <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
-          <span className="text-sm text-slate-500">
-            Showing {cashDrops.length} of {totalElements} cash drops. Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button disabled={page === 0 || loading} onClick={() => setPage(page - 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Prev
-            </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Go to</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={pageInput}
-                onChange={(e) => setPageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    goToPage();
-                  }
-                }}
-                className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Button type="button" variant="secondary" onClick={goToPage} disabled={loading} className="px-3 py-1 text-sm">
-                Go
-              </Button>
-            </div>
-            <Button disabled={page >= totalPages - 1 || loading} onClick={() => setPage(page + 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          summary={`Showing ${cashDrops.length} of ${totalElements} cash drops. Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          page={page}
+          pageInput={pageInput}
+          totalPages={totalPages}
+          loading={loading}
+          onPageChange={setPage}
+          onPageInputChange={setPageInput}
+          onGoToPage={goToPage}
+        />
       </Card>
 
       <Modal
@@ -408,7 +387,7 @@ const CashDrops = () => {
         title="Record Cash Drop"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="page-section-enter" style={{ animationDelay: "60ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Amount *
             </label>
@@ -426,7 +405,7 @@ const CashDrops = () => {
             />
           </div>
 
-          <div>
+          <div className="page-section-enter" style={{ animationDelay: "100ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Reason *
             </label>
@@ -442,7 +421,7 @@ const CashDrops = () => {
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="page-section-enter flex gap-2 pt-4" style={{ animationDelay: "140ms" }}>
             <Button type="submit" className="flex-1" disabled={!hasOpenShift}>
               Record Cash Drop
             </Button>

@@ -14,6 +14,7 @@ import Modal from "../components/common/Modal";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import TablePagination from "../components/common/TablePagination";
 
 const toLocalDateTimeParam = (date, endOfDay = false) => {
   if (!date) return undefined;
@@ -236,8 +237,8 @@ const Expenses = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex flex-col justify-between gap-4 sm:flex-row sm:items-center" style={{ animationDelay: "40ms" }}>
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Expenses</h1>
           <p className="text-sm text-slate-500 mt-1">Track drawer and branch expenses by date, category, and user.</p>
@@ -255,7 +256,7 @@ const Expenses = () => {
       </div>
 
       {isCashier && !hasActiveShift && (
-        <Card>
+        <Card className="ops-alert-card" style={{ animationDelay: "90ms" }}>
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm font-medium text-yellow-800">
               No active shift. Please open a shift to view and record expenses.
@@ -265,8 +266,8 @@ const Expenses = () => {
       )}
 
       <div className={`space-y-6 transition-all duration-300 ${isCashier && !hasActiveShift ? "opacity-40 grayscale pointer-events-none select-none" : ""}`}>
-        <Card className="p-0 overflow-hidden">
-          <div className="border-b border-slate-100 bg-slate-50/50 p-4">
+        <Card className="sales-panel-enter sales-panel-hover overflow-hidden p-0" style={{ animationDelay: "120ms" }}>
+          <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "150ms" }}>
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_200px_auto] xl:items-center">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
@@ -344,45 +345,23 @@ const Expenses = () => {
             <Table columns={columns} data={expenses} />
           )}
 
-          <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
-            <span className="text-sm text-slate-500">
-              Showing {expenses.length} of {totalElements} expenses. Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
-            </span>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button disabled={page === 0 || loading} onClick={() => setPage(page - 1)} variant="secondary" className="px-3 py-1 text-sm">
-                Prev
-              </Button>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">Go to</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={pageInput}
-                  onChange={(e) => setPageInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      goToPage();
-                    }
-                  }}
-                  className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <Button type="button" variant="secondary" onClick={goToPage} disabled={loading} className="px-3 py-1 text-sm">
-                  Go
-                </Button>
-              </div>
-              <Button disabled={page >= totalPages - 1 || loading} onClick={() => setPage(page + 1)} variant="secondary" className="px-3 py-1 text-sm">
-                Next
-              </Button>
-            </div>
-          </div>
+          <TablePagination
+            summary={`Showing ${expenses.length} of ${totalElements} expenses. Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+            page={page}
+            pageInput={pageInput}
+            totalPages={totalPages}
+            loading={loading}
+            onPageChange={setPage}
+            onPageInputChange={setPageInput}
+            onGoToPage={goToPage}
+          />
         </Card>
       </div>
 
       <Modal isOpen={showModal} onClose={handleCloseModal} title="Record Expense">
         <form onSubmit={handleSubmit} className="space-y-4">
           {isAdminOrManager && hasActiveShift && (
-            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="page-section-enter flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 p-3" style={{ animationDelay: "60ms" }}>
               <input
                 type="checkbox"
                 id="isFromDrawer"
@@ -396,7 +375,7 @@ const Expenses = () => {
             </div>
           )}
 
-          <div className="relative z-10">
+          <div className="page-section-enter relative z-10" style={{ animationDelay: "100ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
             <CustomSelect
               value={formData.category}
@@ -408,7 +387,7 @@ const Expenses = () => {
             />
           </div>
 
-          <div>
+          <div className="page-section-enter" style={{ animationDelay: "140ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">Amount</label>
             <input
               type="text"
@@ -421,7 +400,7 @@ const Expenses = () => {
             />
           </div>
 
-          <div>
+          <div className="page-section-enter" style={{ animationDelay: "180ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
             <textarea
               className="w-full border border-slate-300 rounded-lg px-3 py-2 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -432,7 +411,7 @@ const Expenses = () => {
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="page-section-enter flex gap-2 pt-4" style={{ animationDelay: "220ms" }}>
             <Button type="submit" className="flex-1">Record Expense</Button>
             <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button>
           </div>

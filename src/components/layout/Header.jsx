@@ -31,6 +31,7 @@ import { customersAPI } from '../../api/customers.api';
 import { stockAPI } from '../../api/stock.api';
 import { getOfflineSales, getOfflineSalesCount, OFFLINE_EVENTS } from '../../offline/db';
 import { APP_VERSION } from '../../data/versionHistory';
+import { isSingleBranchPlan } from '../../utils/subscriptionFeatures';
 
 const formatPlanName = (name) => {
   const labels = {
@@ -216,6 +217,7 @@ const Header = () => {
   const toolbarItemClass =
     'inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50';
   const hideBranchSelector = location.pathname.startsWith('/purchases');
+  const shouldHideBranchSelectorForPlan = isSingleBranchPlan(user?.planName);
 
   const getNotificationDismissKey = (notification) => `${notification.id}:${notification.message}`;
 
@@ -315,17 +317,17 @@ const Header = () => {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 sm:px-6">
+      <header className="shell-header-enter relative z-40 flex h-16 items-center justify-between gap-4 overflow-visible border-b border-slate-200 bg-white/75 px-4 backdrop-blur-xl sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          {canAccessAllBranches(user.role) && !hideBranchSelector && <BranchSelector />}
+          {canAccessAllBranches(user.role) && !hideBranchSelector && !shouldHideBranchSelectorForPlan && <BranchSelector />}
         </div>
 
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="page-section-enter flex min-w-0 items-center gap-2" style={{ animationDelay: '120ms' }}>
           <LanguageSelector compact />
 
           <Link
             to="/offline-sales"
-            className={`${toolbarItemClass} hidden gap-2 md:inline-flex`}
+            className={`${toolbarItemClass} shell-panel-hover hidden gap-2 md:inline-flex`}
           >
             <UploadCloud size={16} />
             <span className="whitespace-nowrap">Offline Queue</span>
@@ -334,13 +336,13 @@ const Header = () => {
             </span>
           </Link>
 
-          <div className={`hidden h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold shadow-sm md:inline-flex ${isOnline ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+          <div className={`shell-panel-hover hidden h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold shadow-sm md:inline-flex ${isOnline ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
             {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
             {isOnline ? 'Online' : 'Offline'}
           </div>
 
           {validUntilLabel && (
-            <div className="hidden h-11 min-w-[142px] flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-right shadow-sm lg:flex">
+            <div className="shell-panel-hover hidden h-11 min-w-[142px] flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-right shadow-sm lg:flex">
               <div className="text-[11px] font-bold uppercase leading-4 text-emerald-700">
                 {t(formatPlanName(user?.planName))}
               </div>
@@ -357,7 +359,7 @@ const Header = () => {
                 setShowNotifications((open) => !open);
                 if (!showNotifications) setConnectionRestored(false);
               }}
-              className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+              className="shell-panel-hover relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
             >
               <Bell size={19} />
               {notificationCount > 0 ? (
@@ -368,7 +370,7 @@ const Header = () => {
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 z-30 mt-2 w-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+              <div className="modal-panel-enter absolute right-0 z-30 mt-2 w-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                 <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                   <div>
                     <div className="text-sm font-bold text-slate-900">Notifications</div>
@@ -424,7 +426,7 @@ const Header = () => {
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 shadow-sm transition hover:bg-slate-50 sm:min-w-[150px]"
+              className="shell-panel-hover flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 shadow-sm transition hover:bg-slate-50 sm:min-w-[150px]"
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600">
                 <User size={18} className="text-white" />
@@ -442,7 +444,7 @@ const Header = () => {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowUserMenu(false)}
                 />
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-20">
+                <div className="modal-panel-enter absolute right-0 z-20 mt-2 w-56 rounded-lg border border-slate-200 bg-white py-2 shadow-lg">
                   {validUntilLabel && (
                     <div className="px-4 py-2 border-b border-slate-100">
                       <div className="text-xs font-semibold text-slate-700">{t(formatPlanName(user?.planName))}</div>

@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { hasPermission } from "../../utils/permissions";
 import { hasPlanFeature } from "../../utils/subscriptionFeatures";
-import { BRAND_LOGO, BRAND_NAME } from "../../utils/branding";
+import { BRAND_MARK, BRAND_NAME, BRAND_WORDMARK } from "../../utils/branding";
 import { APP_VERSION } from "../../data/versionHistory";
 import { History } from "lucide-react";
 import {
@@ -209,7 +209,7 @@ return (
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="xl:hidden fixed top-4 left-4 z-40 p-2 bg-slate-900 text-white rounded-lg shadow-lg hover:bg-slate-800 transition-colors"
+        className="shell-panel-hover xl:hidden fixed top-4 left-4 z-40 rounded-lg bg-slate-900 p-2 text-white shadow-lg transition-colors hover:bg-slate-800"
       >
         <Menu size={24} />
       </button>
@@ -222,25 +222,36 @@ return (
       )}
 
       <aside
-        className={`fixed xl:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out 
+        className={`shell-sidebar-enter fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0f172a] text-white shadow-2xl transform transition-transform duration-300 ease-in-out xl:static
         ${isOpen ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0`}
       >
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+        <div className="flex items-start justify-between border-b border-slate-800 p-6">
           <div className="min-w-0">
-            <img src={BRAND_LOGO} alt={BRAND_NAME} className="h-16 w-auto max-w-[210px] object-contain" />
-            <p className="text-sm text-slate-400 mt-1">{t(role)}</p>
+            <div className="flex items-center gap-3">
+              <img
+                src={BRAND_MARK}
+                alt={`${BRAND_NAME} mark`}
+                className="sidebar-logo-spin h-14 w-14 shrink-0 object-contain"
+              />
+              <img
+                src={BRAND_WORDMARK}
+                alt={BRAND_NAME}
+                className="h-12 w-auto max-w-[150px] object-contain"
+              />
+            </div>
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="xl:hidden p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white xl:hidden"
           >
             <X size={20} />
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar-dark">
+        <nav className="custom-scrollbar-dark flex-1 overflow-y-auto p-4 space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
+            const navDelay = `${110 + menuItems.indexOf(item) * 32}ms`;
 
             if (
               item.type !== "dropdown-items" &&
@@ -266,7 +277,7 @@ return (
               if (!canSeeSalesMenu) return null;
 
               return (
-                <div key={item.path} className="space-y-1">
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
                     onClick={() => setOpenSales((v) => !v)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
@@ -327,7 +338,7 @@ return (
               if (!canSeeItemsMenu) return null;
 
               return (
-                <div key={item.path} className="space-y-1">
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
                     onClick={() => setOpenItems((v) => !v)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isItemsRoute
@@ -420,7 +431,7 @@ return (
               if (!canSeeCustomersMenu) return null;
 
               return (
-                <div key={item.path} className="space-y-1">
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
                     onClick={() => setOpenCustomers((v) => !v)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isCustomersRoute
@@ -495,7 +506,7 @@ return (
               if (!canSeeSuppliersMenu) return null;
 
               return (
-                <div key={item.path} className="space-y-1">
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
                     onClick={() => setOpenSuppliers((v) => !v)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isSuppliersRoute
@@ -556,7 +567,7 @@ return (
               if (!hasPermission(role, "MANAGE_SHIFTS")) return null;
 
               return (
-                <div key={item.path} className="space-y-1">
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
                     onClick={() => setOpenShifts((v) => !v)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
@@ -612,7 +623,7 @@ return (
               if (!canSeeStockMenu) return null;
 
               return (
-                <div key={item.path} className="space-y-1">
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
                     onClick={() => setOpenStock((v) => !v)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isStockRoute
@@ -689,7 +700,7 @@ return (
               if (!canSeePurchaseMenu) return null;
 
               return (
-                <div key={item.path} className="space-y-1">
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
                     onClick={() => setOpenPurchase((v) => !v)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isPurchaseRoute
@@ -745,8 +756,9 @@ return (
               <NavLink
                 key={item.path}
                 to={item.path}
+                style={{ animationDelay: navDelay }}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                  `shell-nav-item-enter flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
                     ? "bg-blue-600 text-white"
                     : "text-slate-300 hover:bg-slate-800 hover:text-white"
                   }`
@@ -759,7 +771,7 @@ return (
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="page-section-enter border-t border-slate-800 p-4" style={{ animationDelay: '520ms' }}>
           <NavLink
             to="/version-history"
             className={({ isActive }) =>

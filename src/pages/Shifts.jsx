@@ -154,9 +154,8 @@ const Shifts = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "40ms" }}>
         <h1 className="text-xl lg:text-3xl font-bold text-slate-800">Shift Management</h1>
         <Button onClick={handleOpenClick} variant="success">
           <Clock size={20} className="mr-2" />
@@ -167,7 +166,7 @@ const Shifts = () => {
 
       {/* BODY */}
       {!hasOpenShift ? (
-        <Card>
+        <Card className="ops-alert-card" style={{ animationDelay: "90ms" }}>
           <div className="text-center py-12">
             <Clock size={64} className="mx-auto text-slate-300 mb-4" />
             <h3 className="text-xl font-semibold text-slate-800 mb-2">No Active Shift</h3>
@@ -179,7 +178,11 @@ const Shifts = () => {
       ) : (
         <div className="space-y-8">
           {shiftsList.map((shift) => (
-            <div key={shift.id} className="border-b pb-8 last:border-0">
+            <div
+              key={shift.id}
+              className="ops-audit-card border-b pb-8 last:border-0"
+              style={{ animationDelay: `${110 + Math.min(shiftsList.indexOf(shift), 5) * 45}ms` }}
+            >
               
               {/* ✅ 🔴 වෙනස් කරපු Cashier & Branch Info කෑල්ල */}
               {isAdmin && (
@@ -205,10 +208,10 @@ const Shifts = () => {
               )}
               
               {/* Cards Grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
                 
                 {/* 1. Status & Time */}
-                <Card className="flex flex-col justify-center">
+                <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "150ms" }}>
                   <h3 className="text-[11px] lg:text-sm font-medium text-slate-600 mb-2">Status & Time</h3>
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-1 lg:gap-0">
                     <span className="w-fit px-2 py-1 rounded text-[10px] lg:text-xs font-bold bg-green-100 text-green-800 uppercase">
@@ -219,13 +222,13 @@ const Shifts = () => {
                 </Card>
 
                 {/* 2. Opening Cash */}
-                <Card className="flex flex-col justify-center">
+                <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "190ms" }}>
                   <h3 className="text-[11px] lg:text-sm font-medium text-slate-600 mb-1 lg:mb-2">Opening Cash</h3>
                   <p className="text-sm lg:text-xl font-bold text-slate-800">{formatCurrency(shift.openingCash)}</p>
                 </Card>
 
                 {/* 3. Net Cash */}
-                <Card className="flex flex-col justify-center">
+                <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "230ms" }}>
                   <h3 className="text-[11px] lg:text-sm font-medium text-slate-600 mb-1 lg:mb-2">Net Cash (Sales - Exp)</h3>
                   <p className="text-sm lg:text-xl font-bold text-green-600">
                     {formatCurrency((shift.cashSales || 0) - (shift.totalExpenses || 0))}
@@ -233,7 +236,7 @@ const Shifts = () => {
                 </Card>
 
                 {/* 4. Expected Drawer */}
-                <Card className="border-blue-200 bg-blue-50/30 flex flex-col justify-center">
+                <Card className="ops-summary-card shell-panel shell-panel-hover border-blue-200 bg-blue-50/30 flex flex-col justify-center" style={{ animationDelay: "270ms" }}>
                   <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2 lg:gap-0">
                     <div>
                       <h3 className="text-[11px] lg:text-sm font-medium text-blue-700 mb-1">Expected in Drawer</h3>
@@ -263,7 +266,7 @@ const Shifts = () => {
       <Modal isOpen={showOpenModal} onClose={() => setShowOpenModal(false)} title="Open New Shift">
         <form onSubmit={handleOpenShift} className="space-y-4">
           {isAdmin && (
-            <div>
+            <div className="page-section-enter" style={{ animationDelay: "60ms" }}>
               <label className="block text-sm font-medium text-slate-700 mb-1">Select Cashier *</label>
               {loadingUsers ? (
                 <div className="text-sm text-slate-500 mb-2">Loading cashiers...</div>
@@ -280,7 +283,7 @@ const Shifts = () => {
             </div>
           )}
 
-          <div>
+          <div className="page-section-enter" style={{ animationDelay: isAdmin ? "100ms" : "60ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">Opening Cash Amount *</label>
             <input
               type="number"
@@ -293,7 +296,7 @@ const Shifts = () => {
               autoFocus={!isAdmin} 
             />
           </div>
-          <div className="flex gap-2">
+          <div className="page-section-enter flex gap-2" style={{ animationDelay: isAdmin ? "140ms" : "100ms" }}>
             <Button type="submit" className="flex-1" disabled={isAdmin && loadingUsers}>Open Shift</Button>
             <Button type="button" variant="secondary" onClick={() => setShowOpenModal(false)}>Cancel</Button>
           </div>
@@ -310,7 +313,7 @@ const Shifts = () => {
         title={`Close Shift ${isAdmin ? `(Cashier: ${selectedShiftToClose?.cashierName || selectedShiftToClose?.cashierUserId})` : ''}`}
       >
         <form onSubmit={handleCloseShift} className="space-y-4">
-          <div className="bg-slate-50 p-4 rounded-lg space-y-2">
+          <div className="page-section-enter space-y-2 rounded-lg bg-slate-50 p-4" style={{ animationDelay: "60ms" }}>
             <div className="flex justify-between text-sm">
               <span>Expected Cash:</span>
               <span className="font-bold text-blue-600">
@@ -319,7 +322,7 @@ const Shifts = () => {
             </div>
           </div>
 
-          <div>
+          <div className="page-section-enter" style={{ animationDelay: "100ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
             <input
               type="number"
@@ -334,14 +337,14 @@ const Shifts = () => {
           </div>
 
           {countedCash && (
-            <div className={`p-4 rounded-lg ${parseFloat(countedCash) === calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift) ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}`}>
+            <div className={`page-section-enter rounded-lg p-4 ${parseFloat(countedCash) === calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift) ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}`} style={{ animationDelay: "140ms" }}>
               <p className="text-sm font-medium">
                 Difference: {formatCurrency(Math.abs(parseFloat(countedCash) - calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift)))}
               </p>
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="page-section-enter flex gap-2" style={{ animationDelay: "180ms" }}>
             <Button type="submit" variant="danger" className="flex-1">Confirm Close</Button>
             <Button type="button" variant="secondary" onClick={() => setShowCloseModal(false)}>Cancel</Button>
           </div>

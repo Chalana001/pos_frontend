@@ -102,7 +102,7 @@ const CustomerNotesTab = ({ customerId }) => {
   return (
     <div className="space-y-5">
       {/* Add note box */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="sales-panel-enter shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "70ms" }}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-slate-800">Add Note</h3>
           <span className="text-xs text-slate-500">Customer #{customerId}</span>
@@ -125,7 +125,7 @@ const CustomerNotesTab = ({ customerId }) => {
       </div>
 
       {/* Notes list */}
-      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <div className="sales-panel-enter shell-panel overflow-hidden rounded-xl border border-slate-200 bg-white" style={{ animationDelay: "120ms" }}>
         <div className="px-5 py-4 bg-slate-50 border-b flex items-center justify-between">
           <h3 className="font-semibold text-slate-800">Notes</h3>
           <span className="text-xs text-slate-500">{notes.length} notes</span>
@@ -137,8 +137,12 @@ const CustomerNotesTab = ({ customerId }) => {
           <div className="p-6 text-sm text-slate-500">No notes yet.</div>
         ) : (
           <div className="divide-y">
-            {sortedNotes.map((n) => (
-              <div key={n.id} className="p-5 hover:bg-slate-50 transition">
+            {sortedNotes.map((n, index) => (
+              <div
+                key={n.id}
+                className="profile-note-card p-5 transition hover:bg-slate-50"
+                style={{ animationDelay: `${150 + Math.min(index, 6) * 35}ms` }}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">

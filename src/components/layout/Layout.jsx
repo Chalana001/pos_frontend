@@ -6,13 +6,13 @@ import VersionUpdateDialog from '../version/VersionUpdateDialog';
 
 const Layout = () => {
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-transparent">
       <Sidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="page-enter custom-scrollbar flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>

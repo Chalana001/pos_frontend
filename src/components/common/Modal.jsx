@@ -31,11 +31,11 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          className="modal-overlay-enter fixed inset-0 bg-black bg-opacity-50 transition-opacity"
           onClick={onClose}
         />
         
-        <div className={`relative bg-white rounded-xl shadow-2xl ${sizes[size]} w-full max-h-[90vh] overflow-hidden`}>
+        <div className={`modal-panel-enter shell-surface relative w-full max-h-[90vh] overflow-hidden rounded-xl ${sizes[size]}`}>
           <div className="flex items-center justify-between p-6 border-b border-slate-200">
             {title ? <h2 className="text-xl font-semibold text-slate-800">{title}</h2> : <div />}
             <button

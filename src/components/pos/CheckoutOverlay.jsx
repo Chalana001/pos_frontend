@@ -70,10 +70,10 @@ const CheckoutOverlay = ({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm">
-      <div className="w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="shell-surface modal-panel-enter sales-highlight-ring flex h-full w-full max-w-md flex-col">
         
         {/* Header */}
-        <div className="p-5 border-b flex items-center justify-between bg-slate-50">
+        <div className="page-section-enter flex items-center justify-between border-b bg-slate-50 p-5" style={{ animationDelay: "70ms" }}>
           <div>
             <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Finalize Sale</h2>
             <p className="text-slate-500 text-sm font-medium">Select payment method and confirm</p>
@@ -83,15 +83,15 @@ const CheckoutOverlay = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+        <div className="custom-scrollbar flex-1 overflow-y-auto p-5 space-y-6">
           {/* Total Display */}
-          <div className="bg-blue-600 px-6 py-7 rounded-2xl text-center shadow-lg shadow-blue-100">
+          <div className="sales-panel-enter bg-blue-600 px-6 py-7 rounded-2xl text-center shadow-lg shadow-blue-100" style={{ animationDelay: "120ms" }}>
             <p className="text-blue-100 text-sm font-bold uppercase tracking-widest mb-1">Total Payable</p>
             <h1 className="text-4xl font-black text-white">{formatCurrency(normalizedTotal)}</h1>
           </div>
 
           {/* Payment Methods */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="sales-panel-enter grid grid-cols-2 gap-4" style={{ animationDelay: "180ms" }}>
             <button
               onClick={() => setOrderType(ORDER_TYPES.CASH)}
               className={`flex min-h-[122px] flex-col items-center justify-center gap-2.5 p-5 rounded-xl border-2 transition-all ${
@@ -119,7 +119,7 @@ const CheckoutOverlay = ({
 
           {/* Cash Input Section */}
           {orderType === ORDER_TYPES.CASH && (
-            <div className="space-y-4 animate-in fade-in zoom-in duration-200">
+            <div className="sales-panel-enter space-y-4" style={{ animationDelay: "220ms" }}>
               <label className="block text-sm font-black text-slate-700 uppercase">Cash Received</label>
               <div className="relative">
                 <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">Rs.</span>
@@ -190,7 +190,7 @@ const CheckoutOverlay = ({
           )}
 
           {orderType === ORDER_TYPES.CREDIT && (
-            <div className="bg-amber-50 border-2 border-amber-100 p-5 rounded-xl space-y-4 animate-in slide-in-from-bottom duration-300">
+            <div className="sales-panel-enter bg-amber-50 border-2 border-amber-100 p-5 rounded-xl space-y-4" style={{ animationDelay: "220ms" }}>
               <div className="flex gap-4 items-start">
                 <CheckCircle2 className="text-amber-500 shrink-0" size={24} />
                 <p className="text-amber-800 text-sm font-medium leading-relaxed">
@@ -264,7 +264,7 @@ const CheckoutOverlay = ({
         </div>
 
         {/* Action Button */}
-        <div className="p-5 bg-slate-50 border-t">
+        <div className="page-section-enter border-t bg-slate-50 p-5" style={{ animationDelay: "260ms" }}>
           <Button
             onClick={onPlaceOrder}
             disabled={loading || !canConfirm}

@@ -1463,11 +1463,11 @@ const POS = () => {
   }
 
   return (
-    <div className="flex h-full gap-1.5 lg:gap-4 bg-slate-100 p-1.5 lg:p-4 font-sans text-slate-800 flex-col overflow-y-auto lg:overflow-hidden custom-scrollbar">
-      <div className="flex flex-col lg:flex-row flex-1 gap-1.5 lg:gap-4 lg:overflow-hidden lg:h-full">
-        <div className="flex min-w-0 flex-col h-[55vh] flex-shrink-0 lg:h-full lg:flex-1 bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative">
+    <div className="page-enter flex h-full flex-col gap-1.5 overflow-y-auto bg-slate-100 p-1.5 font-sans text-slate-800 custom-scrollbar lg:gap-4 lg:overflow-hidden lg:p-4">
+      <div className="flex flex-1 flex-col gap-1.5 lg:h-full lg:flex-row lg:gap-4 lg:overflow-hidden">
+        <div className="sales-surface sales-panel-enter flex h-[55vh] min-w-0 flex-shrink-0 flex-col overflow-hidden rounded-xl lg:h-full lg:flex-1 lg:rounded-2xl relative" style={{ animationDelay: "90ms" }}>
 
-          <header className="px-2 py-2 lg:px-6 lg:py-5 bg-white border-b border-slate-100 flex flex-col gap-3 flex-shrink-0">
+          <header className="page-section-enter flex flex-shrink-0 flex-col gap-3 border-b border-slate-100 bg-white px-2 py-2 lg:px-6 lg:py-5" style={{ animationDelay: "140ms" }}>
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
               <div className="hidden sm:block lg:block">
                 <h1 className="text-sm lg:text-xl font-bold text-slate-800">
@@ -1499,7 +1499,7 @@ const POS = () => {
             </div>
 
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="inline-flex rounded-xl bg-slate-100 p-1">
+              <div className="inline-flex rounded-xl bg-slate-100 p-1 sales-panel-hover">
                 <button
                   type="button"
                   onClick={() => handleSaleModeChange(SALE_MODES.TAKEAWAY)}
@@ -1532,7 +1532,7 @@ const POS = () => {
           </header>
 
           {saleMode === SALE_MODES.DINE_IN ? (
-            <div className="border-b border-slate-100 bg-white px-2 py-2 lg:px-6 lg:py-4">
+            <div className="page-section-enter border-b border-slate-100 bg-white px-2 py-2 lg:px-6 lg:py-4" style={{ animationDelay: "180ms" }}>
               <div className="mb-3 flex items-center justify-between">
                 <div className="text-sm font-semibold text-slate-800">Dining Tables</div>
                 <button
@@ -1570,7 +1570,7 @@ const POS = () => {
                         key={table.id}
                         type="button"
                         onClick={() => handleSelectTable(table)}
-                        className={`rounded-xl border px-3 py-3 text-left transition ${
+                        className={`sales-panel-hover rounded-xl border px-3 py-3 text-left transition ${
                           isSelected
                             ? "border-blue-500 bg-blue-50 shadow-sm"
                             : "border-slate-200 bg-slate-50 hover:border-slate-300"
@@ -1598,7 +1598,7 @@ const POS = () => {
             </div>
           ) : null}
 
-          <div className="px-2 py-1.5 lg:px-6 lg:py-4 bg-white border-b border-slate-100 flex-shrink-0">
+          <div className="page-section-enter flex-shrink-0 border-b border-slate-100 bg-white px-2 py-1.5 lg:px-6 lg:py-4" style={{ animationDelay: "220ms" }}>
             <div className="flex gap-1.5 lg:gap-2 overflow-x-auto scrollbar-hide pb-0.5 lg:pb-0">
               {categories.map((cat) => (
                 <button
@@ -1617,7 +1617,7 @@ const POS = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-1.5 lg:p-6 bg-slate-50 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto bg-slate-50 p-1.5 custom-scrollbar lg:p-6">
             {!canSell ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400">
                 <Lock className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
@@ -1646,7 +1646,8 @@ const POS = () => {
                     <div
                       key={item.id}
                       onClick={() => !isOutOfStock && addToCart(item)}
-                      className={`group bg-white rounded-lg lg:rounded-xl p-2 lg:px-3 lg:py-4 border border-slate-200 transition-all relative flex flex-col items-center text-center ${
+                      style={{ animationDelay: `${240 + (filteredItems.indexOf(item) % 12) * 32}ms` }}
+                      className={`sales-product-tile sales-panel-hover group relative flex flex-col items-center rounded-lg border border-slate-200 bg-white p-2 text-center transition-all lg:rounded-xl lg:px-3 lg:py-4 ${
                         !isOutOfStock
                           ? "hover:shadow-md cursor-pointer active:scale-95"
                           : "cursor-not-allowed opacity-90"
@@ -1684,8 +1685,8 @@ const POS = () => {
           minHeightClassName="min-h-full"
         />
         <div
-          className={`w-full min-w-0 flex flex-col flex-shrink-0 h-max lg:h-full bg-white rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm lg:overflow-hidden transition-opacity duration-300 ${!canSell ? "opacity-50 pointer-events-none grayscale" : ""}`}
-          style={{ width: `min(100%, ${cartPanelWidth}px)` }}
+          className={`sales-surface sales-panel-enter w-full min-w-0 flex-shrink-0 flex-col h-max rounded-xl transition-opacity duration-300 lg:h-full lg:overflow-hidden lg:rounded-2xl ${!canSell ? "pointer-events-none opacity-50 grayscale" : ""}`}
+          style={{ width: `min(100%, ${cartPanelWidth}px)`, animationDelay: "130ms" }}
         >
           <Cart
             items={cartItems}

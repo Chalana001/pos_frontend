@@ -9,6 +9,7 @@ import Button from "../components/common/Button";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
 const statusOptions = [
@@ -125,8 +126,8 @@ const CustomersListPage = () => {
   ], [navigate]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "40ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">Customers</h1>
 
         <Button onClick={() => navigate("/customers/new")}>
@@ -135,7 +136,7 @@ const CustomersListPage = () => {
         </Button>
       </div>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="sales-panel-enter sales-panel-hover overflow-hidden p-0" style={{ animationDelay: "90ms" }}>
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center">
             <div className="relative lg:col-span-4">
@@ -206,38 +207,16 @@ const CustomersListPage = () => {
           <Table columns={columns} data={customers} onRowClick={(customer) => navigate(`/customers/${customer.id}`)} />
         )}
 
-        <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
-          <span className="text-sm text-slate-500">
-            Showing {customers.length} of {totalElements} customers. Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button disabled={page === 0 || loading} onClick={() => setPage(page - 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Prev
-            </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Go to</span>
-              <input
-                type="number"
-                min="1"
-                max={totalPages || 1}
-                value={pageInput}
-                onChange={(e) => setPageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    goToPage();
-                  }
-                }}
-                className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Button type="button" variant="secondary" onClick={goToPage} disabled={loading} className="px-3 py-1 text-sm">
-                Go
-              </Button>
-            </div>
-            <Button disabled={page >= totalPages - 1 || loading} onClick={() => setPage(page + 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          summary={`Showing ${customers.length} of ${totalElements} customers. Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          page={page}
+          pageInput={pageInput}
+          totalPages={totalPages}
+          loading={loading}
+          onPageChange={setPage}
+          onPageInputChange={setPageInput}
+          onGoToPage={goToPage}
+        />
       </Card>
     </div>
   );

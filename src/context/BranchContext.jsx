@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 import { branchesAPI } from "../api/branches.api";
 import { useAuth } from "../context/AuthContext";
 import { cacheBranches, getCachedBranches } from "../offline/db";
+import { isSingleBranchPlan } from "../utils/subscriptionFeatures";
 
 const BranchContext = createContext(null);
 
@@ -11,16 +12,18 @@ export const BranchProvider = ({ children }) => {
   const { user, isOnline, hasOnlineSession } = useAuth();
 
   const isAdmin = useMemo(() => user?.role === "ADMIN", [user?.role]);
+  const isSingleBranchMode = useMemo(() => isSingleBranchPlan(user?.planName), [user?.planName]);
 
   const [branches, setBranches] = useState([ALL_BRANCH]);
   const [loadingBranches, setLoadingBranches] = useState(false);
-  const [selectedBranchId, setSelectedBranchId] = useState(() => {
+  const [storedSelectedBranchId, setStoredSelectedBranchId] = useState(() => {
     const saved = localStorage.getItem("branchId");
     if (saved !== null && saved !== "" && saved !== "null" && saved !== "undefined") {
       return Number(saved);
     }
     return 0;
   });
+  const selectedBranchId = isSingleBranchMode ? Number(user?.branchId || 0) : storedSelectedBranchId;
 
   useEffect(() => {
     if (!user) return;
@@ -35,34 +38,34 @@ export const BranchProvider = ({ children }) => {
           const filtered = list.filter((branch) => Number(branch.id) !== 0);
           await cacheBranches(filtered);
 
-          if (!isAdmin) {
+          if (!isAdmin || isSingleBranchMode) {
             const myBranchId = Number(user.branchId);
             const onlyMine = filtered.filter((branch) => Number(branch.id) === myBranchId);
             setBranches(onlyMine);
-            setSelectedBranchId(myBranchId);
+            setStoredSelectedBranchId(myBranchId);
           } else {
             setBranches([ALL_BRANCH, ...filtered]);
-            if (!filtered.some((branch) => Number(branch.id) === Number(selectedBranchId))) {
-              setSelectedBranchId(0);
+            if (!filtered.some((branch) => Number(branch.id) === Number(storedSelectedBranchId))) {
+              setStoredSelectedBranchId(0);
             }
           }
           return;
         }
 
         const cached = await getCachedBranches();
-        if (!isAdmin) {
+        if (!isAdmin || isSingleBranchMode) {
           const offlineBranch = cached.find((branch) => Number(branch.id) === Number(user.branchId));
           setBranches(offlineBranch ? [offlineBranch] : [{ id: user.branchId, name: `Branch ${user.branchId}` }]);
-          setSelectedBranchId(Number(user.branchId));
+          setStoredSelectedBranchId(Number(user.branchId));
         } else {
           const nextBranches = cached.length > 0 ? [ALL_BRANCH, ...cached] : [ALL_BRANCH];
           setBranches(nextBranches);
         }
       } catch (error) {
         console.log("Failed to load branches", error);
-        if (!isAdmin && user?.branchId) {
+        if ((!isAdmin || isSingleBranchMode) && user?.branchId) {
           setBranches([{ id: user.branchId, name: `Branch ${user.branchId}` }]);
-          setSelectedBranchId(Number(user.branchId));
+          setStoredSelectedBranchId(Number(user.branchId));
         } else {
           setBranches([ALL_BRANCH]);
         }
@@ -72,12 +75,24 @@ export const BranchProvider = ({ children }) => {
     };
 
     loadBranches();
-  }, [hasOnlineSession, isAdmin, isOnline, selectedBranchId, user]);
+  }, [hasOnlineSession, isAdmin, isOnline, isSingleBranchMode, storedSelectedBranchId, user]);
 
   useEffect(() => {
+    if (!user?.branchId || !isSingleBranchMode) return;
+    setStoredSelectedBranchId(Number(user.branchId));
+  }, [isSingleBranchMode, user?.branchId]);
+
+  useEffect(() => {
+    if (isSingleBranchMode) {
+      if (user?.branchId) {
+        localStorage.setItem("branchId", String(Number(user.branchId)));
+      }
+      return;
+    }
+
     if (!isAdmin) return;
     localStorage.setItem("branchId", String(selectedBranchId));
-  }, [selectedBranchId, isAdmin]);
+  }, [selectedBranchId, isAdmin, isSingleBranchMode, user?.branchId]);
 
   return (
     <BranchContext.Provider
@@ -86,10 +101,11 @@ export const BranchProvider = ({ children }) => {
         selectedBranchId,
         loadingBranches,
         isAdmin,
+        isSingleBranchMode,
         setBranches,
         setSelectedBranchId: (id) => {
-          if (!isAdmin) return;
-          setSelectedBranchId(Number(id));
+          if (!isAdmin || isSingleBranchMode) return;
+          setStoredSelectedBranchId(Number(id));
         },
       }}
     >

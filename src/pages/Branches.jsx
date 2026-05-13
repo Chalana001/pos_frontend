@@ -274,8 +274,8 @@ const Branches = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex items-center justify-between gap-4" style={{ animationDelay: "40ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">Branch Management</h1>
 
         <div className="flex gap-3">
@@ -289,8 +289,8 @@ const Branches = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <Card className="admin-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "90ms" }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-slate-600 mb-2">Total Branches</h3>
@@ -302,7 +302,7 @@ const Branches = () => {
           </div>
         </Card>
 
-        <Card>
+        <Card className="admin-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "130ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">View</h3>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -314,7 +314,7 @@ const Branches = () => {
           </label>
         </Card>
 
-        <Card>
+        <Card className="admin-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "170ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Search</h3>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -328,7 +328,7 @@ const Branches = () => {
         </Card>
       </div>
 
-      <Card>
+      <Card className="admin-panel-card" style={{ animationDelay: "120ms" }}>
         {loading ? (
           <div className="py-12">
             <LoadingSpinner size="lg" text="Loading branches..." />

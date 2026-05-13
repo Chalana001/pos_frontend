@@ -79,14 +79,14 @@ const CustomerFormPage = ({ mode }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "40ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">
           {mode === "edit" ? "Edit Customer" : "Add New Customer"}
         </h1>
       </div>
 
-      <Card>
+      <Card className="sales-panel-enter" style={{ animationDelay: "90ms" }}>
         {loadingCustomer ? (
           <div className="py-12 text-slate-600">Loading customer...</div>
         ) : (

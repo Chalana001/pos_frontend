@@ -8,10 +8,10 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       {/* ✅ Layout: left image + right fields */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left Image */}
         <div className="lg:col-span-1">
-          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden h-full">
+          <div className="page-section-enter shell-panel shell-panel-hover h-full overflow-hidden rounded-xl border border-slate-200 bg-white" style={{ animationDelay: "120ms" }}>
             <div className="px-5 py-4 bg-slate-50 border-b">
               <h3 className="font-semibold text-slate-800 flex items-center gap-2">
                 <ImageIcon size={18} />
@@ -85,7 +85,7 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
         </div>
 
         {/* Right Fields */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="page-section-enter space-y-4 lg:col-span-2" style={{ animationDelay: "170ms" }}>
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">

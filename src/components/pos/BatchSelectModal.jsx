@@ -18,8 +18,8 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
   if (!isOpen || !item) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform transition-all scale-100 animate-in zoom-in-95 duration-200">
+    <div className="modal-overlay-enter fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="modal-panel-enter shell-surface mx-4 w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
             <h3 className="text-lg font-bold text-slate-800">Select Batch</h3>

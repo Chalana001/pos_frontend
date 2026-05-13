@@ -45,15 +45,18 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">{BRAND_NAME}</h1>
+    <div className="auth-screen flex min-h-screen items-center justify-center p-4">
+      <div className="auth-panel-enter w-full max-w-md" style={{ animationDelay: '90ms' }}>
+        <div className="page-section-enter mb-8 text-center" style={{ animationDelay: '180ms' }}>
+          <div className="shell-chip mx-auto mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-blue-900">
+            Admin Setup
+          </div>
+          <h1 className="mb-2 text-4xl font-bold text-white">{BRAND_NAME}</h1>
           <p className="text-blue-100">Create your admin account</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="auth-card rounded-2xl p-8">
+          <form onSubmit={handleSubmit} className="page-section-enter space-y-5" style={{ animationDelay: '260ms' }}>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Username</label>
               <div className="relative">
@@ -62,7 +65,7 @@ const Register = () => {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Choose a username"
                   autoFocus
                 />
@@ -77,7 +80,7 @@ const Register = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter password"
                 />
               </div>
@@ -91,7 +94,7 @@ const Register = () => {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Confirm your password"
                 />
               </div>
@@ -99,7 +102,7 @@ const Register = () => {
 
             <Button
               type="submit"
-              className="w-full py-3 text-lg flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 py-3 text-lg shadow-lg shadow-blue-600/20 hover:-translate-y-0.5"
               disabled={loading}
             >
               {loading ? 'Registering...' : (
@@ -111,7 +114,7 @@ const Register = () => {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="page-section-enter mt-6 text-center" style={{ animationDelay: '340ms' }}>
             <p className="text-sm text-slate-600">
               Already have an account?{' '}
               <Link to="/login" className="text-blue-600 font-semibold hover:underline">

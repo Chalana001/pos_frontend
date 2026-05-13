@@ -391,8 +391,8 @@ const ReceiptSettingsPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="page-enter space-y-6">
+      <div className="page-section-enter flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between" style={{ animationDelay: "40ms" }}>
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Receipt Design</h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -413,7 +413,7 @@ const ReceiptSettingsPage = () => {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,440px)]">
         <div className="space-y-6">
-          <Card>
+          <Card className="admin-panel-card" style={{ animationDelay: "90ms" }}>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="text-sm font-medium text-slate-700">Current Branch</div>
@@ -469,7 +469,7 @@ const ReceiptSettingsPage = () => {
           </Card>
 
           {branchSelectionRequired ? (
-            <Card>
+            <Card className="ops-alert-card" style={{ animationDelay: "120ms" }}>
               <div className="py-16 text-center text-slate-500">
                 <Building2 className="mx-auto mb-3 opacity-40" size={34} />
                 Select a specific branch from the header branch selector to edit receipt settings.
@@ -483,7 +483,7 @@ const ReceiptSettingsPage = () => {
             </Card>
           ) : (
             <>
-              <Card title="Visible Sections">
+              <Card className="admin-panel-card" title="Visible Sections" style={{ animationDelay: "130ms" }}>
                 <div className="grid gap-3 md:grid-cols-2">
                   {RECEIPT_SECTION_FIELDS.map((field) => (
                     (() => {
@@ -519,7 +519,7 @@ const ReceiptSettingsPage = () => {
               </Card>
 
                   <div className="grid gap-6 lg:grid-cols-2">
-                <Card title="Logo & Paper">
+                <Card className="admin-panel-card" title="Logo & Paper" style={{ animationDelay: "170ms" }}>
                   <div className="space-y-5">
                     <div>
                       <div className="flex items-center justify-between text-sm text-slate-700">
@@ -573,7 +573,7 @@ const ReceiptSettingsPage = () => {
                   </div>
                 </Card>
 
-                <Card title="Messages">
+                <Card className="admin-panel-card" title="Messages" style={{ animationDelay: "210ms" }}>
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium text-slate-700">Thanks Message</label>
@@ -612,7 +612,9 @@ const ReceiptSettingsPage = () => {
 
               {canUseDining && (
               <Card
+                className="admin-panel-card"
                 title="Dining Tables"
+                style={{ animationDelay: "250ms" }}
                 action={tableForm.id ? (
                   <Button variant="secondary" size="sm" onClick={resetTableForm}>
                     Cancel Edit
@@ -714,18 +716,20 @@ const ReceiptSettingsPage = () => {
             Live Preview
           </div>
           {branchSelectionRequired ? (
-            <Card>
+            <Card className="ops-alert-card">
               <div className="py-20 text-center text-slate-500">
                 Preview appears after selecting a single branch from the header.
               </div>
             </Card>
           ) : (
+            <div className="admin-panel-card" style={{ animationDelay: "120ms" }}>
             <ReceiptPreview
               branch={activeBranch}
               storeName={user?.shopName || BRAND_NAME_UPPER}
               settings={form}
               templateType={activeTemplate}
             />
+            </div>
           )}
         </div>
       </div>

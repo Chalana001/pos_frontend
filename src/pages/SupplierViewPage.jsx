@@ -57,8 +57,8 @@ const SupplierViewPage = () => {
   ].some((value) => String(value || "").trim());
 
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="page-enter space-y-6 pb-10">
+      <div className="page-section-enter flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ animationDelay: "40ms" }}>
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Supplier Profile</h1>
           <p className="mt-1 text-sm text-slate-500">Supplier payable balance and purchase invoices.</p>
@@ -68,9 +68,9 @@ const SupplierViewPage = () => {
         </Button>
       </div>
 
-      <Card className="p-6">
+      <Card className="sales-panel-enter p-6" style={{ animationDelay: "90ms" }}>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex gap-4">
+          <div className="page-section-enter flex gap-4" style={{ animationDelay: "130ms" }}>
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
               <Truck size={28} />
             </div>
@@ -92,13 +92,13 @@ const SupplierViewPage = () => {
           </div>
 
           <div className="grid min-w-[280px] grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "180ms" }}>
               <div className="text-xs font-semibold uppercase text-slate-400">Payable</div>
               <div className={`mt-1 text-2xl font-bold ${Number(supplier?.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-800"}`}>
                 {formatCurrency(supplier?.dueAmount || 0)}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "220ms" }}>
               <div className="text-xs font-semibold uppercase text-slate-400">Status</div>
               <div className="mt-2">
                 <span className={`rounded-full px-2 py-1 text-xs font-semibold ${supplier?.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
@@ -110,7 +110,7 @@ const SupplierViewPage = () => {
         </div>
       </Card>
 
-      <Card className="overflow-hidden p-0">
+      <Card className="sales-panel-enter overflow-hidden p-0" style={{ animationDelay: "130ms" }}>
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex items-center gap-2">
             <Landmark size={18} className="text-slate-500" />
@@ -120,25 +120,25 @@ const SupplierViewPage = () => {
 
         {hasBankDetails ? (
           <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="profile-detail-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "170ms" }}>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-400">
                 <Landmark size={14} /> Bank
               </div>
               <div className="mt-2 font-semibold text-slate-800">{bankDetails.bankName || "-"}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="profile-detail-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "210ms" }}>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-400">
                 <Building2 size={14} /> Branch
               </div>
               <div className="mt-2 font-semibold text-slate-800">{bankDetails.branchName || "-"}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="profile-detail-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "250ms" }}>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-400">
                 <UserRound size={14} /> Account Name
               </div>
               <div className="mt-2 font-semibold text-slate-800">{bankDetails.accountName || "-"}</div>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="profile-detail-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "290ms" }}>
               <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-400">
                 <CreditCard size={14} /> Account Number
               </div>
@@ -150,7 +150,7 @@ const SupplierViewPage = () => {
         )}
       </Card>
 
-      <Card className="overflow-hidden p-0">
+      <Card className="sales-panel-enter overflow-hidden p-0" style={{ animationDelay: "170ms" }}>
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -163,9 +163,9 @@ const SupplierViewPage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="border-b bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+        <div className="app-table-wrap">
+          <table className="app-table min-w-[980px]">
+            <thead className="app-table-head">
               <tr>
                 <th className="px-6 py-3 font-medium">Date</th>
                 <th className="px-6 py-3 font-medium">Invoice No</th>

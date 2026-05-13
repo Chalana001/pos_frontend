@@ -7,6 +7,7 @@ import { suppliersAPI } from "../api/suppliers.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import TablePagination from "../components/common/TablePagination";
 import { formatCurrency } from "../utils/formatters";
 
 const SuppliersPage = () => {
@@ -14,6 +15,13 @@ const SuppliersPage = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageInput, setPageInput] = useState("1");
+  const [pageSize] = useState(10);
+
+  useEffect(() => {
+    setPageInput(String(page + 1));
+  }, [page]);
 
   const loadSuppliers = async () => {
     setLoading(true);
@@ -43,9 +51,34 @@ const SuppliersPage = () => {
     );
   }, [query, suppliers]);
 
+  const paginatedSuppliers = useMemo(() => {
+    const start = page * pageSize;
+    return filteredSuppliers.slice(start, start + pageSize);
+  }, [filteredSuppliers, page, pageSize]);
+
+  const totalPages = Math.ceil(filteredSuppliers.length / pageSize);
+
+  useEffect(() => {
+    const maxPage = Math.max(Math.ceil(filteredSuppliers.length / pageSize) - 1, 0);
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [filteredSuppliers.length, page, pageSize]);
+
+  const goToPage = () => {
+    const requestedPage = Number(pageInput);
+    if (!Number.isInteger(requestedPage)) {
+      setPageInput(String(page + 1));
+      return;
+    }
+
+    const maxPage = totalPages > 0 ? totalPages : 1;
+    setPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
+  };
+
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="page-enter space-y-6 pb-10">
+      <div className="page-section-enter flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ animationDelay: "40ms" }}>
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Suppliers</h1>
           <p className="mt-1 text-sm text-slate-500">View supplier balances and purchase history.</p>
@@ -55,7 +88,7 @@ const SuppliersPage = () => {
         </Button>
       </div>
 
-      <Card className="overflow-hidden border border-slate-200 p-0">
+      <Card className="sales-panel-enter sales-panel-hover overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "90ms" }}>
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="relative max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -73,9 +106,9 @@ const SuppliersPage = () => {
             <LoadingSpinner size="lg" text="Loading suppliers..." />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-sm">
-              <thead className="border-b bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+          <div className="app-table-wrap">
+            <table className="app-table min-w-[820px]">
+              <thead className="app-table-head">
                 <tr>
                   <th className="px-6 py-3 font-medium">Supplier</th>
                   <th className="px-6 py-3 font-medium">Phone</th>
@@ -86,14 +119,14 @@ const SuppliersPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {filteredSuppliers.length === 0 ? (
+                {paginatedSuppliers.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="px-6 py-8 text-center text-slate-500">
                       No suppliers found.
                     </td>
                   </tr>
                 ) : (
-                  filteredSuppliers.map((supplier) => (
+                  paginatedSuppliers.map((supplier) => (
                     <tr
                       key={supplier.id}
                       className="cursor-pointer transition-colors hover:bg-slate-50"
@@ -130,6 +163,17 @@ const SuppliersPage = () => {
             </table>
           </div>
         )}
+
+        <TablePagination
+          summary={`Showing ${paginatedSuppliers.length} of ${filteredSuppliers.length} suppliers. Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          page={page}
+          pageInput={pageInput}
+          totalPages={totalPages}
+          loading={loading}
+          onPageChange={setPage}
+          onPageInputChange={setPageInput}
+          onGoToPage={goToPage}
+        />
       </Card>
     </div>
   );

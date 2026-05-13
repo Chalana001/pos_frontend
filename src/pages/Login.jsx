@@ -68,21 +68,24 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center p-4">
+    <div className="auth-screen flex min-h-screen items-center justify-center p-4">
       <div className="fixed right-4 top-4 z-10">
         <LanguageSelector />
       </div>
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">{BRAND_NAME}</h1>
-          <p className="text-blue-100">
+      <div className="auth-panel-enter w-full max-w-md" style={{ animationDelay: '90ms' }}>
+        <div className="page-section-enter mb-8 text-center" style={{ animationDelay: '180ms' }}>
+          <div className="shell-chip mx-auto mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-blue-900">
+            POS Workspace
+          </div>
+          <h1 className="mb-2 text-4xl font-bold text-white">{BRAND_NAME}</h1>
+          <p className="text-blue-100/95">
             {isOnline ? t('Sign in to your account') : t('Offline access to POS')}
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+        <div className="auth-card rounded-2xl p-8">
           {isOnline ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="page-section-enter space-y-6" style={{ animationDelay: '260ms' }}>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   {t('Username')}
@@ -93,7 +96,7 @@ const Login = () => {
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t('Enter username')}
                     autoFocus
                   />
@@ -110,7 +113,7 @@ const Login = () => {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
+                    className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-12 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
                     placeholder={t('Enter password')}
                   />
                   <button
@@ -125,15 +128,15 @@ const Login = () => {
 
               <Button
                 type="submit"
-                className="w-full py-3 text-lg"
+                className="w-full py-3 text-lg shadow-lg shadow-blue-600/20 hover:-translate-y-0.5"
                 disabled={loading}
               >
                 {loading ? t('Signing in...') : t('Sign In')}
               </Button>
             </form>
           ) : (
-            <div className="space-y-6">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="page-section-enter space-y-6" style={{ animationDelay: '260ms' }}>
+              <div className="shell-kpi-glow rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                 <div className="flex items-center gap-2 font-medium">
                   <CloudOff size={18} />
                   {t('Offline mode')}
@@ -159,7 +162,7 @@ const Login = () => {
                   />
                   <Button
                     type="submit"
-                    className="w-full py-3 text-lg"
+                    className="w-full py-3 text-lg shadow-lg shadow-blue-600/20 hover:-translate-y-0.5"
                     disabled={loading}
                   >
                     {loading ? t('Unlocking...') : t('Unlock POS')}

@@ -5,6 +5,7 @@ import { usersAPI } from "../api/users.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
+import TablePagination from "../components/common/TablePagination";
 import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
 import { Search, ChevronRight, ShoppingCart } from "lucide-react";
@@ -233,8 +234,8 @@ const SalesListPage = () => {
   };
 
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="page-enter space-y-6 pb-10">
+      <div className="page-section-enter flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center" style={{ animationDelay: "80ms" }}>
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Sales History</h1>
           <p className="text-slate-500 text-sm">Manage Customer Invoices & Transactions</p>
@@ -244,7 +245,7 @@ const SalesListPage = () => {
         </Button>
       </div>
 
-      <Card className="p-4">
+      <Card className="sales-panel-enter sales-panel-hover p-4" style={{ animationDelay: "130ms" }}>
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center">
           <div className="relative lg:col-span-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -365,10 +366,10 @@ const SalesListPage = () => {
         </div>
       </Card>
 
-      <Card className="p-0 overflow-hidden border border-slate-200">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-100 text-slate-600 uppercase font-semibold border-b">
+      <Card className="sales-panel-enter p-0 overflow-hidden border border-slate-200" style={{ animationDelay: "190ms" }}>
+        <div className="app-table-wrap w-full">
+          <table className="app-table whitespace-nowrap">
+            <thead className="app-table-head">
               <tr>
                 <th className="p-4">Date</th>
                 <th className="p-4">Invoice No</th>
@@ -439,38 +440,16 @@ const SalesListPage = () => {
           </table>
         </div>
 
-        <div className="flex flex-col lg:flex-row justify-between items-center p-4 bg-slate-50 border-t gap-4">
-          <span className="text-sm text-slate-500">
-            Showing {data.length} of {totalElements} records. Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button disabled={page === 0 || loading} onClick={() => setPage(page - 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Prev
-            </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Go to</span>
-              <input
-                type="number"
-                min="1"
-                max={totalPages || 1}
-                value={pageInput}
-                onChange={(e) => setPageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    goToPage();
-                  }
-                }}
-                className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Button type="button" variant="secondary" onClick={goToPage} disabled={loading} className="px-3 py-1 text-sm">
-                Go
-              </Button>
-            </div>
-            <Button disabled={page >= totalPages - 1 || loading} onClick={() => setPage(page + 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          summary={`Showing ${data.length} of ${totalElements} records. Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          page={page}
+          pageInput={pageInput}
+          totalPages={totalPages}
+          loading={loading}
+          onPageChange={setPage}
+          onPageInputChange={setPageInput}
+          onGoToPage={goToPage}
+        />
       </Card>
     </div>
   );

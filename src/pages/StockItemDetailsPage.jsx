@@ -8,6 +8,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
 
 const purchaseStatusOptions = [
@@ -246,9 +247,9 @@ const StockItemDetailsPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-enter space-y-6">
       <div className="flex flex-col gap-4">
-        <div className="min-w-0">
+        <div className="page-section-enter min-w-0" style={{ animationDelay: "40ms" }}>
           <Button variant="secondary" onClick={() => navigate("/stock")} className="mb-3">
             <ArrowLeft size={18} className="mr-2" /> Back to Stock
           </Button>
@@ -269,7 +270,11 @@ const StockItemDetailsPage = () => {
           {summaryCards.map((card) => {
             const Icon = card.icon;
             return (
-              <Card key={card.key} className="border border-slate-200 p-6 shadow-sm">
+              <Card
+                key={card.key}
+                className="inventory-kpi-card shell-panel shell-panel-hover border border-slate-200 p-6 shadow-sm"
+                style={{ animationDelay: `${90 + summaryCards.indexOf(card) * 40}ms` }}
+              >
                 <div className="flex items-center gap-4">
                   <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${card.tone}`}>
                     <Icon size={28} />
@@ -287,7 +292,7 @@ const StockItemDetailsPage = () => {
         </div>
       </div>
 
-      <Card className="overflow-hidden border border-slate-200 p-0 shadow-sm">
+      <Card className="sales-panel-enter overflow-hidden border border-slate-200 p-0 shadow-sm" style={{ animationDelay: "130ms" }}>
         <div className="border-b bg-white px-5 py-4">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 rounded-xl bg-slate-100 p-2 text-slate-700">
@@ -300,9 +305,9 @@ const StockItemDetailsPage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b bg-slate-100 text-slate-600">
+        <div className="app-table-wrap">
+          <table className="app-table min-w-[760px]">
+            <thead className="app-table-head">
               <tr>
                 <th className="p-4 font-semibold uppercase">Batch</th>
                 <th className="p-4 font-semibold uppercase">Branch</th>
@@ -342,7 +347,7 @@ const StockItemDetailsPage = () => {
         </div>
       </Card>
 
-      <Card className="overflow-hidden border border-slate-200 p-0 shadow-sm">
+      <Card className="sales-panel-enter overflow-hidden border border-slate-200 p-0 shadow-sm" style={{ animationDelay: "170ms" }}>
         <div className="border-b bg-white px-5 py-4">
           <div className="flex flex-col gap-1 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex items-start gap-3">
@@ -357,7 +362,7 @@ const StockItemDetailsPage = () => {
           </div>
         </div>
 
-        <div className="border-b bg-white px-4 py-4">
+        <div className="inventory-filter-bar border-b bg-white px-4 py-4" style={{ animationDelay: "210ms" }}>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center">
             <div className="relative lg:col-span-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -462,9 +467,9 @@ const StockItemDetailsPage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] whitespace-nowrap text-left text-sm">
-            <thead className="border-b bg-slate-100 text-slate-600">
+        <div className="app-table-wrap">
+          <table className="app-table min-w-[920px] whitespace-nowrap">
+            <thead className="app-table-head">
               <tr>
                 <th className="p-4 font-semibold uppercase">Received</th>
                 <th className="p-4 font-semibold uppercase">Invoice</th>
@@ -521,38 +526,16 @@ const StockItemDetailsPage = () => {
           </table>
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-4 border-t bg-slate-50 p-4 lg:flex-row">
-          <span className="text-sm text-slate-500">
-            Page {page + 1} of {totalPages === 0 ? 1 : totalPages}
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button disabled={page === 0 || historyLoading} onClick={() => setPage(page - 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Prev
-            </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Go to</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={pageInput}
-                onChange={(e) => setPageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    goToPage();
-                  }
-                }}
-                className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Button type="button" variant="secondary" onClick={goToPage} disabled={historyLoading} className="border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-50">
-                Go
-              </Button>
-            </div>
-            <Button disabled={page >= totalPages - 1 || historyLoading} onClick={() => setPage(page + 1)} variant="secondary" className="px-3 py-1 text-sm">
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          summary={`Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          page={page}
+          pageInput={pageInput}
+          totalPages={totalPages}
+          loading={historyLoading}
+          onPageChange={setPage}
+          onPageInputChange={setPageInput}
+          onGoToPage={goToPage}
+        />
       </Card>
     </div>
   );

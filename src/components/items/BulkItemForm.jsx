@@ -18,12 +18,12 @@ export default function BulkItemForm({
   className = "",
 }) {
   return (
-    <div className={`border rounded-xl overflow-hidden bg-white ${className}`}>
+    <div className={`shell-panel shell-panel-hover overflow-hidden rounded-xl border ${className}`}>
       {/* Header */}
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+        className="flex w-full items-center justify-between px-4 py-3 transition hover:bg-gray-50"
       >
         <div className="text-left">
           <div className="font-semibold text-gray-900">{title}</div>
@@ -52,7 +52,7 @@ export default function BulkItemForm({
 
       {/* Content */}
       {isOpen ? (
-        <div className="px-4 py-4 border-t bg-white">{children}</div>
+        <div className="page-section-enter border-t bg-white px-4 py-4">{children}</div>
       ) : null}
     </div>
   );
