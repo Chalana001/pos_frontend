@@ -1,6 +1,61 @@
-export const APP_VERSION = "1.5.0";
+export const APP_VERSION = "1.6.0";
 
 export const VERSION_HISTORY = [
+  {
+    version: "1.6.0",
+    title: "Warranty Workflow, Configuration Center, Invoice Upgrade",
+    releaseDate: "2026-05-17",
+    summary:
+      "This release adds a full warranty workflow, centralizes shop configuration, enforces package-aware modules, upgrades invoice printing, and separates dine-in table management into a cleaner operational flow.",
+    highlights: [
+      "Warranty templates can now be maintained and selected item-by-item in POS, with warranty list, detail, and claims screens added for after-sales work.",
+      "App Configuration now centralizes operational feature toggles and only exposes modules allowed by the active package.",
+      "FREE, STANDARD, and PRO behavior is now reflected across item types, dining features, and POS visibility instead of relying on UI-only assumptions.",
+      "Receipt and invoice printing now support a redesigned A4 invoice, warranty visibility, due/payment fields, and adjustable logo sizing.",
+      "Dining tables now live in a dedicated Table Management page instead of Receipt Design, keeping print layout and floor operations separate.",
+      "Saved dine-in table drafts now stay in sync when cart items are removed, including clearing the backend draft when the final line is deleted.",
+      "POS received tighter cart spacing, per-item warranty selection, and cleaner quantity selector sizing for faster cashier work.",
+      "Receipt Design is now focused on thermal, KOT, and full invoice layouts only.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Warranty templates, warranty records, warranty details, and claims queue screens.",
+          "Per-item warranty selection in POS with warranty data persisted into sales and printed documents.",
+          "App Configuration page for shop-level feature visibility controls.",
+          "Dedicated Table Management page for branch-wise dining tables.",
+          "A4 full invoice printing flow from POS with the new invoice layout.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "Package-aware feature visibility for item types, dining modules, and configuration controls.",
+          "Receipt and invoice layouts with warranty rows, due values, payment context, and logo sizing.",
+          "POS spacing, cart density, warranty controls, and weight quantity defaults.",
+          "Configuration navigation by grouping branches, users, receipt design, warranty settings, and table management together.",
+        ],
+      },
+      {
+        label: "Changed",
+        items: [
+          "Receipt Design now handles print layouts only; dining table CRUD moved to Table Management.",
+          "Unsupported package features are hidden from configuration and also rejected by backend rules.",
+          "Dine-in availability now follows both package capability and App Configuration state.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Saved table drafts now update immediately when cart lines are removed.",
+          "Deleting the last item from a saved table draft now clears the backend pending order and releases the table.",
+          "Warranty dropdown visibility, receipt/invoice warranty output, and old invoice print routing issues.",
+          "Several POS spacing and dropdown sizing problems that reduced usable cart space.",
+        ],
+      },
+    ],
+  },
   {
     version: "1.5.0",
     title: "Supplier Ledger, Single-Branch SaaS Flow, Premium UI Refresh",

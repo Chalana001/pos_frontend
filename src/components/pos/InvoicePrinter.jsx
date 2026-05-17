@@ -45,16 +45,37 @@ const InvoicePrinter = forwardRef((props, ref) => {
         <html>
         <head>
           <style>
-            @page { size: A4; margin: 0; }
-            html, body { margin: 0; padding: 0; background: #ffffff; }
-            body { margin: 0; padding: 0; background: #ffffff; }
+            @page { size: A4 portrait; margin: 0; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              width: 210mm;
+              background: #ffffff;
+              overflow: visible;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            body {
+              display: block;
+            }
+            #invoice-print-root {
+              width: 210mm;
+              margin: 0;
+              padding: 0;
+              overflow: visible;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
             table { page-break-inside: auto; }
             thead { display: table-header-group; }
             tfoot { display: table-footer-group; }
             tr, td, th { page-break-inside: avoid; }
           </style>
         </head>
-        <body>${html}</body>
+        <body><div id="invoice-print-root">${html}</div></body>
         </html>
       `;
 

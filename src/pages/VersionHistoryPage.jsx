@@ -1,5 +1,5 @@
 import React from "react";
-import { CalendarDays, CheckCircle2, GitBranch, History, Tag } from "lucide-react";
+import { CalendarDays, CheckCircle2, History, Tag } from "lucide-react";
 import { APP_VERSION, VERSION_HISTORY } from "../data/versionHistory";
 
 const sectionTone = {
@@ -79,34 +79,6 @@ const VersionHistoryPage = () => {
                 </section>
               ))}
             </div>
-
-            {Array.isArray(release.flowMap) && release.flowMap.length > 0 && (
-              <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-xs font-bold uppercase text-white">
-                    <GitBranch size={14} />
-                    Updated Flow Map
-                  </span>
-                </div>
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                  {release.flowMap.map((flow) => (
-                    <section key={`${release.version}-${flow.title}`} className="rounded-lg border border-slate-200 bg-white p-4">
-                      <h3 className="text-sm font-bold text-slate-900">{flow.title}</h3>
-                      <ol className="mt-3 space-y-2">
-                        {flow.steps.map((step, stepIndex) => (
-                          <li key={step} className="flex gap-3 text-sm leading-5 text-slate-700">
-                            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
-                              {stepIndex + 1}
-                            </span>
-                            <span>{step}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </section>
-                  ))}
-                </div>
-              </div>
-            )}
           </article>
         ))}
       </div>

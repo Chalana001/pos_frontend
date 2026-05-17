@@ -18,9 +18,12 @@ const Cart = ({
   loading,
   onAddCustomer,
   onUpdateQtyUnit,
+  onUpdateWarranty,
+  warrantyOptions = [],
   focusSearch,
   cartSummary,
   footerActions,
+  sideAction,
   checkoutLabel = "Checkout (F9)",
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
@@ -33,6 +36,11 @@ const Cart = ({
     { value: DISCOUNT_TYPES.FIXED, label: "Fixed (LKR)" },
     { value: DISCOUNT_TYPES.PERCENT, label: "Percent (%)" },
   ];
+  const compactSelectButtonClass = "min-h-[24px] rounded-md border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600 shadow-none";
+  const compactSelectMenuClass = "min-w-[144px]";
+  const safeWarrantyOptions = warrantyOptions.length > 0
+    ? warrantyOptions
+    : [{ value: "", label: "No Warranty" }];
 
   const toFiniteNumber = (value) => {
     const numeric = Number(value);
@@ -110,50 +118,40 @@ const Cart = ({
 
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="page-section-enter flex items-center justify-between border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "120ms" }}>
+      <div className="page-section-enter flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-3 py-2.5" style={{ animationDelay: "120ms" }}>
         <div className="flex items-center gap-2">
           <div className="bg-blue-600 text-white p-2 rounded-lg">
             <Receipt size={18} />
           </div>
           <div>
             <h2 className="font-bold text-slate-800">Current Order</h2>
-            {cartSummary ? <div className="mt-0.5 text-[11px] font-medium text-slate-500">{cartSummary}</div> : null}
+            <div className="mt-0.5 text-[11px] font-medium text-slate-500">
+              {cartSummary || `${cartItems.length} Items`}
+            </div>
           </div>
         </div>
-        <span className="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-bold">
-          {cartItems.length} Items
-        </span>
-      </div>
-
-      <div className="page-section-enter border-b border-slate-50 px-4 py-3" style={{ animationDelay: "180ms" }}>
-        {customer ? (
-          <div className="flex items-center justify-between bg-blue-50 p-2 rounded-xl border border-blue-100">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                {customer.name.charAt(0)}
-              </div>
-              <div>
-                <p className="text-xs font-bold text-blue-800">{customer.name}</p>
-                <p className="text-[10px] text-blue-600">{customer.phone}</p>
-              </div>
-            </div>
-            <button onClick={onAddCustomer} className="text-blue-400 hover:text-blue-600">
-              <UserPlus size={16} />
-            </button>
-          </div>
-        ) : (
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700">
+            {cartItems.length} Items
+          </span>
           <button
             onClick={onAddCustomer}
-            className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 hover:border-blue-400 hover:text-blue-500 transition-all text-sm font-medium"
+            className={`inline-flex min-h-[38px] items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all ${
+              customer
+                ? "border-blue-100 bg-blue-50 text-blue-700 hover:border-blue-200 hover:text-blue-800"
+                : "border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:text-blue-600"
+            }`}
           >
-            <UserPlus size={18} />
-            Add Customer (F4)
+            <UserPlus size={16} />
+            <span className="max-w-[170px] truncate">
+              {customer ? customer.name : "Add Customer"}
+            </span>
           </button>
-        )}
+        </div>
       </div>
 
       {/* --- Items List --- */}
-      <div className="custom-scrollbar flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="custom-scrollbar flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
         {cartItems.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale">
             <Receipt size={64} className="mb-4" />
@@ -166,20 +164,20 @@ const Cart = ({
               : 1;
 
             return (
-              <div key={index} style={{ animationDelay: `${220 + index * 38}ms` }} className="sales-cart-item sales-panel-hover relative group overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm hover:border-blue-200 transition-all">
-                <div className="p-3 flex items-center gap-3">
+              <div key={index} style={{ animationDelay: `${220 + index * 38}ms` }} className="sales-cart-item sales-panel-hover relative group overflow-visible rounded-xl border border-slate-100 bg-white shadow-sm hover:border-blue-200 transition-all">
+                <div className="flex items-center gap-2 p-2">
                   <div className="flex-1">
-                    <h4 className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</h4>
-                    <div className="flex items-center gap-2 mt-1">
+                    <h4 className="line-clamp-1 text-[13px] font-bold leading-tight text-slate-800">{item.name}</h4>
+                    <div className="mt-0.5 flex items-center gap-1.5">
                       
                       {item.itemType === ItemType.SERVICE ? (
                         <div className="flex items-center gap-1">
-                          <span className="text-[11px] font-medium text-slate-400">Price:</span>
+                          <span className="text-[10px] font-medium text-slate-400">Price:</span>
                           <input
                             type="number"
                             min="0"
                             step="0.01"
-                            className="w-20 text-right font-bold text-purple-600 bg-purple-50 border border-purple-200 rounded px-1.5 py-0.5 text-[11px] focus:ring-1 focus:ring-purple-500 outline-none"
+                            className="w-20 rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-right text-[10px] font-bold text-purple-600 outline-none focus:ring-1 focus:ring-purple-500"
                             value={item.unitPrice === 0 ? "" : item.unitPrice}
                             onChange={(e) => onUpdatePrice(index, e.target.value)}
                             onBlur={focusSearch}
@@ -191,7 +189,7 @@ const Cart = ({
                           />
                         </div>
                       ) : (
-                        <span className="text-[11px] font-medium text-slate-400">
+                        <span className="text-[10px] font-medium text-slate-400">
                           {getPriceLabel(item)}
                         </span>
                       )}
@@ -207,17 +205,33 @@ const Cart = ({
                         </span>
                       )}
                     </div>
-                    <div className="mt-1.5 font-bold text-blue-600 text-sm">
+                    <div className="mt-0.5 text-[13px] font-bold text-blue-600">
                       {formatCurrency(calculateItemTotal(item))}
+                    </div>
+                    <div className="mt-1 max-w-[144px]">
+                      <CustomSelect
+                        value={item.warrantyOptionValue || ""}
+                        onChange={(value) => {
+                          onUpdateWarranty?.(index, value);
+                          focusSearch();
+                        }}
+                        options={safeWarrantyOptions}
+                        valueKey="value"
+                        labelKey="label"
+                        className="w-full"
+                        buttonClassName={compactSelectButtonClass}
+                        menuClassName={compactSelectMenuClass}
+                        menuPlacement="top"
+                      />
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                  <div className="flex flex-col items-end gap-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
                         <button
                           onClick={() => onUpdateQty(index, Math.max(0, item.qty - stepValue))}
-                          className="p-1 hover:bg-white rounded shadow-sm transition-all"
+                          className="rounded p-1 transition-all hover:bg-white"
                         >
                           <Minus size={14} />
                         </button>
@@ -232,13 +246,13 @@ const Cart = ({
                               e.currentTarget.blur();
                             }
                           }}
-                          className="w-14 text-center text-sm font-bold bg-transparent outline-none focus:bg-white rounded px-1 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-12 rounded bg-transparent px-1 text-center text-[13px] font-bold outline-none transition-all focus:bg-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           title="Click to edit quantity"
                         />
 
                         <button
                           onClick={() => onUpdateQty(index, item.qty + stepValue)}
-                          className="p-1 hover:bg-white rounded shadow-sm transition-all"
+                          className="rounded p-1 transition-all hover:bg-white"
                         >
                           <Plus size={14} />
                         </button>
@@ -254,9 +268,9 @@ const Cart = ({
                           options={qtyUnitOptions}
                           valueKey="value"
                           labelKey="label"
-                          className="w-[76px]"
-                          buttonClassName="rounded-lg border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-600 shadow-none"
-                          menuClassName="min-w-[76px]"
+                          className="w-[58px]"
+                          buttonClassName={compactSelectButtonClass}
+                          menuClassName="min-w-[58px]"
                         />
                       ) : (
                         item.itemType !== ItemType.SERVICE && (
@@ -270,12 +284,12 @@ const Cart = ({
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => setEditingIndex(editingIndex === index ? null : index)}
-                        className={`p-1.5 rounded-lg transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
+                        className={`rounded-md p-1.5 transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
                         title="Add Discount"
                       >
                         <Tag size={14} />
                       </button>
-                      <button onClick={() => onRemoveItem(index)} className="p-1.5 bg-slate-50 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all" title="Remove Item">
+                      <button onClick={() => onRemoveItem(index)} className="rounded-md bg-slate-50 p-1.5 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500" title="Remove Item">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -283,7 +297,7 @@ const Cart = ({
                 </div>
 
                 {editingIndex === index && (
-                  <div className="page-section-enter border-t border-slate-100 bg-slate-50 p-3" style={{ animationDelay: "20ms" }}>
+                  <div className="page-section-enter border-t border-slate-100 bg-slate-50 p-2.5" style={{ animationDelay: "20ms" }}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Item Discount</span>
                       <button onClick={() => setEditingIndex(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
@@ -295,8 +309,9 @@ const Cart = ({
                         options={discountTypeOptions}
                         valueKey="value"
                         labelKey="label"
-                        className="w-[140px]"
-                        buttonClassName="rounded-lg border-slate-200 bg-white px-2 py-2 text-xs font-bold shadow-none"
+                        className="w-[144px]"
+                        buttonClassName={compactSelectButtonClass}
+                        menuClassName={compactSelectMenuClass}
                       />
                       <input
                         type="number"
@@ -318,7 +333,7 @@ const Cart = ({
         )}
       </div>
 
-      <div className="page-section-enter space-y-3 border-t border-slate-200 bg-slate-50 p-4" style={{ animationDelay: "260ms" }}>
+      <div className="page-section-enter space-y-2.5 border-t border-slate-200 bg-slate-50 px-3 py-3" style={{ animationDelay: "260ms" }}>
         <div className="space-y-2">
           <div className="flex justify-between text-slate-500 text-sm">
             <span>Subtotal</span>
@@ -341,7 +356,7 @@ const Cart = ({
           </div>
         </div>
 
-        <div className="pt-3 border-t border-slate-200 flex justify-between items-end">
+        <div className="pt-2.5 border-t border-slate-200 flex justify-between items-end">
           <span className="font-bold text-slate-800">Total</span>
           <span className="text-2xl font-black text-blue-600">
             {formatCurrency(computedTotal)}
@@ -354,13 +369,16 @@ const Cart = ({
           </div>
         ) : null}
 
-        <Button
-          onClick={onCheckout}
-          disabled={cartItems.length === 0 || loading}
-          className="w-full h-[50px] bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-base shadow-md shadow-blue-200 flex items-center justify-center gap-2 transition-all active:scale-95"
-        >
-          {loading ? "Processing..." : checkoutLabel}
-        </Button>
+        <div className={`grid gap-2 ${sideAction ? "grid-cols-4" : "grid-cols-1"}`}>
+          {sideAction ? <div className="col-span-1">{sideAction}</div> : null}
+          <Button
+            onClick={onCheckout}
+            disabled={cartItems.length === 0 || loading}
+            className={`${sideAction ? "col-span-3" : "col-span-1"} h-[50px] bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-base shadow-md shadow-blue-200 flex items-center justify-center gap-2 transition-all active:scale-95`}
+          >
+            {loading ? "Processing..." : checkoutLabel}
+          </Button>
+        </div>
       </div>
     </div>
   );

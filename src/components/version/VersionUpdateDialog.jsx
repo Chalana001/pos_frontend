@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, GitBranch, History, Sparkles } from "lucide-react";
+import { CheckCircle2, History, Sparkles } from "lucide-react";
 import Modal from "../common/Modal";
 import Button from "../common/Button";
 import { useAuth } from "../../context/AuthContext";
@@ -64,31 +64,6 @@ const VersionUpdateDialog = () => {
             </div>
           ))}
         </div>
-
-        {Array.isArray(LATEST_VERSION.flowMap) && LATEST_VERSION.flowMap.length > 0 && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-xs font-bold uppercase text-white">
-              <GitBranch size={14} />
-              Main flow updates
-            </div>
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              {LATEST_VERSION.flowMap.slice(0, 2).map((flow) => (
-                <section key={flow.title} className="rounded-lg border border-slate-200 bg-white p-4">
-                  <h3 className="text-sm font-bold text-slate-900">{flow.title}</h3>
-                  <ul className="mt-3 space-y-2">
-                    {flow.steps.slice(0, 3).map((step) => (
-                      <li key={step} className="flex gap-2 text-sm leading-5 text-slate-700">
-                        <CheckCircle2 className="mt-0.5 shrink-0 text-slate-400" size={16} />
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <Link
             to="/version-history"

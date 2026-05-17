@@ -9,6 +9,7 @@ import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api"; 
 import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
+import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { ItemType, ItemTypeLabels } from "../utils/constants"; // 🟢 Constant එක Import කළා
 
@@ -39,16 +40,24 @@ const itemTypeOptions = [
   { value: ItemType.RECIPE, label: ItemTypeLabels.RECIPE },
 ];
 
-const getAllowedItemTypeOptions = (planName) => {
+const getAllowedItemTypeOptions = (planName, configuration) => {
+  const enabledTypes = new Set([
+    ItemType.NORMAL,
+    ...(configuration?.weightItemsEnabled ? [ItemType.WEIGHT] : []),
+    ...(configuration?.servicesEnabled ? [ItemType.SERVICE] : []),
+    ...(configuration?.recipeItemsEnabled ? [ItemType.RECIPE] : []),
+  ]);
+
   if (planName === "FREE" || planName === "MONTHLY_DEMO") {
-    return itemTypeOptions.filter((option) => option.value === ItemType.NORMAL);
+    return itemTypeOptions.filter((option) => option.value === ItemType.NORMAL && enabledTypes.has(option.value));
   }
   if (["STANDARD", "MONTHLY_LITE", "YEARLY_LITE", "MONTHLY_BASIC"].includes(planName)) {
     return itemTypeOptions.filter((option) =>
-      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.SERVICE].includes(option.value)
+      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.SERVICE].includes(option.value) &&
+      enabledTypes.has(option.value)
     );
   }
-  return itemTypeOptions;
+  return itemTypeOptions.filter((option) => enabledTypes.has(option.value));
 };
 
 const weightUnitOptions = [
@@ -81,7 +90,11 @@ const emptyDraft = () => ({
 export default function BulkAddItems() {
   const { branches: availableBranches } = useBranch();
   const { user } = useAuth();
-  const allowedItemTypeOptions = useMemo(() => getAllowedItemTypeOptions(user?.planName), [user?.planName]);
+  const { configuration } = useAppConfiguration();
+  const allowedItemTypeOptions = useMemo(
+    () => getAllowedItemTypeOptions(user?.planName, configuration),
+    [configuration, user?.planName]
+  );
   const [draft, setDraft] = useState(emptyDraft());
   const [cart, setCart] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -107,6 +120,19 @@ export default function BulkAddItems() {
     () => availableBranches.filter((branch) => Number(branch.id) !== 0),
     [availableBranches]
   );
+
+  useEffect(() => {
+    if (allowedItemTypeOptions.some((option) => option.value === draft.itemType)) return;
+
+    setDraft((prev) => ({
+      ...prev,
+      itemType: ItemType.NORMAL,
+      defaultUnit: "PCS",
+      isKotEnabled: false,
+      ingredients: [],
+      branchIds: [],
+    }));
+  }, [allowedItemTypeOptions, draft.itemType]);
 
   useEffect(() => {
     loadCategories();

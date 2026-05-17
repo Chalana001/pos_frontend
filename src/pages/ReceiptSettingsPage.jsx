@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Building2, Printer, Save, Ticket, FileText, ChefHat, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Building2, Printer, Save, Ticket, FileText, ChefHat } from 'lucide-react';
 
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import CustomSelect from '../components/common/CustomSelect';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ReceiptTemplate from '../components/receipt/ReceiptTemplate';
 import InvoiceTemplate from '../components/invoice/InvoiceTemplate';
@@ -19,8 +18,6 @@ import {
 } from '../utils/receiptSettings';
 import { receiptSettingsAPI } from '../api/receiptSettings.api';
 import { BRAND_NAME_UPPER } from '../utils/branding';
-import { diningTablesAPI } from '../api/diningTables.api';
-import { hasPlanFeature } from '../utils/subscriptionFeatures';
 
 const toSavePayload = (settings, templateType) => {
   const normalized = normalizeReceiptSettings(settings);
@@ -38,6 +35,7 @@ const toSavePayload = (settings, templateType) => {
     showCashier: normalized.showCashier,
     showCustomer: normalized.showCustomer,
     showItemTable: normalized.showItemTable,
+    showWarranty: normalized.showWarranty,
     showSubtotal: normalized.showSubtotal,
     showDiscount: normalized.showDiscount,
     showNetTotal: normalized.showNetTotal,
@@ -54,17 +52,6 @@ const toSavePayload = (settings, templateType) => {
     creditsLine2: normalized.creditsLine2,
   };
 };
-
-const INITIAL_TABLE_FORM = {
-  id: null,
-  tableName: '',
-  status: 'AVAILABLE',
-};
-
-const tableStatusOptions = [
-  { value: 'AVAILABLE', label: 'Available' },
-  { value: 'OCCUPIED', label: 'Occupied' },
-];
 
 const ReceiptPreview = ({ branch, storeName, settings, templateType }) => {
   const normalized = normalizeReceiptSettings({
@@ -113,7 +100,7 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType }) => {
       ]
     : [
         { name: 'White Rice', qty: 1.5, qtyUnit: 'KG', unitPrice: 240, lineTotal: 360 },
-        { name: 'Egg Pack', qty: 2, qtyUnit: 'PCS', unitPrice: 55, lineTotal: 110 },
+        { name: 'Egg Pack', qty: 2, qtyUnit: 'PCS', unitPrice: 55, lineTotal: 110, warrantyLabel: '1 Year', warrantyPeriodValue: 1, warrantyPeriodUnit: 'YEARS' },
         { name: 'Delivery Charge', qty: 1, qtyUnit: 'SERVICE', unitPrice: 150, lineTotal: 150 },
       ];
 
@@ -198,7 +185,6 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType }) => {
 const ReceiptSettingsPage = () => {
   const { user } = useAuth();
   const { branches, selectedBranchId } = useBranch();
-  const canUseDining = hasPlanFeature(user?.planName, 'DINING_TABLES');
   const branchOptions = useMemo(() => branches.filter((branch) => Number(branch.id) !== 0), [branches]);
   const branchSelectionRequired = !selectedBranchId || Number(selectedBranchId) === 0;
   const activeBranch = useMemo(
@@ -210,11 +196,6 @@ const ReceiptSettingsPage = () => {
   const [form, setForm] = useState(getReceiptSettingsDefaults(PRINT_TEMPLATE_TYPES.THERMAL));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [tables, setTables] = useState([]);
-  const [tablesLoading, setTablesLoading] = useState(false);
-  const [tableSaving, setTableSaving] = useState(false);
-  const [tableDeletingId, setTableDeletingId] = useState(null);
-  const [tableForm, setTableForm] = useState(INITIAL_TABLE_FORM);
 
   useEffect(() => {
     if (branchSelectionRequired || !activeBranch?.id) {
@@ -242,31 +223,6 @@ const ReceiptSettingsPage = () => {
 
     loadSettings();
   }, [activeBranch, activeTemplate, branchSelectionRequired]);
-
-  useEffect(() => {
-    if (!canUseDining || branchSelectionRequired || !activeBranch?.id) {
-      setTables([]);
-      setTableForm(INITIAL_TABLE_FORM);
-      setTablesLoading(false);
-      return;
-    }
-
-    const loadTables = async () => {
-      try {
-        setTablesLoading(true);
-        const response = await diningTablesAPI.listByBranch(activeBranch.id);
-        setTables(Array.isArray(response.data) ? response.data : []);
-      } catch (error) {
-        console.error(error);
-        toast.error('Failed to load dining tables');
-        setTables([]);
-      } finally {
-        setTablesLoading(false);
-      }
-    };
-
-    loadTables();
-  }, [activeBranch, branchSelectionRequired, canUseDining]);
 
   const updateField = (field, value) => {
     setForm((prev) => normalizeReceiptSettings({ ...prev, [field]: value }));
@@ -299,83 +255,6 @@ const ReceiptSettingsPage = () => {
     setForm(getReceiptSettingsDefaults(activeTemplate));
   };
 
-  const resetTableForm = () => {
-    setTableForm(INITIAL_TABLE_FORM);
-  };
-
-  const handleSaveTable = async () => {
-    if (!canUseDining) {
-      toast.error('Tables are not available in this package');
-      return;
-    }
-    if (branchSelectionRequired || !activeBranch?.id) {
-      toast.error('Select a branch from the header first');
-      return;
-    }
-
-    if (!tableForm.tableName.trim()) {
-      toast.error('Table name is required');
-      return;
-    }
-
-    try {
-      setTableSaving(true);
-      if (tableForm.id) {
-        await diningTablesAPI.update(tableForm.id, {
-          tableName: tableForm.tableName.trim(),
-          status: tableForm.status,
-        });
-        toast.success('Dining table updated');
-      } else {
-        await diningTablesAPI.create({
-          branchId: activeBranch.id,
-          tableName: tableForm.tableName.trim(),
-          status: tableForm.status,
-        });
-        toast.success('Dining table added');
-      }
-
-      const response = await diningTablesAPI.listByBranch(activeBranch.id);
-      setTables(Array.isArray(response.data) ? response.data : []);
-      resetTableForm();
-    } catch (error) {
-      console.error(error);
-      toast.error(error?.response?.data?.message || 'Failed to save dining table');
-    } finally {
-      setTableSaving(false);
-    }
-  };
-
-  const handleEditTable = (table) => {
-    setTableForm({
-      id: table.id,
-      tableName: table.tableName || '',
-      status: table.status || 'AVAILABLE',
-    });
-  };
-
-  const handleDeleteTable = async (tableId) => {
-    if (!activeBranch?.id) {
-      return;
-    }
-
-    try {
-      setTableDeletingId(tableId);
-      await diningTablesAPI.remove(tableId);
-      toast.success('Dining table deleted');
-      const response = await diningTablesAPI.listByBranch(activeBranch.id);
-      setTables(Array.isArray(response.data) ? response.data : []);
-      if (Number(tableForm.id) === Number(tableId)) {
-        resetTableForm();
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error?.response?.data?.message || 'Failed to delete dining table');
-    } finally {
-      setTableDeletingId(null);
-    }
-  };
-
   if (!branchOptions.length && !loading) {
     return (
       <div className="space-y-6">
@@ -396,7 +275,7 @@ const ReceiptSettingsPage = () => {
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Receipt Design</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Configure branch-wise thermal receipt, full invoice, kitchen ticket, and dining table settings.
+            Configure branch-wise thermal receipt, full invoice, and kitchen ticket layouts.
           </p>
         </div>
 
@@ -610,102 +489,6 @@ const ReceiptSettingsPage = () => {
                 </Card>
               </div>
 
-              {canUseDining && (
-              <Card
-                className="admin-panel-card"
-                title="Dining Tables"
-                style={{ animationDelay: "250ms" }}
-                action={tableForm.id ? (
-                  <Button variant="secondary" size="sm" onClick={resetTableForm}>
-                    Cancel Edit
-                  </Button>
-                ) : null}
-              >
-                {tablesLoading ? (
-                  <div className="py-10">
-                    <LoadingSpinner text="Loading dining tables..." />
-                  </div>
-                ) : (
-                  <div className="space-y-5">
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_160px_120px]">
-                      <div>
-                        <label className="text-sm font-medium text-slate-700">Table Name</label>
-                        <input
-                          value={tableForm.tableName}
-                          onChange={(event) => setTableForm((prev) => ({ ...prev, tableName: event.target.value }))}
-                          placeholder="Table 01"
-                          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium text-slate-700">Status</label>
-                        <CustomSelect
-                          value={tableForm.status}
-                          onChange={(value) => setTableForm((prev) => ({ ...prev, status: value }))}
-                          options={tableStatusOptions}
-                          valueKey="value"
-                          labelKey="label"
-                          className="mt-1"
-                        />
-                      </div>
-
-                      <div className="flex items-end">
-                        <Button onClick={handleSaveTable} disabled={tableSaving} className="w-full">
-                          <Plus size={16} className="mr-2" />
-                          {tableSaving ? 'Saving...' : tableForm.id ? 'Update' : 'Add'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      {tables.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
-                          No dining tables added for this branch yet.
-                        </div>
-                      ) : (
-                        tables.map((table) => (
-                          <div key={table.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="text-base font-semibold text-slate-900">{table.tableName}</div>
-                                <div className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${
-                                  table.status === 'OCCUPIED'
-                                    ? 'bg-amber-100 text-amber-700'
-                                    : 'bg-emerald-100 text-emerald-700'
-                                }`}>
-                                  {table.status}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditTable(table)}
-                                  className="rounded-lg bg-white p-2 text-slate-500 transition hover:text-blue-600"
-                                  title="Edit table"
-                                >
-                                  <Pencil size={15} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteTable(table.id)}
-                                  disabled={tableDeletingId === table.id}
-                                  className="rounded-lg bg-white p-2 text-slate-500 transition hover:text-red-600 disabled:opacity-50"
-                                  title="Delete table"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </Card>
-              )}
             </>
           )}
         </div>

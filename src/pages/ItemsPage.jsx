@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api";
 import { useAuth } from "../context/AuthContext";
+import { useAppConfiguration } from "../context/AppConfigurationContext";
+import { getConfigurableFeatureAvailability } from "../utils/subscriptionFeatures";
 import { hasPermission } from "../utils/permissions";
 import { formatCurrency } from "../utils/formatters";
 import Card from "../components/common/Card";
@@ -15,12 +17,12 @@ import CustomSelect from "../components/common/CustomSelect";
 import TablePagination from "../components/common/TablePagination";
 import { ItemType } from "../utils/constants"; // 🟢 Constant එක Import කළා
 
-const itemTypeOptions = [
+const buildItemTypeOptions = (configuration, availability) => [
   { value: "ALL", label: "All Types" },
   { value: ItemType.NORMAL, label: "Normal" },
-  { value: ItemType.WEIGHT, label: "Weight" },
-  { value: ItemType.SERVICE, label: "Service" },
-  { value: ItemType.RECIPE, label: "Recipe" },
+  ...(availability.weightItemsEnabled && configuration?.weightItemsEnabled ? [{ value: ItemType.WEIGHT, label: "Weight" }] : []),
+  ...(availability.servicesEnabled && configuration?.servicesEnabled ? [{ value: ItemType.SERVICE, label: "Service" }] : []),
+  ...(availability.recipeItemsEnabled && configuration?.recipeItemsEnabled ? [{ value: ItemType.RECIPE, label: "Recipe" }] : []),
 ];
 
 const statusOptions = [
@@ -56,6 +58,15 @@ const formatDateTime = (value) => {
 const ItemsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { configuration } = useAppConfiguration();
+  const featureAvailability = useMemo(
+    () => getConfigurableFeatureAvailability(user?.planName),
+    [user?.planName]
+  );
+  const itemTypeOptions = useMemo(
+    () => buildItemTypeOptions(configuration, featureAvailability),
+    [configuration, featureAvailability]
+  );
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -87,6 +98,19 @@ const ItemsPage = () => {
   useEffect(() => {
     setPageInput(String(page + 1));
   }, [page]);
+
+  useEffect(() => {
+    if (itemType === "ALL") return;
+    if (itemTypeOptions.some((option) => option.value === itemType)) return;
+    setItemType("ALL");
+    setPage(0);
+  }, [itemType, itemTypeOptions]);
+
+  useEffect(() => {
+    if (configuration.recipeItemsEnabled || kotFilter === "ALL") return;
+    setKotFilter("ALL");
+    setPage(0);
+  }, [configuration.recipeItemsEnabled, kotFilter]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -373,19 +397,21 @@ const ItemsPage = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
-              <CustomSelect
-                value={kotFilter}
-                onChange={(value) => {
-                  setKotFilter(value);
-                  resetPage();
-                }}
-                options={kotOptions}
-                valueKey="value"
-                labelKey="label"
-                buttonClassName="h-10 rounded-lg"
-              />
-            </div>
+            {configuration.recipeItemsEnabled && (
+              <div className="lg:col-span-2">
+                <CustomSelect
+                  value={kotFilter}
+                  onChange={(value) => {
+                    setKotFilter(value);
+                    resetPage();
+                  }}
+                  options={kotOptions}
+                  valueKey="value"
+                  labelKey="label"
+                  buttonClassName="h-10 rounded-lg"
+                />
+              </div>
+            )}
 
             <div className="lg:col-span-2">
               <CustomSelect

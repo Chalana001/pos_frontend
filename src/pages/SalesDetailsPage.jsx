@@ -2,11 +2,11 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { salesAPI } from "../api/sales.api"; 
 import { receiptSettingsAPI } from "../api/receiptSettings.api";
-import { openPdfBlob } from "../utils/pdf";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
+import InvoicePrinter from "../components/pos/InvoicePrinter";
 import { useAuth } from "../context/AuthContext"; 
 import { formatQuantityWithUnit } from "../utils/formatters";
 import { 
@@ -56,6 +56,7 @@ const SalesDetailsPage = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   const printRef = useRef(null);
+  const invoicePrintRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -112,7 +113,10 @@ const SalesDetailsPage = () => {
       qtyUnit: item.qtyUnit,
       discountType: item.discountType || 'FIXED', 
       discountValue: item.discountValue || 0,
-      lineTotal: item.lineTotal 
+      lineTotal: item.lineTotal,
+      warrantyLabel: item.warrantyLabel,
+      warrantyPeriodValue: item.warrantyPeriodValue,
+      warrantyPeriodUnit: item.warrantyPeriodUnit,
     }));
 
     const storeName = user?.shopName || BRAND_NAME_UPPER; 
@@ -126,16 +130,56 @@ const SalesDetailsPage = () => {
     printRef.current.printOrder(orderData, cartItems, storeName, shiftData, customerData, receiptSettings);
   };
 
-  const handlePrintFullInvoice = async () => {
-    if (!sale) return;
+  const handlePrintFullInvoice = () => {
+    if (!sale || !invoicePrintRef.current) return;
 
-    try {
-      const response = await salesAPI.downloadInvoicePdf(sale.invoiceNo);
-      openPdfBlob(response.data, `${sale.invoiceNo}.pdf`);
-    } catch (error) {
-      console.error("Failed to open invoice PDF", error);
-      toast.error(error?.response?.data?.message || "Failed to open invoice PDF");
-    }
+    const orderData = {
+      invoiceNo: sale.invoiceNo,
+      subTotal: sale.subTotal,
+      billDiscount: sale.billDiscount,
+      netTotal: sale.grandTotal,
+      paidAmount: sale.paidAmount,
+      dueAmount: sale.dueAmount,
+      paymentMethod: sale.paymentMethod,
+      orderType: sale.orderType || 'CASH',
+      branchName: sale.branchName,
+      branchAddress: sale.branchAddress,
+      branchPhone: sale.branchPhone,
+      branchLogo: sale.branchLogo,
+      createdAt: sale.createdAt,
+      customerName: sale.customerName,
+      customerPhone: sale.customerPhone,
+      cashierName: sale.cashierName,
+      note: sale.note || "",
+    };
+
+    const cartItems = sale.items.map((item) => ({
+      name: item.itemName,
+      barcode: item.barcode,
+      unitPrice: item.unitPrice,
+      qty: item.qty,
+      qtyUnit: item.qtyUnit,
+      discountType: item.discountType || 'FIXED',
+      discountValue: item.discountValue || 0,
+      lineTotal: item.lineTotal,
+      warrantyLabel: item.warrantyLabel,
+      warrantyPeriodValue: item.warrantyPeriodValue,
+      warrantyPeriodUnit: item.warrantyPeriodUnit,
+    }));
+
+    const storeName = user?.shopName || BRAND_NAME_UPPER;
+    const shiftData = {
+      branchName: sale.branchName,
+      branchAddress: sale.branchAddress,
+      branchPhone: sale.branchPhone,
+      branchLogo: sale.branchLogo,
+      cashierName: sale.cashierName || (sale.cashierUserId ? `Cashier #${sale.cashierUserId}` : "Cashier"),
+    };
+    const customerData = sale.customerId
+      ? { name: sale.customerName, phone: sale.customerPhone, address: sale.customerAddress }
+      : null;
+
+    invoicePrintRef.current.printInvoice(orderData, cartItems, storeName, shiftData, customerData, receiptSettings);
   };
 
   const handleOpenPayment = () => {
@@ -219,6 +263,7 @@ const SalesDetailsPage = () => {
       
       {/* 🖨️ Hidden Receipt Printer Component */}
       <ReceiptPrinter ref={printRef} />
+      <InvoicePrinter ref={invoicePrintRef} />
 
       {/* --- TOP BAR --- */}
       <div className="page-section-enter print:hidden flex items-center justify-between" style={{ animationDelay: "80ms" }}>
@@ -373,6 +418,7 @@ const SalesDetailsPage = () => {
                             <th className="p-4 text-right">Unit Price</th>
                             <th className="p-4 text-center">Qty</th>
                             <th className="p-4 text-right">Discount</th>
+                            <th className="p-4">Warranty</th>
                             <th className="p-4 text-right pr-6">Line Total</th>
                         </tr>
                     </thead>
@@ -392,6 +438,9 @@ const SalesDetailsPage = () => {
                                 </td>
                                 <td className="p-4 text-right text-red-500 text-xs">
                                     {item.discountValue > 0 ? `- ${item.discountValue.toLocaleString()}` : '-'}
+                                </td>
+                                <td className="p-4 text-slate-600">
+                                    {item.warrantyLabel || "-"}
                                 </td>
                                 <td className="p-4 text-right font-bold text-slate-800 pr-6">
                                     {item.lineTotal?.toLocaleString(undefined, {minimumFractionDigits: 2})}

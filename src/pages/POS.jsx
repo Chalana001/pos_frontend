@@ -7,6 +7,7 @@ import { ordersAPI } from "../api/orders.api";
 import { shiftsAPI } from "../api/shifts.api";
 import { diningTablesAPI } from "../api/diningTables.api";
 import { pendingOrdersAPI } from "../api/pendingOrders.api";
+import { warrantyTemplatesAPI } from "../api/warrantyTemplates.api";
 import CustomerSelect from "../components/pos/CustomerSelect";
 import Cart from "../components/pos/Cart";
 import CheckoutOverlay from "../components/pos/CheckoutOverlay";
@@ -15,15 +16,16 @@ import { formatCurrency } from "../utils/formatters";
 import { ORDER_TYPES, DISCOUNT_TYPES, ItemType, SALE_MODES } from "../utils/constants";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
+import { useAppConfiguration } from "../context/AppConfigurationContext";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter";
 import KotPrinter from "../components/pos/KotPrinter";
+import InvoicePrinter from "../components/pos/InvoicePrinter";
 import { receiptSettingsAPI } from "../api/receiptSettings.api";
 import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
-import { openPdfBlob } from "../utils/pdf";
 import PanelResizeHandle from "../components/common/PanelResizeHandle";
 import { BRAND_NAME_UPPER } from "../utils/branding";
-import { hasPlanFeature } from "../utils/subscriptionFeatures";
+import { getConfigurableFeatureAvailability, hasPlanFeature } from "../utils/subscriptionFeatures";
 import {
   addOfflineSale,
   cacheItemsForBranch,
@@ -122,7 +124,9 @@ const getCartDraftKey = (userId, branchId) =>
 const POS = () => {
   const { user, isOnline, hasOnlineSession, isOfflineSession } = useAuth();
   const { selectedBranchId, branches } = useBranch();
+  const { configuration } = useAppConfiguration();
   const printRef = useRef(null);
+  const invoicePrintRef = useRef(null);
   const kotPrintRef = useRef(null);
   const searchInputRef = useRef(null);
   const kotPrintedQuantitiesRef = useRef({});
@@ -134,6 +138,7 @@ const POS = () => {
   const [allItems, setAllItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [cartItems, setCartItems] = useState([]);
+  const [warrantyOptions, setWarrantyOptions] = useState([{ value: "", label: "No Warranty" }]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [categories, setCategories] = useState(["All"]);
@@ -173,7 +178,17 @@ const POS = () => {
   const canUseServer = isOnline && hasOnlineSession && !isOfflineSession;
   const isFreeStockUnmanagedPlan = user?.planName === "FREE" || user?.planName === "MONTHLY_DEMO";
   const isFreeLocalSalesPlan = isFreeStockUnmanagedPlan;
-  const canUseDining = hasPlanFeature(user?.planName, "DINING_TABLES");
+  const canUseDining =
+    hasPlanFeature(user?.planName, "DINING_TABLES") &&
+    configuration.tableManagementEnabled &&
+    configuration.dineInEnabled;
+  const featureAvailability = useMemo(
+    () => getConfigurableFeatureAvailability(user?.planName),
+    [user?.planName]
+  );
+  const diningUnavailableMessage = !hasPlanFeature(user?.planName, "DINING_TABLES")
+    ? "Tables are not available in this package."
+    : "Dine-in is disabled in app configuration.";
   const activeCartMode = cartItems.length > 0
     ? (cartMode || (canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE))
     : null;
@@ -201,6 +216,19 @@ const POS = () => {
     () => diningTables.find((table) => Number(table.id) === Number(selectedTableId)) || null,
     [diningTables, selectedTableId]
   );
+
+  const isConfiguredItemTypeVisible = (item) => {
+    if (item.itemType === ItemType.WEIGHT) {
+      return featureAvailability.weightItemsEnabled && configuration.weightItemsEnabled;
+    }
+    if (item.itemType === ItemType.SERVICE) {
+      return featureAvailability.servicesEnabled && configuration.servicesEnabled;
+    }
+    if (item.itemType === ItemType.RECIPE) {
+      return featureAvailability.recipeItemsEnabled && configuration.recipeItemsEnabled;
+    }
+    return true;
+  };
 
   const currentSessionKey = saleMode === SALE_MODES.DINE_IN && selectedTable
     ? `DINE_IN_TABLE_${selectedTable.id}`
@@ -337,6 +365,55 @@ const POS = () => {
       .then(setFreeLocalSalesSummary)
       .catch(() => setFreeLocalSalesSummary({ count: 0, total: 0 }));
   }, [isFreeLocalSalesPlan]);
+
+  useEffect(() => {
+    if (!canUseServer) {
+      setWarrantyOptions([{ value: "", label: "No Warranty" }]);
+      return;
+    }
+
+    warrantyTemplatesAPI.listActive()
+      .then((response) => {
+        const activeTemplates = Array.isArray(response.data) ? response.data : [];
+        setWarrantyOptions([
+          { value: "", label: "No Warranty" },
+          ...activeTemplates.map((template) => ({
+            value: String(template.id),
+            label: template.label,
+            periodValue: template.periodValue,
+            periodUnit: template.periodUnit,
+          })),
+        ]);
+      })
+      .catch((error) => {
+        console.error("Failed to load warranty templates", error);
+        setWarrantyOptions([{ value: "", label: "No Warranty" }]);
+      });
+  }, [canUseServer]);
+
+  useEffect(() => {
+    if (warrantyOptions.length <= 1) {
+      return;
+    }
+
+    setCartItems((currentItems) =>
+      currentItems.map((item) => {
+        if (!item.warrantyLabel || item.warrantyOptionValue) {
+          return item;
+        }
+
+        const matchingOption = warrantyOptions.find((option) =>
+          option.label === item.warrantyLabel
+          && option.periodValue === item.warrantyPeriodValue
+          && option.periodUnit === item.warrantyPeriodUnit
+        );
+
+        return matchingOption
+          ? { ...item, warrantyOptionValue: matchingOption.value }
+          : item;
+      })
+    );
+  }, [warrantyOptions]);
 
   useEffect(() => {
     if (!isResizingPanels) {
@@ -546,6 +623,10 @@ const POS = () => {
       defaultUnit: sourceItem?.defaultUnit || qtyUnit,
       discountType: pendingItem.discountType || DISCOUNT_TYPES.NONE,
       discountValue: Number(pendingItem.discountValue || 0),
+      warrantyOptionValue: "",
+      warrantyLabel: pendingItem.warrantyLabel || "",
+      warrantyPeriodValue: pendingItem.warrantyPeriodValue || null,
+      warrantyPeriodUnit: pendingItem.warrantyPeriodUnit || null,
       stockBaseQty: getSellableStockBaseQty(sourceItem || pendingItem),
       image: sourceItem?.imageUrl,
       isKotEnabled: !!sourceItem?.isKotEnabled,
@@ -708,9 +789,9 @@ const POS = () => {
       setSelectedTableId(null);
       setDiningTables([]);
       setPendingOrders([]);
-      toast.error(canUseDining ? "POS switched to takeaway-only queue mode." : "Tables are not available in this package.");
+      toast.error(canUseDining ? "POS switched to takeaway-only queue mode." : diningUnavailableMessage);
     }
-  }, [canUseDining, canUseServer, saleMode]);
+  }, [canUseDining, canUseServer, diningUnavailableMessage, saleMode]);
 
   const fetchProducts = async (branchId) => {
     if (!branchId) {
@@ -732,6 +813,7 @@ const POS = () => {
       }
 
       items = items.filter((item) => {
+        if (!isConfiguredItemTypeVisible(item)) return false;
         if (item.itemType === ItemType.SERVICE || item.itemType === ItemType.RECIPE) return true;
         if (item.batches && item.batches.length > 0) return true;
         if (item.availableQty !== undefined && item.availableQty !== null) return true;
@@ -750,10 +832,12 @@ const POS = () => {
       console.error(error);
       const cachedItems = await getCachedItemsForBranch(branchId);
       if (cachedItems.length > 0) {
-        const localItems = cachedItems.map((item) => ({
-          ...item,
-          stockUnmanaged: isFreeStockUnmanagedPlan && item.itemType !== ItemType.SERVICE && item.itemType !== ItemType.RECIPE,
-        }));
+        const localItems = cachedItems
+          .filter(isConfiguredItemTypeVisible)
+          .map((item) => ({
+            ...item,
+            stockUnmanaged: isFreeStockUnmanagedPlan && item.itemType !== ItemType.SERVICE && item.itemType !== ItemType.RECIPE,
+          }));
         setAllItems(localItems);
         setFilteredItems(localItems);
         setCategories(["All", ...new Set(localItems.map((item) => item.categoryName).filter(Boolean))]);
@@ -872,6 +956,10 @@ const POS = () => {
           defaultUnit,
           discountType: DISCOUNT_TYPES.NONE,
           discountValue: 0,
+          warrantyOptionValue: "",
+          warrantyLabel: "",
+          warrantyPeriodValue: null,
+          warrantyPeriodUnit: null,
           stockBaseQty,
           stockUnmanaged: !!item.stockUnmanaged,
           image: item.imageUrl,
@@ -982,8 +1070,35 @@ const POS = () => {
     setCartItems(newItems);
   };
 
-  const removeItem = (index) => {
-    setCartItems(cartItems.filter((_, itemIndex) => itemIndex !== index));
+  const removeItem = async (index) => {
+    const nextItems = cartItems.filter((_, itemIndex) => itemIndex !== index);
+    const savedDraft = pendingOrdersByTable[Number(selectedTableId)];
+    const shouldSyncSavedDraft =
+      saleMode === SALE_MODES.DINE_IN &&
+      !!selectedTableId &&
+      canUseServer &&
+      canUseDining &&
+      !!savedDraft;
+
+    if (shouldSyncSavedDraft) {
+      setSavingDraft(true);
+      try {
+        if (nextItems.length === 0) {
+          await pendingOrdersAPI.clearTable(selectedTableId);
+        } else {
+          await pendingOrdersAPI.saveForTable(selectedTableId, createPendingOrderPayload(nextItems));
+        }
+        await refreshDiningState(myShift?.branchId, selectedTableId);
+      } catch (error) {
+        console.error(error);
+        toast.error(error?.response?.data?.message || "Failed to update table draft");
+        return;
+      } finally {
+        setSavingDraft(false);
+      }
+    }
+
+    setCartItems(nextItems);
     if (searchInputRef.current) searchInputRef.current.focus();
   };
 
@@ -994,11 +1109,21 @@ const POS = () => {
     setCartItems(newItems);
   };
 
-  const createPendingOrderPayload = () => ({
+  const updateWarranty = (index, optionValue) => {
+    const selectedOption = warrantyOptions.find((option) => option.value === optionValue) || warrantyOptions[0];
+    const newItems = [...cartItems];
+    newItems[index].warrantyOptionValue = selectedOption.value;
+    newItems[index].warrantyLabel = selectedOption.label === "No Warranty" ? "" : selectedOption.label;
+    newItems[index].warrantyPeriodValue = selectedOption.periodValue || null;
+    newItems[index].warrantyPeriodUnit = selectedOption.periodUnit || null;
+    setCartItems(newItems);
+  };
+
+  const createPendingOrderPayload = (items = cartItems) => ({
     customerId: customer ? customer.id : null,
     billDiscount,
     note: "",
-    items: cartItems.map((item) => ({
+    items: items.map((item) => ({
       itemId: item.itemId,
       batchId: item.batchId,
       qty: item.qty,
@@ -1006,6 +1131,9 @@ const POS = () => {
       unitPrice: item.unitPrice,
       discountType: item.discountType,
       discountValue: item.discountValue,
+      warrantyLabel: item.warrantyLabel || undefined,
+      warrantyPeriodValue: item.warrantyPeriodValue || undefined,
+      warrantyPeriodUnit: item.warrantyPeriodUnit || undefined,
     })),
   });
 
@@ -1075,7 +1203,7 @@ const POS = () => {
     }
 
     if (!canUseDining && nextMode === SALE_MODES.DINE_IN) {
-      toast.error("Tables are not available in this package");
+      toast.error(diningUnavailableMessage);
       return;
     }
 
@@ -1221,6 +1349,9 @@ const POS = () => {
           unitPrice: item.unitPrice,
           discountType: item.discountType,
           discountValue: item.discountValue,
+          warrantyLabel: item.warrantyLabel || undefined,
+          warrantyPeriodValue: item.warrantyPeriodValue || undefined,
+          warrantyPeriodUnit: item.warrantyPeriodUnit || undefined,
         })),
         note: "",
       };
@@ -1308,6 +1439,9 @@ const POS = () => {
               unitPrice: item.unitPrice,
               discountType: item.discountType,
               discountValue: item.discountValue,
+              warrantyLabel: item.warrantyLabel || undefined,
+              warrantyPeriodValue: item.warrantyPeriodValue || undefined,
+              warrantyPeriodUnit: item.warrantyPeriodUnit || undefined,
             })),
           },
         });
@@ -1382,9 +1516,8 @@ const POS = () => {
         printRef.current.printOrder(printData, cartItems, storeName, myShift, customer, receiptSettings);
       }
 
-      if (shouldPrintFullInvoice) {
-        const invoicePdfResponse = await ordersAPI.downloadInvoicePdf(response.data.invoiceNo);
-        openPdfBlob(invoicePdfResponse.data, `${response.data.invoiceNo}.pdf`);
+      if (shouldPrintFullInvoice && invoicePrintRef.current) {
+        invoicePrintRef.current.printInvoice(printData, cartItems, storeName, myShift, customer, receiptSettings);
       }
 
       const pendingKotItems = saleMode === SALE_MODES.TAKEAWAY ? getPendingKotItems() : kotItems;
@@ -1463,12 +1596,12 @@ const POS = () => {
   }
 
   return (
-    <div className="page-enter flex h-full flex-col gap-1.5 overflow-y-auto bg-slate-100 p-1.5 font-sans text-slate-800 custom-scrollbar lg:gap-4 lg:overflow-hidden lg:p-4">
-      <div className="flex flex-1 flex-col gap-1.5 lg:h-full lg:flex-row lg:gap-4 lg:overflow-hidden">
-        <div className="sales-surface sales-panel-enter flex h-[55vh] min-w-0 flex-shrink-0 flex-col overflow-hidden rounded-xl lg:h-full lg:flex-1 lg:rounded-2xl relative" style={{ animationDelay: "90ms" }}>
+    <div className="page-enter flex h-full flex-col gap-1 overflow-y-auto bg-slate-100 p-1 font-sans text-slate-800 custom-scrollbar lg:gap-2 lg:overflow-hidden lg:p-2">
+      <div className="flex flex-1 flex-col gap-1 lg:h-full lg:flex-row lg:gap-2 lg:overflow-hidden">
+        <div className="sales-surface sales-panel-enter flex h-[58vh] min-w-0 flex-shrink-0 flex-col overflow-hidden rounded-xl lg:h-full lg:flex-1 lg:rounded-2xl relative" style={{ animationDelay: "90ms" }}>
 
-          <header className="page-section-enter flex flex-shrink-0 flex-col gap-3 border-b border-slate-100 bg-white px-2 py-2 lg:px-6 lg:py-5" style={{ animationDelay: "140ms" }}>
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <header className="page-section-enter flex flex-shrink-0 flex-col gap-2 border-b border-slate-100 bg-white px-2 py-2 lg:px-4 lg:py-3" style={{ animationDelay: "140ms" }}>
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div className="hidden sm:block lg:block">
                 <h1 className="text-sm lg:text-xl font-bold text-slate-800">
                   New Sale {branchLabel ? `(Branch: ${branchLabel})` : ""}
@@ -1498,7 +1631,7 @@ const POS = () => {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div className="inline-flex rounded-xl bg-slate-100 p-1 sales-panel-hover">
                 <button
                   type="button"
@@ -1510,17 +1643,19 @@ const POS = () => {
                   <ShoppingBag size={16} />
                   Quick Sale
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleSaleModeChange(SALE_MODES.DINE_IN)}
-                  disabled={!canUseServer || !canUseDining || queueCartActive}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    saleMode === SALE_MODES.DINE_IN ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <UtensilsCrossed size={16} />
-                  Dine In
-                </button>
+                {canUseDining && (
+                  <button
+                    type="button"
+                    onClick={() => handleSaleModeChange(SALE_MODES.DINE_IN)}
+                    disabled={!canUseServer || queueCartActive}
+                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                      saleMode === SALE_MODES.DINE_IN ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    <UtensilsCrossed size={16} />
+                    Dine In
+                  </button>
+                )}
               </div>
 
               {saleMode === SALE_MODES.DINE_IN ? (
@@ -1598,7 +1733,7 @@ const POS = () => {
             </div>
           ) : null}
 
-          <div className="page-section-enter flex-shrink-0 border-b border-slate-100 bg-white px-2 py-1.5 lg:px-6 lg:py-4" style={{ animationDelay: "220ms" }}>
+          <div className="page-section-enter flex-shrink-0 border-b border-slate-100 bg-white px-2 py-1.5 lg:px-4 lg:py-2.5" style={{ animationDelay: "220ms" }}>
             <div className="flex gap-1.5 lg:gap-2 overflow-x-auto scrollbar-hide pb-0.5 lg:pb-0">
               {categories.map((cat) => (
                 <button
@@ -1617,7 +1752,7 @@ const POS = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-slate-50 p-1.5 custom-scrollbar lg:p-6">
+          <div className="flex-1 overflow-y-auto bg-slate-50 p-1.5 custom-scrollbar lg:p-3">
             {!canSell ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400">
                 <Lock className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
@@ -1631,7 +1766,7 @@ const POS = () => {
                 <p className="text-sm lg:text-lg font-medium text-center">No items found</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-4 lg:gap-3 xl:grid-cols-5 2xl:grid-cols-6">
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-4 lg:gap-2 xl:grid-cols-5 2xl:grid-cols-6">
                 {filteredItems.map((item) => {
                   const unlimitedStockItem = isUnlimitedStockItem(item);
                   const stockQty = getSellableStockBaseQty(item);
@@ -1647,7 +1782,7 @@ const POS = () => {
                       key={item.id}
                       onClick={() => !isOutOfStock && addToCart(item)}
                       style={{ animationDelay: `${240 + (filteredItems.indexOf(item) % 12) * 32}ms` }}
-                      className={`sales-product-tile sales-panel-hover group relative flex flex-col items-center rounded-lg border border-slate-200 bg-white p-2 text-center transition-all lg:rounded-xl lg:px-3 lg:py-4 ${
+                      className={`sales-product-tile sales-panel-hover group relative flex flex-col items-center rounded-lg border border-slate-200 bg-white p-2 text-center transition-all lg:rounded-xl lg:px-3 lg:py-3 ${
                         !isOutOfStock
                           ? "hover:shadow-md cursor-pointer active:scale-95"
                           : "cursor-not-allowed opacity-90"
@@ -1667,7 +1802,7 @@ const POS = () => {
                         )}
                       </div>
 
-                      <div className="mt-3 mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 lg:mt-3 lg:mb-3 lg:h-14 lg:w-14">
+                      <div className="mt-2 mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 lg:mt-2 lg:mb-2 lg:h-12 lg:w-12">
                         <ChefHat className={`w-4 h-4 lg:w-6 lg:h-6 ${isOutOfStock ? "text-slate-200" : "text-slate-300"}`} />
                       </div>
                       <h3 className="mb-0.5 min-h-[1.25rem] text-[9px] font-semibold leading-tight text-slate-800 line-clamp-2 lg:mb-2 lg:min-h-[2rem] lg:text-[13px]">{item.name}</h3>
@@ -1697,6 +1832,8 @@ const POS = () => {
             onRemoveItem={removeItem}
             onInlineDiscount={handleInlineDiscount}
             onUpdateQtyUnit={updateQtyUnit}
+            onUpdateWarranty={updateWarranty}
+            warrantyOptions={warrantyOptions}
             billDiscount={billDiscount}
             setBillDiscount={setBillDiscount}
             onCheckout={handleCheckout}
@@ -1705,6 +1842,17 @@ const POS = () => {
             focusSearch={focusSearch}
             cartSummary={cartSummary}
             checkoutLabel={saleMode === SALE_MODES.DINE_IN ? "Checkout Table (F9)" : "Checkout (F9)"}
+            sideAction={(
+              <button
+                type="button"
+                onClick={handlePrintKot}
+                disabled={!canUseServer || queueCartActive || printingKot || !hasKotItems || !canPrintKot}
+                className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChefHat size={16} />
+                {printingKot ? "Printing..." : "Print KOT"}
+              </button>
+            )}
             footerActions={(
               <>
                 <div className="grid grid-cols-2 gap-2">
@@ -1721,15 +1869,7 @@ const POS = () => {
                   ) : (
                     <div />
                   )}
-                  <button
-                    type="button"
-                    onClick={handlePrintKot}
-                    disabled={!canUseServer || queueCartActive || printingKot || !hasKotItems || !canPrintKot}
-                    className="inline-flex h-[40px] items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChefHat size={16} />
-                    {printingKot ? "Printing..." : "Print KOT"}
-                  </button>
+                  <div />
                 </div>
                 {saleMode === SALE_MODES.DINE_IN && !selectedTableId ? (
                   <div className="text-[11px] text-slate-500">Select a table before saving or sending KOT.</div>
@@ -1767,6 +1907,7 @@ const POS = () => {
       />
       <BatchSelectModal isOpen={showBatchModal} onClose={() => { setShowBatchModal(false); if (searchInputRef.current) searchInputRef.current.focus(); }} onSelectBatch={handleBatchSelect} item={selectedBatchItem} />
       <ReceiptPrinter ref={printRef} />
+      <InvoicePrinter ref={invoicePrintRef} />
       <KotPrinter ref={kotPrintRef} />
     </div>
   );

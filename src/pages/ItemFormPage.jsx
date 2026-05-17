@@ -11,6 +11,7 @@ import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api";
 import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
+import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { ItemType, ItemTypeLabels } from "../utils/constants";
 
 import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon, ChefHat, Search, Trash2 } from "lucide-react";
@@ -50,16 +51,24 @@ const itemTypeOptions = [
   { value: ItemType.RECIPE, label: ItemTypeLabels.RECIPE },
 ];
 
-const getAllowedItemTypeOptions = (planName) => {
+const getAllowedItemTypeOptions = (planName, configuration) => {
+  const enabledTypes = new Set([
+    ItemType.NORMAL,
+    ...(configuration?.weightItemsEnabled ? [ItemType.WEIGHT] : []),
+    ...(configuration?.servicesEnabled ? [ItemType.SERVICE] : []),
+    ...(configuration?.recipeItemsEnabled ? [ItemType.RECIPE] : []),
+  ]);
+
   if (planName === "FREE" || planName === "MONTHLY_DEMO") {
-    return itemTypeOptions.filter((option) => option.value === ItemType.NORMAL);
+    return itemTypeOptions.filter((option) => option.value === ItemType.NORMAL && enabledTypes.has(option.value));
   }
   if (["STANDARD", "MONTHLY_LITE", "YEARLY_LITE", "MONTHLY_BASIC"].includes(planName)) {
     return itemTypeOptions.filter((option) =>
-      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.SERVICE].includes(option.value)
+      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.SERVICE].includes(option.value) &&
+      enabledTypes.has(option.value)
     );
   }
-  return itemTypeOptions;
+  return itemTypeOptions.filter((option) => enabledTypes.has(option.value));
 };
 
 const weightUnitOptions = [
@@ -78,7 +87,11 @@ const ItemFormPage = ({ mode }) => {
   const { id } = useParams();
   const { branches: availableBranches } = useBranch();
   const { user } = useAuth();
-  const allowedItemTypeOptions = useMemo(() => getAllowedItemTypeOptions(user?.planName), [user?.planName]);
+  const { configuration } = useAppConfiguration();
+  const allowedItemTypeOptions = useMemo(
+    () => getAllowedItemTypeOptions(user?.planName, configuration),
+    [configuration, user?.planName]
+  );
 
   const [submitting, setSubmitting] = useState(false);
   const [loadingItem, setLoadingItem] = useState(false);
@@ -129,6 +142,20 @@ const ItemFormPage = ({ mode }) => {
   useEffect(() => {
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    if (mode !== "create") return;
+    if (allowedItemTypeOptions.some((option) => option.value === formData.itemType)) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      itemType: ItemType.NORMAL,
+      defaultUnit: "PCS",
+      isKotEnabled: false,
+      ingredients: [],
+      branchIds: [],
+    }));
+  }, [allowedItemTypeOptions, formData.itemType, mode]);
 
   const loadCategories = async () => {
     try {

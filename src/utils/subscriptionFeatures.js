@@ -12,6 +12,9 @@ export const PLAN_FEATURES = {
     DINING_TABLES: false,
     ORDER_CANCEL: false,
     SHIFT_HISTORY: false,
+    RECIPE_ITEMS: false,
+    WEIGHT_ITEMS: false,
+    SERVICES: false,
   },
   STANDARD: {
     DASHBOARD_ONLY: true,
@@ -26,6 +29,9 @@ export const PLAN_FEATURES = {
     DINING_TABLES: true,
     ORDER_CANCEL: false,
     SHIFT_HISTORY: false,
+    RECIPE_ITEMS: false,
+    WEIGHT_ITEMS: true,
+    SERVICES: true,
   },
   PRO: {
     DASHBOARD_ONLY: false,
@@ -40,6 +46,9 @@ export const PLAN_FEATURES = {
     DINING_TABLES: true,
     ORDER_CANCEL: true,
     SHIFT_HISTORY: true,
+    RECIPE_ITEMS: true,
+    WEIGHT_ITEMS: true,
+    SERVICES: true,
   },
   MONTHLY_LITE: {
     DASHBOARD_ONLY: true,
@@ -54,6 +63,9 @@ export const PLAN_FEATURES = {
     DINING_TABLES: true,
     ORDER_CANCEL: false,
     SHIFT_HISTORY: false,
+    RECIPE_ITEMS: false,
+    WEIGHT_ITEMS: true,
+    SERVICES: true,
   },
   MONTHLY_BASIC: {
     DASHBOARD_ONLY: true,
@@ -68,6 +80,9 @@ export const PLAN_FEATURES = {
     DINING_TABLES: true,
     ORDER_CANCEL: false,
     SHIFT_HISTORY: false,
+    RECIPE_ITEMS: false,
+    WEIGHT_ITEMS: true,
+    SERVICES: true,
   },
   YEARLY_LITE: {
     DASHBOARD_ONLY: true,
@@ -82,6 +97,9 @@ export const PLAN_FEATURES = {
     DINING_TABLES: true,
     ORDER_CANCEL: false,
     SHIFT_HISTORY: false,
+    RECIPE_ITEMS: false,
+    WEIGHT_ITEMS: true,
+    SERVICES: true,
   },
   MONTHLY_PRO: {
     DASHBOARD_ONLY: false,
@@ -96,6 +114,9 @@ export const PLAN_FEATURES = {
     DINING_TABLES: true,
     ORDER_CANCEL: true,
     SHIFT_HISTORY: true,
+    RECIPE_ITEMS: true,
+    WEIGHT_ITEMS: true,
+    SERVICES: true,
   },
   YEARLY_PRO: {
     DASHBOARD_ONLY: false,
@@ -110,6 +131,9 @@ export const PLAN_FEATURES = {
     DINING_TABLES: true,
     ORDER_CANCEL: true,
     SHIFT_HISTORY: true,
+    RECIPE_ITEMS: true,
+    WEIGHT_ITEMS: true,
+    SERVICES: true,
   },
   MONTHLY_DEMO: {
     DASHBOARD_ONLY: true,
@@ -124,6 +148,9 @@ export const PLAN_FEATURES = {
     DINING_TABLES: false,
     ORDER_CANCEL: false,
     SHIFT_HISTORY: false,
+    RECIPE_ITEMS: false,
+    WEIGHT_ITEMS: false,
+    SERVICES: false,
   },
 };
 
@@ -146,3 +173,11 @@ export const hasPlanFeature = (planName, feature) => {
   if (!planName) return true;
   return PLAN_FEATURES[planName]?.[feature] ?? true;
 };
+
+export const getConfigurableFeatureAvailability = (planName) => ({
+  recipeItemsEnabled: hasPlanFeature(planName, 'RECIPE_ITEMS'),
+  weightItemsEnabled: hasPlanFeature(planName, 'WEIGHT_ITEMS'),
+  servicesEnabled: hasPlanFeature(planName, 'SERVICES'),
+  tableManagementEnabled: hasPlanFeature(planName, 'DINING_TABLES'),
+  dineInEnabled: hasPlanFeature(planName, 'DINING_TABLES'),
+});

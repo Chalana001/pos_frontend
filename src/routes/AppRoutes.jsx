@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { BranchProvider } from '../context/BranchContext';
 import { ShiftProvider } from '../context/ShiftContext';
+import { AppConfigurationProvider } from '../context/AppConfigurationContext';
 import ProtectedRoute from './ProtectedRoute';
 
 const Login = lazy(() => import('../pages/Login'));
@@ -15,6 +16,10 @@ const POS = lazy(() => import('../pages/POS'));
 const OfflineSalesPage = lazy(() => import('../pages/OfflineSalesPage'));
 const SalesListPage = lazy(() => import('../pages/SalesListPage'));
 const SalesDetailsPage = lazy(() => import('../pages/SalesDetailsPage'));
+const WarrantiesPage = lazy(() => import('../pages/WarrantiesPage'));
+const WarrantyClaimsPage = lazy(() => import('../pages/WarrantyClaimsPage'));
+const WarrantyDetailsPage = lazy(() => import('../pages/WarrantyDetailsPage'));
+const WarrantySettingsPage = lazy(() => import('../pages/WarrantySettingsPage'));
 const ItemsPage = lazy(() => import('../pages/ItemsPage'));
 const ItemFormPage = lazy(() => import('../pages/ItemFormPage'));
 const BulkAddItems = lazy(() => import('../pages/BulkAddItems'));
@@ -40,6 +45,8 @@ const SupplierFormPage = lazy(() => import('../pages/SupplierFormPage'));
 const Reports = lazy(() => import('../pages/Reports'));
 const Branches = lazy(() => import('../pages/Branches'));
 const ReceiptSettingsPage = lazy(() => import('../pages/ReceiptSettingsPage'));
+const AppConfigurationPage = lazy(() => import('../pages/AppConfigurationPage'));
+const DiningTablesPage = lazy(() => import('../pages/DiningTablesPage'));
 const Users = lazy(() => import('../pages/Users'));
 const SubscriptionPage = lazy(() => import('../pages/SubscriptionPage'));
 const VersionHistoryPage = lazy(() => import('../pages/VersionHistoryPage'));
@@ -76,11 +83,13 @@ const AppRoutes = () => {
         path="/"
         element={(
           <ProtectedRoute>
-            <BranchProvider>
-              <ShiftProvider>
-                <Layout />
-              </ShiftProvider>
-            </BranchProvider>
+            <AppConfigurationProvider>
+              <BranchProvider>
+                <ShiftProvider>
+                  <Layout />
+                </ShiftProvider>
+              </BranchProvider>
+            </AppConfigurationProvider>
           </ProtectedRoute>
         )}
       >
@@ -93,6 +102,10 @@ const AppRoutes = () => {
 
         <Route path="sales" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<SalesListPage />)}</ProtectedRoute>} />
         <Route path="sales/:id" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<SalesDetailsPage />)}</ProtectedRoute>} />
+        <Route path="warranties" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantiesPage />)}</ProtectedRoute>} />
+        <Route path="warranties/claims" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantyClaimsPage />)}</ProtectedRoute>} />
+        <Route path="warranties/settings" element={<ProtectedRoute permission="MANAGE_WARRANTY_SETTINGS" requiresOnline>{withSuspense(<WarrantySettingsPage />)}</ProtectedRoute>} />
+        <Route path="warranties/:id" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantyDetailsPage />)}</ProtectedRoute>} />
 
         <Route path="items" element={<ProtectedRoute permission="VIEW_ITEMS" requiresOnline>{withSuspense(<ItemsPage />)}</ProtectedRoute>} />
         <Route path="items/new" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline>{withSuspense(<ItemFormPage mode="create" />)}</ProtectedRoute>} />
@@ -125,7 +138,9 @@ const AppRoutes = () => {
         <Route path="suppliers/:id" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline>{withSuspense(<SupplierViewPage />)}</ProtectedRoute>} />
 
         <Route path="reports" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports />)}</ProtectedRoute>} />
+        <Route path="app-configuration" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<AppConfigurationPage />)}</ProtectedRoute>} />
         <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<Branches />)}</ProtectedRoute>} />
+        <Route path="dining-tables" element={<ProtectedRoute permission="MANAGE_BRANCHES" feature="DINING_TABLES" requiresOnline>{withSuspense(<DiningTablesPage />)}</ProtectedRoute>} />
         <Route path="receipt-settings" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<ReceiptSettingsPage />)}</ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute permission="MANAGE_USERS" feature="USER_MANAGEMENT" requiresOnline>{withSuspense(<Users />)}</ProtectedRoute>} />
         <Route path="version-history" element={withSuspense(<VersionHistoryPage />)} />

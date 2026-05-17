@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useAppConfiguration } from "../../context/AppConfigurationContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { hasPermission } from "../../utils/permissions";
 import { hasPlanFeature } from "../../utils/subscriptionFeatures";
@@ -17,19 +18,20 @@ import {
   TrendingDown,
   Warehouse,
   PieChart,
-  Building2,
   ChevronDown,
   ChevronRight,
   Menu,
   X,
   Truck,
-  ReceiptText,
+  ShieldCheck,
+  Settings2,
   CreditCard, // 🔴 Sales වලට අලුත් Icon එකක් ගත්තා
   // Printer,
 } from "lucide-react";
 
 const Sidebar = () => {
   const { user } = useAuth();
+  const { configuration } = useAppConfiguration();
   const { t } = useLanguage();
   const location = useLocation();
   const role = user?.role;
@@ -55,6 +57,16 @@ const Sidebar = () => {
   const isSuppliersRoute = location.pathname.startsWith("/suppliers");
   const isViewingSupplier = /^\/suppliers\/\d+$/.test(location.pathname);
   const isPurchaseRoute = location.pathname.startsWith("/purchases");
+  const isWarrantyRoute =
+    location.pathname.startsWith("/warranties") &&
+    !location.pathname.startsWith("/warranties/settings");
+  const isConfigurationRoute =
+    location.pathname.startsWith("/app-configuration") ||
+    location.pathname.startsWith("/branches") ||
+    location.pathname.startsWith("/dining-tables") ||
+    location.pathname.startsWith("/receipt-settings") ||
+    location.pathname.startsWith("/users") ||
+    location.pathname.startsWith("/warranties/settings");
 
   // 🟢 අලුතින් එකතු කළ Sales Route Detection
   const isSalesRoute = location.pathname.startsWith("/sales") || location.pathname.startsWith("/offline-sales");
@@ -67,6 +79,8 @@ const Sidebar = () => {
   const [openStock, setOpenStock] = useState(false);
   const [openPurchase, setOpenPurchase] = useState(false);
   const [openSales, setOpenSales] = useState(false); // 🟢 Sales dropdown state
+  const [openWarranties, setOpenWarranties] = useState(false);
+  const [openConfiguration, setOpenConfiguration] = useState(false);
 
   // ✅ auto open dropdown when inside those routes
   useEffect(() => {
@@ -92,6 +106,14 @@ const Sidebar = () => {
   useEffect(() => {
     if (isPurchaseRoute) setOpenPurchase(true);
   }, [isPurchaseRoute]);
+
+  useEffect(() => {
+    if (isWarrantyRoute) setOpenWarranties(true);
+  }, [isWarrantyRoute]);
+
+  useEffect(() => {
+    if (isConfigurationRoute) setOpenConfiguration(true);
+  }, [isConfigurationRoute]);
 
   // 🟢 Auto open Sales Dropdown
   useEffect(() => {
@@ -140,6 +162,13 @@ const Sidebar = () => {
       type: "dropdown-customers",
     },
     {
+      name: "Warranties",
+      icon: ShieldCheck,
+      path: "/warranties",
+      permission: "VIEW_SALES",
+      type: "dropdown-warranties",
+    },
+    {
       name: "Suppliers",
       icon: Truck,
       path: "/suppliers",
@@ -186,22 +215,11 @@ const Sidebar = () => {
       permission: "VIEW_REPORTS",
     },
     {
-      name: "Branches",
-      icon: Building2,
-      path: "/branches",
+      name: "Configuration",
+      icon: Settings2,
+      path: "/app-configuration",
       permission: "MANAGE_BRANCHES",
-    },
-    {
-      name: "Receipt Design",
-      icon: ReceiptText,
-      path: "/receipt-settings",
-      permission: "MANAGE_BRANCHES",
-    },
-    {
-      name: "Users",
-      icon: Users,
-      path: "/users",
-      permission: "MANAGE_USERS",
+      type: "dropdown-configuration",
     },
   ];
 
@@ -259,7 +277,9 @@ return (
               item.type !== "dropdown-stock" &&
               item.type !== "dropdown-shifts" &&
               item.type !== "dropdown-purchase" &&
-              item.type !== "dropdown-sales" // 🟢
+              item.type !== "dropdown-sales" &&
+              item.type !== "dropdown-warranties" &&
+              item.type !== "dropdown-configuration"
             ) {
               if (!hasPermission(role, item.permission)) return null;
               if (item.path === "/reports" && !canUseFeature("ADVANCED_REPORTS")) return null;
@@ -321,6 +341,164 @@ return (
                       
                       {/* ඔබට Sales Return වගේ වෙනත් ලින්ක් තියෙනවා නම් මෙතනින් එකතු කරන්න පුළුවන් */}
                       
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            if (item.type === "dropdown-warranties") {
+              if (!hasPermission(role, "VIEW_SALES")) return null;
+
+              return (
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
+                  <button
+                    onClick={() => setOpenWarranties((v) => !v)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                      isWarrantyRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon size={20} />
+                      <span className="font-medium">Warranties</span>
+                    </div>
+                    {openWarranties ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  </button>
+
+                  {openWarranties && (
+                    <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                      <NavLink
+                        to="/warranties"
+                        end
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Warranty List
+                      </NavLink>
+                      <NavLink
+                        to="/warranties/claims"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Claims Queue
+                      </NavLink>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            if (item.type === "dropdown-configuration") {
+              const canSeeConfigurationMenu =
+                hasPermission(role, "MANAGE_BRANCHES") ||
+                hasPermission(role, "MANAGE_USERS") ||
+                hasPermission(role, "MANAGE_WARRANTY_SETTINGS");
+
+              if (!canSeeConfigurationMenu) return null;
+
+              return (
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
+                  <button
+                    onClick={() => setOpenConfiguration((value) => !value)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                      isConfigurationRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon size={20} />
+                      <span className="font-medium">{t("Configuration")}</span>
+                    </div>
+                    {openConfiguration ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  </button>
+
+                  {openConfiguration && (
+                    <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                      {hasPermission(role, "MANAGE_BRANCHES") && (
+                        <NavLink
+                          to="/app-configuration"
+                          end
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("App Configuration")}
+                        </NavLink>
+                      )}
+
+                      {hasPermission(role, "MANAGE_BRANCHES") && (
+                        <NavLink
+                          to="/branches"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Branches")}
+                        </NavLink>
+                      )}
+
+                      {hasPermission(role, "MANAGE_USERS") && canUseFeature("USER_MANAGEMENT") && (
+                        <NavLink
+                          to="/users"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Users")}
+                        </NavLink>
+                      )}
+
+                      {hasPermission(role, "MANAGE_BRANCHES") && (
+                        <NavLink
+                          to="/receipt-settings"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Receipt Design")}
+                        </NavLink>
+                      )}
+
+                      {hasPermission(role, "MANAGE_BRANCHES") &&
+                        canUseFeature("DINING_TABLES") &&
+                        configuration.tableManagementEnabled && (
+                          <NavLink
+                            to="/dining-tables"
+                            className={({ isActive }) =>
+                              `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                                isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                              }`
+                            }
+                          >
+                            {t("Table Management")}
+                          </NavLink>
+                        )}
+
+                      {hasPermission(role, "MANAGE_WARRANTY_SETTINGS") && (
+                        <NavLink
+                          to="/warranties/settings"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Warranty Settings")}
+                        </NavLink>
+                      )}
                     </div>
                   )}
                 </div>

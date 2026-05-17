@@ -333,6 +333,14 @@ const ReceiptTemplate = ({
                     <td style={{ ...styles.tableCell, paddingRight: isKot ? 0 : mode === 'print' ? '1mm' : '8px' }}>
                       <div style={styles.itemName}>{item.name || item.itemName}</div>
                       {!isKot ? <div style={styles.itemPrice}>@ {formatCurrency(Number(item.unitPrice || 0))}</div> : null}
+                      {!isKot && normalized.showWarranty && item.warrantyLabel ? (
+                        <div style={styles.itemPrice}>
+                          Warranty: {item.warrantyLabel}
+                          {item.warrantyPeriodValue && item.warrantyPeriodUnit
+                            ? ` (${item.warrantyPeriodValue} ${item.warrantyPeriodUnit})`
+                            : ''}
+                        </div>
+                      ) : null}
                     </td>
                     <td style={{ ...styles.tableCell, textAlign: 'center' }}>
                       {formatReceiptTemplateQty(item.qty, item.qtyUnit || item.defaultUnit)}
