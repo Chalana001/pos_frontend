@@ -18,7 +18,7 @@ import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon, ChefHat, Search
 
 const Section = ({ title, open, onToggle, right, children }) => {
   return (
-    <div className="shell-panel shell-panel-hover overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div className={`shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white ${open ? "overflow-visible" : "overflow-hidden"}`}>
       <button
         type="button"
         onClick={onToggle}
@@ -44,9 +44,22 @@ const buildEmptyIngredient = () => ({
   search: "",
 });
 
+const buildEmptyProcessingOutput = () => ({
+  outputItemId: "",
+  outputName: "",
+  outputBarcode: "",
+  itemType: "",
+  defaultUnit: "PCS",
+  defaultQty: "",
+  defaultQtyUnit: "PCS",
+  waste: false,
+  search: "",
+});
+
 const itemTypeOptions = [
   { value: ItemType.NORMAL, label: ItemTypeLabels.NORMAL },
   { value: ItemType.WEIGHT, label: ItemTypeLabels.WEIGHT },
+  { value: ItemType.VOLUME, label: ItemTypeLabels.VOLUME },
   { value: ItemType.SERVICE, label: ItemTypeLabels.SERVICE },
   { value: ItemType.RECIPE, label: ItemTypeLabels.RECIPE },
 ];
@@ -55,6 +68,7 @@ const getAllowedItemTypeOptions = (planName, configuration) => {
   const enabledTypes = new Set([
     ItemType.NORMAL,
     ...(configuration?.weightItemsEnabled ? [ItemType.WEIGHT] : []),
+    ...(configuration?.weightItemsEnabled ? [ItemType.VOLUME] : []),
     ...(configuration?.servicesEnabled ? [ItemType.SERVICE] : []),
     ...(configuration?.recipeItemsEnabled ? [ItemType.RECIPE] : []),
   ]);
@@ -64,7 +78,7 @@ const getAllowedItemTypeOptions = (planName, configuration) => {
   }
   if (["STANDARD", "MONTHLY_LITE", "YEARLY_LITE", "MONTHLY_BASIC"].includes(planName)) {
     return itemTypeOptions.filter((option) =>
-      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.SERVICE].includes(option.value) &&
+      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME, ItemType.SERVICE].includes(option.value) &&
       enabledTypes.has(option.value)
     );
   }
@@ -76,11 +90,24 @@ const weightUnitOptions = [
   { value: "G", label: "G" },
 ];
 
+const volumeUnitOptions = [
+  { value: "L", label: "L" },
+  { value: "ML", label: "ML" },
+];
+
 const recipeUnitOptions = [
   { value: "PCS", label: "PCS" },
   { value: "KG", label: "KG" },
   { value: "G", label: "G" },
+  { value: "L", label: "L" },
+  { value: "ML", label: "ML" },
 ];
+
+const priceUnitLabel = (itemType) => {
+  if (itemType === ItemType.WEIGHT) return "(per 1 KG)";
+  if (itemType === ItemType.VOLUME) return "(per 1 L)";
+  return "";
+};
 
 const ItemFormPage = ({ mode }) => {
   const navigate = useNavigate();
@@ -88,6 +115,7 @@ const ItemFormPage = ({ mode }) => {
   const { branches: availableBranches } = useBranch();
   const { user } = useAuth();
   const { configuration } = useAppConfiguration();
+  const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
   const allowedItemTypeOptions = useMemo(
     () => getAllowedItemTypeOptions(user?.planName, configuration),
     [configuration, user?.planName]
@@ -97,6 +125,7 @@ const ItemFormPage = ({ mode }) => {
   const [loadingItem, setLoadingItem] = useState(false);
 
   const [secGeneral, setSecGeneral] = useState(true);
+  const [secProcessing, setSecProcessing] = useState(true);
   const [secRecipe, setSecRecipe] = useState(true);
   const [secLabels, setSecLabels] = useState(false);
 
@@ -115,12 +144,17 @@ const ItemFormPage = ({ mode }) => {
     ingredients: [],
     branchIds: [],
     active: true,
+    posVisible: true,
+    stockProcessingEnabled: false,
+    processingOutputs: [],
   });
 
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [ingredientSearchResults, setIngredientSearchResults] = useState({});
   const ingredientSearchRequestRef = useRef({});
+  const [processingOutputSearchResults, setProcessingOutputSearchResults] = useState({});
+  const processingOutputSearchRequestRef = useRef({});
 
   const [showCatModal, setShowCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
@@ -141,7 +175,7 @@ const ItemFormPage = ({ mode }) => {
 
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [singleCategoryMode]);
 
   useEffect(() => {
     if (mode !== "create") return;
@@ -159,7 +193,9 @@ const ItemFormPage = ({ mode }) => {
 
   const loadCategories = async () => {
     try {
-      const res = await categoriesAPI.getAll();
+      const res = singleCategoryMode
+        ? await categoriesAPI.getSingleCategories()
+        : await categoriesAPI.getAll();
       setCategories(res.data || []);
     } catch (e) {
       toast.error("Failed to load categories");
@@ -167,6 +203,10 @@ const ItemFormPage = ({ mode }) => {
   };
 
   const loadSubCategories = async (catId) => {
+    if (singleCategoryMode) {
+      setSubCategories([]);
+      return;
+    }
     if (!catId) {
       setSubCategories([]);
       return;
@@ -190,7 +230,7 @@ const ItemFormPage = ({ mode }) => {
         setFormData({
           name: item.name ?? "",
           barcode: item.barcode ?? "",
-          categoryId: item.categoryId ?? "",
+          categoryId: singleCategoryMode ? item.subCategoryId ?? "" : item.categoryId ?? "",
           subCategoryId: item.subCategoryId ?? "",
           costPrice: item.costPrice ?? "",
           sellingPrice: item.sellingPrice ?? "",
@@ -211,9 +251,24 @@ const ItemFormPage = ({ mode }) => {
             : [],
           branchIds: item.branchIds ?? [],
           active: item.active ?? true,
+          posVisible: item.posVisible ?? true,
+          stockProcessingEnabled: item.stockProcessingEnabled ?? false,
+          processingOutputs: Array.isArray(item.processingOutputs)
+            ? item.processingOutputs.map((output) => ({
+                outputItemId: output.outputItemId,
+                outputName: output.outputName || "",
+                outputBarcode: output.outputBarcode || "",
+                itemType: output.itemType || "",
+                defaultUnit: output.defaultUnit || "PCS",
+                defaultQty: output.defaultQty ?? "",
+                defaultQtyUnit: output.defaultQtyUnit || "PCS",
+                waste: !!output.waste,
+                search: output.outputName || "",
+              }))
+            : [],
         });
 
-        if (item.categoryId) {
+        if (!singleCategoryMode && item.categoryId) {
           loadSubCategories(item.categoryId);
         }
       } catch {
@@ -224,9 +279,13 @@ const ItemFormPage = ({ mode }) => {
       }
     };
     load();
-  }, [mode, id, navigate]);
+  }, [mode, id, navigate, singleCategoryMode]);
 
   const handleCategoryChange = (catId) => {
+    if (singleCategoryMode) {
+      setFormData((prev) => ({ ...prev, categoryId: catId, subCategoryId: catId }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, categoryId: catId, subCategoryId: "" }));
     loadSubCategories(catId);
   };
@@ -245,10 +304,12 @@ const ItemFormPage = ({ mode }) => {
 
     setSavingCat(true);
     try {
-      const res = await categoriesAPI.create({ name: newCatName.trim() });
+      const res = singleCategoryMode
+        ? await categoriesAPI.createSingleCategory({ name: newCatName.trim() })
+        : await categoriesAPI.create({ name: newCatName.trim() });
       toast.success("Category created!");
       await loadCategories();
-      handleCategoryChange(res.data.id);
+      handleCategoryChange(String(res.data.id));
 
       setShowCatModal(false);
       setNewCatName("");
@@ -352,7 +413,7 @@ const ItemFormPage = ({ mode }) => {
       const itemsArray = Array.isArray(res.data) ? res.data : [];
       const filteredItems = itemsArray.filter(
         (item) =>
-          (item.itemType === ItemType.NORMAL || item.itemType === ItemType.WEIGHT) &&
+          (item.itemType === ItemType.NORMAL || item.itemType === ItemType.WEIGHT || item.itemType === ItemType.VOLUME) &&
           item.active !== false &&
           Number(item.id) !== Number(id)
       );
@@ -385,7 +446,7 @@ const ItemFormPage = ({ mode }) => {
         ingredientItemId: ingredientItem.id,
         ingredientName: ingredientItem.name,
         ingredientBarcode: ingredientItem.barcode || "",
-        qtyUnit: ingredientItem.defaultUnit || (ingredientItem.itemType === ItemType.WEIGHT ? "KG" : "PCS"),
+        qtyUnit: ingredientItem.defaultUnit || (ingredientItem.itemType === ItemType.WEIGHT ? "KG" : ingredientItem.itemType === ItemType.VOLUME ? "L" : "PCS"),
         search: ingredientItem.name,
       };
 
@@ -430,9 +491,137 @@ const ItemFormPage = ({ mode }) => {
     }));
   };
 
+  const isStockTrackedFormItem = [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(formData.itemType);
+
+  const addProcessingOutputRow = () => {
+    setFormData((prev) => ({
+      ...prev,
+      processingOutputs: [...prev.processingOutputs, buildEmptyProcessingOutput()],
+    }));
+  };
+
+  const updateProcessingOutput = (index, field, value) => {
+    setFormData((prev) => {
+      const nextOutputs = [...prev.processingOutputs];
+      nextOutputs[index] = { ...nextOutputs[index], [field]: value };
+      return { ...prev, processingOutputs: nextOutputs };
+    });
+  };
+
+  const clearProcessingOutputSearchResults = (index) => {
+    setProcessingOutputSearchResults((prev) => {
+      if (!prev[index]) return prev;
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const searchProcessingOutputItems = async (index, query) => {
+    setFormData((prev) => {
+      const nextOutputs = [...prev.processingOutputs];
+      const currentRow = nextOutputs[index];
+      const isSameSelectedItem = query.trim() === (currentRow?.outputName || "").trim();
+      nextOutputs[index] = {
+        ...currentRow,
+        search: query,
+        outputItemId: isSameSelectedItem ? currentRow.outputItemId : "",
+        outputName: isSameSelectedItem ? currentRow.outputName : "",
+        outputBarcode: isSameSelectedItem ? currentRow.outputBarcode : "",
+      };
+      return { ...prev, processingOutputs: nextOutputs };
+    });
+
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      clearProcessingOutputSearchResults(index);
+      return;
+    }
+
+    const requestId = (processingOutputSearchRequestRef.current[index] || 0) + 1;
+    processingOutputSearchRequestRef.current[index] = requestId;
+    setProcessingOutputSearchResults((prev) => ({
+      ...prev,
+      [index]: { loading: true, items: [] },
+    }));
+
+    try {
+      const res = await itemsAPI.search(trimmedQuery);
+      const itemsArray = Array.isArray(res.data) ? res.data : [];
+      const selectedIds = new Set(
+        formData.processingOutputs
+          .map((output, outputIndex) => outputIndex === index ? null : Number(output.outputItemId))
+          .filter(Boolean)
+      );
+      const filteredItems = itemsArray.filter(
+        (item) =>
+          [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(item.itemType) &&
+          item.active !== false &&
+          Number(item.id) !== Number(id) &&
+          !selectedIds.has(Number(item.id))
+      );
+
+      if (processingOutputSearchRequestRef.current[index] !== requestId) return;
+      setProcessingOutputSearchResults((prev) => ({
+        ...prev,
+        [index]: { loading: false, items: filteredItems },
+      }));
+    } catch {
+      if (processingOutputSearchRequestRef.current[index] !== requestId) return;
+      setProcessingOutputSearchResults((prev) => ({
+        ...prev,
+        [index]: { loading: false, items: [] },
+      }));
+    }
+  };
+
+  const selectProcessingOutputForRow = (index, item) => {
+    const defaultQtyUnit = item.itemType === ItemType.WEIGHT ? "KG" : item.itemType === ItemType.VOLUME ? "L" : (item.defaultUnit || "PCS");
+    setFormData((prev) => {
+      const nextOutputs = [...prev.processingOutputs];
+      nextOutputs[index] = {
+        ...nextOutputs[index],
+        outputItemId: item.id,
+        outputName: item.name,
+        outputBarcode: item.barcode || "",
+        itemType: item.itemType,
+        defaultUnit: item.defaultUnit || "PCS",
+        defaultQtyUnit,
+        search: item.name,
+      };
+      return { ...prev, processingOutputs: nextOutputs };
+    });
+    clearProcessingOutputSearchResults(index);
+  };
+
+  const handleProcessingOutputSearchKeyDown = (index, event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const searchValue = formData.processingOutputs[index]?.search?.trim();
+    const resultItems = processingOutputSearchResults[index]?.items || [];
+    if (!searchValue || resultItems.length === 0) {
+      toast.error("Output item not found");
+      return;
+    }
+    const exactMatch = resultItems.find(
+      (item) =>
+        item.barcode?.toLowerCase() === searchValue.toLowerCase() ||
+        item.name?.toLowerCase() === searchValue.toLowerCase()
+    );
+    selectProcessingOutputForRow(index, exactMatch || resultItems[0]);
+  };
+
+  const removeProcessingOutput = (index) => {
+    clearProcessingOutputSearchResults(index);
+    setFormData((prev) => ({
+      ...prev,
+      processingOutputs: prev.processingOutputs.filter((_, outputIndex) => outputIndex !== index),
+    }));
+  };
+
   const submitItem = async () => {
     if (!formData.name.trim() || !formData.subCategoryId) {
-      toast.error("Please fill required fields (Name, Sub Category)");
+      toast.error(`Please fill required fields (Name, ${singleCategoryMode ? "Category" : "Sub Category"})`);
       setSecGeneral(true);
       return;
     }
@@ -458,6 +647,26 @@ const ItemFormPage = ({ mode }) => {
       return;
     }
 
+    if (
+      isStockTrackedFormItem &&
+      formData.stockProcessingEnabled &&
+      formData.processingOutputs.some((output) => !output.outputItemId)
+    ) {
+      toast.error("Select each stock processing output from search");
+      setSecProcessing(true);
+      return;
+    }
+
+    if (
+      isStockTrackedFormItem &&
+      formData.stockProcessingEnabled &&
+      formData.processingOutputs.some((output) => Number(output.defaultQty || 0) <= 0)
+    ) {
+      toast.error("Enter a valid default quantity for each stock processing output");
+      setSecProcessing(true);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -480,12 +689,21 @@ const ItemFormPage = ({ mode }) => {
             }))
           : [],
         defaultUnit:
-          formData.itemType === ItemType.WEIGHT
+          formData.itemType === ItemType.WEIGHT || formData.itemType === ItemType.VOLUME
             ? formData.defaultUnit
             : formData.itemType === ItemType.SERVICE
               ? "SERVICE"
               : "PCS",
         active: formData.active,
+        posVisible: formData.posVisible,
+        stockProcessingEnabled: isStockTrackedFormItem ? !!formData.stockProcessingEnabled : false,
+        processingOutputs: isStockTrackedFormItem && formData.stockProcessingEnabled
+          ? formData.processingOutputs.map((output) => ({
+              outputItemId: Number(output.outputItemId),
+              defaultQty: Number(output.defaultQty),
+              waste: !!output.waste,
+            }))
+          : [],
         ...(formData.itemType === ItemType.SERVICE ? { branchIds: formData.branchIds } : {}),
       };
 
@@ -602,7 +820,7 @@ const ItemFormPage = ({ mode }) => {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
                     <div className="flex gap-2">
                       <CustomSelect
-                        value={formData.categoryId}
+                        value={singleCategoryMode ? formData.subCategoryId : formData.categoryId}
                         onChange={handleCategoryChange}
                         options={categories}
                         placeholder="Select Category"
@@ -613,27 +831,29 @@ const ItemFormPage = ({ mode }) => {
                     </div>
                   </div>
 
-                  <div className="relative z-10">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Sub Category *</label>
-                    <div className="flex gap-2">
-                      <CustomSelect
-                        value={formData.subCategoryId}
-                        onChange={(value) => setFormData({ ...formData, subCategoryId: value })}
-                        options={subCategories}
-                        placeholder="Select Sub Category"
-                        disabled={!formData.categoryId}
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => setShowSubCatModal(true)}
-                        className="px-3 shrink-0"
-                        disabled={!formData.categoryId}
-                      >
-                        <Plus size={18} />
-                      </Button>
+                  {!singleCategoryMode && (
+                    <div className="relative z-10">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Sub Category *</label>
+                      <div className="flex gap-2">
+                        <CustomSelect
+                          value={formData.subCategoryId}
+                          onChange={(value) => setFormData({ ...formData, subCategoryId: value })}
+                          options={subCategories}
+                          placeholder="Select Sub Category"
+                          disabled={!formData.categoryId}
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setShowSubCatModal(true)}
+                          className="px-3 shrink-0"
+                          disabled={!formData.categoryId}
+                        >
+                          <Plus size={18} />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="md:col-span-2 flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-2">
@@ -644,10 +864,16 @@ const ItemFormPage = ({ mode }) => {
                           setFormData({
                             ...formData,
                             itemType: value,
-                            defaultUnit: value === ItemType.WEIGHT ? "KG" : value === ItemType.SERVICE ? "SERVICE" : "PCS",
+                            defaultUnit: value === ItemType.WEIGHT ? "KG" : value === ItemType.VOLUME ? "L" : value === ItemType.SERVICE ? "SERVICE" : "PCS",
                             isKotEnabled: value === ItemType.RECIPE ? formData.isKotEnabled : false,
                             ingredients: value === ItemType.RECIPE ? formData.ingredients : [],
                             branchIds: value === ItemType.SERVICE ? formData.branchIds : [],
+                            stockProcessingEnabled: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(value)
+                              ? formData.stockProcessingEnabled
+                              : false,
+                            processingOutputs: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(value)
+                              ? formData.processingOutputs
+                              : [],
                           });
                         }}
                         options={allowedItemTypeOptions}
@@ -658,13 +884,13 @@ const ItemFormPage = ({ mode }) => {
                       />
                     </div>
 
-                    {formData.itemType === ItemType.WEIGHT && (
+                    {(formData.itemType === ItemType.WEIGHT || formData.itemType === ItemType.VOLUME) && (
                       <div className="flex items-center gap-2 mt-2 md:mt-0 md:ml-4 border-l md:pl-4 border-slate-300">
                         <label className="text-sm font-medium text-slate-700">Default Unit:</label>
                         <CustomSelect
                           value={formData.defaultUnit}
                           onChange={(value) => setFormData({ ...formData, defaultUnit: value })}
-                          options={weightUnitOptions}
+                          options={formData.itemType === ItemType.VOLUME ? volumeUnitOptions : weightUnitOptions}
                           valueKey="value"
                           labelKey="label"
                           className="w-[96px]"
@@ -690,6 +916,45 @@ const ItemFormPage = ({ mode }) => {
                       </label>
                     </div>
                   )}
+
+                  <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <label className="flex items-center justify-between gap-3 cursor-pointer">
+                      <div>
+                        <div className="text-sm font-medium text-slate-700">Show in POS</div>
+                        <p className="text-xs text-slate-500">Turn this off for ingredient-only stock items used in recipes.</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={!!formData.posVisible}
+                        onChange={(e) => setFormData({ ...formData, posVisible: e.target.checked })}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </label>
+                  </div>
+
+                  <div className={`md:col-span-2 rounded-xl border p-4 ${
+                    formData.active ? "border-slate-200 bg-slate-50" : "border-red-200 bg-red-50"
+                  }`}>
+                    <label className="flex items-center justify-between gap-3 cursor-pointer">
+                      <div>
+                        <div className={`text-sm font-medium ${formData.active ? "text-slate-700" : "text-red-700"}`}>
+                          Item Active
+                        </div>
+                        <p className="text-xs text-slate-500">Turn this off to deactivate the item without deleting its history.</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={!!formData.active}
+                        onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </label>
+                    {!formData.active && (
+                      <div className="mt-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600">
+                        This item will be deactivated after saving.
+                      </div>
+                    )}
+                  </div>
 
                   {formData.itemType === ItemType.SERVICE && (
                     <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -727,7 +992,7 @@ const ItemFormPage = ({ mode }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Cost Price {formData.itemType === ItemType.WEIGHT && "(per 1 KG)"}
+                      Cost Price {priceUnitLabel(formData.itemType)}
                     </label>
                     <input
                       type="number"
@@ -741,7 +1006,7 @@ const ItemFormPage = ({ mode }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Selling Price {formData.itemType === ItemType.WEIGHT && "(per 1 KG)"}
+                      Selling Price {priceUnitLabel(formData.itemType)}
                     </label>
                     <input
                       type="number"
@@ -771,6 +1036,154 @@ const ItemFormPage = ({ mode }) => {
                 </div>
               </Section>
 
+              {isStockTrackedFormItem && (
+                <Section
+                  title="Stock Processing"
+                  open={secProcessing}
+                  onToggle={() => setSecProcessing((value) => !value)}
+                >
+                  <div className="space-y-4">
+                    <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 cursor-pointer">
+                      <div>
+                        <div className="text-sm font-medium text-slate-700">Enable as processing source</div>
+                        <p className="text-xs text-slate-500">Use this item as a source that can be cut or converted into linked stock items.</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={!!formData.stockProcessingEnabled}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            stockProcessingEnabled: e.target.checked,
+                            processingOutputs: e.target.checked && prev.processingOutputs.length === 0
+                              ? [buildEmptyProcessingOutput()]
+                              : prev.processingOutputs,
+                          }))
+                        }
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </label>
+
+                    {formData.stockProcessingEnabled && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm text-slate-500">
+                            Link the items produced from this source. Waste rows are tracked in processing history without adding sellable stock.
+                          </p>
+                          <Button type="button" onClick={addProcessingOutputRow}>
+                            <Plus size={16} className="mr-2" />
+                            Add Output
+                          </Button>
+                        </div>
+
+                        {formData.processingOutputs.length === 0 ? (
+                          <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                            No output items linked yet.
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {formData.processingOutputs.map((output, index) => (
+                              <div
+                                key={`${output.outputItemId || "new"}-${index}`}
+                                className={`relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_140px_120px_52px] ${
+                                  processingOutputSearchResults[index]?.loading || (processingOutputSearchResults[index]?.items || []).length > 0 ? "z-50" : "z-0"
+                                }`}
+                              >
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-slate-700">Output Item</label>
+                                  <div className="relative">
+                                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                      type="text"
+                                      value={output.search || ""}
+                                      onChange={(e) => searchProcessingOutputItems(index, e.target.value)}
+                                      onKeyDown={(e) => handleProcessingOutputSearchKeyDown(index, e)}
+                                      onBlur={() => window.setTimeout(() => clearProcessingOutputSearchResults(index), 150)}
+                                      placeholder="Search output item..."
+                                      className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    {(processingOutputSearchResults[index]?.loading || (processingOutputSearchResults[index]?.items || []).length > 0) && (
+                                      <div className="relative z-[80] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+                                        {processingOutputSearchResults[index]?.loading ? (
+                                          <div className="px-4 py-3 text-sm text-slate-500">Searching...</div>
+                                        ) : (
+                                          processingOutputSearchResults[index].items.map((option) => (
+                                            <button
+                                              key={option.id}
+                                              type="button"
+                                              onMouseDown={(e) => e.preventDefault()}
+                                              onClick={() => selectProcessingOutputForRow(index, option)}
+                                              className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-blue-50 last:border-b-0"
+                                            >
+                                              <div className="min-w-0">
+                                                <div className="truncate font-medium text-slate-800">{option.name}</div>
+                                                <div className="text-xs text-slate-500">{option.barcode || "No barcode"}</div>
+                                              </div>
+                                              <div className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                                                {option.defaultUnit || "PCS"}
+                                              </div>
+                                            </button>
+                                          ))
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {output.outputItemId && (
+                                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                      <span className="rounded border border-slate-200 bg-white px-2 py-1">{output.outputName}</span>
+                                      <span className="rounded border border-slate-200 bg-white px-2 py-1">{output.defaultQtyUnit || output.defaultUnit || "PCS"}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-slate-700">Default Qty</label>
+                                  <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.001"
+                                      value={output.defaultQty}
+                                      onChange={(e) => updateProcessingOutput(index, "defaultQty", e.target.value)}
+                                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      placeholder="0"
+                                    />
+                                    <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600">
+                                      {output.defaultQtyUnit || output.defaultUnit || "PCS"}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <label className="flex items-end gap-2 pb-2 text-sm font-medium text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!output.waste}
+                                    onChange={(e) => updateProcessingOutput(index, "waste", e.target.checked)}
+                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  Waste
+                                </label>
+
+                                <div className="flex items-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeProcessingOutput(index)}
+                                    className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"
+                                    title="Remove output"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Section>
+              )}
+
               {formData.itemType === ItemType.RECIPE && (
                 <Section
                   title="Recipe Ingredients"
@@ -796,7 +1209,13 @@ const ItemFormPage = ({ mode }) => {
                     ) : (
                       <div className="space-y-3">
                         {formData.ingredients.map((ingredient, index) => (
-                          <div key={`${ingredient.ingredientItemId || "new"}-${index}`} style={{ animationDelay: `${140 + index * 40}ms` }} className="sales-cart-item grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px]">
+                          <div
+                            key={`${ingredient.ingredientItemId || "new"}-${index}`}
+                            style={{ animationDelay: `${140 + index * 40}ms` }}
+                            className={`sales-cart-item relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px] ${
+                              ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0 ? "z-50" : "z-0"
+                            }`}
+                          >
                             <div>
                               <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
                               <div className="relative">
@@ -811,7 +1230,7 @@ const ItemFormPage = ({ mode }) => {
                                   className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                                 {(ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0) && (
-                                  <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+                                  <div className="relative z-[80] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
                                     {ingredientSearchResults[index]?.loading ? (
                                       <div className="px-4 py-3 text-sm text-slate-500">Searching...</div>
                                     ) : (

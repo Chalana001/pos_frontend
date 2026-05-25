@@ -26,7 +26,36 @@ export const itemsAPI = {
   getById: (id) => api.get(`/items/${id}`),
   create: (data) => api.post("/items", data),
   update: (id, data) => api.put(`/items/${id}`, data),
+  deleteCheck: (id) => api.get(`/items/${id}/delete-check`),
+  delete: (id) => api.delete(`/items/${id}`),
+  deactivate: (id) => api.post(`/items/${id}/deactivate`),
   createBulk: (payload) => api.post("/items/bulk", payload),
+  previewImport: (formData) =>
+    api.post("/items/import/preview", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  commitImport: (payload) => api.post("/items/import/commit", payload),
+  previewRecipeIngredientsImport: (formData) =>
+    api.post("/items/import/recipe-ingredients/preview", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  commitRecipeIngredientsImport: (payload) => api.post("/items/import/recipe-ingredients/commit", payload),
+  importRecipeIngredientsFromFile: (formData) =>
+    api.post("/items/import/recipe-ingredients", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  importFromFile: (formData) =>
+    api.post("/items/import", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  downloadImportTemplate: () =>
+    api.get("/items/import/template", {
+      responseType: "blob",
+    }),
+  downloadRecipeIngredientsTemplate: () =>
+    api.get("/items/import/recipe-ingredients/template", {
+      responseType: "blob",
+    }),
 
   getRecent: (limit = 50) => api.get("/items/recent", { params: { limit } }),
 };

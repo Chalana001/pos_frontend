@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Plus, Edit, Search, Tag } from "lucide-react";
+import { AlertTriangle, Plus, Edit, Search, Tag, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api";
@@ -15,12 +15,14 @@ import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
 import TablePagination from "../components/common/TablePagination";
+import Modal from "../components/common/Modal";
 import { ItemType } from "../utils/constants"; // 🟢 Constant එක Import කළා
 
 const buildItemTypeOptions = (configuration, availability) => [
   { value: "ALL", label: "All Types" },
   { value: ItemType.NORMAL, label: "Normal" },
   ...(availability.weightItemsEnabled && configuration?.weightItemsEnabled ? [{ value: ItemType.WEIGHT, label: "Weight" }] : []),
+  ...(availability.weightItemsEnabled && configuration?.weightItemsEnabled ? [{ value: ItemType.VOLUME, label: "Volume" }] : []),
   ...(availability.servicesEnabled && configuration?.servicesEnabled ? [{ value: ItemType.SERVICE, label: "Service" }] : []),
   ...(availability.recipeItemsEnabled && configuration?.recipeItemsEnabled ? [{ value: ItemType.RECIPE, label: "Recipe" }] : []),
 ];
@@ -59,6 +61,7 @@ const ItemsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { configuration } = useAppConfiguration();
+  const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
   const featureAvailability = useMemo(
     () => getConfigurableFeatureAvailability(user?.planName),
     [user?.planName]
@@ -86,6 +89,9 @@ const ItemsPage = () => {
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteCheck, setDeleteCheck] = useState(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -93,7 +99,7 @@ const ItemsPage = () => {
     }, 500); 
 
     return () => clearTimeout(timer);
-  }, [searchQuery, page, categoryId, subCategoryId, itemType, status, kotFilter, priceField, priceOperator, priceAmount]);
+  }, [searchQuery, page, categoryId, subCategoryId, itemType, status, kotFilter, priceField, priceOperator, priceAmount, singleCategoryMode]);
 
   useEffect(() => {
     setPageInput(String(page + 1));
@@ -113,9 +119,18 @@ const ItemsPage = () => {
   }, [configuration.recipeItemsEnabled, kotFilter]);
 
   useEffect(() => {
+    setCategoryId("");
+    setSubCategoryId("");
+    setSubCategories([]);
+    setPage(0);
+  }, [singleCategoryMode]);
+
+  useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await categoriesAPI.getAll();
+        const response = singleCategoryMode
+          ? await categoriesAPI.getSingleCategories()
+          : await categoriesAPI.getAll();
         setCategories(response.data || []);
       } catch (error) {
         toast.error("Failed to load item filters");
@@ -123,10 +138,10 @@ const ItemsPage = () => {
     };
 
     fetchCategories();
-  }, []);
+  }, [singleCategoryMode]);
 
   useEffect(() => {
-    if (!categoryId) {
+    if (singleCategoryMode || !categoryId) {
       setSubCategories([]);
       setSubCategoryId("");
       return;
@@ -144,7 +159,7 @@ const ItemsPage = () => {
     };
 
     fetchSubCategories();
-  }, [categoryId]);
+  }, [categoryId, singleCategoryMode]);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -153,8 +168,8 @@ const ItemsPage = () => {
         search: searchQuery,
         page: page,
         size: pageSize,
-        categoryId: categoryId || undefined,
-        subCategoryId: subCategoryId || undefined,
+        categoryId: singleCategoryMode ? undefined : categoryId || undefined,
+        subCategoryId: singleCategoryMode ? categoryId || undefined : subCategoryId || undefined,
         itemType: itemType !== "ALL" ? itemType : undefined,
         active: status === "ALL" ? undefined : status === "ACTIVE",
         kotEnabled: kotFilter === "ALL" ? undefined : kotFilter === "KOT",
@@ -215,6 +230,65 @@ const ItemsPage = () => {
     setPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
   };
 
+  const openDeleteModal = async (item) => {
+    setDeleteLoading(true);
+    setDeleteModalOpen(true);
+    setDeleteCheck({
+      itemId: item.id,
+      itemName: item.name,
+      canDelete: false,
+      reasons: [],
+    });
+    try {
+      const response = await itemsAPI.deleteCheck(item.id);
+      setDeleteCheck(response.data);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to check item delete status");
+      setDeleteModalOpen(false);
+      setDeleteCheck(null);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteLoading) return;
+    setDeleteModalOpen(false);
+    setDeleteCheck(null);
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!deleteCheck?.itemId || !deleteCheck.canDelete) return;
+    setDeleteLoading(true);
+    try {
+      await itemsAPI.delete(deleteCheck.itemId);
+      toast.success("Item deleted permanently");
+      setDeleteModalOpen(false);
+      setDeleteCheck(null);
+      fetchItems();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error?.response?.data?.detail || "Failed to delete item");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!deleteCheck?.itemId) return;
+    setDeleteLoading(true);
+    try {
+      await itemsAPI.deactivate(deleteCheck.itemId);
+      toast.success("Item deactivated");
+      setDeleteModalOpen(false);
+      setDeleteCheck(null);
+      fetchItems();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to deactivate item");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const columns = useMemo(() => [
     { 
       header: "Barcode", 
@@ -229,8 +303,10 @@ const ItemsPage = () => {
           {/* 🟢 Enum එක පාවිච්චි කිරීම */}
           {i.itemType === ItemType.SERVICE && <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded w-fit mt-1">Service</span>}
           {i.itemType === ItemType.WEIGHT && <span className="text-[10px] uppercase font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded w-fit mt-1">Weight Item</span>}
+          {i.itemType === ItemType.VOLUME && <span className="text-[10px] uppercase font-bold text-cyan-600 bg-cyan-100 px-1.5 py-0.5 rounded w-fit mt-1">Volume Item</span>}
           {i.itemType === ItemType.RECIPE && <span className="text-[10px] uppercase font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded w-fit mt-1">Recipe</span>}
           {i.isKotEnabled && <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded w-fit mt-1">KOT</span>}
+          {i.posVisible === false && <span className="text-[10px] uppercase font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">Hidden in POS</span>}
         </div>
       )
     },
@@ -241,10 +317,10 @@ const ItemsPage = () => {
            <div className="flex items-center gap-1">
               <Tag size={14} className="text-blue-500" />
               <span className="font-medium text-slate-700 text-sm">
-                  {item.categoryName || "Uncategorized"}
+                  {(singleCategoryMode ? item.subCategoryName || item.categoryName : item.categoryName) || "Uncategorized"}
               </span>
            </div>
-           {item.subCategoryName && (
+           {!singleCategoryMode && item.subCategoryName && (
                <span className="text-xs text-slate-400 ml-5 border-l-2 border-slate-200 pl-2 mt-0.5">
                   {item.subCategoryName}
                </span>
@@ -284,16 +360,25 @@ const ItemsPage = () => {
       header: "Actions",
       render: (i) =>
         hasPermission(user.role, "MANAGE_ITEMS") ? (
-          <button
-            onClick={() => navigate(`/items/${i.id}/edit`)}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-            title="Edit"
-          >
-            <Edit size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate(`/items/${i.id}/edit`)}
+              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              title="Edit"
+            >
+              <Edit size={18} />
+            </button>
+            <button
+              onClick={() => openDeleteModal(i)}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+              title="Delete"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
         ) : null,
     },
-  ], [navigate, user.role]);
+  ], [navigate, singleCategoryMode, user.role]);
 
   const categoryOptions = [
     { value: "", label: "All Categories" },
@@ -353,7 +438,8 @@ const ItemsPage = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
+            {!singleCategoryMode && (
+              <div className="lg:col-span-2">
               <CustomSelect
                 value={subCategoryId}
                 onChange={(value) => {
@@ -367,7 +453,8 @@ const ItemsPage = () => {
                 disabled={!categoryId}
                 buttonClassName="h-10 rounded-lg"
               />
-            </div>
+              </div>
+            )}
 
             <div className="lg:col-span-2">
               <CustomSelect
@@ -483,6 +570,57 @@ const ItemsPage = () => {
           onGoToPage={goToPage}
         />
       </Card>
+
+      <Modal isOpen={deleteModalOpen} onClose={closeDeleteModal} title="Delete Item" size="md">
+        <div className="space-y-5">
+          <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={20} />
+            <div>
+              <div className="font-semibold text-slate-900">{deleteCheck?.itemName || "Item"}</div>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Permanent delete is allowed only when this item has no sale, stock, purchase, recipe, processing, promotion, or warranty references.
+              </p>
+            </div>
+          </div>
+
+          {deleteLoading && !deleteCheck?.reasons?.length ? (
+            <LoadingSpinner size="md" text="Checking item references..." />
+          ) : deleteCheck?.canDelete ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+              This item has no history or active references. You can delete it permanently.
+            </div>
+          ) : (
+            <div className="rounded-lg border border-slate-200 p-4">
+              <div className="text-sm font-semibold text-slate-800">Cannot delete permanently</div>
+              <ul className="mt-3 space-y-2">
+                {(deleteCheck?.reasons || []).map((reason) => (
+                  <li key={reason} className="text-sm text-slate-600">
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-sm text-slate-500">
+                Use deactivate to hide this item from POS while keeping old records safe.
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={closeDeleteModal} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            {deleteCheck?.canDelete ? (
+              <Button type="button" variant="danger" onClick={handlePermanentDelete} disabled={deleteLoading}>
+                {deleteLoading ? "Deleting..." : "Delete Permanently"}
+              </Button>
+            ) : (
+              <Button type="button" variant="danger" onClick={handleDeactivate} disabled={deleteLoading || !deleteCheck?.itemId}>
+                {deleteLoading ? "Deactivating..." : "Deactivate Instead"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

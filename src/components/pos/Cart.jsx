@@ -20,6 +20,7 @@ const Cart = ({
   onUpdateQtyUnit,
   onUpdateWarranty,
   warrantyOptions = [],
+  billPromotion,
   focusSearch,
   cartSummary,
   footerActions,
@@ -28,10 +29,12 @@ const Cart = ({
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
   const cartItems = Array.isArray(items) ? items : [];
-  const qtyUnitOptions = [
-    { value: "KG", label: "KG" },
-    { value: "G", label: "G" },
-  ];
+  const getMeasuredUnitOptions = (item) => {
+    const defaultUnit = String(item?.defaultUnit || item?.qtyUnit || "").toUpperCase();
+    return defaultUnit === "L" || defaultUnit === "ML"
+      ? [{ value: "L", label: "L" }, { value: "ML", label: "ML" }]
+      : [{ value: "KG", label: "KG" }, { value: "G", label: "G" }];
+  };
   const discountTypeOptions = [
     { value: DISCOUNT_TYPES.FIXED, label: "Fixed (LKR)" },
     { value: DISCOUNT_TYPES.PERCENT, label: "Percent (%)" },
@@ -63,19 +66,25 @@ const Cart = ({
   };
 
   const calculateItemTotal = (item) => {
+    const previewLineTotal = Number(item?.effectiveLineTotal);
+    if (Number.isFinite(previewLineTotal) && previewLineTotal >= 0) {
+      return previewLineTotal;
+    }
+
     const qty = toFiniteNumber(item?.qty);
     if (qty <= 0) return 0;
 
     let lineTotal = 0;
-    if (item?.weightItem && item?.qtyUnit === 'G') {
-      lineTotal = qty * toFiniteNumber(item?.perGramPrice);
+    if (item?.weightItem && (item?.qtyUnit === 'G' || item?.qtyUnit === 'ML')) {
+      lineTotal = qty * toFiniteNumber(item?.perSmallUnitPrice ?? item?.perGramPrice);
     } else {
       lineTotal = qty * toFiniteNumber(item?.unitPrice);
     }
 
-    const discountValue = toFiniteNumber(item?.discountValue);
+    const discountType = item?.effectiveDiscountType || item?.discountType;
+    const discountValue = toFiniteNumber(item?.effectiveDiscountValue ?? item?.discountValue);
     if (discountValue > 0) {
-      if (item?.discountType === DISCOUNT_TYPES.PERCENT) {
+      if (discountType === DISCOUNT_TYPES.PERCENT) {
         lineTotal -= lineTotal * (discountValue / 100);
       } else {
         lineTotal -= discountValue;
@@ -93,14 +102,20 @@ const Cart = ({
       return acc;
     }
 
-    const lineBaseTotal = item?.weightItem && item?.qtyUnit === "G"
-      ? qty * toFiniteNumber(item?.perGramPrice)
+    const lineBaseTotal = item?.weightItem && (item?.qtyUnit === "G" || item?.qtyUnit === "ML")
+      ? qty * toFiniteNumber(item?.perSmallUnitPrice ?? item?.perGramPrice)
       : qty * toFiniteNumber(item?.unitPrice);
 
     return acc + Math.max(0, lineBaseTotal);
   }, 0);
   
-  const computedTotal = Math.max(0, cartItems.reduce((acc, item) => acc + calculateItemTotal(item), 0) - safeBillDiscount);
+  const lineTotalAfterItemDiscounts = cartItems.reduce((acc, item) => acc + calculateItemTotal(item), 0);
+  const previewBillDiscount = Number(billPromotion?.appliedBillDiscountAmount);
+  const effectiveBillDiscount = Math.max(0, Math.min(
+    lineTotalAfterItemDiscounts,
+    Number.isFinite(previewBillDiscount) ? previewBillDiscount : safeBillDiscount
+  ));
+  const computedTotal = Math.max(0, lineTotalAfterItemDiscounts - effectiveBillDiscount);
 
   const getPriceLabel = (item) => {
     if (item.itemType === ItemType.SERVICE) {
@@ -108,9 +123,11 @@ const Cart = ({
     }
 
     if (item.weightItem) {
-      return item.qtyUnit === "G"
-        ? `1 G = ${formatCurrency(item.perGramPrice)}`
-        : `1 KG = ${formatCurrency(item.unitPrice)}`;
+      const smallUnit = item.defaultUnit === "L" || item.defaultUnit === "ML" ? "ML" : "G";
+      const primaryUnit = smallUnit === "ML" ? "L" : "KG";
+      return item.qtyUnit === smallUnit
+        ? `1 ${smallUnit} = ${formatCurrency(item.perSmallUnitPrice ?? item.perGramPrice)}`
+        : `1 ${primaryUnit} = ${formatCurrency(item.unitPrice)}`;
     }
 
     return `1 ${item.defaultUnit} = ${formatCurrency(item.unitPrice)}`;
@@ -160,7 +177,7 @@ const Cart = ({
         ) : (
           cartItems.map((item, index) => {
             const stepValue = item.weightItem
-              ? (item.qtyUnit === 'G' ? 100 : 0.1)
+              ? ((item.qtyUnit === 'G' || item.qtyUnit === 'ML') ? 100 : 0.1)
               : 1;
 
             return (
@@ -199,15 +216,27 @@ const Cart = ({
                           {item.qtyUnit || item.defaultUnit}
                         </span>
                       )}
-                      {item.discountValue > 0 && (
+                      {(item.effectiveDiscountValue ?? item.discountValue) > 0 && (
                         <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
-                          -{item.discountType === DISCOUNT_TYPES.PERCENT ? `${item.discountValue}%` : formatCurrency(item.discountValue)}
+                          -{(item.effectiveDiscountType || item.discountType) === DISCOUNT_TYPES.PERCENT
+                            ? `${item.effectiveDiscountValue ?? item.discountValue}%`
+                            : formatCurrency(item.effectiveDiscountValue ?? item.discountValue)}
+                        </span>
+                      )}
+                      {item.promotionApplied && (
+                        <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">
+                          Promo
                         </span>
                       )}
                     </div>
                     <div className="mt-0.5 text-[13px] font-bold text-blue-600">
                       {formatCurrency(calculateItemTotal(item))}
                     </div>
+                    {item.promotionApplied && item.promotionName && (
+                      <div className="mt-0.5 max-w-[220px] truncate text-[10px] font-semibold text-emerald-700">
+                        {item.promotionName}
+                      </div>
+                    )}
                     <div className="mt-1 max-w-[144px]">
                       <CustomSelect
                         value={item.warrantyOptionValue || ""}
@@ -265,7 +294,7 @@ const Cart = ({
                             onUpdateQtyUnit?.(index, value);
                             focusSearch();
                           }}
-                          options={qtyUnitOptions}
+                          options={getMeasuredUnitOptions(item)}
                           valueKey="value"
                           labelKey="label"
                           className="w-[58px]"
@@ -354,6 +383,12 @@ const Cart = ({
               className="w-24 text-right font-bold text-slate-800 bg-white border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
+          {billPromotion?.billPromotionApplied ? (
+            <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-700">
+              <span className="min-w-0 truncate font-bold">{billPromotion.billPromotionName || "Bill promotion"}</span>
+              <span className="shrink-0 font-black">-{formatCurrency(billPromotion.billPromotionDiscountAmount || 0)}</span>
+            </div>
+          ) : null}
         </div>
 
         <div className="pt-2.5 border-t border-slate-200 flex justify-between items-end">

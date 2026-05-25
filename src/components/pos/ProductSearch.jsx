@@ -16,10 +16,10 @@ const formatQty = (value) => {
 };
 
 const getStockDisplay = (item) => {
-  if (item.itemType === ItemType.WEIGHT) {
+  if (item.itemType === ItemType.WEIGHT || item.itemType === ItemType.VOLUME) {
     const rawBaseQty = Number(item.availableBaseQty ?? item.availableQty ?? 0);
     const qty = Number.isFinite(rawBaseQty) ? rawBaseQty / 1000 : 0;
-    return `${formatQty(qty)} KG`;
+    return `${formatQty(qty)} ${item.itemType === ItemType.VOLUME ? "L" : "KG"}`;
   }
 
   const qty = Number(item.availableQty ?? 0);

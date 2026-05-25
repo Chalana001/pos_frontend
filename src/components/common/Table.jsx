@@ -35,7 +35,7 @@ const Table = ({ columns, data, onRowClick }) => {
               >
                 {columns.map((column, colIndex) => (
                   <td key={colIndex} className="app-table-cell whitespace-nowrap text-slate-900">
-                    {column.render ? column.render(row) : row[column.accessor]}
+                    {column.render ? column.render(row, rowIndex) : row[column.accessor]}
                   </td>
                 ))}
               </tr>

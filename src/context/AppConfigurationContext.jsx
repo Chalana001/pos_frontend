@@ -11,6 +11,8 @@ export const DEFAULT_APP_CONFIGURATION = {
   servicesEnabled: true,
   tableManagementEnabled: true,
   dineInEnabled: true,
+  categoryMode: 'MAIN_AND_SUB',
+  stockOverrideMode: 'MANAGER_OVERRIDE',
 };
 
 const AppConfigurationContext = createContext(null);
@@ -21,6 +23,10 @@ const normalizeConfiguration = (value = {}) => ({
   servicesEnabled: value.servicesEnabled !== false,
   tableManagementEnabled: value.tableManagementEnabled !== false,
   dineInEnabled: value.tableManagementEnabled === false ? false : value.dineInEnabled !== false,
+  categoryMode: value.categoryMode === 'SINGLE_CATEGORY' ? 'SINGLE_CATEGORY' : 'MAIN_AND_SUB',
+  stockOverrideMode: ['BLOCK', 'MANAGER_OVERRIDE', 'ALWAYS_ALLOW'].includes(value.stockOverrideMode)
+    ? value.stockOverrideMode
+    : 'MANAGER_OVERRIDE',
 });
 
 const readCachedConfiguration = () => {

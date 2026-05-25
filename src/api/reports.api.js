@@ -11,6 +11,12 @@ export const reportsAPI = {
   profit: (params) => api.get('/reports/profit', { params }),
   profitSummary: (params) => api.get('/reports/profit-summary', { params }),
   salesTrend: (params) => api.get("/reports/sales-trend", { params }),
+  salesByCategory: (params) => api.get("/reports/sales-by-category", { params }),
   topCustomers: (params) => api.get("/reports/top-customers", { params }),
   topSuppliers: (params) => api.get("/reports/top-suppliers", { params }),
+  productPerformance: (params) => api.get("/reports/product-performance", { params }),
+  customerPerformance: (params) => api.get("/reports/customer-performance", { params }),
+  supplierPerformance: (params) => api.get("/reports/supplier-performance", { params }),
+  salesReport: (params) => api.get("/reports/sales", { params }),
+  exportReport: (params) => api.get("/reports/export", { params, responseType: "blob" }),
 };

@@ -4,6 +4,7 @@ import { ArrowLeft, Boxes, CalendarDays, Package, Search, Tag, Workflow } from "
 import { stockAPI } from "../api/stock.api";
 import { suppliersAPI } from "../api/suppliers.api";
 import { useBranch } from "../context/BranchContext";
+import { useAppConfiguration } from "../context/AppConfigurationContext";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -31,6 +32,8 @@ const StockItemDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { selectedBranchId } = useBranch();
+  const { configuration } = useAppConfiguration();
+  const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
   const branchId = selectedBranchId || 0;
 
   const [itemDetails, setItemDetails] = useState(null);
@@ -153,11 +156,42 @@ const StockItemDetailsPage = () => {
         return [];
       }
 
+      const categoryCards = singleCategoryMode
+        ? [{
+            key: "category",
+            label: "Category",
+            value: itemDetails.subCategoryName || itemDetails.categoryName || "-",
+            helper: "Item category",
+            icon: Tag,
+            tone: "bg-slate-100 text-slate-700",
+          }]
+        : [
+            {
+              key: "category",
+              label: "Category",
+              value: itemDetails.categoryName || "-",
+              helper: "Item category",
+              icon: Tag,
+              tone: "bg-slate-100 text-slate-700",
+            },
+            {
+              key: "sub-category",
+              label: "Sub Category",
+              value: itemDetails.subCategoryName || "-",
+              helper: "Item sub category",
+              icon: Workflow,
+              tone: "bg-violet-50 text-violet-700",
+            },
+          ];
+
       return [
         {
           key: "stock",
           label: "Total Stock",
-          value: formatQtyWithUnit(itemDetails.displayQuantity, itemDetails.itemType === "WEIGHT" ? "KG" : itemDetails.defaultUnit),
+          value: formatQtyWithUnit(
+            itemDetails.displayQuantity,
+            itemDetails.itemType === "WEIGHT" ? "KG" : itemDetails.itemType === "VOLUME" ? "L" : itemDetails.defaultUnit
+          ),
           helper: "Total available quantity",
           icon: Package,
           tone: "bg-blue-50 text-blue-700",
@@ -170,25 +204,10 @@ const StockItemDetailsPage = () => {
           icon: Boxes,
           tone: "bg-emerald-50 text-emerald-700",
         },
-        {
-          key: "category",
-          label: "Category",
-          value: itemDetails.categoryName || "-",
-          helper: "Item category",
-          icon: Tag,
-          tone: "bg-slate-100 text-slate-700",
-        },
-        {
-          key: "sub-category",
-          label: "Sub Category",
-          value: itemDetails.subCategoryName || "-",
-          helper: "Item sub category",
-          icon: Workflow,
-          tone: "bg-violet-50 text-violet-700",
-        },
+        ...categoryCards,
       ];
     },
-    [itemDetails]
+    [itemDetails, singleCategoryMode]
   );
 
   const resetPage = () => setPage(0);

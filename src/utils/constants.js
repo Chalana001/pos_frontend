@@ -17,6 +17,7 @@ export const DISCOUNT_TYPES = {
 export const ItemType = {
     NORMAL: "NORMAL",
     WEIGHT: "WEIGHT",
+    VOLUME: "VOLUME",
     SERVICE: "SERVICE",
     RECIPE: "RECIPE",
 };
@@ -24,6 +25,7 @@ export const ItemType = {
 export const ItemTypeLabels = {
     NORMAL: "Normal Item (Stock Managed)",
     WEIGHT: "Weight Based (KG/G)",
+    VOLUME: "Volume Based (L/ML)",
     SERVICE: "Service / Non-Stock",
     RECIPE: "Recipe / Food Item",
 };
@@ -32,6 +34,8 @@ export const MeasurementUnit = {
   PCS: 'PCS',
   G: 'G',
   KG: 'KG',
+  ML: 'ML',
+  L: 'L',
   SERVICE: 'SERVICE',
 };
 

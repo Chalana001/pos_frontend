@@ -105,8 +105,9 @@ const normalizeRequestedQty = (cachedItem, qty, qtyUnit) => {
     return 0;
   }
 
-  if (cachedItem?.itemType === "WEIGHT") {
-    return String(qtyUnit || cachedItem?.defaultUnit || "G").toUpperCase() === "KG"
+  if (cachedItem?.itemType === "WEIGHT" || cachedItem?.itemType === "VOLUME") {
+    const unit = String(qtyUnit || cachedItem?.defaultUnit || (cachedItem?.itemType === "VOLUME" ? "ML" : "G")).toUpperCase();
+    return unit === "KG" || unit === "L"
       ? Math.round(numericQty * GRAMS_PER_KILOGRAM)
       : Math.round(numericQty);
   }

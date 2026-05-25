@@ -36,6 +36,7 @@ const buildEmptyIngredient = () => ({
 const itemTypeOptions = [
   { value: ItemType.NORMAL, label: ItemTypeLabels.NORMAL },
   { value: ItemType.WEIGHT, label: ItemTypeLabels.WEIGHT },
+  { value: ItemType.VOLUME, label: ItemTypeLabels.VOLUME },
   { value: ItemType.SERVICE, label: ItemTypeLabels.SERVICE },
   { value: ItemType.RECIPE, label: ItemTypeLabels.RECIPE },
 ];
@@ -44,6 +45,7 @@ const getAllowedItemTypeOptions = (planName, configuration) => {
   const enabledTypes = new Set([
     ItemType.NORMAL,
     ...(configuration?.weightItemsEnabled ? [ItemType.WEIGHT] : []),
+    ...(configuration?.weightItemsEnabled ? [ItemType.VOLUME] : []),
     ...(configuration?.servicesEnabled ? [ItemType.SERVICE] : []),
     ...(configuration?.recipeItemsEnabled ? [ItemType.RECIPE] : []),
   ]);
@@ -53,7 +55,7 @@ const getAllowedItemTypeOptions = (planName, configuration) => {
   }
   if (["STANDARD", "MONTHLY_LITE", "YEARLY_LITE", "MONTHLY_BASIC"].includes(planName)) {
     return itemTypeOptions.filter((option) =>
-      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.SERVICE].includes(option.value) &&
+      [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME, ItemType.SERVICE].includes(option.value) &&
       enabledTypes.has(option.value)
     );
   }
@@ -65,11 +67,24 @@ const weightUnitOptions = [
   { value: "G", label: "G" },
 ];
 
+const volumeUnitOptions = [
+  { value: "L", label: "L" },
+  { value: "ML", label: "ML" },
+];
+
 const recipeUnitOptions = [
   { value: "PCS", label: "PCS" },
   { value: "KG", label: "KG" },
   { value: "G", label: "G" },
+  { value: "L", label: "L" },
+  { value: "ML", label: "ML" },
 ];
+
+const priceUnitLabel = (itemType) => {
+  if (itemType === ItemType.WEIGHT) return "(per 1 KG)";
+  if (itemType === ItemType.VOLUME) return "(per 1 L)";
+  return "";
+};
 
 const emptyDraft = () => ({
   imageUrl: "",
@@ -83,6 +98,7 @@ const emptyDraft = () => ({
   itemType: ItemType.NORMAL, // 🟢 Default අගය
   defaultUnit: "PCS",
   isKotEnabled: false,
+  posVisible: true,
   ingredients: [],
   branchIds: [],
 });
@@ -91,6 +107,7 @@ export default function BulkAddItems() {
   const { branches: availableBranches } = useBranch();
   const { user } = useAuth();
   const { configuration } = useAppConfiguration();
+  const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
   const allowedItemTypeOptions = useMemo(
     () => getAllowedItemTypeOptions(user?.planName, configuration),
     [configuration, user?.planName]
@@ -129,6 +146,7 @@ export default function BulkAddItems() {
       itemType: ItemType.NORMAL,
       defaultUnit: "PCS",
       isKotEnabled: false,
+      posVisible: true,
       ingredients: [],
       branchIds: [],
     }));
@@ -136,11 +154,13 @@ export default function BulkAddItems() {
 
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [singleCategoryMode]);
 
   const loadCategories = async () => {
     try {
-      const res = await categoriesAPI.getAll();
+      const res = singleCategoryMode
+        ? await categoriesAPI.getSingleCategories()
+        : await categoriesAPI.getAll();
       setCategories(res.data || []);
     } catch (e) {
       toast.error("Failed to load categories");
@@ -148,6 +168,10 @@ export default function BulkAddItems() {
   };
 
   const loadSubCategories = async (catId) => {
+    if (singleCategoryMode) {
+      setSubCategories([]);
+      return;
+    }
     if (!catId) {
       setSubCategories([]);
       return;
@@ -161,6 +185,11 @@ export default function BulkAddItems() {
   };
 
   const handleCategoryChange = (catId) => {
+    if (singleCategoryMode) {
+      updateDraft("categoryId", catId);
+      updateDraft("subCategoryId", catId);
+      return;
+    }
     updateDraft("categoryId", catId);
     updateDraft("subCategoryId", "");
     loadSubCategories(catId);
@@ -171,10 +200,12 @@ export default function BulkAddItems() {
     
     setSavingCat(true);
     try {
-      const res = await categoriesAPI.create({ name: newCatName.trim() });
+      const res = singleCategoryMode
+        ? await categoriesAPI.createSingleCategory({ name: newCatName.trim() })
+        : await categoriesAPI.create({ name: newCatName.trim() });
       toast.success("Category created!");
       await loadCategories();
-      handleCategoryChange(res.data.id); 
+      handleCategoryChange(String(res.data.id)); 
       
       setShowCatModal(false);
       setNewCatName("");
@@ -292,7 +323,7 @@ export default function BulkAddItems() {
       const itemsArray = Array.isArray(res.data) ? res.data : [];
       const filteredItems = itemsArray.filter(
         (item) =>
-          (item.itemType === ItemType.NORMAL || item.itemType === ItemType.WEIGHT) &&
+          (item.itemType === ItemType.NORMAL || item.itemType === ItemType.WEIGHT || item.itemType === ItemType.VOLUME) &&
           item.active !== false
       );
 
@@ -324,7 +355,7 @@ export default function BulkAddItems() {
         ingredientItemId: ingredientItem.id,
         ingredientName: ingredientItem.name,
         ingredientBarcode: ingredientItem.barcode || "",
-        qtyUnit: ingredientItem.defaultUnit || (ingredientItem.itemType === ItemType.WEIGHT ? "KG" : "PCS"),
+        qtyUnit: ingredientItem.defaultUnit || (ingredientItem.itemType === ItemType.WEIGHT ? "KG" : ingredientItem.itemType === ItemType.VOLUME ? "L" : "PCS"),
         search: ingredientItem.name,
       };
 
@@ -374,9 +405,8 @@ export default function BulkAddItems() {
   const generalFilledCount = useMemo(() => {
     let c = 0;
     if (draft.name.trim()) c++;
-    if (draft.barcode.trim()) c++;
     if (String(draft.categoryId).trim()) c++;
-    if (String(draft.subCategoryId).trim()) c++;
+    if (!singleCategoryMode && String(draft.subCategoryId).trim()) c++;
     if (String(draft.costPrice).trim()) c++;
     if (String(draft.sellingPrice).trim()) c++;
     if (
@@ -385,17 +415,18 @@ export default function BulkAddItems() {
       draft.itemType !== ItemType.RECIPE
     ) c++;
     return c;
-  }, [draft]);
+  }, [draft, singleCategoryMode]);
 
   const generalBadge = `${generalFilledCount}/${
-    draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE ? 6 : 7
+    draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE
+      ? (singleCategoryMode ? 4 : 5)
+      : (singleCategoryMode ? 5 : 6)
   }`;
 
   const validateGeneral = () => {
     if (!draft.name.trim()) return "Item name is required";
-    if (!draft.barcode.trim()) return "Barcode is required";
     if (!String(draft.categoryId).trim()) return "Category is required";
-    if (!String(draft.subCategoryId).trim()) return "Sub Category is required";
+    if (!String(draft.subCategoryId).trim()) return singleCategoryMode ? "Category is required" : "Sub Category is required";
 
     const cost = num(draft.costPrice);
     const sell = num(draft.sellingPrice);
@@ -427,7 +458,8 @@ export default function BulkAddItems() {
     const err = validateGeneral();
     if (err) return toast.error(err);
 
-    const exists = cart.find((x) => x.barcode === draft.barcode.trim());
+    const nextBarcode = draft.barcode.trim();
+    const exists = nextBarcode ? cart.find((x) => x.barcode === nextBarcode) : null;
     if (exists) {
       return toast.error("This barcode is already in the list!");
     }
@@ -436,7 +468,7 @@ export default function BulkAddItems() {
     const newItem = {
       tempId: uuid(),
       name: draft.name.trim(),
-      barcode: draft.barcode.trim(),
+      barcode: nextBarcode,
       categoryId: draft.categoryId, 
       subCategoryId: Number(draft.subCategoryId),
       imageUrl: draft.imageUrl?.trim() || "",
@@ -448,6 +480,7 @@ export default function BulkAddItems() {
           : (num(draft.reorderLevel) ?? 0),
       itemType: draft.itemType,
       isKotEnabled: draft.itemType === ItemType.RECIPE ? !!draft.isKotEnabled : false,
+      posVisible: !!draft.posVisible,
       ingredients:
         draft.itemType === ItemType.RECIPE
           ? draft.ingredients.map((ingredient) => ({
@@ -460,7 +493,7 @@ export default function BulkAddItems() {
             }))
           : [],
       defaultUnit:
-        draft.itemType === ItemType.WEIGHT
+        draft.itemType === ItemType.WEIGHT || draft.itemType === ItemType.VOLUME
           ? draft.defaultUnit
           : draft.itemType === ItemType.SERVICE
             ? "SERVICE"
@@ -495,6 +528,7 @@ export default function BulkAddItems() {
       itemType: row.itemType || ItemType.NORMAL,
       defaultUnit: row.defaultUnit || "PCS",
       isKotEnabled: row.isKotEnabled ?? false,
+      posVisible: row.posVisible ?? true,
       ingredients: Array.isArray(row.ingredients)
         ? row.ingredients.map((ingredient) => ({
             ingredientItemId: ingredient.ingredientItemId,
@@ -508,7 +542,7 @@ export default function BulkAddItems() {
       branchIds: row.branchIds || [],
     });
 
-    if (row.categoryId) {
+    if (!singleCategoryMode && row.categoryId) {
       loadSubCategories(row.categoryId);
     }
 
@@ -544,6 +578,7 @@ export default function BulkAddItems() {
             : [],
         defaultUnit: item.defaultUnit,
         ...(item.itemType === ItemType.SERVICE ? { branchIds: item.branchIds } : {}),
+        posVisible: item.posVisible,
         active: item.active,
       }));
 
@@ -652,13 +687,14 @@ export default function BulkAddItems() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2 col-span-2 md:col-span-1">
-                  <label className="text-sm font-medium">Barcode *</label>
+                  <label className="text-sm font-medium">Barcode</label>
                   <input
                     className="w-full border rounded-lg px-3 py-2"
                     value={draft.barcode}
                     onChange={(e) => updateDraft("barcode", e.target.value)}
-                    placeholder="123456"
+                    placeholder="Leave blank for auto-generate"
                   />
+                  <p className="text-xs text-slate-500">Optional. Backend will generate a barcode if this is empty.</p>
                 </div>
 
                 <div className="space-y-2 col-span-2 md:col-span-1">
@@ -681,7 +717,7 @@ export default function BulkAddItems() {
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <CustomSelect
-                        value={draft.categoryId}
+                        value={singleCategoryMode ? draft.subCategoryId : draft.categoryId}
                         onChange={handleCategoryChange}
                         options={categories}
                         placeholder="Select Category"
@@ -693,29 +729,31 @@ export default function BulkAddItems() {
                   </div>
                 </div>
 
-                <div className="space-y-2 col-span-2 relative z-10">
-                  <label className="text-sm font-medium">Sub Category *</label>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <CustomSelect
-                        value={draft.subCategoryId}
-                        onChange={(val) => updateDraft("subCategoryId", val)}
-                        options={subCategories}
-                        placeholder="Select Sub Category"
+                {!singleCategoryMode && (
+                  <div className="space-y-2 col-span-2 relative z-10">
+                    <label className="text-sm font-medium">Sub Category *</label>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <CustomSelect
+                          value={draft.subCategoryId}
+                          onChange={(val) => updateDraft("subCategoryId", val)}
+                          options={subCategories}
+                          placeholder="Select Sub Category"
+                          disabled={!draft.categoryId}
+                        />
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="secondary" 
+                        onClick={() => setShowSubCatModal(true)} 
+                        className="px-3 shrink-0"
                         disabled={!draft.categoryId}
-                      />
+                      >
+                        <Plus size={18} />
+                      </Button>
                     </div>
-                    <Button 
-                      type="button" 
-                      variant="secondary" 
-                      onClick={() => setShowSubCatModal(true)} 
-                      className="px-3 shrink-0"
-                      disabled={!draft.categoryId}
-                    >
-                      <Plus size={18} />
-                    </Button>
                   </div>
-                </div>
+                )}
 
                 {/* 🟢 Enum Option එක භාවිතා කිරීම */}
                 <div className="space-y-2 col-span-2 p-3 bg-slate-50 border rounded-lg">
@@ -728,10 +766,11 @@ export default function BulkAddItems() {
                         setDraft({
                            ...draft, 
                            itemType: val,
-                           defaultUnit: val === ItemType.WEIGHT ? "KG" : val === ItemType.SERVICE ? "SERVICE" : "PCS",
+                          defaultUnit: val === ItemType.WEIGHT ? "KG" : val === ItemType.VOLUME ? "L" : val === ItemType.SERVICE ? "SERVICE" : "PCS",
                            isKotEnabled: val === ItemType.RECIPE ? draft.isKotEnabled : false,
                            ingredients: val === ItemType.RECIPE ? draft.ingredients : [],
                            branchIds: val === ItemType.SERVICE ? draft.branchIds : [],
+                           posVisible: draft.posVisible,
                         });
                       }}
                       options={allowedItemTypeOptions}
@@ -741,13 +780,13 @@ export default function BulkAddItems() {
                       buttonClassName="rounded-lg px-3 py-1.5 text-sm"
                     />
 
-                    {draft.itemType === ItemType.WEIGHT && (
+                    {(draft.itemType === ItemType.WEIGHT || draft.itemType === ItemType.VOLUME) && (
                       <div className="flex items-center gap-2 ml-4 border-l pl-4 border-slate-300">
                         <label className="text-sm font-medium text-slate-700">Unit:</label>
                         <CustomSelect
                           value={draft.defaultUnit}
                           onChange={(value) => updateDraft("defaultUnit", value)}
-                          options={weightUnitOptions}
+                          options={draft.itemType === ItemType.VOLUME ? volumeUnitOptions : weightUnitOptions}
                           valueKey="value"
                           labelKey="label"
                           className="w-[96px]"
@@ -759,7 +798,7 @@ export default function BulkAddItems() {
                 </div>
 
                 <div className="space-y-2 col-span-1">
-                  <label className="text-sm font-medium">Cost {draft.itemType === ItemType.WEIGHT && "(per 1 KG)"}</label>
+                  <label className="text-sm font-medium">Cost {priceUnitLabel(draft.itemType)}</label>
                   <input
                     type="number"
                     min="0"
@@ -772,7 +811,7 @@ export default function BulkAddItems() {
                 </div>
 
                 <div className="space-y-2 col-span-1">
-                  <label className="text-sm font-medium">Sell {draft.itemType === ItemType.WEIGHT && "(per 1 KG)"}</label>
+                  <label className="text-sm font-medium">Sell {priceUnitLabel(draft.itemType)}</label>
                   <input
                     type="number"
                     min="0"
@@ -834,6 +873,21 @@ export default function BulkAddItems() {
                     </label>
                   </div>
                 )}
+
+                <div className="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <label className="flex items-center justify-between gap-3 cursor-pointer">
+                    <div>
+                      <div className="text-sm font-medium text-slate-700">Show in POS</div>
+                      <p className="text-xs text-slate-500">Turn this off for ingredient-only stock items used in recipes.</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={!!draft.posVisible}
+                      onChange={(e) => updateDraft("posVisible", e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </label>
+                </div>
               </div>
 
             </div>
@@ -867,7 +921,9 @@ export default function BulkAddItems() {
                     {draft.ingredients.map((ingredient, index) => (
                       <div
                         key={`${ingredient.ingredientItemId || "new"}-${index}`}
-                        className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px]"
+                        className={`relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px] ${
+                          ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0 ? "z-50" : "z-0"
+                        }`}
                       >
                         <div>
                           <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
@@ -883,7 +939,7 @@ export default function BulkAddItems() {
                               className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                             {(ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0) && (
-                              <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+                              <div className="relative z-[80] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
                                 {ingredientSearchResults[index]?.loading ? (
                                   <div className="px-4 py-3 text-sm text-slate-500">Searching...</div>
                                 ) : (
@@ -989,6 +1045,7 @@ export default function BulkAddItems() {
                       <th className="px-3 py-2">Item</th>
                       <th className="px-3 py-2">Barcode</th>
                       <th className="px-3 py-2">Type</th>
+                      <th className="px-3 py-2">POS</th>
                       <th className="px-3 py-2 text-right">Cost</th>
                       <th className="px-3 py-2 text-right">Sell</th>
                       <th className="px-3 py-2 text-right">Actions</th>
@@ -999,9 +1056,16 @@ export default function BulkAddItems() {
                     {cart.map((row) => (
                       <tr key={row.tempId} className="border-t">
                         <td className="px-3 py-2 whitespace-nowrap">{row.name}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{row.barcode}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{row.barcode || "Auto"}</td>
                         <td className="px-3 py-2 whitespace-nowrap">
                             <span className="text-xs bg-slate-100 px-1.5 py-0.5 rounded border">{row.itemType}</span>
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <span className={`text-xs px-1.5 py-0.5 rounded border ${
+                            row.posVisible ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600 border-slate-200"
+                          }`}>
+                            {row.posVisible ? "Visible" : "Hidden"}
+                          </span>
                         </td>
                         <td className="px-3 py-2 text-right">{row.costPrice}</td>
                         <td className="px-3 py-2 text-right">{row.sellingPrice}</td>

@@ -10,6 +10,33 @@ import { BRAND_MARK, BRAND_NAME } from "../../utils/branding";
 const getStorageKey = (user) =>
   `zensys-pos-seen-version:${user?.tenantId || "tenant"}:${user?.username || user?.userId || "user"}`;
 
+const parseVersion = (version) => {
+  const [major = 0, minor = 0, patch = 0] = String(version || "0.0.0")
+    .split(".")
+    .map((part) => Number.parseInt(part, 10) || 0);
+
+  return { major, minor, patch };
+};
+
+const shouldShowUpdateDialog = (seenVersion, currentVersion) => {
+  if (!seenVersion) {
+    return false;
+  }
+
+  const seen = parseVersion(seenVersion);
+  const current = parseVersion(currentVersion);
+
+  if (current.major !== seen.major) {
+    return current.major > seen.major;
+  }
+
+  if (current.minor !== seen.minor) {
+    return current.minor > seen.minor;
+  }
+
+  return false;
+};
+
 const VersionUpdateDialog = () => {
   const { user, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
@@ -23,7 +50,7 @@ const VersionUpdateDialog = () => {
     }
 
     const seenVersion = localStorage.getItem(storageKey);
-    setOpen(seenVersion !== APP_VERSION);
+    setOpen(shouldShowUpdateDialog(seenVersion, APP_VERSION));
   }, [isAuthenticated, storageKey, user]);
 
   const closeDialog = () => {

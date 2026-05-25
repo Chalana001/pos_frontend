@@ -11,8 +11,10 @@ const formatQty = (value) => {
   return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, "");
 };
 
-const isWeightItem = (item) =>
-  item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
+const isMeasuredItem = (item) =>
+  item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
+
+const getPrimaryUnit = (item) => item?.itemType === ItemType.VOLUME || item?.defaultUnit === "L" || item?.defaultUnit === "ML" ? "L" : "KG";
 
 const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
   if (!isOpen || !item) return null;
@@ -38,10 +40,10 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
             item.batches.map((batch) => {
               const availableQty = Number(batch.qty || 0);
               const isAvailable = availableQty > 0;
-              const displayQty = isWeightItem(item)
+              const displayQty = isMeasuredItem(item)
                 ? availableQty / 1000
                 : Number(batch.displayQty ?? batch.qty ?? 0);
-              const displayUnit = isWeightItem(item) ? "KG" : (batch.displayUnit ?? item.defaultUnit ?? "");
+              const displayUnit = isMeasuredItem(item) ? getPrimaryUnit(item) : (batch.displayUnit ?? item.defaultUnit ?? "");
 
               return (
                 <button

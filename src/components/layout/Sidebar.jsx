@@ -25,6 +25,7 @@ import {
   Truck,
   ShieldCheck,
   Settings2,
+  Tag,
   CreditCard, // 🔴 Sales වලට අලුත් Icon එකක් ගත්තා
   // Printer,
 } from "lucide-react";
@@ -67,6 +68,7 @@ const Sidebar = () => {
     location.pathname.startsWith("/receipt-settings") ||
     location.pathname.startsWith("/users") ||
     location.pathname.startsWith("/warranties/settings");
+  const isReportsRoute = location.pathname.startsWith("/reports");
 
   // 🟢 අලුතින් එකතු කළ Sales Route Detection
   const isSalesRoute = location.pathname.startsWith("/sales") || location.pathname.startsWith("/offline-sales");
@@ -80,6 +82,7 @@ const Sidebar = () => {
   const [openPurchase, setOpenPurchase] = useState(false);
   const [openSales, setOpenSales] = useState(false); // 🟢 Sales dropdown state
   const [openWarranties, setOpenWarranties] = useState(false);
+  const [openReports, setOpenReports] = useState(false);
   const [openConfiguration, setOpenConfiguration] = useState(false);
 
   // ✅ auto open dropdown when inside those routes
@@ -115,6 +118,10 @@ const Sidebar = () => {
     if (isConfigurationRoute) setOpenConfiguration(true);
   }, [isConfigurationRoute]);
 
+  useEffect(() => {
+    if (isReportsRoute) setOpenReports(true);
+  }, [isReportsRoute]);
+
   // 🟢 Auto open Sales Dropdown
   useEffect(() => {
     if (isSalesRoute) setOpenSales(true);
@@ -123,7 +130,7 @@ const Sidebar = () => {
   // 🔴 Mobile එකේදී වෙනත් පිටුවකට ගියාම Sidebar එක Auto Close වෙන්න
   useEffect(() => {
     setIsOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   // ✅ Menu config
   const menuItems = [
@@ -146,6 +153,12 @@ const Sidebar = () => {
       path: "/sales",
       permission: "VIEW_SALES", // ගැලපෙන permission එකක් දෙන්න
       type: "dropdown-sales",
+    },
+    {
+      name: "Promotions",
+      icon: Tag,
+      path: "/promotions",
+      permission: "MANAGE_PROMOTIONS",
     },
     {
       name: "Items",
@@ -213,6 +226,7 @@ const Sidebar = () => {
       icon: PieChart,
       path: "/reports",
       permission: "VIEW_REPORTS",
+      type: "dropdown-reports",
     },
     {
       name: "Configuration",
@@ -225,12 +239,16 @@ const Sidebar = () => {
 
 return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="shell-panel-hover xl:hidden fixed top-4 left-4 z-40 rounded-lg bg-slate-900 p-2 text-white shadow-lg transition-colors hover:bg-slate-800"
-      >
-        <Menu size={24} />
-      </button>
+      {!isOpen && (
+        <button
+          type="button"
+          aria-label="Open sidebar menu"
+          onClick={() => setIsOpen(true)}
+          className="shell-panel-hover fixed left-4 top-4 z-[60] rounded-lg bg-slate-900 p-2 text-white shadow-lg transition-colors hover:bg-slate-800 xl:hidden"
+        >
+          <Menu size={24} />
+        </button>
+      )}
 
       {isOpen && (
         <div
@@ -240,7 +258,7 @@ return (
       )}
 
       <aside
-        className={`shell-sidebar-enter fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0f172a] text-white shadow-2xl transform transition-transform duration-300 ease-in-out xl:static
+        className={`${isOpen ? "shell-sidebar-enter" : ""} fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0f172a] text-white shadow-2xl transform transition-transform duration-300 ease-in-out xl:static
         ${isOpen ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0`}
       >
         <div className="flex items-start justify-between border-b border-slate-800 p-6">
@@ -259,6 +277,8 @@ return (
             </div>
           </div>
           <button
+            type="button"
+            aria-label="Close sidebar menu"
             onClick={() => setIsOpen(false)}
             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white xl:hidden"
           >
@@ -278,6 +298,7 @@ return (
               item.type !== "dropdown-shifts" &&
               item.type !== "dropdown-purchase" &&
               item.type !== "dropdown-sales" &&
+              item.type !== "dropdown-reports" &&
               item.type !== "dropdown-warranties" &&
               item.type !== "dropdown-configuration"
             ) {
@@ -341,6 +362,83 @@ return (
                       
                       {/* ඔබට Sales Return වගේ වෙනත් ලින්ක් තියෙනවා නම් මෙතනින් එකතු කරන්න පුළුවන් */}
                       
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            if (item.type === "dropdown-reports") {
+              if (!hasPermission(role, "VIEW_REPORTS") || !canUseFeature("ADVANCED_REPORTS")) return null;
+
+              return (
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
+                  <button
+                    onClick={() => setOpenReports((value) => !value)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                      isReportsRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon size={20} />
+                      <span className="font-medium">{t("Reports")}</span>
+                    </div>
+                    {openReports ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  </button>
+
+                  {openReports && (
+                    <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                      <NavLink
+                        to="/reports"
+                        end
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Basic Reports
+                      </NavLink>
+                      <NavLink
+                        to="/reports/sales"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Sales Reports
+                      </NavLink>
+                      <NavLink
+                        to="/reports/products"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Product Reports
+                      </NavLink>
+                      <NavLink
+                        to="/reports/customers"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Customer Reports
+                      </NavLink>
+                      <NavLink
+                        to="/reports/suppliers"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Supplier Reports
+                      </NavLink>
                     </div>
                   )}
                 </div>
@@ -573,6 +671,20 @@ return (
                           }
                         >
                           {t("Bulk Add Items")}
+                        </NavLink>
+                      )}
+
+                      {hasPermission(role, "MANAGE_ITEMS") && canUseFeature("BULK_ITEMS") && (
+                        <NavLink
+                          to="/items/import-excel"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Excel Import")}
                         </NavLink>
                       )}
 
@@ -844,6 +956,20 @@ return (
                           }
                         >
                           {t("Adjustments")}
+                        </NavLink>
+                      )}
+
+                      {hasPermission(role, "ADJUST_STOCK") && (
+                        <NavLink
+                          to="/stock/processing"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          Processing
                         </NavLink>
                       )}
 

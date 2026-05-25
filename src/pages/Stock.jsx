@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Search, Package, AlertTriangle, Settings2, ArrowRightLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { stockAPI } from "../api/stock.api";
 import { itemsAPI } from "../api/items.api";
@@ -10,6 +10,7 @@ import api from '../api/axios';
 
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
+import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { ADJUSTMENT_TYPES } from "../utils/constants";
 import { ItemType } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
@@ -22,8 +23,8 @@ import Modal from "../components/common/Modal";
 import CustomSelect from "../components/common/CustomSelect";
 import TablePagination from "../components/common/TablePagination";
 
-const isWeightItem = (item) =>
-  item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
+const isMeasuredItem = (item) =>
+  item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
 
 const formatQty = (value) => {
   const numeric = Number(value);
@@ -34,7 +35,7 @@ const formatQty = (value) => {
 };
 
 const getDisplayQty = (entity, fallback = 0) => {
-  if (isWeightItem(entity)) {
+  if (isMeasuredItem(entity)) {
     const rawValue =
       entity?.qty ??
       entity?.totalQuantity ??
@@ -55,7 +56,9 @@ const getDisplayQty = (entity, fallback = 0) => {
 };
 
 const getDisplayUnit = (entity, fallbackUnit = "") =>
-  isWeightItem(entity) ? "KG" : (entity?.displayUnit ?? entity?.defaultUnit ?? fallbackUnit);
+  isMeasuredItem(entity)
+    ? (entity?.itemType === ItemType.VOLUME || entity?.defaultUnit === "L" || entity?.defaultUnit === "ML" ? "L" : "KG")
+    : (entity?.displayUnit ?? entity?.defaultUnit ?? fallbackUnit);
 
 const formatQtyWithUnit = (value, unit) => (unit ? `${formatQty(value)} ${unit}` : formatQty(value));
 
@@ -83,6 +86,17 @@ const weightUnitOptions = [
   { value: "KG", label: "Kilograms (KG)" },
 ];
 
+const volumeUnitOptions = [
+  { value: "ML", label: "Milliliters (ML)" },
+  { value: "L", label: "Liters (L)" },
+];
+
+const getMeasuredUnitOptions = (item) => item?.itemType === ItemType.VOLUME || item?.defaultUnit === "L" || item?.defaultUnit === "ML"
+  ? volumeUnitOptions
+  : weightUnitOptions;
+
+const getMeasuredStep = (unit) => unit === "G" || unit === "ML" ? "1" : "0.1";
+
 const stockStatusOptions = [
   { value: "ALL", label: "All Stock" },
   { value: "REORDER", label: "Reorder Level" },
@@ -92,8 +106,11 @@ const stockStatusOptions = [
 
 const Stock = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { selectedBranchId } = useBranch();
+  const { configuration } = useAppConfiguration();
+  const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
 
   const [stockItems, setStockItems] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -118,6 +135,21 @@ const Stock = () => {
   useEffect(() => {
     setPageInput(String(page + 1));
   }, [page]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const requestedStatus = params.get("status");
+    const validStatus = stockStatusOptions.some((option) => option.value === requestedStatus);
+    setStockStatus(validStatus ? requestedStatus : "ALL");
+    setPage(0);
+  }, [location.search]);
+
+  useEffect(() => {
+    setCategoryId("");
+    setSubCategoryId("");
+    setSubCategories([]);
+    setPage(0);
+  }, [singleCategoryMode]);
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemBatches, setItemBatches] = useState([]);
@@ -149,7 +181,7 @@ const Stock = () => {
       try {
         const [branchRes, categoryRes] = await Promise.all([
           api.get('/branches'),
-          categoriesAPI.getAll(),
+          singleCategoryMode ? categoriesAPI.getSingleCategories() : categoriesAPI.getAll(),
         ]);
         setBranches(branchRes.data || []);
         setCategories(categoryRes.data || []);
@@ -158,10 +190,10 @@ const Stock = () => {
       }
     };
     fetchInitialFilters();
-  }, []);
+  }, [singleCategoryMode]);
 
   useEffect(() => {
-    if (!categoryId) {
+    if (singleCategoryMode || !categoryId) {
       setSubCategories([]);
       setSubCategoryId("");
       return;
@@ -179,7 +211,7 @@ const Stock = () => {
     };
 
     fetchSubCategories();
-  }, [categoryId]);
+  }, [categoryId, singleCategoryMode]);
 
   const fetchStock = async () => {
     setLoading(true);
@@ -188,8 +220,8 @@ const Stock = () => {
       const response = await stockAPI.getByBranch(currentBranchId, {
         search: searchQuery,
         stockStatus,
-        categoryId: categoryId || undefined,
-        subCategoryId: subCategoryId || undefined,
+        categoryId: singleCategoryMode ? undefined : categoryId || undefined,
+        subCategoryId: singleCategoryMode ? categoryId || undefined : subCategoryId || undefined,
         page: page,
         size: pageSize
       });
@@ -201,8 +233,8 @@ const Stock = () => {
       const valueResponse = await stockAPI.getValue(currentBranchId, {
         search: searchQuery,
         stockStatus,
-        categoryId: categoryId || undefined,
-        subCategoryId: subCategoryId || undefined,
+        categoryId: singleCategoryMode ? undefined : categoryId || undefined,
+        subCategoryId: singleCategoryMode ? categoryId || undefined : subCategoryId || undefined,
       });
       setStockValue(Number(valueResponse.data?.stockValue || 0));
     } catch (error) {
@@ -221,8 +253,8 @@ const Stock = () => {
       const currentBranchId = selectedBranchId || 0;
       const baseParams = {
         search: searchQuery,
-        categoryId: categoryId || undefined,
-        subCategoryId: subCategoryId || undefined,
+        categoryId: singleCategoryMode ? undefined : categoryId || undefined,
+        subCategoryId: singleCategoryMode ? categoryId || undefined : subCategoryId || undefined,
         page: 0,
         size: 1,
       };
@@ -248,7 +280,7 @@ const Stock = () => {
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranchId, searchQuery, stockStatus, categoryId, subCategoryId, page]);
+  }, [selectedBranchId, searchQuery, stockStatus, categoryId, subCategoryId, page, singleCategoryMode]);
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
@@ -277,6 +309,7 @@ const Stock = () => {
     setCategoryId("");
     setSubCategoryId("");
     setPage(0);
+    if (location.search) navigate("/stock", { replace: true });
   };
 
   const goToPage = () => {
@@ -304,7 +337,7 @@ const Stock = () => {
       setItemBatches(branchBatches);
       setFormState(prev => ({
         ...prev,
-        qtyUnit: isWeightItem(matchedItem || item) ? (matchedItem?.defaultUnit || item.defaultUnit || "KG") : prev.qtyUnit,
+        qtyUnit: isMeasuredItem(matchedItem || item) ? (matchedItem?.defaultUnit || item.defaultUnit || getDisplayUnit(matchedItem || item)) : prev.qtyUnit,
       }));
 
       if (branchBatches.length === 1) {
@@ -324,7 +357,7 @@ const Stock = () => {
       type: ADJUSTMENT_TYPES.MANUAL,
       direction: getDefaultAdjustmentDirection(ADJUSTMENT_TYPES.MANUAL),
       qty: '',
-      qtyUnit: isWeightItem(item) ? (item.defaultUnit || "KG") : "KG",
+      qtyUnit: isMeasuredItem(item) ? (item.defaultUnit || getDisplayUnit(item)) : "KG",
       reason: '',
     });
     setShowAdjustModal(true);
@@ -339,7 +372,7 @@ const Stock = () => {
     setIsSubmitting(true);
     try {
       const currentBranchId = selectedBranchId || 0;
-      const weightItem = isWeightItem(selectedItem);
+      const weightItem = isMeasuredItem(selectedItem);
 
       await api.post('/stock-adjustments', {
         ...adjustFormData,
@@ -367,7 +400,7 @@ const Stock = () => {
       batchId: '',
       toBranchId: '',
       qty: '',
-      qtyUnit: isWeightItem(item) ? (item.defaultUnit || "KG") : "KG",
+      qtyUnit: isMeasuredItem(item) ? (item.defaultUnit || getDisplayUnit(item)) : "KG",
       notes: '',
     });
     setShowTransferModal(true);
@@ -382,7 +415,7 @@ const Stock = () => {
     setIsSubmitting(true);
     try {
       const currentBranchId = selectedBranchId || 0;
-      const weightItem = isWeightItem(selectedItem);
+      const weightItem = isMeasuredItem(selectedItem);
 
       const payload = {
         fromBranchId: currentBranchId,
@@ -415,7 +448,7 @@ const Stock = () => {
     () => [
       { header: "Barcode", render: (item) => <span>{item.barcode ?? "-"}</span> },
       { header: "Name", render: (item) => <span className="font-medium text-slate-800">{item.itemName ?? "-"}</span> },
-      { header: "Category", render: (item) => <span>{item.categoryName || item.subCategoryName || "-"}</span> },
+      { header: "Category", render: (item) => <span>{singleCategoryMode ? item.subCategoryName || item.categoryName || "-" : item.categoryName || item.subCategoryName || "-"}</span> },
       { header: "Cost", render: (item) => <span>LKR {Number(item.costPrice || 0).toFixed(2)}</span> },
       { header: "Selling", render: (item) => <span>LKR {Number(item.sellingPrice || 0).toFixed(2)}</span> },
       {
@@ -476,7 +509,7 @@ const Stock = () => {
         ),
       },
     ],
-    [selectedBranchId]
+    [selectedBranchId, singleCategoryMode]
   );
 
   const batchOptions = itemBatches.map((batch) => ({
@@ -526,7 +559,16 @@ const Stock = () => {
           </div>
         </Card>
 
-        <Card className="inventory-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "130ms" }}>
+        <Card className="inventory-kpi-card shell-panel shell-panel-hover cursor-pointer" style={{ animationDelay: "130ms" }}>
+          <button
+            type="button"
+            onClick={() => {
+              setStockStatus("REORDER");
+              setPage(0);
+              navigate("/stock?status=REORDER");
+            }}
+            className="w-full text-left"
+          >
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-slate-600 mb-2">Reorder Alerts</h3>
@@ -543,6 +585,7 @@ const Stock = () => {
               <AlertTriangle className="text-amber-600" size={24} />
             </div>
           </div>
+          </button>
         </Card>
 
         <Card className="inventory-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "170ms" }}>
@@ -582,7 +625,8 @@ const Stock = () => {
               placeholder="All Categories"
               buttonClassName="h-[42px]"
             />
-            <CustomSelect
+            {!singleCategoryMode && (
+              <CustomSelect
               value={subCategoryId}
               onChange={handleSubCategoryChange}
               options={subCategoryOptions}
@@ -592,6 +636,7 @@ const Stock = () => {
               disabled={!categoryId}
               buttonClassName="h-[42px]"
             />
+            )}
             <Button
               type="button"
               variant="secondary"
@@ -688,18 +733,18 @@ const Stock = () => {
                   />
                   <input
                     type="number"
-                    step={isWeightItem(selectedItem) ? (adjustFormData.qtyUnit === "G" ? "1" : "0.1") : "1"}
+                    step={isMeasuredItem(selectedItem) ? getMeasuredStep(adjustFormData.qtyUnit) : "1"}
                     value={adjustFormData.qty}
                     onChange={(e) => setAdjustFormData({ ...adjustFormData, qty: e.target.value })}
                     className="flex-1 p-2 border border-slate-300 rounded-lg w-full"
                     placeholder="Enter quantity"
                     required
                   />
-                  {isWeightItem(selectedItem) && (
+                  {isMeasuredItem(selectedItem) && (
                     <CustomSelect
                       value={adjustFormData.qtyUnit}
                       onChange={(value) => setAdjustFormData({ ...adjustFormData, qtyUnit: value })}
-                      options={weightUnitOptions}
+                      options={getMeasuredUnitOptions(selectedItem)}
                       valueKey="value"
                       labelKey="label"
                       className="min-w-[150px]"
@@ -777,18 +822,18 @@ const Stock = () => {
                   <input
                     type="number"
                     min="0.1"
-                    step={isWeightItem(selectedItem) ? (transferFormData.qtyUnit === "G" ? "1" : "0.1") : "1"}
+                    step={isMeasuredItem(selectedItem) ? getMeasuredStep(transferFormData.qtyUnit) : "1"}
                     value={transferFormData.qty}
                     onChange={(e) => setTransferFormData({ ...transferFormData, qty: e.target.value })}
                     className="flex-1 p-2 border border-slate-300 rounded-lg"
                     placeholder="e.g., 5"
                     required
                   />
-                  {isWeightItem(selectedItem) && (
+                  {isMeasuredItem(selectedItem) && (
                     <CustomSelect
                       value={transferFormData.qtyUnit}
                       onChange={(value) => setTransferFormData({ ...transferFormData, qtyUnit: value })}
-                      options={weightUnitOptions}
+                      options={getMeasuredUnitOptions(selectedItem)}
                       valueKey="value"
                       labelKey="label"
                       className="min-w-[150px]"

@@ -14,13 +14,33 @@ import { toast } from "react-hot-toast";
 import { ItemType } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
 
-const isWeightItem = (item) =>
-  item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
+const isMeasuredItem = (item) =>
+  item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
 
 const weightUnitOptions = [
   { value: "G", label: "G" },
   { value: "KG", label: "KG" },
 ];
+
+const volumeUnitOptions = [
+  { value: "ML", label: "ML" },
+  { value: "L", label: "L" },
+];
+
+const getMeasuredUnitOptions = (item) => item?.itemType === ItemType.VOLUME || item?.defaultUnit === "L" || item?.defaultUnit === "ML"
+  ? volumeUnitOptions
+  : weightUnitOptions;
+
+const getPrimaryMeasuredUnit = (item) => item?.itemType === ItemType.VOLUME || item?.defaultUnit === "L" || item?.defaultUnit === "ML" ? "L" : "KG";
+
+const calculateMeasuredLineTotal = (qty, unit, costPrice, measuredItem) => {
+  const normalizedQty = Number(qty || 0);
+  const normalizedCost = Number(costPrice || 0);
+  if (!measuredItem) return normalizedQty * normalizedCost;
+  return (unit === "G" || unit === "ML")
+    ? (normalizedQty / 1000) * normalizedCost
+    : normalizedQty * normalizedCost;
+};
 
 const paymentMethodOptions = [
   { value: "CASH", label: "Cash" },
@@ -64,11 +84,11 @@ const PurchaseFormPage = () => {
   const [cartItems, setCartItems] = useState([]);
 
   const formatStockQty = (item) => {
-    if (isWeightItem(item)) {
+    if (isMeasuredItem(item)) {
       const rawQty = item.batches && item.batches.length > 0
         ? item.batches.reduce((sum, batch) => sum + Number(batch.qty || 0), 0)
         : Number(item.availableBaseQty ?? item.availableQty ?? 0);
-      return `${(rawQty / 1000).toFixed(3).replace(/\.?0+$/, "")} KG`;
+      return `${(rawQty / 1000).toFixed(3).replace(/\.?0+$/, "")} ${getPrimaryMeasuredUnit(item)}`;
     }
 
     const totalStock = item.batches && item.batches.length > 0
@@ -255,7 +275,7 @@ const PurchaseFormPage = () => {
     const newRows = [];
 
     Object.entries(branchInputs).forEach(([branchIdStr, data]) => {
-      const weightItem = isWeightItem(selectedItem);
+      const weightItem = isMeasuredItem(selectedItem);
       const qty = weightItem ? parseFloat(data.qty) : Number(data.qty);
 
       if (qty > 0) {
@@ -274,7 +294,7 @@ const PurchaseFormPage = () => {
           costPrice: Number(data.cost),
           sellingPrice: Number(data.sell),
           expiryDate: data.expiry || null,
-          lineTotal: qty * Number(data.cost)
+          lineTotal: calculateMeasuredLineTotal(qty, data.qtyUnit, data.cost, weightItem)
         });
       }
     });
@@ -534,7 +554,7 @@ const PurchaseFormPage = () => {
                           <th className="w-[120px] px-2 py-2 text-right">Cost</th>
                           <th className="w-[120px] px-2 py-2 text-right">Sell</th>
                           <th className="w-[110px] px-2 py-2 text-center">Qty</th>
-                          {isWeightItem(selectedItem) && <th className="w-[92px] px-2 py-2 text-center">Unit</th>}
+                          {isMeasuredItem(selectedItem) && <th className="w-[92px] px-2 py-2 text-center">Unit</th>}
                           <th className="w-[160px] px-2 py-2 text-center">Expiry</th>
                           <th className="w-[42px] px-2 py-2 text-center"></th>
                         </tr>
@@ -542,7 +562,7 @@ const PurchaseFormPage = () => {
                       <tbody className="divide-y divide-slate-100 bg-white">
                         {branches.map((branch, idx) => {
                           const inputs = branchInputs[branch.id] || {};
-                          const weightItem = isWeightItem(selectedItem);
+                          const weightItem = isMeasuredItem(selectedItem);
                           return (
                             <tr key={branch.id} className="hover:bg-slate-50">
                               <td className="px-3 py-2">
@@ -587,7 +607,7 @@ const PurchaseFormPage = () => {
                                   <CustomSelect
                                     value={inputs.qtyUnit || selectedItem.defaultUnit}
                                     onChange={(value) => handleInputChange(branch.id, 'qtyUnit', value)}
-                                    options={weightUnitOptions}
+                                    options={getMeasuredUnitOptions(selectedItem)}
                                     valueKey="value"
                                     labelKey="label"
                                     buttonClassName="h-9 px-2 py-1 text-xs shadow-none"

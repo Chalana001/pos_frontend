@@ -5,6 +5,7 @@ import { Building2, ChefHat, FileText, Save, Scale, Settings2, ShieldCheck, Tabl
 
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
+import CustomSelect from '../components/common/CustomSelect';
 import { useAppConfiguration } from '../context/AppConfigurationContext';
 import { useAuth } from '../context/AuthContext';
 import { getConfigurableFeatureAvailability, hasPlanFeature } from '../utils/subscriptionFeatures';
@@ -121,6 +122,37 @@ const AppConfigurationPage = () => {
     }
   };
 
+  const categoryModeOptions = [
+    {
+      value: 'MAIN_AND_SUB',
+      label: 'Main + Sub',
+      description: 'Use parent categories with separate sub categories for each item.',
+    },
+    {
+      value: 'SINGLE_CATEGORY',
+      label: 'Single Category',
+      description: 'Show one category selector. Categories are stored under a default parent.',
+    },
+  ];
+
+  const stockOverrideModeOptions = [
+    {
+      value: 'MANAGER_OVERRIDE',
+      label: 'Manager Override',
+      description: 'Warn on shortage and continue only after manager/admin confirmation.',
+    },
+    {
+      value: 'BLOCK',
+      label: 'Block Shortages',
+      description: 'Stop checkout when normal stock or recipe ingredients are insufficient.',
+    },
+    {
+      value: 'ALWAYS_ALLOW',
+      label: 'Always Allow',
+      description: 'Allow negative stock without an extra checkout confirmation.',
+    },
+  ];
+
   return (
     <div className="page-enter space-y-6 pb-10">
       <div className="page-section-enter flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between" style={{ animationDelay: '40ms' }}>
@@ -143,6 +175,40 @@ const AppConfigurationPage = () => {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,420px)]">
         <Card className="admin-panel-card" title="Feature Visibility" style={{ animationDelay: '90ms' }}>
+          <div className="mb-5 border-b border-slate-100 pb-5">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_260px] md:items-center">
+              <div>
+                <div className="font-semibold text-slate-800">Category Structure</div>
+                <div className="mt-1 text-xs leading-5 text-slate-500">Select how item categories appear across item, stock, and POS screens.</div>
+              </div>
+              <CustomSelect
+                value={form.categoryMode || 'MAIN_AND_SUB'}
+                onChange={(value) => updateField('categoryMode', value)}
+                options={categoryModeOptions}
+                valueKey="value"
+                labelKey="label"
+                buttonClassName="h-11 rounded-xl"
+                placeholder="Select category structure"
+              />
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_260px] md:items-center">
+              <div>
+                <div className="font-semibold text-slate-800">Stock Shortage Handling</div>
+                <div className="mt-1 text-xs leading-5 text-slate-500">Control whether POS can continue when item stock or recipe ingredients are short.</div>
+              </div>
+              <CustomSelect
+                value={form.stockOverrideMode || 'MANAGER_OVERRIDE'}
+                onChange={(value) => updateField('stockOverrideMode', value)}
+                options={stockOverrideModeOptions}
+                valueKey="value"
+                labelKey="label"
+                buttonClassName="h-11 rounded-xl"
+                placeholder="Select stock handling"
+              />
+            </div>
+          </div>
+
           <div className="grid gap-3 md:grid-cols-2">
             {featureDefinitions.filter((feature) => featureAvailability[feature.key]).map((feature) => {
               const Icon = feature.icon;

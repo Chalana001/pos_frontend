@@ -42,11 +42,11 @@ const calculateItemTotal = (item) => {
 
   const qty = Number(item?.qty || 0);
   const unitPrice = Number(item?.unitPrice || 0);
-  const perGramPrice = Number(item?.perGramPrice);
+  const perSmallUnitPrice = Number(item?.perSmallUnitPrice ?? item?.perGramPrice);
   const qtyUnit = String(item?.qtyUnit || '').toUpperCase();
 
-  let itemTotal = qtyUnit === 'G' && Number.isFinite(perGramPrice)
-    ? qty * perGramPrice
+  let itemTotal = (qtyUnit === 'G' || qtyUnit === 'ML') && Number.isFinite(perSmallUnitPrice)
+    ? qty * perSmallUnitPrice
     : qty * unitPrice;
 
   if (item?.discountType === 'FIXED') {

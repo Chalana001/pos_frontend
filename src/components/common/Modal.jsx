@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
@@ -27,8 +28,8 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     xl: 'max-w-6xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div 
           className="modal-overlay-enter fixed inset-0 bg-black bg-opacity-50 transition-opacity"
@@ -51,7 +52,8 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

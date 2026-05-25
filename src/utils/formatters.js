@@ -63,6 +63,20 @@ export const formatQuantityWithUnit = (qty, qtyUnit) => {
     return `${formatNumericQty(numericQty)} G`;
   }
 
+  if (normalizedUnit === 'L') {
+    if (numericQty < 1) {
+      return `${formatNumericQty(numericQty * 1000)} ML`;
+    }
+    return `${formatNumericQty(numericQty)} L`;
+  }
+
+  if (normalizedUnit === 'ML') {
+    if (numericQty >= 1000) {
+      return `${formatNumericQty(numericQty / 1000)} L`;
+    }
+    return `${formatNumericQty(numericQty)} ML`;
+  }
+
   if (normalizedUnit === 'PCS') {
     return `${formatNumericQty(numericQty)} PCS`;
   }

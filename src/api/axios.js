@@ -3,6 +3,41 @@ import toast from 'react-hot-toast';
 import { getToken, clearAuth, notifyAuthExpired } from '../utils/auth';
 
 let isHandlingUnauthorized = false;
+const BACKEND_CONNECTION_ERROR_MESSAGE = 'Backend connection failed. Please check whether the server is running.';
+const TOAST_DEDUPE_MS = 3000;
+const recentErrorToasts = new Map();
+const originalToastError = toast.error.bind(toast);
+let lastBackendConnectionErrorAt = 0;
+
+toast.error = (message, options = {}) => {
+  const normalizedMessage = typeof message === 'string' ? message : String(message || 'Something went wrong!');
+  const dedupeKey = options.id || normalizedMessage;
+  const now = Date.now();
+
+  if (
+    lastBackendConnectionErrorAt &&
+    now - lastBackendConnectionErrorAt < TOAST_DEDUPE_MS &&
+    normalizedMessage !== BACKEND_CONNECTION_ERROR_MESSAGE
+  ) {
+    return dedupeKey;
+  }
+
+  if (normalizedMessage === BACKEND_CONNECTION_ERROR_MESSAGE || options.id === 'backend-connection-error') {
+    lastBackendConnectionErrorAt = now;
+  }
+
+  const lastShownAt = recentErrorToasts.get(dedupeKey) || 0;
+
+  if (now - lastShownAt < TOAST_DEDUPE_MS) {
+    return dedupeKey;
+  }
+
+  recentErrorToasts.set(dedupeKey, now);
+  return originalToastError(normalizedMessage, {
+    ...options,
+    id: options.id || dedupeKey,
+  });
+};
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -34,7 +69,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (!error.response) {
-      toast.error('Network Error! Please check your connection or server.');
+      error.isBackendConnectionError = true;
+      error.response = {
+        status: 0,
+        data: {
+          message: BACKEND_CONNECTION_ERROR_MESSAGE,
+        },
+      };
+      toast.error(BACKEND_CONNECTION_ERROR_MESSAGE, { id: 'backend-connection-error' });
       return Promise.reject(error);
     }
 

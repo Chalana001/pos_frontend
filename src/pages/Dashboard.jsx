@@ -189,7 +189,7 @@ const Dashboard = () => {
     { title: "Total Orders", value: kpis?.todayOrders || 0, type: "number", icon: ShoppingCart, color: "bg-purple-500" },
     { title: "Expenses", value: kpis?.todayExpenses || 0, type: "currency", icon: TrendingDown, color: "bg-red-500" },
     { title: "Cash Drops", value: kpis?.todayCashDrops || 0, type: "currency", icon: Package, color: "bg-indigo-500" },
-    { title: "Low Stock Items", value: kpis?.lowStockCount || 0, type: "number", icon: AlertTriangle, color: "bg-yellow-500" },
+    { title: "Low Stock Items", value: kpis?.lowStockCount || 0, type: "number", icon: AlertTriangle, color: "bg-yellow-500", path: "/stock?status=REORDER" },
     { title: "Credit Due", value: kpis?.totalDue || 0, type: "currency", icon: Users, color: "bg-pink-500" },
   ];
 
@@ -214,6 +214,11 @@ const Dashboard = () => {
               style={{ animationDelay: `${120 + index * 70}ms` }}
             >
               <Card className="dashboard-premium-card dashboard-soft-glow shell-panel-hover">
+                <button
+                  type="button"
+                  onClick={() => stat.path && navigate(stat.path)}
+                  className={`w-full text-left ${stat.path ? "cursor-pointer" : "cursor-default"}`}
+                >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-600 mb-1">{stat.title}</p>
@@ -229,6 +234,7 @@ const Dashboard = () => {
                     <Icon className="text-white" size={24} />
                   </div>
                 </div>
+                </button>
               </Card>
             </div>
           );

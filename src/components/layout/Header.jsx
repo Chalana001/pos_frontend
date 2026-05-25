@@ -240,7 +240,7 @@ const Header = () => {
       message: `${lowStockCount} items low stock`,
       icon: PackageX,
       tone: 'amber',
-      action: () => navigate('/stock'),
+      action: () => navigate('/stock?status=REORDER'),
     },
     hasShiftAlert && {
       id: 'shift-alert',

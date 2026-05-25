@@ -4,6 +4,7 @@ import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw } 
 import { useKeyboard } from "../hooks/useKeyboard";
 import { itemsAPI } from "../api/items.api";
 import { ordersAPI } from "../api/orders.api";
+import { promotionsAPI } from "../api/promotions.api";
 import { shiftsAPI } from "../api/shifts.api";
 import { diningTablesAPI } from "../api/diningTables.api";
 import { pendingOrdersAPI } from "../api/pendingOrders.api";
@@ -35,10 +36,27 @@ import {
   getFreeLocalSalesSummary,
 } from "../offline/db";
 
-const GRAMS_PER_KILOGRAM = 1000;
+const SMALL_UNITS_PER_PRIMARY_UNIT = 1000;
 
-const isWeightItem = (item) =>
-  item?.itemType === ItemType.WEIGHT || item?.weightItem === true;
+const isMeasuredItem = (item) =>
+  item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
+
+const isBaseScaledStockItem = (item) =>
+  item?.itemType === ItemType.NORMAL || item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
+
+const getPrimaryMeasuredUnit = (itemOrUnit) => {
+  const unit = typeof itemOrUnit === "string" ? itemOrUnit : itemOrUnit?.defaultUnit;
+  return String(unit || "").toUpperCase() === "ML" || String(unit || "").toUpperCase() === "L" ? "L" : "KG";
+};
+
+const getSmallMeasuredUnit = (itemOrUnit) => (getPrimaryMeasuredUnit(itemOrUnit) === "L" ? "ML" : "G");
+
+const getMeasuredUnitOptions = (item) => {
+  const primaryUnit = getPrimaryMeasuredUnit(item);
+  return primaryUnit === "L"
+    ? [{ value: "L", label: "L" }, { value: "ML", label: "ML" }]
+    : [{ value: "KG", label: "KG" }, { value: "G", label: "G" }];
+};
 
 const isUnlimitedStockItem = (item) =>
   item?.itemType === ItemType.SERVICE || item?.stockUnmanaged === true;
@@ -46,38 +64,44 @@ const isUnlimitedStockItem = (item) =>
 const isBatchlessItem = (item) =>
   item?.itemType === ItemType.SERVICE || item?.itemType === ItemType.RECIPE;
 
-const toBaseQuantity = (quantity, unit, weightItem = false) => {
+const toBaseQuantity = (quantity, unit, measuredItem = false) => {
   const numeric = Number(quantity);
   if (!Number.isFinite(numeric)) {
     return 0;
   }
-  if (!weightItem) {
+  if (!measuredItem) {
     return numeric;
   }
-  return unit === "KG" ? numeric * GRAMS_PER_KILOGRAM : numeric;
+  const normalizedUnit = String(unit || "").toUpperCase();
+  return normalizedUnit === "KG" || normalizedUnit === "L" || normalizedUnit === "PCS"
+    ? numeric * SMALL_UNITS_PER_PRIMARY_UNIT
+    : numeric;
 };
 
-const fromBaseQuantity = (baseQuantity, unit, weightItem = false) => {
+const fromBaseQuantity = (baseQuantity, unit, measuredItem = false) => {
   const numeric = Number(baseQuantity);
   if (!Number.isFinite(numeric)) {
     return 0;
   }
-  if (!weightItem) {
+  if (!measuredItem) {
     return numeric;
   }
-  return unit === "KG" ? numeric / GRAMS_PER_KILOGRAM : numeric;
+  const normalizedUnit = String(unit || "").toUpperCase();
+  return normalizedUnit === "KG" || normalizedUnit === "L" || normalizedUnit === "PCS"
+    ? numeric / SMALL_UNITS_PER_PRIMARY_UNIT
+    : numeric;
 };
 
-const getWeightStep = (unit) => (unit === "G" ? 100 : 0.1);
+const getMeasuredStep = (unit) => (String(unit || "").toUpperCase() === "G" || String(unit || "").toUpperCase() === "ML" ? 100 : 0.1);
 
-const getInitialWeightQuantity = (unit) => (unit === "G" ? 100 : 1);
+const getInitialMeasuredQuantity = (unit) => (String(unit || "").toUpperCase() === "G" || String(unit || "").toUpperCase() === "ML" ? 100 : 1);
 
-const getPerGramPrice = (configuredPrice, weightItem = false) => {
+const getPerSmallUnitPrice = (configuredPrice, measuredItem = false) => {
   const numeric = Number(configuredPrice);
   if (!Number.isFinite(numeric)) {
     return 0;
   }
-  return weightItem ? numeric / GRAMS_PER_KILOGRAM : numeric;
+  return measuredItem ? numeric / SMALL_UNITS_PER_PRIMARY_UNIT : numeric;
 };
 
 const formatQty = (value) => {
@@ -89,7 +113,20 @@ const formatQty = (value) => {
 };
 
 const getStockDisplayQty = (item, batch = null) => {
-  if (!isWeightItem(item)) {
+  if (item?.itemType === ItemType.NORMAL) {
+    if (batch) {
+      const displayQty = Number(batch.displayQty);
+      if (Number.isFinite(displayQty)) return displayQty;
+      const rawQty = Number(batch.qty ?? 0);
+      return Number.isFinite(rawQty) ? rawQty / SMALL_UNITS_PER_PRIMARY_UNIT : 0;
+    }
+    const displayQty = Number(item.availableQty);
+    if (Number.isFinite(displayQty)) return displayQty;
+    const rawQty = Number(item.availableBaseQty ?? 0);
+    return Number.isFinite(rawQty) ? rawQty / SMALL_UNITS_PER_PRIMARY_UNIT : 0;
+  }
+
+  if (!isMeasuredItem(item)) {
     const rawQty = batch ? batch.qty : item.availableQty;
     const numeric = Number(rawQty);
     return Number.isFinite(numeric) ? numeric : 0;
@@ -99,10 +136,10 @@ const getStockDisplayQty = (item, batch = null) => {
     ? batch.qty
     : (item.availableBaseQty ?? item.availableQty ?? 0);
   const numeric = Number(rawBaseQty);
-  return Number.isFinite(numeric) ? numeric / GRAMS_PER_KILOGRAM : 0;
+  return Number.isFinite(numeric) ? numeric / SMALL_UNITS_PER_PRIMARY_UNIT : 0;
 };
 
-const getStockDisplayUnit = (item) => (isWeightItem(item) ? "KG" : (item.defaultUnit || "PCS"));
+const getStockDisplayUnit = (item) => (isMeasuredItem(item) ? getPrimaryMeasuredUnit(item) : (item.defaultUnit || "PCS"));
 
 const formatStockDisplay = (item, batch = null) =>
   `${formatQty(getStockDisplayQty(item, batch))} ${getStockDisplayUnit(item)}`;
@@ -112,6 +149,27 @@ const buildOfflineInvoiceNo = (clientSaleId) =>
 
 const getApiErrorMessage = (error, fallback = "Failed") =>
   error?.response?.data?.message || error?.response?.data?.detail || fallback;
+
+const isStockOverrideRequiredError = (error) =>
+  error?.response?.data?.code === "STOCK_OVERRIDE_REQUIRED";
+
+const formatStockOverrideConfirmation = (error) => {
+  const shortages = Array.isArray(error?.response?.data?.shortages) ? error.response.data.shortages : [];
+  const lines = shortages.map((shortage) => {
+    const itemLabel = shortage.itemName && shortage.stockItemName && shortage.itemName !== shortage.stockItemName
+      ? `${shortage.itemName} / ${shortage.stockItemName}`
+      : (shortage.stockItemName || shortage.itemName || "Item");
+    const unit = shortage.unit || "PCS";
+    return `${itemLabel}: need ${shortage.requiredQuantity} ${unit}, available ${shortage.availableQuantity} ${unit}`;
+  });
+
+  return [
+    "Stock is insufficient for this sale.",
+    ...lines,
+    "",
+    "Continue and allow negative stock?",
+  ].join("\n");
+};
 
 const CART_MODES = {
   ONLINE: "ONLINE",
@@ -125,6 +183,7 @@ const POS = () => {
   const { user, isOnline, hasOnlineSession, isOfflineSession } = useAuth();
   const { selectedBranchId, branches } = useBranch();
   const { configuration } = useAppConfiguration();
+  const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
   const printRef = useRef(null);
   const invoicePrintRef = useRef(null);
   const kotPrintRef = useRef(null);
@@ -142,17 +201,17 @@ const POS = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [categories, setCategories] = useState(["All"]);
-
-  const [showCustomerSelect, setShowCustomerSelect] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [selectedBatchItem, setSelectedBatchItem] = useState(null);
 
+  const [showCustomerSelect, setShowCustomerSelect] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const [customer, setCustomer] = useState(null);
   const [orderType, setOrderType] = useState(ORDER_TYPES.CASH);
   const [saleMode, setSaleMode] = useState(SALE_MODES.TAKEAWAY);
   const [cartMode, setCartMode] = useState(null);
   const [billDiscount, setBillDiscount] = useState(0);
+  const [billPromotionPreview, setBillPromotionPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -196,6 +255,8 @@ const POS = () => {
   const shouldUseServerForCheckout = activeCartMode
     ? activeCartMode === CART_MODES.ONLINE && canUseServer && !isFreeLocalSalesPlan
     : canUseServer && !isFreeLocalSalesPlan;
+  const stockOverrideCanProceed =
+    shouldUseServerForCheckout && configuration?.stockOverrideMode !== "BLOCK";
   const fallbackBranchId = isAdminUser ? (selectedBranchId || null) : (user?.branchId || null);
   const effectiveBranchId = myShift?.branchId || fallbackBranchId;
   const effectiveBranch = branches.find((branch) => Number(branch.id) === Number(effectiveBranchId)) || null;
@@ -218,7 +279,7 @@ const POS = () => {
   );
 
   const isConfiguredItemTypeVisible = (item) => {
-    if (item.itemType === ItemType.WEIGHT) {
+    if (item.itemType === ItemType.WEIGHT || item.itemType === ItemType.VOLUME) {
       return featureAvailability.weightItemsEnabled && configuration.weightItemsEnabled;
     }
     if (item.itemType === ItemType.SERVICE) {
@@ -229,6 +290,9 @@ const POS = () => {
     }
     return true;
   };
+
+  const getItemCategoryName = (item) =>
+    singleCategoryMode ? item.subCategoryName || item.categoryName : item.categoryName;
 
   const currentSessionKey = saleMode === SALE_MODES.DINE_IN && selectedTable
     ? `DINE_IN_TABLE_${selectedTable.id}`
@@ -464,31 +528,58 @@ const POS = () => {
     if (!Number.isFinite(qty) || qty <= 0) return 0;
 
     const unitPrice = Number(item?.unitPrice || 0);
-    const perGramPrice = Number(item?.perGramPrice || 0);
+    const perSmallUnitPrice = Number(item?.perSmallUnitPrice ?? item?.perGramPrice ?? 0);
 
-    if (item?.weightItem && item?.qtyUnit === "G") {
-      return qty * (Number.isFinite(perGramPrice) ? perGramPrice : 0);
+    if (item?.weightItem && (item?.qtyUnit === "G" || item?.qtyUnit === "ML")) {
+      return qty * (Number.isFinite(perSmallUnitPrice) ? perSmallUnitPrice : 0);
     }
 
     return qty * (Number.isFinite(unitPrice) ? unitPrice : 0);
   };
 
+  const getEffectiveDiscountType = (item) =>
+    item?.effectiveDiscountType || item?.discountType || DISCOUNT_TYPES.NONE;
+
+  const getEffectiveDiscountValue = (item) => {
+    const value = item?.effectiveDiscountValue ?? item?.discountValue ?? 0;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+  };
+
+  const calculateCartItemTotal = (item) => {
+    const previewLineTotal = Number(item?.effectiveLineTotal);
+    if (Number.isFinite(previewLineTotal) && previewLineTotal >= 0) {
+      return previewLineTotal;
+    }
+
+    let itemTotal = calculateItemBaseTotal(item);
+    const discountType = getEffectiveDiscountType(item);
+    const discountValue = getEffectiveDiscountValue(item);
+
+    if (discountType === DISCOUNT_TYPES.FIXED) {
+      itemTotal -= discountValue;
+    } else if (discountType === DISCOUNT_TYPES.PERCENT) {
+      itemTotal -= (itemTotal * discountValue) / 100;
+    }
+
+    return Math.max(0, Number.isFinite(itemTotal) ? itemTotal : 0);
+  };
+
+  const getEffectiveBillDiscount = (baseTotal) => {
+    const previewDiscount = Number(billPromotionPreview?.appliedBillDiscountAmount);
+    const discount = Number.isFinite(previewDiscount)
+      ? previewDiscount
+      : toNonNegativeNumber(billDiscount);
+    return Math.max(0, Math.min(Number(baseTotal) || 0, discount));
+  };
+
   const calculateTotal = () => {
     let total = 0;
     cartItems.forEach((item) => {
-      let itemTotal = calculateItemBaseTotal(item);
-      const discountValue = Number(item?.discountValue || 0);
-
-      if (item.discountType === DISCOUNT_TYPES.FIXED) {
-        itemTotal -= discountValue;
-      } else if (item.discountType === DISCOUNT_TYPES.PERCENT) {
-        itemTotal -= (itemTotal * discountValue) / 100;
-      }
-
-      total += Math.max(0, Number.isFinite(itemTotal) ? itemTotal : 0);
+      total += calculateCartItemTotal(item);
     });
 
-    const normalizedBillDiscount = toNonNegativeNumber(billDiscount);
+    const normalizedBillDiscount = getEffectiveBillDiscount(total);
     return roundToRupee(total - normalizedBillDiscount);
   };
 
@@ -537,10 +628,10 @@ const POS = () => {
     return "";
   };
 
-  const getCartLineKey = (item) => `${item.itemId}-${item.batchId ?? "NA"}`;
+  const getCartLineKey = (item) => `${item.itemId}-${item.batchId || "AUTO"}`;
 
   const getComparableQty = (item) =>
-    isWeightItem(item)
+    isMeasuredItem(item)
       ? toBaseQuantity(item.qty, item.qtyUnit || item.defaultUnit, true)
       : Number(item.qty || 0);
 
@@ -605,7 +696,7 @@ const POS = () => {
 
   const mapPendingItemToCartItem = (pendingItem) => {
     const sourceItem = allItems.find((item) => Number(item.id) === Number(pendingItem.itemId));
-    const weightItem = isWeightItem(sourceItem || pendingItem);
+    const weightItem = isMeasuredItem(sourceItem || pendingItem);
     const qtyUnit = pendingItem.qtyUnit || sourceItem?.defaultUnit || "PCS";
     const unitPrice = Number(pendingItem.unitPrice || 0);
 
@@ -615,7 +706,8 @@ const POS = () => {
       name: pendingItem.itemName,
       barcode: pendingItem.barcode || sourceItem?.barcode,
       unitPrice,
-      perGramPrice: getPerGramPrice(unitPrice, weightItem),
+      perSmallUnitPrice: getPerSmallUnitPrice(unitPrice, weightItem),
+      perGramPrice: getPerSmallUnitPrice(unitPrice, weightItem),
       qty: Number(pendingItem.qty || 0),
       qtyUnit,
       weightItem,
@@ -826,7 +918,7 @@ const POS = () => {
       setAllItems(items);
       setFilteredItems(items);
 
-      const uniqueCats = ["All", ...new Set(items.map((item) => item.categoryName).filter(Boolean))];
+      const uniqueCats = ["All", ...new Set(items.map((item) => getItemCategoryName(item)).filter(Boolean))];
       setCategories(uniqueCats);
     } catch (error) {
       console.error(error);
@@ -840,7 +932,7 @@ const POS = () => {
           }));
         setAllItems(localItems);
         setFilteredItems(localItems);
-        setCategories(["All", ...new Set(localItems.map((item) => item.categoryName).filter(Boolean))]);
+        setCategories(["All", ...new Set(localItems.map((item) => getItemCategoryName(item)).filter(Boolean))]);
         toast.error("Live refresh failed. Using cached items.");
       } else {
         setAllItems([]);
@@ -854,7 +946,7 @@ const POS = () => {
   useEffect(() => {
     let result = allItems;
     if (activeCategory !== "All") {
-      result = result.filter((item) => item.categoryName === activeCategory);
+      result = result.filter((item) => getItemCategoryName(item) === activeCategory);
     }
     if (searchQuery.trim()) {
       const lowerQuery = searchQuery.toLowerCase();
@@ -864,7 +956,7 @@ const POS = () => {
       );
     }
     setFilteredItems(result);
-  }, [activeCategory, searchQuery, allItems]);
+  }, [activeCategory, searchQuery, allItems, singleCategoryMode]);
 
   const addToCart = (item) => {
     if (!canSell) {
@@ -872,25 +964,20 @@ const POS = () => {
       return;
     }
 
-    if (isBatchlessItem(item)) {
-      processAddToCart(item, item.sellingPrice || 0, 1, null);
-      return;
-    }
-
-    if (item.batches && item.batches.length > 1) {
+    const itemBatches = Array.isArray(item?.batches) ? item.batches.filter((batch) => Number(batch?.qty || 0) > 0) : [];
+    if (!isBatchlessItem(item) && itemBatches.length > 1) {
       setSelectedBatchItem(item);
       setShowBatchModal(true);
       return;
     }
 
-    const targetBatch = item.batches && item.batches.length > 0 ? item.batches[0] : null;
-    processAddToCart(item, targetBatch ? targetBatch.price : item.sellingPrice, 1, targetBatch);
-  };
+    if (!isBatchlessItem(item) && itemBatches.length === 1) {
+      const batch = itemBatches[0];
+      processAddToCart(item, batch.price ?? item.sellingPrice ?? 0, 1, batch);
+      return;
+    }
 
-  const handleBatchSelect = (batch) => {
-    processAddToCart(selectedBatchItem, batch.price, 1, batch);
-    setShowBatchModal(false);
-    setSelectedBatchItem(null);
+    processAddToCart(item, item.sellingPrice || 0, 1, null);
   };
 
   const processAddToCart = (item, price, qty, batchData = null) => {
@@ -899,46 +986,51 @@ const POS = () => {
     }
 
     const unlimitedStockItem = isUnlimitedStockItem(item);
-    const isWeight = isWeightItem(item);
-    const batchId = batchData ? batchData.batchId : (item.batches?.[0]?.batchId || null);
+    const isWeight = isMeasuredItem(item);
+    const baseScaledStockItem = isBaseScaledStockItem(item);
+    const batchId = isBatchlessItem(item) ? null : (batchData ? batchData.batchId : null);
 
     const defaultUnit = item.defaultUnit || "PCS";
-    const qtyToAdd = isWeight ? getInitialWeightQuantity(defaultUnit) : qty;
+    const qtyToAdd = isWeight ? getInitialMeasuredQuantity(defaultUnit) : qty;
     const stockBaseQty = getSellableStockBaseQty(item, batchData);
-    const requestedBaseQty = isWeight ? toBaseQuantity(qtyToAdd, defaultUnit, true) : qtyToAdd;
+    const requestedBaseQty = baseScaledStockItem ? toBaseQuantity(qtyToAdd, defaultUnit, true) : qtyToAdd;
 
-    if (!unlimitedStockItem && stockBaseQty < requestedBaseQty) {
+    if (!unlimitedStockItem && stockBaseQty < requestedBaseQty && !stockOverrideCanProceed) {
       toast.error(item.itemType === ItemType.RECIPE ? "Item is Out of Stock!" : `Insufficient stock! Available: ${formatStockDisplay(item, batchData)}`);
       if (searchInputRef.current) searchInputRef.current.focus();
       return;
+    } else if (!unlimitedStockItem && stockBaseQty < requestedBaseQty) {
+      toast.error(item.itemType === ItemType.RECIPE ? "Recipe ingredient stock is low. Override will be required at checkout." : `Low stock. Override will be required at checkout. Available: ${formatStockDisplay(item, batchData)}`);
     }
 
     const existingIndex = cartItems.findIndex(
-      (cartItem) => String(cartItem.itemId) === String(item.id) && String(cartItem.batchId) === String(batchId)
+      (cartItem) => String(cartItem.itemId) === String(item.id) && String(cartItem.batchId || "AUTO") === String(batchId || "AUTO")
     );
 
     if (existingIndex !== -1) {
       const newItems = [...cartItems];
       const currentItem = newItems[existingIndex];
       const incrementQty = isWeight
-        ? getWeightStep(currentItem.qtyUnit || currentItem.defaultUnit)
+        ? getMeasuredStep(currentItem.qtyUnit || currentItem.defaultUnit)
         : qty;
       const nextQty = currentItem.qty + incrementQty;
-      const nextBaseQty = isWeight
+      const nextBaseQty = isBaseScaledStockItem(currentItem)
         ? toBaseQuantity(nextQty, currentItem.qtyUnit || currentItem.defaultUnit, true)
         : nextQty;
 
-      if (!unlimitedStockItem && nextBaseQty > currentItem.stockBaseQty) {
+      if (!unlimitedStockItem && nextBaseQty > currentItem.stockBaseQty && !stockOverrideCanProceed) {
         toast.error(item.itemType === ItemType.RECIPE ? "Low stock." : `Low stock. Available: ${formatStockDisplay(item, batchData)}`);
         if (searchInputRef.current) searchInputRef.current.focus();
         return;
+      } else if (!unlimitedStockItem && nextBaseQty > currentItem.stockBaseQty) {
+        toast.error(item.itemType === ItemType.RECIPE ? "Recipe ingredient stock is low. Override will be required at checkout." : `Low stock. Override will be required at checkout. Available: ${formatStockDisplay(item, batchData)}`);
       }
 
       newItems[existingIndex] = { ...newItems[existingIndex], qty: nextQty };
       setCartItems(newItems);
     } else {
       const unitPrice = Number(price);
-      const gramPrice = getPerGramPrice(unitPrice, isWeight);
+      const smallUnitPrice = getPerSmallUnitPrice(unitPrice, isWeight);
 
       setCartItems((prev) => [
         ...prev,
@@ -948,7 +1040,8 @@ const POS = () => {
           name: item.name,
           barcode: item.barcode,
           unitPrice,
-          perGramPrice: gramPrice,
+          perSmallUnitPrice: smallUnitPrice,
+          perGramPrice: smallUnitPrice,
           qty: qtyToAdd,
           qtyUnit: defaultUnit,
           weightItem: isWeight,
@@ -1008,9 +1101,9 @@ const POS = () => {
     const unlimitedStockItem = isUnlimitedStockItem(item);
 
     let finalQty = newQty;
-    if (item.weightItem && item.qtyUnit === "KG") {
+    if (item.weightItem && (item.qtyUnit === "KG" || item.qtyUnit === "L")) {
       finalQty = Math.round(newQty * 1000) / 1000;
-    } else if (item.weightItem && item.qtyUnit === "G") {
+    } else if (item.weightItem && (item.qtyUnit === "G" || item.qtyUnit === "ML")) {
       finalQty = Math.round(newQty);
     } else {
       finalQty = Math.round(newQty);
@@ -1042,7 +1135,8 @@ const POS = () => {
     const nextUnitPrice = toNonNegativeNumber(newPrice);
     newItems[index].unitPrice = nextUnitPrice;
     if (newItems[index].weightItem) {
-      newItems[index].perGramPrice = getPerGramPrice(nextUnitPrice, true);
+      newItems[index].perSmallUnitPrice = getPerSmallUnitPrice(nextUnitPrice, true);
+      newItems[index].perGramPrice = getPerSmallUnitPrice(nextUnitPrice, true);
     }
     setCartItems(newItems);
   };
@@ -1066,7 +1160,7 @@ const POS = () => {
     const item = newItems[index];
 
     item.qtyUnit = unit;
-    item.qty = getInitialWeightQuantity(unit);
+    item.qty = getInitialMeasuredQuantity(unit);
     setCartItems(newItems);
   };
 
@@ -1106,6 +1200,13 @@ const POS = () => {
     const newItems = [...cartItems];
     newItems[index].discountType = type;
     newItems[index].discountValue = toNonNegativeNumber(value);
+    newItems[index].effectiveDiscountType = undefined;
+    newItems[index].effectiveDiscountValue = undefined;
+    newItems[index].promotionId = null;
+    newItems[index].promotionName = "";
+    newItems[index].promotionDiscountAmount = 0;
+    newItems[index].promotionApplied = false;
+    newItems[index].effectiveLineTotal = undefined;
     setCartItems(newItems);
   };
 
@@ -1119,22 +1220,91 @@ const POS = () => {
     setCartItems(newItems);
   };
 
+  const createOrderItemPayload = (item, useEffectiveDiscount = true) => ({
+    itemId: item.itemId,
+    batchId: item.batchId,
+    qty: item.qty,
+    qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
+    unitPrice: item.unitPrice,
+    discountType: useEffectiveDiscount ? getEffectiveDiscountType(item) : (item.discountType || DISCOUNT_TYPES.NONE),
+    discountValue: useEffectiveDiscount ? getEffectiveDiscountValue(item) : toNonNegativeNumber(item.discountValue),
+    warrantyLabel: item.warrantyLabel || undefined,
+    warrantyPeriodValue: item.warrantyPeriodValue || undefined,
+    warrantyPeriodUnit: item.warrantyPeriodUnit || undefined,
+  });
+
+  const promotionPreviewSignature = useMemo(() => JSON.stringify(cartItems.map((item) => ({
+    itemId: item.itemId,
+    batchId: item.batchId,
+    qty: item.qty,
+    qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
+    unitPrice: item.unitPrice,
+    discountType: item.discountType || DISCOUNT_TYPES.NONE,
+    discountValue: toNonNegativeNumber(item.discountValue),
+    customerId: customer?.id || null,
+    billDiscount: toNonNegativeNumber(billDiscount),
+  }))), [billDiscount, cartItems, customer?.id]);
+
+  useEffect(() => {
+    if (!canUseServer || queueCartActive || isFreeLocalSalesPlan || !effectiveBranchId || cartItems.length === 0) {
+      setBillPromotionPreview(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await promotionsAPI.preview({
+          branchId: effectiveBranchId,
+          customerId: customer ? customer.id : null,
+          billDiscount,
+          items: cartItems.map((item) => createOrderItemPayload(item, false)),
+        });
+        const previewItems = Array.isArray(response.data?.items) ? response.data.items : [];
+        if (cancelled) return;
+        setBillPromotionPreview({
+          billPromotionId: response.data?.billPromotionId || null,
+          billPromotionName: response.data?.billPromotionName || "",
+          billPromotionDiscountAmount: Number(response.data?.billPromotionDiscountAmount || 0),
+          appliedBillDiscountAmount: Number(response.data?.appliedBillDiscountAmount ?? billDiscount),
+          billPromotionApplied: !!response.data?.billPromotionApplied,
+        });
+
+        setCartItems((currentItems) => currentItems.map((item, index) => {
+          const preview = previewItems[index];
+          if (!preview || String(preview.itemId) !== String(item.itemId)) {
+            return item;
+          }
+
+          return {
+            ...item,
+            effectiveDiscountType: preview.discountType || item.discountType || DISCOUNT_TYPES.NONE,
+            effectiveDiscountValue: Number(preview.discountValue || 0),
+            promotionId: preview.promotionApplied ? preview.promotionId : null,
+            promotionName: preview.promotionApplied ? preview.promotionName : "",
+            promotionDiscountAmount: preview.promotionApplied ? Number(preview.promotionDiscountAmount || 0) : 0,
+            promotionApplied: !!preview.promotionApplied,
+            effectiveLineTotal: Number(preview.finalLineTotal || 0),
+          };
+        }));
+      } catch (error) {
+        console.error("Promotion preview failed", error);
+        setBillPromotionPreview(null);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canUseServer, queueCartActive, isFreeLocalSalesPlan, effectiveBranchId, promotionPreviewSignature]);
+
   const createPendingOrderPayload = (items = cartItems) => ({
     customerId: customer ? customer.id : null,
     billDiscount,
     note: "",
-    items: items.map((item) => ({
-      itemId: item.itemId,
-      batchId: item.batchId,
-      qty: item.qty,
-      qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
-      unitPrice: item.unitPrice,
-      discountType: item.discountType,
-      discountValue: item.discountValue,
-      warrantyLabel: item.warrantyLabel || undefined,
-      warrantyPeriodValue: item.warrantyPeriodValue || undefined,
-      warrantyPeriodUnit: item.warrantyPeriodUnit || undefined,
-    })),
+    items: items.map((item) => createOrderItemPayload(item, true)),
   });
 
   const savePendingDraft = async (tableId = selectedTableId, { silent = false } = {}) => {
@@ -1312,6 +1482,7 @@ const POS = () => {
   const handlePlaceOrder = async () => {
     const total = calculateTotal();
     const subTotal = cartItems.reduce((acc, item) => acc + calculateItemBaseTotal(item), 0);
+    const effectiveBillDiscount = getEffectiveBillDiscount(subTotal);
     const kotItems = getKotEligibleItems(cartItems);
     const shouldPrintFullInvoice = printFullInvoice;
     const failCheckout = (message) => {
@@ -1341,18 +1512,7 @@ const POS = () => {
         billDiscount,
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
         paymentMethod: orderType === ORDER_TYPES.CASH ? paymentMethod : "CREDIT",
-        items: cartItems.map((item) => ({
-          itemId: item.itemId,
-          batchId: item.batchId,
-          qty: item.qty,
-          qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
-          unitPrice: item.unitPrice,
-          discountType: item.discountType,
-          discountValue: item.discountValue,
-          warrantyLabel: item.warrantyLabel || undefined,
-          warrantyPeriodValue: item.warrantyPeriodValue || undefined,
-          warrantyPeriodUnit: item.warrantyPeriodUnit || undefined,
-        })),
+        items: cartItems.map((item) => createOrderItemPayload(item, true)),
         note: "",
       };
 
@@ -1371,7 +1531,7 @@ const POS = () => {
           orderId: clientSaleId,
           invoiceNo: offlineInvoiceNo,
           subTotal,
-          billDiscount,
+          billDiscount: effectiveBillDiscount,
           netTotal: total,
           paidAmount,
           paymentMethod: orderData.paymentMethod,
@@ -1390,7 +1550,9 @@ const POS = () => {
         };
         const receiptCartItems = cartItems.map((item) => ({
           ...item,
-          lineTotal: calculateItemBaseTotal(item),
+          discountType: getEffectiveDiscountType(item),
+          discountValue: getEffectiveDiscountValue(item),
+          lineTotal: calculateCartItemTotal(item),
         }));
 
         await addOfflineSale({
@@ -1431,18 +1593,7 @@ const POS = () => {
             ...orderData,
             clientSaleId,
             offlineSoldAt: soldAt,
-            items: cartItems.map((item) => ({
-              itemId: item.itemId,
-              batchId: item.batchId,
-              qty: item.qty,
-              qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
-              unitPrice: item.unitPrice,
-              discountType: item.discountType,
-              discountValue: item.discountValue,
-              warrantyLabel: item.warrantyLabel || undefined,
-              warrantyPeriodValue: item.warrantyPeriodValue || undefined,
-              warrantyPeriodUnit: item.warrantyPeriodUnit || undefined,
-            })),
+            items: cartItems.map((item) => createOrderItemPayload(item, true)),
           },
         });
         if (isFreeLocalSalesPlan) {
@@ -1474,7 +1625,25 @@ const POS = () => {
         return;
       }
 
-      const response = await ordersAPI.create(orderData);
+      let response;
+      try {
+        response = await ordersAPI.create(orderData);
+      } catch (error) {
+        if (isStockOverrideRequiredError(error) && error?.response?.data?.overrideAvailable) {
+          const confirmed = window.confirm(formatStockOverrideConfirmation(error));
+          if (!confirmed) {
+            throw error;
+          }
+          response = await ordersAPI.create({
+            ...orderData,
+            allowStockOverride: true,
+            stockOverrideReason: "POS stock shortage override",
+          });
+          toast.success("Stock override applied");
+        } else {
+          throw error;
+        }
+      }
       toast.success(`Order ${response.data.invoiceNo} success!`);
 
       const storeName = user?.shopName || BRAND_NAME_UPPER;
@@ -1836,6 +2005,7 @@ const POS = () => {
             warrantyOptions={warrantyOptions}
             billDiscount={billDiscount}
             setBillDiscount={setBillDiscount}
+            billPromotion={billPromotionPreview}
             onCheckout={handleCheckout}
             loading={loading}
             onAddCustomer={() => setShowCustomerSelect(true)}
@@ -1905,10 +2075,22 @@ const POS = () => {
         customer={customer}
         errorMessage={checkoutError}
       />
-      <BatchSelectModal isOpen={showBatchModal} onClose={() => { setShowBatchModal(false); if (searchInputRef.current) searchInputRef.current.focus(); }} onSelectBatch={handleBatchSelect} item={selectedBatchItem} />
       <ReceiptPrinter ref={printRef} />
       <InvoicePrinter ref={invoicePrintRef} />
       <KotPrinter ref={kotPrintRef} />
+      <BatchSelectModal
+        isOpen={showBatchModal}
+        onClose={() => {
+          setShowBatchModal(false);
+          setSelectedBatchItem(null);
+        }}
+        item={selectedBatchItem}
+        onSelectBatch={(batch) => {
+          processAddToCart(selectedBatchItem, batch.price ?? selectedBatchItem?.sellingPrice ?? 0, 1, batch);
+          setShowBatchModal(false);
+          setSelectedBatchItem(null);
+        }}
+      />
     </div>
   );
 };

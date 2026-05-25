@@ -18,7 +18,7 @@ export default function BulkItemForm({
   className = "",
 }) {
   return (
-    <div className={`shell-panel shell-panel-hover overflow-hidden rounded-xl border ${className}`}>
+    <div className={`shell-panel shell-panel-hover rounded-xl border ${isOpen ? "overflow-visible" : "overflow-hidden"} ${className}`}>
       {/* Header */}
       <button
         type="button"
