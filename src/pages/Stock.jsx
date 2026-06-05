@@ -8,12 +8,18 @@ import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api";
 import api from '../api/axios';
 
-import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
-import { ADJUSTMENT_TYPES } from "../utils/constants";
-import { ItemType } from "../utils/constants";
+import { ADJUSTMENT_TYPES, ItemType } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
+import {
+  formatDisplayStockQuantity,
+  getDisplayStockBaseQuantity,
+  formatStockQuantity,
+  getDisplayStockQuantity,
+  getPrimaryStockUnit,
+  isMeasuredStockItem,
+} from "../utils/stockQuantity";
 
 import Card from "../components/common/Card";
 import Table from "../components/common/Table";
@@ -23,44 +29,10 @@ import Modal from "../components/common/Modal";
 import CustomSelect from "../components/common/CustomSelect";
 import TablePagination from "../components/common/TablePagination";
 
-const isMeasuredItem = (item) =>
-  item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
-
-const formatQty = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return String(value ?? "");
-  }
-  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, "");
-};
-
-const getDisplayQty = (entity, fallback = 0) => {
-  if (isMeasuredItem(entity)) {
-    const rawValue =
-      entity?.qty ??
-      entity?.totalQuantity ??
-      entity?.availableBaseQty ??
-      entity?.availableQty ??
-      fallback;
-    const numeric = Number(rawValue);
-    return Number.isFinite(numeric) ? numeric / 1000 : 0;
-  }
-
-  const value =
-    entity?.displayQty ??
-    entity?.displayQuantity ??
-    entity?.availableQty ??
-    fallback;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : fallback;
-};
-
-const getDisplayUnit = (entity, fallbackUnit = "") =>
-  isMeasuredItem(entity)
-    ? (entity?.itemType === ItemType.VOLUME || entity?.defaultUnit === "L" || entity?.defaultUnit === "ML" ? "L" : "KG")
-    : (entity?.displayUnit ?? entity?.defaultUnit ?? fallbackUnit);
-
-const formatQtyWithUnit = (value, unit) => (unit ? `${formatQty(value)} ${unit}` : formatQty(value));
+const isMeasuredItem = isMeasuredStockItem;
+const getDisplayQty = getDisplayStockQuantity;
+const getDisplayUnit = getPrimaryStockUnit;
+const formatQtyWithUnit = (value, unit) => (unit ? `${formatStockQuantity(value)} ${unit}` : formatStockQuantity(value));
 
 const adjustmentTypeOptions = [
   { value: ADJUSTMENT_TYPES.EXPIRED, label: "Expired" },
@@ -107,7 +79,6 @@ const stockStatusOptions = [
 const Stock = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
   const { selectedBranchId } = useBranch();
   const { configuration } = useAppConfiguration();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
@@ -454,9 +425,9 @@ const Stock = () => {
       {
         header: "Quantity",
         render: (item) => {
-          const displayQty = getDisplayQty(item, item.totalQuantity ?? 0);
+          const displayQty = getDisplayQty(item);
           const displayUnit = getDisplayUnit(item, item.defaultUnit);
-          const isLow = (item.totalQuantity ?? 0) <= 0;
+          const isLow = displayQty <= 0;
           return (
             <span className={"font-semibold " + (isLow ? "text-red-600" : "text-slate-800")}>
               {formatQtyWithUnit(displayQty, displayUnit)}
@@ -468,8 +439,8 @@ const Stock = () => {
       {
         header: "Status",
         render: (item) => {
-          const qty = item.totalQuantity ?? 0;
-          const reorderLevel = item.reorderLevel ?? 0;
+          const qty = getDisplayQty(item);
+          const reorderLevel = getDisplayStockBaseQuantity(item.reorderLevel ?? 0, item);
           const isReorder = qty <= reorderLevel;
           return (
             <span className={"px-2 py-1 rounded-full text-xs font-medium " + (qty <= 0 ? "bg-red-100 text-red-800" : isReorder ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800")}>
@@ -501,7 +472,7 @@ const Stock = () => {
                 handleOpenTransfer(item);
               }}
               className="flex items-center gap-1 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 border-none"
-              disabled={(item.totalQuantity ?? 0) <= 0}
+              disabled={getDisplayQty(item) <= 0}
             >
               <ArrowRightLeft size={16} /> Transfer
             </Button>
@@ -514,7 +485,7 @@ const Stock = () => {
 
   const batchOptions = itemBatches.map((batch) => ({
     value: String(batch.batchId),
-    label: `Batch #${batch.batchId} | Qty: ${formatQtyWithUnit(getDisplayQty(batch), getDisplayUnit(batch, selectedItem?.defaultUnit))} | Price: ${formatCurrency(batch.price)}`,
+    label: `Batch #${batch.batchId} | Qty: ${formatDisplayStockQuantity(batch, 0, selectedItem)} | Price: ${formatCurrency(batch.price)}`,
   }));
 
   const transferBranchOptions = branches
@@ -596,8 +567,8 @@ const Stock = () => {
 
       <Card className="sales-panel-enter sales-panel-hover overflow-hidden p-0" style={{ animationDelay: "120ms" }}>
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "150ms" }}>
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(260px,1fr)_180px_220px_220px_auto] xl:items-center">
-            <div className="relative w-full">
+          <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-[minmax(260px,1fr)_180px_220px_220px_auto] xl:items-center">
+            <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-2 xl:col-span-1 w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
               <input
                 type="text"
@@ -607,44 +578,52 @@ const Stock = () => {
                 className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <CustomSelect
-              value={stockStatus}
-              onChange={handleStockStatusChange}
-              options={stockStatusOptions}
-              valueKey="value"
-              labelKey="label"
-              placeholder="Stock Status"
-              buttonClassName="h-[42px]"
-            />
-            <CustomSelect
-              value={categoryId}
-              onChange={handleCategoryChange}
-              options={categoryOptions}
-              valueKey="value"
-              labelKey="label"
-              placeholder="All Categories"
-              buttonClassName="h-[42px]"
-            />
-            {!singleCategoryMode && (
+            <div className="col-span-1">
               <CustomSelect
-              value={subCategoryId}
-              onChange={handleSubCategoryChange}
-              options={subCategoryOptions}
-              valueKey="value"
-              labelKey="label"
-              placeholder="All Sub Categories"
-              disabled={!categoryId}
-              buttonClassName="h-[42px]"
-            />
+                value={stockStatus}
+                onChange={handleStockStatusChange}
+                options={stockStatusOptions}
+                valueKey="value"
+                labelKey="label"
+                placeholder="Stock Status"
+                buttonClassName="h-[42px]"
+              />
+            </div>
+            <div className="col-span-1">
+              <CustomSelect
+                value={categoryId}
+                onChange={handleCategoryChange}
+                options={categoryOptions}
+                valueKey="value"
+                labelKey="label"
+                placeholder="All Categories"
+                buttonClassName="h-[42px]"
+              />
+            </div>
+            {!singleCategoryMode && (
+              <div className="col-span-1">
+                <CustomSelect
+                  value={subCategoryId}
+                  onChange={handleSubCategoryChange}
+                  options={subCategoryOptions}
+                  valueKey="value"
+                  labelKey="label"
+                  placeholder="All Sub Categories"
+                  disabled={!categoryId}
+                  buttonClassName="h-[42px]"
+                />
+              </div>
             )}
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={clearFilters}
-              className="h-[42px] px-4 text-sm"
-            >
-              Clear
-            </Button>
+            <div className="col-span-1">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={clearFilters}
+                className="h-[42px] w-full px-4 text-sm"
+              >
+                Clear
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -687,7 +666,7 @@ const Stock = () => {
                 {itemBatches.length === 1 ? (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
                     <span className="text-sm text-blue-800 font-semibold">Batch #{itemBatches[0].batchId} Auto-selected</span>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">In Stock: {formatQtyWithUnit(getDisplayQty(itemBatches[0]), getDisplayUnit(itemBatches[0], selectedItem?.defaultUnit))}</span>
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">In Stock: {formatDisplayStockQuantity(itemBatches[0], 0, selectedItem)}</span>
                   </div>
                 ) : itemBatches.length > 1 ? (
                   <CustomSelect
@@ -788,7 +767,7 @@ const Stock = () => {
                 {itemBatches.length === 1 ? (
                   <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between">
                     <span className="text-sm text-purple-800 font-semibold">Batch #{itemBatches[0].batchId} Auto-selected</span>
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">In Stock: {formatQtyWithUnit(getDisplayQty(itemBatches[0]), getDisplayUnit(itemBatches[0], selectedItem?.defaultUnit))}</span>
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">In Stock: {formatDisplayStockQuantity(itemBatches[0], 0, selectedItem)}</span>
                   </div>
                 ) : itemBatches.length > 1 ? (
                   <CustomSelect

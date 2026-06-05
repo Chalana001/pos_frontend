@@ -9,8 +9,10 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import DatePicker from "../components/common/DatePicker";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
+import { formatDisplayStockBaseQuantity, formatDisplayStockQuantity } from "../utils/stockQuantity";
 
 const purchaseStatusOptions = [
   { value: "ALL", label: "All Status" },
@@ -146,7 +148,7 @@ const StockItemDetailsPage = () => {
     return [
       itemDetails.itemType,
       itemDetails.defaultUnit ? `Unit: ${itemDetails.defaultUnit}` : null,
-      itemDetails.reorderLevel ? `Reorder: ${formatQtyWithUnit(itemDetails.reorderLevel, itemDetails.defaultUnit)}` : null,
+      itemDetails.reorderLevel ? `Reorder: ${formatDisplayStockBaseQuantity(itemDetails.reorderLevel, itemDetails, itemDetails.defaultUnit)}` : null,
     ].filter(Boolean);
   }, [itemDetails]);
 
@@ -188,10 +190,7 @@ const StockItemDetailsPage = () => {
         {
           key: "stock",
           label: "Total Stock",
-          value: formatQtyWithUnit(
-            itemDetails.displayQuantity,
-            itemDetails.itemType === "WEIGHT" ? "KG" : itemDetails.itemType === "VOLUME" ? "L" : itemDetails.defaultUnit
-          ),
+          value: formatDisplayStockQuantity(itemDetails),
           helper: "Total available quantity",
           icon: Package,
           tone: "bg-blue-50 text-blue-700",
@@ -345,7 +344,7 @@ const StockItemDetailsPage = () => {
                     <td className="p-4 text-slate-600">{batch.branchName || `Branch #${batch.branchId}`}</td>
                     <td className="p-4">
                       <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                        {formatQtyWithUnit(batch.displayQty, batch.displayUnit)}
+                        {formatDisplayStockQuantity(batch, 0, itemDetails)}
                       </span>
                     </td>
                     <td className="p-4 text-right text-slate-700">{formatCurrency(batch.costPrice || 0)}</td>
@@ -382,8 +381,8 @@ const StockItemDetailsPage = () => {
         </div>
 
         <div className="inventory-filter-bar border-b bg-white px-4 py-4" style={{ animationDelay: "210ms" }}>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center">
-            <div className="relative lg:col-span-3">
+          <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
+            <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
@@ -397,7 +396,7 @@ const StockItemDetailsPage = () => {
               />
             </div>
 
-            <div className="relative lg:col-span-3">
+            <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-3">
               <input
                 type="text"
                 value={selectedSupplier ? selectedSupplier.name : supplierQuery}
@@ -440,7 +439,7 @@ const StockItemDetailsPage = () => {
               )}
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="col-span-1 xl:col-span-2">
               <CustomSelect
                 value={status}
                 onChange={(value) => {
@@ -454,32 +453,28 @@ const StockItemDetailsPage = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
-              <input
-                type="date"
+            <div className="col-span-1 xl:col-span-2">
+              <DatePicker
                 value={fromDate}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
+                onChange={(value) => {
+                  setFromDate(value);
                   resetPage();
                 }}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <div className="lg:col-span-2">
-              <input
-                type="date"
+            <div className="col-span-1 xl:col-span-2">
+              <DatePicker
                 value={toDate}
-                onChange={(e) => {
-                  setToDate(e.target.value);
+                onChange={(value) => {
+                  setToDate(value);
                   resetPage();
                 }}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <div className="lg:col-span-12 flex justify-end">
-              <Button type="button" variant="secondary" onClick={clearFilters} disabled={historyLoading} className="h-10 px-4 text-sm">
+            <div className="col-span-1 xl:col-span-12 xl:flex xl:justify-end">
+              <Button type="button" variant="secondary" onClick={clearFilters} disabled={historyLoading} className="h-10 w-full px-4 text-sm xl:w-auto">
                 Clear
               </Button>
             </div>

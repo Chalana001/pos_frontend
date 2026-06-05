@@ -317,12 +317,12 @@ const Header = () => {
 
   return (
     <>
-      <header className="shell-header-enter relative z-40 flex h-16 items-center justify-between gap-4 overflow-visible border-b border-slate-200 bg-white/75 px-4 backdrop-blur-xl sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+      <header className="shell-header-enter relative z-40 flex min-h-16 flex-wrap items-center justify-between gap-3 overflow-visible border-b border-slate-200 bg-white/75 px-4 py-2 backdrop-blur-xl sm:px-6 sm:py-0">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           {canAccessAllBranches(user.role) && !hideBranchSelector && !shouldHideBranchSelectorForPlan && <BranchSelector />}
         </div>
 
-        <div className="page-section-enter flex min-w-0 items-center gap-2" style={{ animationDelay: '120ms' }}>
+        <div className="page-section-enter flex min-w-0 flex-wrap items-center justify-end gap-2" style={{ animationDelay: '120ms' }}>
           <LanguageSelector compact />
 
           <Link
@@ -426,7 +426,7 @@ const Header = () => {
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="shell-panel-hover flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 shadow-sm transition hover:bg-slate-50 sm:min-w-[150px]"
+            className="shell-panel-hover flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 shadow-sm transition hover:bg-slate-50 sm:min-w-[150px]"
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600">
                 <User size={18} className="text-white" />

@@ -11,23 +11,9 @@ import Card from "../components/common/Card";
 import Table from "../components/common/Table";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import SharedModal from "../components/common/Modal";
 
 const ALL_BRANCH_OPTION = { id: 0, name: "All Branches" };
-
-const Modal = ({ open, onClose, title, children }) => {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-xl bg-white rounded-xl shadow-lg">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-bold text-lg">{title}</h3>
-          <button onClick={onClose} className="text-slate-600 hover:text-slate-900">✕</button>
-        </div>
-        <div className="p-4">{children}</div>
-      </div>
-    </div>
-  );
-};
 
 const MAX_LOGO_SIZE_BYTES = 100 * 1024;
 
@@ -55,6 +41,7 @@ const Branches = () => {
   // modals
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [selected, setSelected] = useState(null);
 
   // forms
@@ -199,11 +186,10 @@ const Branches = () => {
   };
 
   const handleDeactivate = async (b) => {
-    if (!window.confirm(`Deactivate branch "${b.name}" ?`)) return;
-
     try {
       await branchesAPI.deactivate(b.id);
       toast.success("Branch deactivated");
+      setDeactivateTarget(null);
       loadBranches();
     } catch (err) {
       console.error(err);
@@ -262,7 +248,7 @@ const Branches = () => {
             size="sm"
             variant="outline"
             disabled={!isAdmin || !b.active}
-            onClick={() => handleDeactivate(b)}
+            onClick={() => setDeactivateTarget(b)}
             title={!isAdmin ? "Admin only" : !b.active ? "Already inactive" : ""}
           >
             <Trash2 size={16} className="mr-1" />
@@ -339,7 +325,7 @@ const Branches = () => {
       </Card>
 
       {/* Create Modal */}
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create Branch">
+      <SharedModal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Create Branch">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-sm font-medium text-slate-700">Code</label>
@@ -423,10 +409,10 @@ const Branches = () => {
           </Button>
           <Button onClick={handleCreate}>Create</Button>
         </div>
-      </Modal>
+      </SharedModal>
 
       {/* Edit Modal */}
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={`Edit Branch - ${selected?.name || ""}`}>
+      <SharedModal isOpen={editOpen} onClose={() => setEditOpen(false)} title={`Edit Branch - ${selected?.name || ""}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
             <label className="text-sm font-medium text-slate-700">Name</label>
@@ -512,7 +498,33 @@ const Branches = () => {
           </Button>
           <Button onClick={handleUpdate}>Save</Button>
         </div>
-      </Modal>
+      </SharedModal>
+
+      <SharedModal isOpen={!!deactivateTarget} onClose={() => setDeactivateTarget(null)} title="Deactivate Branch" size="sm">
+        <div className="space-y-5">
+          <div className="flex gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+              <Trash2 size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                Deactivate "{deactivateTarget?.name}"?
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                This branch will no longer be available for active operations.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setDeactivateTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={() => handleDeactivate(deactivateTarget)}>
+              Deactivate
+            </Button>
+          </div>
+        </div>
+      </SharedModal>
     </div>
   );
 };

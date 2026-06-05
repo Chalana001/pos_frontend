@@ -11,7 +11,7 @@ import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { Plus, Search, Trash2 } from "lucide-react";
-import { ItemType, ItemTypeLabels } from "../utils/constants"; // 🟢 Constant එක Import කළා
+import { ItemType, ItemTypeLabels, OVERHEAD_COST_MODES } from "../utils/constants"; // 🟢 Constant එක Import කළා
 
 const uuid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -30,6 +30,32 @@ const buildEmptyIngredient = () => ({
   ingredientBarcode: "",
   quantity: "",
   qtyUnit: "PCS",
+  search: "",
+});
+
+const isBlankIngredient = (ingredient) => {
+  if (!ingredient) return true;
+  return (
+    !ingredient.ingredientItemId &&
+    !String(ingredient.ingredientName || "").trim() &&
+    !String(ingredient.ingredientBarcode || "").trim() &&
+    !String(ingredient.search || "").trim() &&
+    Number(ingredient.quantity || 0) <= 0
+  );
+};
+
+const getRecipeIngredientRows = (ingredients = []) =>
+  ingredients.filter((ingredient) => !isBlankIngredient(ingredient));
+
+const buildEmptyProcessingOutput = () => ({
+  outputItemId: "",
+  outputName: "",
+  outputBarcode: "",
+  itemType: "",
+  defaultUnit: "PCS",
+  defaultQty: "",
+  defaultQtyUnit: "PCS",
+  waste: false,
   search: "",
 });
 
@@ -80,6 +106,12 @@ const recipeUnitOptions = [
   { value: "ML", label: "ML" },
 ];
 
+const overheadCostOptions = [
+  { value: OVERHEAD_COST_MODES.NONE, label: "No Overhead Cost" },
+  { value: OVERHEAD_COST_MODES.FIXED, label: "Fixed Amount" },
+  { value: OVERHEAD_COST_MODES.PERCENT, label: "Percent of Ingredient Cost" },
+];
+
 const priceUnitLabel = (itemType) => {
   if (itemType === ItemType.WEIGHT) return "(per 1 KG)";
   if (itemType === ItemType.VOLUME) return "(per 1 L)";
@@ -98,7 +130,12 @@ const emptyDraft = () => ({
   itemType: ItemType.NORMAL, // 🟢 Default අගය
   defaultUnit: "PCS",
   isKotEnabled: false,
+  active: true,
   posVisible: true,
+  overheadCostMode: OVERHEAD_COST_MODES.NONE,
+  overheadCostValue: "",
+  stockProcessingEnabled: false,
+  processingOutputs: [],
   ingredients: [],
   branchIds: [],
 });
@@ -108,6 +145,7 @@ export default function BulkAddItems() {
   const { user } = useAuth();
   const { configuration } = useAppConfiguration();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
+  const kotEnabled = configuration?.kotEnabled !== false;
   const allowedItemTypeOptions = useMemo(
     () => getAllowedItemTypeOptions(user?.planName, configuration),
     [configuration, user?.planName]
@@ -118,12 +156,15 @@ export default function BulkAddItems() {
 
   const [openImage, setOpenImage] = useState(true);
   const [openGeneral, setOpenGeneral] = useState(true);
+  const [openProcessing, setOpenProcessing] = useState(true);
   const [openRecipe, setOpenRecipe] = useState(true);
 
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [ingredientSearchResults, setIngredientSearchResults] = useState({});
   const ingredientSearchRequestRef = useRef({});
+  const [processingOutputSearchResults, setProcessingOutputSearchResults] = useState({});
+  const processingOutputSearchRequestRef = useRef({});
 
   const [showCatModal, setShowCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState("");
@@ -146,7 +187,12 @@ export default function BulkAddItems() {
       itemType: ItemType.NORMAL,
       defaultUnit: "PCS",
       isKotEnabled: false,
+      active: true,
       posVisible: true,
+      overheadCostMode: OVERHEAD_COST_MODES.NONE,
+      overheadCostValue: "",
+      stockProcessingEnabled: false,
+      processingOutputs: [],
       ingredients: [],
       branchIds: [],
     }));
@@ -400,6 +446,163 @@ export default function BulkAddItems() {
     }));
   };
 
+  const isStockTrackedDraft = [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(draft.itemType);
+
+  const clearProcessingOutputSearchResults = (index) => {
+    setProcessingOutputSearchResults((prev) => {
+      if (!prev[index]) return prev;
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const addProcessingOutputRow = () => {
+    setDraft((prev) => ({
+      ...prev,
+      processingOutputs: [...prev.processingOutputs, buildEmptyProcessingOutput()],
+    }));
+  };
+
+  const updateProcessingOutput = (index, field, value) => {
+    setDraft((prev) => {
+      const nextOutputs = [...prev.processingOutputs];
+      nextOutputs[index] = {
+        ...nextOutputs[index],
+        [field]: value,
+      };
+      return {
+        ...prev,
+        processingOutputs: nextOutputs,
+      };
+    });
+  };
+
+  const searchProcessingOutputItems = async (index, query) => {
+    setDraft((prev) => {
+      const nextOutputs = [...prev.processingOutputs];
+      const currentRow = nextOutputs[index];
+      const isSameSelectedItem = query.trim() === (currentRow?.outputName || "").trim();
+
+      nextOutputs[index] = {
+        ...currentRow,
+        search: query,
+        outputItemId: isSameSelectedItem ? currentRow.outputItemId : "",
+        outputName: isSameSelectedItem ? currentRow.outputName : "",
+        outputBarcode: isSameSelectedItem ? currentRow.outputBarcode : "",
+      };
+
+      return {
+        ...prev,
+        processingOutputs: nextOutputs,
+      };
+    });
+
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      clearProcessingOutputSearchResults(index);
+      return;
+    }
+
+    const requestId = (processingOutputSearchRequestRef.current[index] || 0) + 1;
+    processingOutputSearchRequestRef.current[index] = requestId;
+
+    setProcessingOutputSearchResults((prev) => ({
+      ...prev,
+      [index]: { loading: true, items: [] },
+    }));
+
+    try {
+      const res = await itemsAPI.search(trimmedQuery);
+      const itemsArray = Array.isArray(res.data) ? res.data : [];
+      const selectedIds = new Set(
+        draft.processingOutputs
+          .map((output, outputIndex) => outputIndex === index ? null : Number(output.outputItemId))
+          .filter(Boolean)
+      );
+      const filteredItems = itemsArray.filter(
+        (item) =>
+          [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(item.itemType) &&
+          item.active !== false &&
+          !selectedIds.has(Number(item.id))
+      );
+
+      if (processingOutputSearchRequestRef.current[index] !== requestId) {
+        return;
+      }
+
+      setProcessingOutputSearchResults((prev) => ({
+        ...prev,
+        [index]: { loading: false, items: filteredItems },
+      }));
+    } catch (error) {
+      if (processingOutputSearchRequestRef.current[index] !== requestId) {
+        return;
+      }
+
+      setProcessingOutputSearchResults((prev) => ({
+        ...prev,
+        [index]: { loading: false, items: [] },
+      }));
+    }
+  };
+
+  const selectProcessingOutputForRow = (index, item) => {
+    const defaultQtyUnit = item.itemType === ItemType.WEIGHT ? "KG" : item.itemType === ItemType.VOLUME ? "L" : (item.defaultUnit || "PCS");
+    setDraft((prev) => {
+      const nextOutputs = [...prev.processingOutputs];
+      nextOutputs[index] = {
+        ...nextOutputs[index],
+        outputItemId: item.id,
+        outputName: item.name,
+        outputBarcode: item.barcode || "",
+        itemType: item.itemType,
+        defaultUnit: item.defaultUnit || "PCS",
+        defaultQtyUnit,
+        search: item.name,
+      };
+
+      return {
+        ...prev,
+        processingOutputs: nextOutputs,
+      };
+    });
+
+    clearProcessingOutputSearchResults(index);
+  };
+
+  const handleProcessingOutputSearchKeyDown = (index, event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+
+    const searchValue = draft.processingOutputs[index]?.search?.trim();
+    const resultItems = processingOutputSearchResults[index]?.items || [];
+
+    if (!searchValue || resultItems.length === 0) {
+      toast.error("Processing output item not found");
+      return;
+    }
+
+    const exactMatch = resultItems.find(
+      (item) =>
+        item.barcode?.toLowerCase() === searchValue.toLowerCase() ||
+        item.name?.toLowerCase() === searchValue.toLowerCase()
+    );
+
+    selectProcessingOutputForRow(index, exactMatch || resultItems[0]);
+  };
+
+  const removeProcessingOutput = (index) => {
+    clearProcessingOutputSearchResults(index);
+    setDraft((prev) => ({
+      ...prev,
+      processingOutputs: prev.processingOutputs.filter((_, outputIndex) => outputIndex !== index),
+    }));
+  };
+
   const imageBadge = draft.imageUrl?.trim() ? "1 Image" : "0 Image";
 
   const generalFilledCount = useMemo(() => {
@@ -435,20 +638,47 @@ export default function BulkAddItems() {
     if (draft.itemType === ItemType.SERVICE && draft.branchIds.length === 0) {
       return "Select at least one branch for the service";
     }
-    if (draft.itemType === ItemType.RECIPE && draft.ingredients.length === 0) {
-      return "Add at least one ingredient for the recipe";
-    }
+    const recipeIngredientRows = getRecipeIngredientRows(draft.ingredients);
+
     if (
       draft.itemType === ItemType.RECIPE &&
-      draft.ingredients.some((ingredient) => !ingredient.ingredientItemId || Number(ingredient.quantity || 0) <= 0)
+      recipeIngredientRows.some((ingredient) => !ingredient.ingredientItemId || Number(ingredient.quantity || 0) <= 0)
     ) {
       return "Select each ingredient from search and enter a valid quantity";
     }
     if (
       draft.itemType === ItemType.RECIPE &&
-      new Set(draft.ingredients.map((ingredient) => String(ingredient.ingredientItemId))).size !== draft.ingredients.length
+      new Set(recipeIngredientRows.map((ingredient) => String(ingredient.ingredientItemId))).size !== recipeIngredientRows.length
     ) {
       return "Duplicate ingredient found in recipe";
+    }
+    if (
+      draft.itemType === ItemType.RECIPE &&
+      draft.overheadCostMode !== OVERHEAD_COST_MODES.NONE &&
+      Number(draft.overheadCostValue || 0) <= 0
+    ) {
+      return "Enter a valid recipe overhead value";
+    }
+    if (
+      isStockTrackedDraft &&
+      draft.stockProcessingEnabled &&
+      draft.processingOutputs.some((output) => !output.outputItemId)
+    ) {
+      return "Select each stock processing output from search";
+    }
+    if (
+      isStockTrackedDraft &&
+      draft.stockProcessingEnabled &&
+      draft.processingOutputs.some((output) => Number(output.defaultQty || 0) <= 0)
+    ) {
+      return "Enter a valid default quantity for each stock processing output";
+    }
+    if (
+      isStockTrackedDraft &&
+      draft.stockProcessingEnabled &&
+      new Set(draft.processingOutputs.map((output) => String(output.outputItemId))).size !== draft.processingOutputs.length
+    ) {
+      return "Duplicate stock processing output found";
     }
 
     return null;
@@ -479,11 +709,32 @@ export default function BulkAddItems() {
           ? 0
           : (num(draft.reorderLevel) ?? 0),
       itemType: draft.itemType,
-      isKotEnabled: draft.itemType === ItemType.RECIPE ? !!draft.isKotEnabled : false,
+      isKotEnabled: draft.itemType === ItemType.RECIPE && kotEnabled ? !!draft.isKotEnabled : false,
+      active: !!draft.active,
       posVisible: !!draft.posVisible,
+      overheadCostMode: draft.itemType === ItemType.RECIPE ? draft.overheadCostMode : OVERHEAD_COST_MODES.NONE,
+      overheadCostValue:
+        draft.itemType === ItemType.RECIPE && draft.overheadCostMode !== OVERHEAD_COST_MODES.NONE
+          ? Number(draft.overheadCostValue || 0)
+          : 0,
+      stockProcessingEnabled: isStockTrackedDraft ? !!draft.stockProcessingEnabled : false,
+      processingOutputs:
+        isStockTrackedDraft && draft.stockProcessingEnabled
+          ? draft.processingOutputs.map((output) => ({
+              outputItemId: Number(output.outputItemId),
+              outputName: output.outputName || "",
+              outputBarcode: output.outputBarcode || "",
+              itemType: output.itemType || "",
+              defaultUnit: output.defaultUnit || "PCS",
+              defaultQty: Number(output.defaultQty || 0),
+              defaultQtyUnit: output.defaultQtyUnit || output.defaultUnit || "PCS",
+              waste: !!output.waste,
+              search: output.search || output.outputName || "",
+            }))
+          : [],
       ingredients:
         draft.itemType === ItemType.RECIPE
-          ? draft.ingredients.map((ingredient) => ({
+          ? getRecipeIngredientRows(draft.ingredients).map((ingredient) => ({
               ingredientItemId: Number(ingredient.ingredientItemId),
               ingredientName: ingredient.ingredientName || "",
               ingredientBarcode: ingredient.ingredientBarcode || "",
@@ -499,13 +750,13 @@ export default function BulkAddItems() {
             ? "SERVICE"
             : "PCS",
       branchIds: draft.itemType === ItemType.SERVICE ? draft.branchIds : [],
-      active: true,
     };
 
     setCart((prev) => [...prev, newItem]);
     
     setDraft(emptyDraft());
     setIngredientSearchResults({});
+    setProcessingOutputSearchResults({});
     setSubCategories([]); 
     toast.success("Added to list");
   };
@@ -528,7 +779,24 @@ export default function BulkAddItems() {
       itemType: row.itemType || ItemType.NORMAL,
       defaultUnit: row.defaultUnit || "PCS",
       isKotEnabled: row.isKotEnabled ?? false,
+      active: row.active ?? true,
       posVisible: row.posVisible ?? true,
+      overheadCostMode: row.overheadCostMode || OVERHEAD_COST_MODES.NONE,
+      overheadCostValue: row.overheadCostValue ?? "",
+      stockProcessingEnabled: row.stockProcessingEnabled ?? false,
+      processingOutputs: Array.isArray(row.processingOutputs)
+        ? row.processingOutputs.map((output) => ({
+            outputItemId: output.outputItemId,
+            outputName: output.outputName || "",
+            outputBarcode: output.outputBarcode || "",
+            itemType: output.itemType || "",
+            defaultUnit: output.defaultUnit || "PCS",
+            defaultQty: output.defaultQty ?? "",
+            defaultQtyUnit: output.defaultQtyUnit || output.defaultUnit || "PCS",
+            waste: !!output.waste,
+            search: output.outputName || "",
+          }))
+        : [],
       ingredients: Array.isArray(row.ingredients)
         ? row.ingredients.map((ingredient) => ({
             ingredientItemId: ingredient.ingredientItemId,
@@ -547,8 +815,10 @@ export default function BulkAddItems() {
     }
 
     setIngredientSearchResults({});
+    setProcessingOutputSearchResults({});
     removeRow(tempId);
     setOpenGeneral(true);
+    setOpenProcessing([ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(row.itemType || ItemType.NORMAL));
     setOpenRecipe((row.itemType || ItemType.NORMAL) === ItemType.RECIPE);
   };
 
@@ -580,6 +850,22 @@ export default function BulkAddItems() {
         ...(item.itemType === ItemType.SERVICE ? { branchIds: item.branchIds } : {}),
         posVisible: item.posVisible,
         active: item.active,
+        overheadCostMode: item.itemType === ItemType.RECIPE ? item.overheadCostMode : OVERHEAD_COST_MODES.NONE,
+        overheadCostValue:
+          item.itemType === ItemType.RECIPE && item.overheadCostMode !== OVERHEAD_COST_MODES.NONE
+            ? Number(item.overheadCostValue || 0)
+            : 0,
+        stockProcessingEnabled: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(item.itemType)
+          ? !!item.stockProcessingEnabled
+          : false,
+        processingOutputs:
+          [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(item.itemType) && item.stockProcessingEnabled
+            ? item.processingOutputs.map((output) => ({
+                outputItemId: Number(output.outputItemId),
+                defaultQty: Number(output.defaultQty || 0),
+                waste: !!output.waste,
+              }))
+            : [],
       }));
 
       await itemsAPI.createBulk(payload);
@@ -768,6 +1054,14 @@ export default function BulkAddItems() {
                            itemType: val,
                           defaultUnit: val === ItemType.WEIGHT ? "KG" : val === ItemType.VOLUME ? "L" : val === ItemType.SERVICE ? "SERVICE" : "PCS",
                            isKotEnabled: val === ItemType.RECIPE ? draft.isKotEnabled : false,
+                           overheadCostMode: val === ItemType.RECIPE ? draft.overheadCostMode : OVERHEAD_COST_MODES.NONE,
+                           overheadCostValue: val === ItemType.RECIPE ? draft.overheadCostValue : "",
+                           stockProcessingEnabled: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(val)
+                             ? draft.stockProcessingEnabled
+                             : false,
+                           processingOutputs: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(val)
+                             ? draft.processingOutputs
+                             : [],
                            ingredients: val === ItemType.RECIPE ? draft.ingredients : [],
                            branchIds: val === ItemType.SERVICE ? draft.branchIds : [],
                            posVisible: draft.posVisible,
@@ -858,19 +1152,61 @@ export default function BulkAddItems() {
                 )}
 
                 {draft.itemType === ItemType.RECIPE && (
-                  <div className="col-span-2 rounded-lg border border-rose-200 bg-rose-50 p-4">
-                    <label className="flex items-center justify-between gap-3 cursor-pointer">
+                  <div className="col-span-2 space-y-4 rounded-lg border border-rose-200 bg-rose-50 p-4">
+                    <label className={`flex items-center justify-between gap-3 ${kotEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}>
                       <div>
                         <div className="text-sm font-medium text-slate-700">Send to Kitchen (KOT)</div>
-                        <p className="text-xs text-slate-500">Enable this when the item should appear on kitchen order tickets.</p>
+                        <p className="text-xs text-slate-500">
+                          {kotEnabled
+                            ? 'Enable this when the item should appear on kitchen order tickets.'
+                            : 'KOT is disabled in App Configuration.'}
+                        </p>
                       </div>
                       <input
                         type="checkbox"
-                        checked={!!draft.isKotEnabled}
+                        checked={kotEnabled && !!draft.isKotEnabled}
+                        disabled={!kotEnabled}
                         onChange={(e) => updateDraft("isKotEnabled", e.target.checked)}
                         className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                       />
                     </label>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Recipe Overhead</label>
+                        <CustomSelect
+                          value={draft.overheadCostMode}
+                          onChange={(value) => {
+                            updateDraft("overheadCostMode", value);
+                            if (value === OVERHEAD_COST_MODES.NONE) updateDraft("overheadCostValue", "");
+                          }}
+                          options={overheadCostOptions}
+                          valueKey="value"
+                          labelKey="label"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">
+                          {draft.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "Overhead Percent" : "Overhead Amount"}
+                        </label>
+                        <div className="flex rounded-lg border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-blue-500">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={draft.overheadCostValue}
+                            onChange={(e) => updateDraft("overheadCostValue", e.target.value)}
+                            disabled={draft.overheadCostMode === OVERHEAD_COST_MODES.NONE}
+                            className="w-full rounded-l-lg px-3 py-2 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                            placeholder="0"
+                          />
+                          <span className="flex items-center rounded-r-lg border-l border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500">
+                            {draft.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "%" : "LKR"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -888,10 +1224,177 @@ export default function BulkAddItems() {
                     />
                   </label>
                 </div>
+
+                <div className={`col-span-2 rounded-lg border p-4 ${draft.active ? "border-slate-200 bg-slate-50" : "border-red-200 bg-red-50"}`}>
+                  <label className="flex items-center justify-between gap-3 cursor-pointer">
+                    <div>
+                      <div className={`text-sm font-medium ${draft.active ? "text-slate-700" : "text-red-700"}`}>
+                        Active Item
+                      </div>
+                      <p className="text-xs text-slate-500">Inactive items stay saved but are hidden from sale and stock selection.</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={!!draft.active}
+                      onChange={(e) => updateDraft("active", e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </label>
+                </div>
               </div>
 
             </div>
           </AccordionSection>
+
+          {isStockTrackedDraft && (
+            <AccordionSection
+              title="Stock Processing"
+              subtitle="Link output items produced from this stock item"
+              badge={draft.stockProcessingEnabled ? `${draft.processingOutputs.length} Outputs` : "Off"}
+              isOpen={openProcessing}
+              onToggle={() => setOpenProcessing((v) => !v)}
+            >
+              <div className="space-y-4">
+                <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 cursor-pointer">
+                  <div>
+                    <div className="text-sm font-medium text-slate-700">Enable Stock Processing</div>
+                    <p className="text-xs text-slate-500">Use this item as a source that can be processed into linked outputs.</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={!!draft.stockProcessingEnabled}
+                    onChange={(e) => {
+                      setDraft((prev) => ({
+                        ...prev,
+                        stockProcessingEnabled: e.target.checked,
+                        processingOutputs: e.target.checked && prev.processingOutputs.length === 0
+                          ? [buildEmptyProcessingOutput()]
+                          : prev.processingOutputs,
+                      }));
+                    }}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </label>
+
+                {draft.stockProcessingEnabled && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm text-slate-500">
+                        Select output stock items and default quantities produced from this source.
+                      </p>
+                      <Button type="button" onClick={addProcessingOutputRow}>
+                        <Plus size={16} className="mr-2" />
+                        Add Output
+                      </Button>
+                    </div>
+
+                    {draft.processingOutputs.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                        No output items linked yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {draft.processingOutputs.map((output, index) => (
+                          <div
+                            key={`${output.outputItemId || "new"}-${index}`}
+                            className={`relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_140px_120px_52px] ${
+                              processingOutputSearchResults[index]?.loading || (processingOutputSearchResults[index]?.items || []).length > 0 ? "z-50" : "z-0"
+                            }`}
+                          >
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-slate-700">Output Item</label>
+                              <div className="relative">
+                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                  type="text"
+                                  value={output.search || ""}
+                                  onChange={(e) => searchProcessingOutputItems(index, e.target.value)}
+                                  onKeyDown={(e) => handleProcessingOutputSearchKeyDown(index, e)}
+                                  onBlur={() => window.setTimeout(() => clearProcessingOutputSearchResults(index), 150)}
+                                  placeholder="Search output item..."
+                                  className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                {(processingOutputSearchResults[index]?.loading || (processingOutputSearchResults[index]?.items || []).length > 0) && (
+                                  <div className="relative z-[80] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
+                                    {processingOutputSearchResults[index]?.loading ? (
+                                      <div className="px-4 py-3 text-sm text-slate-500">Searching...</div>
+                                    ) : (
+                                      processingOutputSearchResults[index].items.map((option) => (
+                                        <button
+                                          key={option.id}
+                                          type="button"
+                                          onMouseDown={(e) => e.preventDefault()}
+                                          onClick={() => selectProcessingOutputForRow(index, option)}
+                                          className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-blue-50 last:border-b-0"
+                                        >
+                                          <div className="min-w-0">
+                                            <div className="truncate font-medium text-slate-800">{option.name}</div>
+                                            <div className="text-xs text-slate-500">{option.barcode || "No barcode"}</div>
+                                          </div>
+                                          <div className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                                            {option.defaultUnit || "PCS"}
+                                          </div>
+                                        </button>
+                                      ))
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {output.outputItemId && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                  <span className="rounded border border-slate-200 bg-white px-2 py-1">{output.outputName}</span>
+                                  <span className="rounded border border-slate-200 bg-white px-2 py-1">{output.defaultQtyUnit || output.defaultUnit || "PCS"}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-slate-700">Default Qty</label>
+                              <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.001"
+                                  value={output.defaultQty}
+                                  onChange={(e) => updateProcessingOutput(index, "defaultQty", e.target.value)}
+                                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="0"
+                                />
+                                <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600">
+                                  {output.defaultQtyUnit || output.defaultUnit || "PCS"}
+                                </div>
+                              </div>
+                            </div>
+
+                            <label className="flex items-end gap-2 pb-2 text-sm font-medium text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={!!output.waste}
+                                onChange={(e) => updateProcessingOutput(index, "waste", e.target.checked)}
+                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              Waste
+                            </label>
+
+                            <div className="flex items-end">
+                              <button
+                                type="button"
+                                onClick={() => removeProcessingOutput(index)}
+                                className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"
+                                title="Remove output"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </AccordionSection>
+          )}
 
           {draft.itemType === ItemType.RECIPE && (
             <AccordionSection

@@ -35,12 +35,14 @@ import html2canvas from "html2canvas";
 
 import { reportsAPI } from "../api/reports.api";
 import { formatCurrency } from "../utils/formatters";
+import { formatDisplayStockBaseQuantity } from "../utils/stockQuantity";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Table from "../components/common/Table";
 import TablePagination from "../components/common/TablePagination";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import DatePicker from "../components/common/DatePicker";
 import { useBranch } from "../context/BranchContext";
 
 const PAGE_SIZE = 10;
@@ -1120,8 +1122,8 @@ const Reports = ({ mode = "basic" }) => {
           <Table
             columns={[
               { header: "Item", accessor: "itemName" },
-              { header: "Stock", render: (i) => <span className="font-bold text-red-600">{i.totalQty}</span> },
-              { header: "Reorder Level", accessor: "reorderLevel" },
+              { header: "Stock", render: (i) => <span className="font-bold text-red-600">{formatDisplayStockBaseQuantity(i.totalQty, i, i.defaultUnit)}</span> },
+              { header: "Reorder Level", render: (i) => formatDisplayStockBaseQuantity(i.reorderLevel, i, i.defaultUnit) },
               { header: "Status", render: () => <span className="rounded bg-red-100 px-2 py-1 text-xs font-bold text-red-700">LOW</span> },
             ]}
             data={reportData}
@@ -1172,18 +1174,16 @@ const Reports = ({ mode = "basic" }) => {
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:ml-auto">
-              <input
-                type="date"
+              <DatePicker
                 value={dateRange.from}
-                onChange={(e) => handleCustomDateChange("from", e.target.value)}
-                className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(value) => handleCustomDateChange("from", value)}
+                buttonClassName="h-[38px] rounded-xl"
               />
               <span className="hidden text-sm text-slate-400 sm:inline">to</span>
-              <input
-                type="date"
+              <DatePicker
                 value={dateRange.to}
-                onChange={(e) => handleCustomDateChange("to", e.target.value)}
-                className="h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(value) => handleCustomDateChange("to", value)}
+                buttonClassName="h-[38px] rounded-xl"
               />
             </div>
           </div>

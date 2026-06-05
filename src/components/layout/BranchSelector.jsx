@@ -18,7 +18,7 @@ const BranchSelector = () => {
   };
 
   return (
-    <div className="relative z-20 flex h-11 min-w-[190px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm">
+    <div className="relative z-20 flex h-11 min-w-[150px] max-w-[190px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm sm:min-w-[190px]">
       <Building2 size={18} className="shrink-0 text-slate-500" />
       <div className="min-w-0 flex-1">
         <CustomSelect
@@ -27,7 +27,7 @@ const BranchSelector = () => {
           options={branches}
           placeholder={t("Select Branch")}
           buttonClassName="h-9 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0 hover:border-transparent"
-          menuClassName="min-w-[190px]"
+          menuClassName="min-w-[150px] sm:min-w-[190px]"
         />
       </div>
     </div>

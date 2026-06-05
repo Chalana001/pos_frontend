@@ -5,11 +5,12 @@ import { usersAPI } from "../api/users.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
+import DatePicker from "../components/common/DatePicker";
 import TablePagination from "../components/common/TablePagination";
 import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
 import { Search, ChevronRight, ShoppingCart } from "lucide-react";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, formatDate, formatTime } from "../utils/formatters";
 
 const datePresetOptions = [
   { value: "ALL", label: "All Dates" },
@@ -246,8 +247,8 @@ const SalesListPage = () => {
       </div>
 
       <Card className="sales-panel-enter sales-panel-hover p-4" style={{ animationDelay: "130ms" }}>
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center">
-          <div className="relative lg:col-span-4">
+        <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
+          <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
@@ -258,7 +259,7 @@ const SalesListPage = () => {
             />
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="col-span-1 xl:col-span-2">
             <CustomSelect
               value={datePreset}
               onChange={handleDatePreset}
@@ -269,31 +270,21 @@ const SalesListPage = () => {
             />
           </div>
 
-          <div className="lg:col-span-2">
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => handleManualDate("from", e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="col-span-1 xl:col-span-2">
+            <DatePicker value={fromDate} onChange={(value) => handleManualDate("from", value)} />
           </div>
 
-          <div className="lg:col-span-2">
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => handleManualDate("to", e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="col-span-1 xl:col-span-2">
+            <DatePicker value={toDate} onChange={(value) => handleManualDate("to", value)} />
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="col-span-1 xl:col-span-2">
             <Button type="button" variant="secondary" onClick={clearFilters} className="h-10 w-full px-4 text-sm">
               Clear
             </Button>
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="col-span-1 xl:col-span-2">
             <CustomSelect
               value={orderType}
               onChange={(value) => {
@@ -307,7 +298,7 @@ const SalesListPage = () => {
             />
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="col-span-1 xl:col-span-2">
             <CustomSelect
               value={customerType}
               onChange={(value) => {
@@ -321,7 +312,7 @@ const SalesListPage = () => {
             />
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="col-span-1 xl:col-span-2">
             <CustomSelect
               value={cashierId}
               onChange={(value) => {
@@ -335,7 +326,7 @@ const SalesListPage = () => {
             />
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="col-span-1 xl:col-span-2">
             <CustomSelect
               value={totalOperator}
               onChange={(value) => {
@@ -349,7 +340,7 @@ const SalesListPage = () => {
             />
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="col-span-full min-[440px]:col-span-3 min-[620px]:col-span-2 xl:col-span-2">
             <input
               type="number"
               min="0"
@@ -396,7 +387,10 @@ const SalesListPage = () => {
                     onClick={() => navigate(`/sales/${sale.invoiceNo}`)}
                   >
                     <td className="p-4 text-slate-600">
-                      {new Date(sale.createdAt).toLocaleDateString()}
+                      <div className="leading-tight">
+                        <div>{formatDate(sale.createdAt)}</div>
+                        <div className="mt-1 text-xs text-slate-400">{formatTime(sale.createdAt)}</div>
+                      </div>
                     </td>
                     <td className={`p-4 font-bold ${sale.status === "CANCELED" ? "text-red-500 line-through" : "text-blue-600"}`}>
                       {sale.invoiceNo}

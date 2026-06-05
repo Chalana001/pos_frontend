@@ -14,6 +14,7 @@ import Modal from "../components/common/Modal";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import DatePicker from "../components/common/DatePicker";
 import TablePagination from "../components/common/TablePagination";
 
 const toLocalDateTimeParam = (date, endOfDay = false) => {
@@ -305,8 +306,8 @@ const CashDrops = () => {
 
       <Card className="sales-panel-enter sales-panel-hover overflow-hidden p-0" style={{ animationDelay: "130ms" }}>
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "170ms" }}>
-          <div className={`grid grid-cols-1 gap-3 ${isAdmin ? "xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_auto]" : "xl:grid-cols-[minmax(260px,1fr)_180px_180px_auto]"} xl:items-center`}>
-            <div className="relative w-full">
+          <div className={`grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 ${isAdmin ? "xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_auto]" : "xl:grid-cols-[minmax(260px,1fr)_180px_180px_auto]"} xl:items-center`}>
+            <div className={`relative w-full col-span-full ${isAdmin ? "min-[620px]:col-span-2" : "min-[620px]:col-span-2"} min-[440px]:col-span-3 xl:col-span-1`}>
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
               <input
                 type="text"
@@ -320,44 +321,50 @@ const CashDrops = () => {
               />
             </div>
 
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                resetPage();
-              }}
-              className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                resetPage();
-              }}
-              className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-            {isAdmin && (
-              <CustomSelect
-                value={cashierId}
+            <div className="col-span-1">
+              <DatePicker
+                value={startDate}
                 onChange={(value) => {
-                  setCashierId(value);
+                  setStartDate(value);
                   resetPage();
                 }}
-                options={cashierOptions}
-                valueKey="value"
-                labelKey="label"
-                placeholder="All Users"
-                buttonClassName="h-[42px]"
+                buttonClassName="h-[42px] rounded-xl"
               />
+            </div>
+
+            <div className="col-span-1">
+              <DatePicker
+                value={endDate}
+                onChange={(value) => {
+                  setEndDate(value);
+                  resetPage();
+                }}
+                buttonClassName="h-[42px] rounded-xl"
+              />
+            </div>
+
+            {isAdmin && (
+              <div className="col-span-1">
+                <CustomSelect
+                  value={cashierId}
+                  onChange={(value) => {
+                    setCashierId(value);
+                    resetPage();
+                  }}
+                  options={cashierOptions}
+                  valueKey="value"
+                  labelKey="label"
+                  placeholder="All Users"
+                  buttonClassName="h-[42px]"
+                />
+              </div>
             )}
 
-            <Button type="button" variant="secondary" onClick={clearFilters} className="h-[42px] px-4 text-sm" disabled={loading || summaryLoading}>
-              Clear
-            </Button>
+            <div className="col-span-1">
+              <Button type="button" variant="secondary" onClick={clearFilters} className="h-[42px] w-full px-4 text-sm" disabled={loading || summaryLoading}>
+                Clear
+              </Button>
+            </div>
           </div>
         </div>
 

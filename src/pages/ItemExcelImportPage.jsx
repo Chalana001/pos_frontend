@@ -49,6 +49,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
   const fileInputRef = useRef(null);
   const { configuration } = useAppConfiguration();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
+  const kotEnabled = configuration?.kotEnabled !== false;
   const [activeTab, setActiveTab] = useState(initialTab);
   const [categories, setCategories] = useState([]);
   const [subCategoryMap, setSubCategoryMap] = useState({});
@@ -180,7 +181,10 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
       const formData = new FormData();
       formData.append("file", file);
       const res = await itemsAPI.previewImport(formData);
-      await applyRows(res.data?.rows || []);
+      await applyRows((res.data?.rows || []).map((row) => ({
+        ...row,
+        kotEnabled: kotEnabled ? row.kotEnabled : false,
+      })));
       toast.success(`Loaded ${res.data?.totalRows || 0} rows`);
     } catch (error) {
       setRows([]);
@@ -199,6 +203,10 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
   };
 
   const updateRow = async (rowNumber, field, value) => {
+    if (field === "kotEnabled" && !kotEnabled) {
+      return;
+    }
+
     if (field === "categoryId") {
       const categoryId = value ? Number(value) : null;
       const categoryName = categoryId ? categoryNameById[String(categoryId)] || "" : "";
@@ -354,6 +362,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
             </div>
             <div className="text-xs text-slate-500">
               Recipe items import here without ingredients. Add ingredient joins from the Recipe Ingredients tab.
+              {!kotEnabled ? ' KOT is disabled in App Configuration, so imported KOT values will stay off.' : ''}
             </div>
             {fileName ? <span className="ml-2 font-medium text-slate-800">{fileName}</span> : null}
           </div>
@@ -475,7 +484,15 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                         <CustomSelect value={String(row.posVisible ?? true)} onChange={(value) => updateRow(row.rowNumber, "posVisible", value === "true")} options={booleanOptions} valueKey="value" labelKey="label" className="w-24" />
                       </td>
                       <td className="px-3 py-3">
-                        <CustomSelect value={String(row.kotEnabled ?? false)} onChange={(value) => updateRow(row.rowNumber, "kotEnabled", value === "true")} options={booleanOptions} valueKey="value" labelKey="label" className="w-24" />
+                        <CustomSelect
+                          value={String(kotEnabled ? row.kotEnabled ?? false : false)}
+                          onChange={(value) => updateRow(row.rowNumber, "kotEnabled", value === "true")}
+                          options={booleanOptions}
+                          valueKey="value"
+                          labelKey="label"
+                          className="w-24"
+                          disabled={!kotEnabled}
+                        />
                       </td>
                       <td className="px-3 py-3">
                         <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">

@@ -6,6 +6,7 @@ import { suppliersAPI } from "../api/suppliers.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
+import DatePicker from "../components/common/DatePicker";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
@@ -15,6 +16,14 @@ const purchaseStatusOptions = [
   { value: "COMPLETED", label: "Completed" },
   { value: "CANCELED", label: "Canceled" },
 ];
+
+const formatCashSource = (value) => {
+  if (value === "CASH_DRAWER") return "Drawer";
+  if (value === "BRANCH_CASH") return "Branch Cash";
+  if (value === "BANK") return "Bank";
+  if (value === "NONE") return "No Cash Out";
+  return value || "Branch Cash";
+};
 
 const PurchaseListPage = () => {
   const navigate = useNavigate();
@@ -127,8 +136,8 @@ const PurchaseListPage = () => {
 
       <Card className="sales-panel-enter sales-panel-hover overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "90ms" }}>
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "130ms" }}>
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-            <div className="relative w-full xl:min-w-[300px] xl:flex-1">
+          <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
+            <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
@@ -142,7 +151,7 @@ const PurchaseListPage = () => {
               />
             </div>
 
-            <div className="w-full xl:w-52 xl:shrink-0">
+            <div className="col-span-1 xl:col-span-2">
               <CustomSelect
                 value={supplierId}
                 onChange={(value) => {
@@ -156,7 +165,7 @@ const PurchaseListPage = () => {
               />
             </div>
 
-            <div className="w-full xl:w-44 xl:shrink-0">
+            <div className="col-span-1 xl:col-span-2">
               <CustomSelect
                 value={status}
                 onChange={(value) => {
@@ -170,32 +179,30 @@ const PurchaseListPage = () => {
               />
             </div>
 
-            <div className="w-full xl:w-44 xl:shrink-0">
-              <input
-                type="date"
+            <div className="col-span-1 xl:col-span-2">
+              <DatePicker
                 value={fromDate}
-                onChange={(event) => {
-                  setFromDate(event.target.value);
+                onChange={(value) => {
+                  setFromDate(value);
                   resetPage();
                 }}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                buttonClassName="h-[42px] rounded-xl"
               />
             </div>
 
-            <div className="w-full xl:w-44 xl:shrink-0">
-              <input
-                type="date"
+            <div className="col-span-1 xl:col-span-2">
+              <DatePicker
                 value={toDate}
-                onChange={(event) => {
-                  setToDate(event.target.value);
+                onChange={(value) => {
+                  setToDate(value);
                   resetPage();
                 }}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                buttonClassName="h-[42px] rounded-xl"
               />
             </div>
 
-            <div className="w-full xl:w-auto xl:shrink-0">
-              <Button type="button" variant="secondary" onClick={clearFilters} className="h-[42px] w-full px-4 text-sm xl:w-auto" disabled={loading}>
+            <div className="col-span-1 xl:col-span-2">
+              <Button type="button" variant="secondary" onClick={clearFilters} className="h-[42px] w-full px-4 text-sm" disabled={loading}>
                 Clear
               </Button>
             </div>
@@ -218,6 +225,7 @@ const PurchaseListPage = () => {
                   <th className="app-table-head-cell text-right">Discount</th>
                   <th className="app-table-head-cell text-right">Grand Total</th>
                   <th className="app-table-head-cell text-right">Paid</th>
+                  <th className="app-table-head-cell">Source</th>
                   <th className="app-table-head-cell text-right">Due</th>
                   <th className="app-table-head-cell text-center">GRNs</th>
                   <th className="app-table-head-cell w-10"></th>
@@ -226,7 +234,7 @@ const PurchaseListPage = () => {
               <tbody className="app-table-body">
                 {data.length === 0 ? (
                   <tr>
-                    <td colSpan="10" className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan="11" className="px-6 py-8 text-center text-slate-500">
                       No records found.
                     </td>
                   </tr>
@@ -268,6 +276,9 @@ const PurchaseListPage = () => {
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap text-right font-semibold ${isCanceled ? "text-slate-400 line-through" : "text-emerald-700"}`}>
                           {formatCurrency(purchase.paidAmount || 0)}
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-xs font-semibold ${isCanceled ? "text-slate-400" : "text-slate-600"}`}>
+                          {Number(purchase.paidAmount || 0) > 0 ? formatCashSource(purchase.cashSource) : "No Cash Out"}
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap text-right font-bold ${
                           isCanceled

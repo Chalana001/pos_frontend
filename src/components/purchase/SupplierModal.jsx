@@ -1,23 +1,20 @@
 import React, { useState } from "react";
-import Card from "../common/Card";
 import Button from "../common/Button";
-import { supplierAPI } from "../../api/supplier.api";
+import Modal from "../common/Modal";
+import { suppliersAPI } from "../../api/suppliers.api";
 
 export default function SupplierModal({ open, onClose, onSaved }) {
   const [name, setName] = useState("");
 
-  if (!open) return null;
-
   const save = async () => {
-    const res = await supplierAPI.create({ name });
+    const res = await suppliersAPI.create({ name });
     onSaved(res.data);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
-      <Card className="p-5 w-96 space-y-3">
-        <h2 className="text-lg font-semibold">Add Supplier</h2>
+    <Modal isOpen={open} onClose={onClose} title="Add Supplier" size="sm">
+      <div className="space-y-4">
         <input
           placeholder="Supplier Name"
           value={name}
@@ -28,7 +25,7 @@ export default function SupplierModal({ open, onClose, onSaved }) {
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={save}>Save</Button>
         </div>
-      </Card>
-    </div>
+      </div>
+    </Modal>
   );
 }

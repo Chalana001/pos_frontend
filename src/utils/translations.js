@@ -159,13 +159,11 @@ const exactTranslations = {
     'Item not found!': 'භාණ්ඩය හමු නොවීය!',
     'Item is Out of Stock!': 'භාණ්ඩය තොගයෙන් අවසන්!',
     'Low stock.': 'අඩු තොග.',
-    'Cart is empty': 'කාර්ට් එක හිස්ය',
     'Select a table before checkout': 'Checkout කිරීමට පෙර මේසයක් තෝරන්න',
     'No active shift. Cannot checkout.': 'සක්‍රීය ෂිෆ්ට් එකක් නොමැත. Checkout කළ නොහැක.',
     'Insufficient amount': 'ප්‍රමාණවත් මුදලක් නැත',
     'Select customer for credit': 'ණය විකිණීම සඳහා පාරිභෝගිකයෙක් තෝරන්න',
     Failed: 'අසාර්ථක විය',
-    'Open a shift to view items': 'භාණ්ඩ බැලීමට ෂිෆ්ට් එකක් අරඹන්න',
   },
 };
 

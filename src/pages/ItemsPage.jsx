@@ -62,6 +62,7 @@ const ItemsPage = () => {
   const { user } = useAuth();
   const { configuration } = useAppConfiguration();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
+  const kotEnabled = configuration?.kotEnabled !== false;
   const featureAvailability = useMemo(
     () => getConfigurableFeatureAvailability(user?.planName),
     [user?.planName]
@@ -113,10 +114,10 @@ const ItemsPage = () => {
   }, [itemType, itemTypeOptions]);
 
   useEffect(() => {
-    if (configuration.recipeItemsEnabled || kotFilter === "ALL") return;
+    if ((configuration.recipeItemsEnabled && kotEnabled) || kotFilter === "ALL") return;
     setKotFilter("ALL");
     setPage(0);
-  }, [configuration.recipeItemsEnabled, kotFilter]);
+  }, [configuration.recipeItemsEnabled, kotEnabled, kotFilter]);
 
   useEffect(() => {
     setCategoryId("");
@@ -305,7 +306,7 @@ const ItemsPage = () => {
           {i.itemType === ItemType.WEIGHT && <span className="text-[10px] uppercase font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded w-fit mt-1">Weight Item</span>}
           {i.itemType === ItemType.VOLUME && <span className="text-[10px] uppercase font-bold text-cyan-600 bg-cyan-100 px-1.5 py-0.5 rounded w-fit mt-1">Volume Item</span>}
           {i.itemType === ItemType.RECIPE && <span className="text-[10px] uppercase font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded w-fit mt-1">Recipe</span>}
-          {i.isKotEnabled && <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded w-fit mt-1">KOT</span>}
+          {kotEnabled && i.isKotEnabled && <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded w-fit mt-1">KOT</span>}
           {i.posVisible === false && <span className="text-[10px] uppercase font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">Hidden in POS</span>}
         </div>
       )
@@ -414,8 +415,8 @@ const ItemsPage = () => {
 
       <Card className="sales-panel-enter sales-panel-hover p-0 overflow-hidden" style={{ animationDelay: "130ms" }}>
         <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center">
-            <div className="relative lg:col-span-4">
+          <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
+            <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
@@ -426,7 +427,7 @@ const ItemsPage = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="col-span-1 xl:col-span-2">
               <CustomSelect
                 value={categoryId}
                 onChange={handleCategoryChange}
@@ -439,24 +440,24 @@ const ItemsPage = () => {
             </div>
 
             {!singleCategoryMode && (
-              <div className="lg:col-span-2">
-              <CustomSelect
-                value={subCategoryId}
-                onChange={(value) => {
-                  setSubCategoryId(value);
-                  resetPage();
-                }}
-                options={subCategoryOptions}
-                valueKey="value"
-                labelKey="label"
-                placeholder="All Sub Categories"
-                disabled={!categoryId}
-                buttonClassName="h-10 rounded-lg"
-              />
+              <div className="col-span-1 xl:col-span-2">
+                <CustomSelect
+                  value={subCategoryId}
+                  onChange={(value) => {
+                    setSubCategoryId(value);
+                    resetPage();
+                  }}
+                  options={subCategoryOptions}
+                  valueKey="value"
+                  labelKey="label"
+                  placeholder="All Sub Categories"
+                  disabled={!categoryId}
+                  buttonClassName="h-10 rounded-lg"
+                />
               </div>
             )}
 
-            <div className="lg:col-span-2">
+            <div className="col-span-1 xl:col-span-2">
               <CustomSelect
                 value={itemType}
                 onChange={(value) => {
@@ -470,7 +471,7 @@ const ItemsPage = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="col-span-1 xl:col-span-2">
               <CustomSelect
                 value={status}
                 onChange={(value) => {
@@ -484,8 +485,8 @@ const ItemsPage = () => {
               />
             </div>
 
-            {configuration.recipeItemsEnabled && (
-              <div className="lg:col-span-2">
+            {configuration.recipeItemsEnabled && kotEnabled && (
+              <div className="col-span-1 xl:col-span-2">
                 <CustomSelect
                   value={kotFilter}
                   onChange={(value) => {
@@ -500,7 +501,7 @@ const ItemsPage = () => {
               </div>
             )}
 
-            <div className="lg:col-span-2">
+            <div className="col-span-1 xl:col-span-2">
               <CustomSelect
                 value={priceField}
                 onChange={(value) => {
@@ -514,7 +515,7 @@ const ItemsPage = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="col-span-1 xl:col-span-2">
               <CustomSelect
                 value={priceOperator}
                 onChange={(value) => {
@@ -528,7 +529,7 @@ const ItemsPage = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="col-span-full min-[440px]:col-span-3 min-[620px]:col-span-2 xl:col-span-2">
               <input
                 type="number"
                 min="0"
@@ -543,7 +544,7 @@ const ItemsPage = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="col-span-1 xl:col-span-2">
               <Button type="button" variant="secondary" onClick={clearFilters} className="h-10 w-full px-4 text-sm">
                 Clear
               </Button>

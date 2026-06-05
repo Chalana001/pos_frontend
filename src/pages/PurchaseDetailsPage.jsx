@@ -5,6 +5,7 @@ import { suppliersAPI } from "../api/suppliers.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
+import Modal from "../components/common/Modal";
 import PurchaseA4Print from "../components/purchase/PurchaseA4Print";
 import { useAuth } from "../context/AuthContext"; 
 import { 
@@ -20,6 +21,20 @@ const paymentMethodOptions = [
   { value: "CHEQUE", label: "Cheque" },
   { value: "CARD", label: "Card" },
 ];
+
+const cashSourceOptions = [
+  { value: "BRANCH_CASH", label: "Branch Cash" },
+  { value: "CASH_DRAWER", label: "Cash Drawer" },
+  { value: "BANK", label: "Bank" },
+];
+
+const formatCashSource = (value) => {
+  if (value === "CASH_DRAWER") return "Cash Drawer";
+  if (value === "BRANCH_CASH") return "Branch Cash";
+  if (value === "BANK") return "Bank";
+  if (value === "NONE") return "No Cash Out";
+  return value || "Branch Cash";
+};
 
 const PurchaseDetailsPage = () => {
   const { id } = useParams();
@@ -38,6 +53,8 @@ const PurchaseDetailsPage = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentCashSource, setPaymentCashSource] = useState("BRANCH_CASH");
+  const [paymentCashSourceBranchId, setPaymentCashSourceBranchId] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(false);
 
@@ -98,6 +115,8 @@ const PurchaseDetailsPage = () => {
   const handleOpenPayment = () => {
     setPaymentAmount(String(Math.max(0, Number(purchase?.dueAmount || 0))));
     setPaymentMethod("CASH");
+    setPaymentCashSource("BRANCH_CASH");
+    setPaymentCashSourceBranchId("");
     setPaymentNote("");
     setShowPaymentModal(true);
   };
@@ -112,6 +131,11 @@ const PurchaseDetailsPage = () => {
       toast.error("Payment amount cannot exceed this purchase due amount");
       return;
     }
+    const purchaseBranchIds = [...new Set((purchase?.grnList || []).map((grn) => Number(grn.branchId)).filter(Boolean))];
+    if (paymentCashSource === "CASH_DRAWER" && purchaseBranchIds.length > 1 && !paymentCashSourceBranchId) {
+      toast.error("Please select the drawer branch");
+      return;
+    }
 
     try {
       setPaymentLoading(true);
@@ -119,6 +143,10 @@ const PurchaseDetailsPage = () => {
         purchaseId: purchase.purchaseId,
         amount,
         paymentMethod,
+        cashSource: paymentCashSource,
+        cashSourceBranchId: paymentCashSource === "CASH_DRAWER"
+          ? Number(paymentCashSourceBranchId || purchaseBranchIds[0] || 0)
+          : null,
         note: paymentNote || `Payment for purchase ${purchase.invoiceNo}`,
       });
       toast.success("Supplier payment recorded");
@@ -139,6 +167,10 @@ const PurchaseDetailsPage = () => {
   const canCancel = user?.role !== 'CASHIER' && !isCanceled;
   const purchaseDue = Number(purchase.dueAmount || 0);
   const canPaySupplier = user?.role !== 'CASHIER' && !isCanceled && purchaseDue > 0;
+  const purchaseBranchOptions = [...new Map((purchase.grnList || [])
+    .filter((grn) => grn.branchId)
+    .map((grn) => [String(grn.branchId), { value: String(grn.branchId), label: grn.branchName || `Branch ${grn.branchId}` }])
+  ).values()];
 
   return (
     <div className="page-enter mx-auto max-w-6xl space-y-6 pb-20">
@@ -251,9 +283,21 @@ const PurchaseDetailsPage = () => {
                   </div>
                 </div>
                 {purchase.paymentMethod && Number(purchase.paidAmount || 0) > 0 && (
-                  <div className="mt-3 flex justify-between border-t border-slate-200 pt-3 text-sm">
-                    <span className="text-slate-500">Payment Method</span>
-                    <span className="font-semibold text-slate-700">{purchase.paymentMethod}</span>
+                  <div className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Payment Method</span>
+                      <span className="font-semibold text-slate-700">{purchase.paymentMethod}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Cash Source</span>
+                      <span className="font-semibold text-slate-700">{formatCashSource(purchase.cashSource)}</span>
+                    </div>
+                    {purchase.cashShiftId && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Shift</span>
+                        <span className="font-semibold text-slate-700">#{purchase.cashShiftId}</span>
+                      </div>
+                    )}
                   </div>
                 )}
             </div>
@@ -357,17 +401,7 @@ const PurchaseDetailsPage = () => {
         })}
       </div>
 
-      {/* --- 🟢 BEAUTIFUL CANCEL MODAL (BLUE & SLATE THEME) --- */}
-      {showPaymentModal && (
-        <div className="modal-overlay-enter fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-          <div className="modal-panel-enter shell-surface mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center gap-3 mb-3 text-emerald-600">
-              <div className="p-2 bg-emerald-50 rounded-full">
-                <Wallet size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800">Supplier Payment</h3>
-            </div>
-
+      <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Supplier Payment" size="sm">
             <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Invoice Due</span>
@@ -393,11 +427,43 @@ const PurchaseDetailsPage = () => {
             <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Method</label>
             <CustomSelect
               value={paymentMethod}
-              onChange={setPaymentMethod}
+              onChange={(value) => {
+                setPaymentMethod(value);
+                if (value === "BANK") setPaymentCashSource("BANK");
+                if (value === "CASH" && paymentCashSource === "BANK") setPaymentCashSource("BRANCH_CASH");
+              }}
               options={paymentMethodOptions}
               className="mb-4"
               buttonClassName="py-2 focus:ring-emerald-100"
             />
+
+            <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Cash Source</label>
+            <CustomSelect
+              value={paymentCashSource}
+              onChange={(value) => {
+                setPaymentCashSource(value);
+                if (value !== "CASH_DRAWER") setPaymentCashSourceBranchId("");
+              }}
+              options={cashSourceOptions}
+              className="mb-4"
+              buttonClassName="py-2 focus:ring-emerald-100"
+            />
+
+            {paymentCashSource === "CASH_DRAWER" && purchaseBranchOptions.length > 1 && (
+              <>
+                <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Drawer Branch</label>
+                <CustomSelect
+                  value={paymentCashSourceBranchId}
+                  onChange={setPaymentCashSourceBranchId}
+                  options={purchaseBranchOptions}
+                  valueKey="value"
+                  labelKey="label"
+                  className="mb-4"
+                  buttonClassName="py-2 focus:ring-emerald-100"
+                  placeholder="Select branch"
+                />
+              </>
+            )}
 
             <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Note</label>
             <textarea
@@ -424,20 +490,9 @@ const PurchaseDetailsPage = () => {
                 {paymentLoading ? "Processing..." : "Confirm Payment"}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
-      {showCancelModal && (
-        <div className="modal-overlay-enter fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-          <div className="modal-panel-enter shell-surface mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            
-            <div className="flex items-center gap-3 mb-3 text-blue-600">
-              <div className="p-2 bg-blue-50 rounded-full">
-                <Ban size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800">Cancel Purchase</h3>
-            </div>
+      <Modal isOpen={showCancelModal} onClose={() => setShowCancelModal(false)} title="Cancel Purchase" size="sm">
             
             <p className="text-sm text-slate-500 mb-5 leading-relaxed">
               Are you sure you want to cancel this purchase? This action will reverse the stock. Please provide a reason below.
@@ -469,10 +524,7 @@ const PurchaseDetailsPage = () => {
                 {isCanceling ? "Processing..." : "Confirm Cancel"}
               </Button>
             </div>
-            
-          </div>
-        </div>
-      )}
+      </Modal>
 
     </div>
   );

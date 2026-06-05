@@ -10,7 +10,8 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import TablePagination from "../components/common/TablePagination";
-import CustomSelect from "../components/common/CustomSelect"; // 🟢 Custom Select එක Import කළා
+import CustomSelect from "../components/common/CustomSelect";
+import DatePicker from "../components/common/DatePicker";
 
 const ShiftHistory = () => {
   const navigate = useNavigate();
@@ -132,19 +133,27 @@ const ShiftHistory = () => {
       </div>
 
       <Card className="sales-panel-enter sales-panel-hover border-slate-200 bg-white shadow-sm" style={{ animationDelay: "90ms" }}>
-        <div className="inventory-filter-bar grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" style={{ animationDelay: "130ms" }}>
+        <div className="inventory-filter-bar grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4" style={{ animationDelay: "130ms" }}>
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 flex items-center gap-1 uppercase">
               <Calendar size={14} /> From Date
             </label>
-            <input type="date" name="startDate" value={filters.startDate} onChange={handleInputChange} className="input w-full" />
+            <DatePicker
+              value={filters.startDate}
+              onChange={(value) => handleInputChange({ target: { name: "startDate", value } })}
+              buttonClassName="input h-10 w-full"
+            />
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 flex items-center gap-1 uppercase">
               <Calendar size={14} /> To Date
             </label>
-            <input type="date" name="endDate" value={filters.endDate} onChange={handleInputChange} className="input w-full" />
+            <DatePicker
+              value={filters.endDate}
+              onChange={(value) => handleInputChange({ target: { name: "endDate", value } })}
+              buttonClassName="input h-10 w-full"
+            />
           </div>
 
           {isAdmin && (
@@ -272,3 +281,5 @@ const ShiftHistory = () => {
 };
 
 export default ShiftHistory;
+
+

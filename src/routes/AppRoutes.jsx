@@ -33,6 +33,7 @@ const Shifts = lazy(() => import('../pages/Shifts'));
 const ShiftHistory = lazy(() => import('../pages/ShiftHistory'));
 const ShiftDetailsPage = lazy(() => import('../pages/ShiftDetailsPage'));
 const Expenses = lazy(() => import('../pages/Expenses'));
+const ExpenseTypesPage = lazy(() => import('../pages/ExpenseTypesPage'));
 const CashDrops = lazy(() => import('../pages/CashDrops'));
 const Stock = lazy(() => import('../pages/Stock'));
 const StockItemDetailsPage = lazy(() => import('../pages/StockItemDetailsPage'));
@@ -86,13 +87,13 @@ const AppRoutes = () => {
         path="/"
         element={(
           <ProtectedRoute>
-            <AppConfigurationProvider>
-              <BranchProvider>
+            <BranchProvider>
+              <AppConfigurationProvider>
                 <ShiftProvider>
                   <Layout />
                 </ShiftProvider>
-              </BranchProvider>
-            </AppConfigurationProvider>
+              </AppConfigurationProvider>
+            </BranchProvider>
           </ProtectedRoute>
         )}
       >
@@ -129,6 +130,7 @@ const AppRoutes = () => {
         <Route path="shifts/history/:id" element={<ProtectedRoute permission="MANAGE_SHIFTS_HISTORY" feature="SHIFT_HISTORY" requiresOnline>{withSuspense(<ShiftDetailsPage />)}</ProtectedRoute>} />
 
         <Route path="expenses" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline>{withSuspense(<Expenses />)}</ProtectedRoute>} />
+        <Route path="expenses/settings" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline>{withSuspense(<ExpenseTypesPage />)}</ProtectedRoute>} />
         <Route path="cash-drops" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline>{withSuspense(<CashDrops />)}</ProtectedRoute>} />
 
         <Route path="stock" element={<ProtectedRoute permission="VIEW_STOCK" feature="STOCK_LEVELS" requiresOnline>{withSuspense(<Stock />)}</ProtectedRoute>} />
@@ -149,7 +151,7 @@ const AppRoutes = () => {
         <Route path="reports/products" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="product" />)}</ProtectedRoute>} />
         <Route path="reports/customers" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="customer" />)}</ProtectedRoute>} />
         <Route path="reports/suppliers" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="supplier" />)}</ProtectedRoute>} />
-        <Route path="app-configuration" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<AppConfigurationPage />)}</ProtectedRoute>} />
+        <Route path="app-configuration" element={<ProtectedRoute permission="MANAGE_APP_CONFIGURATION" requiresOnline>{withSuspense(<AppConfigurationPage />)}</ProtectedRoute>} />
         <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<Branches />)}</ProtectedRoute>} />
         <Route path="dining-tables" element={<ProtectedRoute permission="MANAGE_BRANCHES" feature="DINING_TABLES" requiresOnline>{withSuspense(<DiningTablesPage />)}</ProtectedRoute>} />
         <Route path="receipt-settings" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<ReceiptSettingsPage />)}</ProtectedRoute>} />

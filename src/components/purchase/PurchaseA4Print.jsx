@@ -2,6 +2,13 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 
 const PurchaseA4Print = forwardRef((props, ref) => {
   const printFrameRef = useRef(null);
+  const formatCashSource = (value) => {
+    if (value === "CASH_DRAWER") return "Cash Drawer";
+    if (value === "BRANCH_CASH") return "Branch Cash";
+    if (value === "BANK") return "Bank";
+    if (value === "NONE") return "No Cash Out";
+    return value || "Branch Cash";
+  };
 
   useImperativeHandle(ref, () => ({
     printDocument: (purchase) => {
@@ -111,6 +118,7 @@ const PurchaseA4Print = forwardRef((props, ref) => {
                   <div class="amount">LKR ${purchase.grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
                   <div class="total-row"><span>Supplier Discount</span><span>LKR ${Number(purchase.discountAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
                   <div class="total-row"><span>Paid</span><span class="paid">LKR ${Number(purchase.paidAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+                  <div class="total-row"><span>Cash Source</span><span>${Number(purchase.paidAmount || 0) > 0 ? formatCashSource(purchase.cashSource) : "No Cash Out"}</span></div>
                   <div class="total-row"><span>Supplier Due</span><span class="due">LKR ${Number(purchase.dueAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
               </div>
           </div>

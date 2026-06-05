@@ -4,6 +4,13 @@ export const PRINT_TEMPLATE_TYPES = {
   KOT: 'KOT',
 };
 
+export const RECEIPT_FONT_OPTIONS = [
+  { value: 'COURIER_NEW', label: 'Courier New' },
+  { value: 'ARIAL', label: 'Arial' },
+  { value: 'VERDANA', label: 'Verdana' },
+  { value: 'TAHOMA', label: 'Tahoma' },
+];
+
 export const DEFAULT_RECEIPT_SETTINGS = {
   templateType: PRINT_TEMPLATE_TYPES.THERMAL,
   showLogo: true,
@@ -28,7 +35,9 @@ export const DEFAULT_RECEIPT_SETTINGS = {
   showThanksMessage: true,
   showCredits: true,
   logoWidthPercent: 78,
+  logoTopSpacing: 4,
   invoiceLogoWidthPercent: 78,
+  receiptFontFamily: RECEIPT_FONT_OPTIONS[0].value,
   paperWidthMm: 72,
   thanksMessage: 'Thank You, Come Again!',
   creditsLine1: 'SOFTWARE BY CHALA',
@@ -47,7 +56,11 @@ export const normalizeReceiptSettings = (settings) => {
     creditsLine1: DEFAULT_RECEIPT_SETTINGS.creditsLine1,
     creditsLine2: DEFAULT_RECEIPT_SETTINGS.creditsLine2,
     logoWidthPercent: Math.min(200, Math.max(35, Number(merged.logoWidthPercent) || DEFAULT_RECEIPT_SETTINGS.logoWidthPercent)),
+    logoTopSpacing: Math.min(20, Math.max(0, Number(merged.logoTopSpacing) || 0)),
     invoiceLogoWidthPercent: Math.min(200, Math.max(35, Number(merged.invoiceLogoWidthPercent) || DEFAULT_RECEIPT_SETTINGS.invoiceLogoWidthPercent)),
+    receiptFontFamily: RECEIPT_FONT_OPTIONS.some((option) => option.value === merged.receiptFontFamily)
+      ? merged.receiptFontFamily
+      : DEFAULT_RECEIPT_SETTINGS.receiptFontFamily,
     paperWidthMm: Math.min(210, Math.max(48, Number(merged.paperWidthMm) || DEFAULT_RECEIPT_SETTINGS.paperWidthMm)),
     thanksMessage: (merged.thanksMessage || DEFAULT_RECEIPT_SETTINGS.thanksMessage).trim(),
   };

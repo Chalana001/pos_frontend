@@ -6,25 +6,7 @@ import Modal from "../common/Modal";
 import LoadingSpinner from "../common/LoadingSpinner";
 import { formatCurrency } from "../../utils/formatters";
 import { ItemType } from "../../utils/constants";
-
-const formatQty = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return String(value ?? "");
-  }
-  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, "");
-};
-
-const getStockDisplay = (item) => {
-  if (item.itemType === ItemType.WEIGHT || item.itemType === ItemType.VOLUME) {
-    const rawBaseQty = Number(item.availableBaseQty ?? item.availableQty ?? 0);
-    const qty = Number.isFinite(rawBaseQty) ? rawBaseQty / 1000 : 0;
-    return `${formatQty(qty)} ${item.itemType === ItemType.VOLUME ? "L" : "KG"}`;
-  }
-
-  const qty = Number(item.availableQty ?? 0);
-  return item.defaultUnit ? `${formatQty(qty)} ${item.defaultUnit}` : formatQty(qty);
-};
+import { formatDisplayStockQuantity, getDisplayStockQuantity } from "../../utils/stockQuantity";
 
 const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,7 +62,8 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
           ) : (
             items.map((item) => {
               const isService = item.itemType === ItemType.SERVICE;
-              const qtyLabel = getStockDisplay(item);
+              const stockQty = getDisplayStockQuantity(item);
+              const qtyLabel = formatDisplayStockQuantity(item);
 
               return (
                 <button
@@ -97,7 +80,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-bold text-slate-900 font-mono">{formatCurrency(item.sellingPrice)}</div>
-                    <div className={`text-xs font-medium mt-1 ${isService ? "text-purple-600" : (item.availableQty > 0 ? "text-emerald-600" : "text-red-500")}`}>
+                    <div className={`text-xs font-medium mt-1 ${isService ? "text-purple-600" : (stockQty > 0 ? "text-emerald-600" : "text-red-500")}`}>
                       {isService ? "Service Item" : `${qtyLabel} in stock`}
                     </div>
                   </div>

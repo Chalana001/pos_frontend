@@ -1,6 +1,12 @@
 import api from './axios';
 
 export const appConfigurationAPI = {
-  get: () => api.get('/app-configuration'),
-  update: (payload) => api.put('/app-configuration', payload),
+  get: (branchId) =>
+    api.get('/app-configuration', {
+      params: branchId ? { branchId } : {},
+    }),
+  update: (payload, branchId) =>
+    api.put('/app-configuration', payload, {
+      params: branchId ? { branchId } : {},
+    }),
 };

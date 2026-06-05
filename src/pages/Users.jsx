@@ -11,22 +11,7 @@ import Table from "../components/common/Table";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
-
-// ✅ simple modal (if you already have Modal component, use it instead)
-const Modal = ({ open, onClose, title, children }) => {
-    if (!open) return null;
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-xl bg-white rounded-xl shadow-lg">
-                <div className="flex items-center justify-between p-4 border-b">
-                    <h3 className="font-bold text-lg">{title}</h3>
-                    <button onClick={onClose} className="text-slate-600 hover:text-slate-900">✕</button>
-                </div>
-                <div className="p-4">{children}</div>
-            </div>
-        </div>
-    );
-};
+import SharedModal from "../components/common/Modal";
 
 const Users = () => {
     const { user } = useAuth();
@@ -393,7 +378,7 @@ const Users = () => {
             </Card>
 
             {/* Create Modal */}
-            <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create User">
+            <SharedModal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Create User">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label className="text-sm font-medium text-slate-700">Username</label>
@@ -454,11 +439,11 @@ const Users = () => {
                 <p className="text-xs text-slate-500 mt-3">
                     Note: Branch is required for CASHIER/MANAGER.
                 </p>
-            </Modal>
+            </SharedModal>
 
             {/* Assign Branch Modal */}
-            <Modal
-                open={assignBranchOpen}
+            <SharedModal
+                isOpen={assignBranchOpen}
                 onClose={() => setAssignBranchOpen(false)}
                 title={`Assign Branch - ${selectedUser?.username || ""}`}
             >
@@ -482,11 +467,11 @@ const Users = () => {
                     </Button>
                     <Button onClick={handleAssignBranch}>Assign</Button>
                 </div>
-            </Modal>
+            </SharedModal>
 
             {/* Reset Password Modal */}
-            <Modal
-                open={resetOpen}
+            <SharedModal
+                isOpen={resetOpen}
                 onClose={() => setResetOpen(false)}
                 title={`Reset Password - ${selectedUser?.username || ""}`}
             >
@@ -507,7 +492,7 @@ const Users = () => {
                     </Button>
                     <Button onClick={handleResetPassword}>Reset</Button>
                 </div>
-            </Modal>
+            </SharedModal>
         </div>
     );
 };

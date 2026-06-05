@@ -16,6 +16,11 @@ export const itemsAPI = {
       params: (branchId !== undefined && branchId !== null) ? { name, branchId } : { name },
     }),
 
+  searchForPurchase: (name, branchId) =>
+    api.get("/items/searchForPurchase", {
+      params: (branchId !== undefined && branchId !== null) ? { name, branchId } : { name },
+    }),
+
   searchForPos: (name, branchId) =>
     api.get("/items/searchForPos", {
       params: (branchId !== undefined && branchId !== null) ? { name, branchId } : { name },

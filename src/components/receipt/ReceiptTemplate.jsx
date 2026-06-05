@@ -9,6 +9,20 @@ const mmToPx = (mm) => `${Math.round(mm * 3.78)}px`;
 
 const templateUnit = (mode, mm, pxFallback) => (mode === 'print' ? `${mm}mm` : pxFallback || mmToPx(mm));
 
+const getReceiptFontFamily = (settings) => {
+  switch (settings.receiptFontFamily) {
+    case 'ARIAL':
+      return 'Arial, Helvetica, sans-serif';
+    case 'VERDANA':
+      return 'Verdana, Geneva, sans-serif';
+    case 'TAHOMA':
+      return 'Tahoma, Geneva, sans-serif';
+    case 'COURIER_NEW':
+    default:
+      return "'Courier New', Courier, monospace";
+  }
+};
+
 const getLogoWidth = (settings, mode) => {
   if (mode === 'print') {
     return `${Math.max(20, ((settings.paperWidthMm - 6) * settings.logoWidthPercent) / 100)}mm`;
@@ -33,6 +47,11 @@ const getLogoMaxHeight = (settings, mode, templateType) => {
   }
   return '132px';
 };
+
+const getLogoTopSpacing = (settings, mode) =>
+  mode === 'print'
+    ? `${Math.max(0, Number(settings.logoTopSpacing) || 0) / 2}mm`
+    : `${Math.max(0, Number(settings.logoTopSpacing) || 0) * 2}px`;
 
 const calculateItemTotal = (item) => {
   const lineTotal = Number(item?.lineTotal);
@@ -67,7 +86,7 @@ const getStyles = (settings, mode, templateType) => ({
     pageBreakAfter: 'always',
   },
   receipt: {
-    fontFamily: "'Courier New', Courier, monospace",
+    fontFamily: getReceiptFontFamily(settings),
     width: '100%',
     boxSizing: 'border-box',
     fontSize: templateUnit(mode, 3, '12px'),
@@ -80,11 +99,14 @@ const getStyles = (settings, mode, templateType) => ({
     textAlign: 'center',
   },
   logoWrap: {
-    marginTop: mode === 'print' ? '-1.4mm' : '-6px',
-    marginBottom: mode === 'print' ? '-5mm' : '-18px',
+    marginTop: getLogoTopSpacing(settings, mode),
+    marginBottom: mode === 'print' ? '1.5mm' : '10px',
     display: 'flex',
     justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: getLogoMaxHeight(settings, mode, templateType),
     lineHeight: 0,
+    overflow: 'hidden',
   },
   logo: {
     width: getLogoWidth(settings, mode),
@@ -96,20 +118,20 @@ const getStyles = (settings, mode, templateType) => ({
   },
   title: {
     fontSize: templateUnit(mode, 5.6, '18px'),
-    margin: mode === 'print' ? '0 0 1mm 0' : '0 0 4px 0',
+    margin: mode === 'print' ? '0 0 1mm 0' : '0 0 6px 0',
     fontWeight: 900,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   headerParagraph: {
-    margin: mode === 'print' ? '0.8mm 0' : '4px 0',
+    margin: mode === 'print' ? '0.6mm 0' : '3px 0',
     fontSize: templateUnit(mode, 3, '12px'),
   },
   branchName: {
     fontWeight: 700,
   },
   contactInfo: {
-    margin: mode === 'print' ? '1mm 0 0' : '4px 0 0',
+    margin: mode === 'print' ? '0.8mm 0 0' : '4px 0 0',
   },
   contactParagraph: {
     margin: mode === 'print' ? '0.5mm 0' : '4px 0',
@@ -233,6 +255,7 @@ const ReceiptTemplate = ({
 }) => {
   const normalized = normalizeReceiptSettings(settings);
   const isKot = templateType === PRINT_TEMPLATE_TYPES.KOT;
+  const isPreBill = orderData?.documentType === 'PRE_BILL';
   const styles = getStyles(normalized, mode, templateType);
   const createdAt = orderData?.createdAt ? new Date(orderData.createdAt) : new Date();
   const customerName = customerData?.name || orderData?.customerName;
@@ -280,6 +303,7 @@ const ReceiptTemplate = ({
           </div>
 
           {isKot ? <div style={styles.subtitle}>{orderData?.subTitle || 'Kitchen Order Ticket'}</div> : null}
+          {!isKot && isPreBill ? <div style={styles.subtitle}>{orderData?.subTitle || 'Unpaid Bill'}</div> : null}
         </div>
 
         <div style={styles.divider} />
@@ -287,10 +311,11 @@ const ReceiptTemplate = ({
         <div style={styles.infoSection}>
           {normalized.showInvoiceNumber ? (
             <p style={styles.infoParagraph}>
-              {isKot ? 'Order ID' : 'Invoice'}: <b>{invoiceValue}</b>{' '}
+              {isKot || isPreBill ? 'Order ID' : 'Invoice'}: <b>{invoiceValue}</b>{' '}
               {!isKot && totalPages > 1 ? `(Page ${pageNumber} of ${totalPages})` : ''}
             </p>
           ) : null}
+          {isPreBill ? <p style={styles.infoParagraph}>Status: <b>UNPAID - NOT A RECEIPT</b></p> : null}
           {normalized.showDateTime ? <p style={styles.infoParagraph}>Date: {createdAt.toLocaleString()}</p> : null}
           {normalized.showCashier ? (
             <p style={styles.infoParagraph}>
@@ -379,7 +404,7 @@ const ReceiptTemplate = ({
                 <span>{formatCurrency(grandTotal)}</span>
               </div>
             ) : null}
-            {normalized.showPaid ? (
+            {normalized.showPaid && !isPreBill ? (
               <div style={styles.totalRow}>
                 <span>Paid ({orderType})</span>
                 <span>{formatCurrency(paidAmount)}</span>
@@ -391,9 +416,9 @@ const ReceiptTemplate = ({
                 <span>{formatCurrency(paidAmount - grandTotal)}</span>
               </div>
             ) : null}
-            {normalized.showDueAmount && dueAmount > 0 ? (
+            {(normalized.showDueAmount || isPreBill) && dueAmount > 0 ? (
               <div style={{ ...styles.totalRow, fontWeight: 700 }}>
-                <span>Credit Due</span>
+                <span>{isPreBill ? 'Amount Due' : 'Credit Due'}</span>
                 <span>{formatCurrency(dueAmount)}</span>
               </div>
             ) : null}

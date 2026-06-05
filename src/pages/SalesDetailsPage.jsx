@@ -5,6 +5,7 @@ import { receiptSettingsAPI } from "../api/receiptSettings.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
+import Modal from "../components/common/Modal";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
 import InvoicePrinter from "../components/pos/InvoicePrinter";
 import { useAuth } from "../context/AuthContext"; 
@@ -453,16 +454,7 @@ const SalesDetailsPage = () => {
         )}
       </Card>
 
-      {showPaymentModal && (
-        <div className="modal-overlay-enter fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-          <div className="shell-surface modal-panel-enter w-full max-w-md rounded-2xl p-6 mx-4">
-            <div className="flex items-center gap-3 mb-3 text-blue-600">
-              <div className="p-2 bg-blue-50 rounded-full">
-                <Wallet size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800">Sale Due Payment</h3>
-            </div>
-
+      <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Sale Due Payment" size="sm">
             <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Invoice Due</span>
@@ -525,21 +517,9 @@ const SalesDetailsPage = () => {
                 {paymentLoading ? "Processing..." : "Confirm Payment"}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
       
-      {/* --- 🟢 BEAUTIFUL CANCEL MODAL (BLUE & SLATE THEME) --- */}
-      {showCancelModal && (
-        <div className="modal-overlay-enter fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-          <div className="shell-surface modal-panel-enter w-full max-w-md rounded-2xl p-6 mx-4">
-            
-            <div className="flex items-center gap-3 mb-3 text-blue-600">
-              <div className="p-2 bg-blue-50 rounded-full">
-                <Ban size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800">Cancel Order</h3>
-            </div>
+      <Modal isOpen={showCancelModal} onClose={() => setShowCancelModal(false)} title="Cancel Order" size="sm">
             
             <p className="text-sm text-slate-500 mb-5 leading-relaxed">
               Are you sure you want to cancel this order? This action will reverse the stock. Please provide a reason below.
@@ -571,10 +551,7 @@ const SalesDetailsPage = () => {
                 {isCanceling ? "Processing..." : "Confirm Cancel"}
               </Button>
             </div>
-            
-          </div>
-        </div>
-      )}
+      </Modal>
 
     </div>
   );

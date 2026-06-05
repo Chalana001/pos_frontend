@@ -12,7 +12,7 @@ import { categoriesAPI } from "../api/categories.api";
 import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
-import { ItemType, ItemTypeLabels } from "../utils/constants";
+import { ItemType, ItemTypeLabels, OVERHEAD_COST_MODES } from "../utils/constants";
 
 import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon, ChefHat, Search, Trash2 } from "lucide-react";
 
@@ -43,6 +43,20 @@ const buildEmptyIngredient = () => ({
   qtyUnit: "PCS",
   search: "",
 });
+
+const isBlankIngredient = (ingredient) => {
+  if (!ingredient) return true;
+  return (
+    !ingredient.ingredientItemId &&
+    !String(ingredient.ingredientName || "").trim() &&
+    !String(ingredient.ingredientBarcode || "").trim() &&
+    !String(ingredient.search || "").trim() &&
+    Number(ingredient.quantity || 0) <= 0
+  );
+};
+
+const getRecipeIngredientRows = (ingredients = []) =>
+  ingredients.filter((ingredient) => !isBlankIngredient(ingredient));
 
 const buildEmptyProcessingOutput = () => ({
   outputItemId: "",
@@ -116,6 +130,7 @@ const ItemFormPage = ({ mode }) => {
   const { user } = useAuth();
   const { configuration } = useAppConfiguration();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
+  const kotEnabled = configuration?.kotEnabled !== false;
   const allowedItemTypeOptions = useMemo(
     () => getAllowedItemTypeOptions(user?.planName, configuration),
     [configuration, user?.planName]
@@ -145,6 +160,8 @@ const ItemFormPage = ({ mode }) => {
     branchIds: [],
     active: true,
     posVisible: true,
+    overheadCostMode: OVERHEAD_COST_MODES.NONE,
+    overheadCostValue: "",
     stockProcessingEnabled: false,
     processingOutputs: [],
   });
@@ -188,6 +205,8 @@ const ItemFormPage = ({ mode }) => {
       isKotEnabled: false,
       ingredients: [],
       branchIds: [],
+      overheadCostMode: OVERHEAD_COST_MODES.NONE,
+      overheadCostValue: "",
     }));
   }, [allowedItemTypeOptions, formData.itemType, mode]);
 
@@ -252,6 +271,8 @@ const ItemFormPage = ({ mode }) => {
           branchIds: item.branchIds ?? [],
           active: item.active ?? true,
           posVisible: item.posVisible ?? true,
+          overheadCostMode: item.overheadCostMode || OVERHEAD_COST_MODES.NONE,
+          overheadCostValue: item.overheadCostValue ?? "",
           stockProcessingEnabled: item.stockProcessingEnabled ?? false,
           processingOutputs: Array.isArray(item.processingOutputs)
             ? item.processingOutputs.map((output) => ({
@@ -632,18 +653,24 @@ const ItemFormPage = ({ mode }) => {
       return;
     }
 
-    if (formData.itemType === ItemType.RECIPE && formData.ingredients.length === 0) {
-      toast.error("Add at least one ingredient for the recipe");
+    const recipeIngredientRows = getRecipeIngredientRows(formData.ingredients);
+
+    if (
+      formData.itemType === ItemType.RECIPE &&
+      recipeIngredientRows.some((ingredient) => !ingredient.ingredientItemId || Number(ingredient.quantity || 0) <= 0)
+    ) {
+      toast.error("Select each ingredient from search and enter a valid quantity");
       setSecRecipe(true);
       return;
     }
 
     if (
       formData.itemType === ItemType.RECIPE &&
-      formData.ingredients.some((ingredient) => !ingredient.ingredientItemId || Number(ingredient.quantity || 0) <= 0)
+      formData.overheadCostMode !== OVERHEAD_COST_MODES.NONE &&
+      Number(formData.overheadCostValue || 0) <= 0
     ) {
-      toast.error("Select each ingredient from search and enter a valid quantity");
-      setSecRecipe(true);
+      toast.error("Enter a valid recipe overhead value");
+      setSecGeneral(true);
       return;
     }
 
@@ -680,9 +707,11 @@ const ItemFormPage = ({ mode }) => {
           : Number(formData.reorderLevel || 0),
         imageUrl: formData.imageUrl?.trim() || null,
         itemType: formData.itemType,
-        isKotEnabled: formData.itemType === ItemType.RECIPE ? !!formData.isKotEnabled : false,
+        isKotEnabled: formData.itemType === ItemType.RECIPE
+          ? (kotEnabled ? !!formData.isKotEnabled : undefined)
+          : false,
         ingredients: formData.itemType === ItemType.RECIPE
-          ? formData.ingredients.map((ingredient) => ({
+          ? recipeIngredientRows.map((ingredient) => ({
               ingredientItemId: Number(ingredient.ingredientItemId),
               quantity: Number(ingredient.quantity || 0),
               qtyUnit: ingredient.qtyUnit,
@@ -696,6 +725,11 @@ const ItemFormPage = ({ mode }) => {
               : "PCS",
         active: formData.active,
         posVisible: formData.posVisible,
+        overheadCostMode: formData.itemType === ItemType.RECIPE ? formData.overheadCostMode : OVERHEAD_COST_MODES.NONE,
+        overheadCostValue:
+          formData.itemType === ItemType.RECIPE && formData.overheadCostMode !== OVERHEAD_COST_MODES.NONE
+            ? Number(formData.overheadCostValue || 0)
+            : 0,
         stockProcessingEnabled: isStockTrackedFormItem ? !!formData.stockProcessingEnabled : false,
         processingOutputs: isStockTrackedFormItem && formData.stockProcessingEnabled
           ? formData.processingOutputs.map((output) => ({
@@ -867,6 +901,8 @@ const ItemFormPage = ({ mode }) => {
                             defaultUnit: value === ItemType.WEIGHT ? "KG" : value === ItemType.VOLUME ? "L" : value === ItemType.SERVICE ? "SERVICE" : "PCS",
                             isKotEnabled: value === ItemType.RECIPE ? formData.isKotEnabled : false,
                             ingredients: value === ItemType.RECIPE ? formData.ingredients : [],
+                            overheadCostMode: value === ItemType.RECIPE ? formData.overheadCostMode : OVERHEAD_COST_MODES.NONE,
+                            overheadCostValue: value === ItemType.RECIPE ? formData.overheadCostValue : "",
                             branchIds: value === ItemType.SERVICE ? formData.branchIds : [],
                             stockProcessingEnabled: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(value)
                               ? formData.stockProcessingEnabled
@@ -902,14 +938,19 @@ const ItemFormPage = ({ mode }) => {
 
                   {formData.itemType === ItemType.RECIPE && (
                     <div className="md:col-span-2 rounded-xl border border-rose-200 bg-rose-50 p-4">
-                      <label className="flex items-center justify-between gap-3 cursor-pointer">
+                      <label className={`flex items-center justify-between gap-3 ${kotEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}>
                         <div>
                           <div className="text-sm font-medium text-slate-700">Send to Kitchen (KOT)</div>
-                          <p className="text-xs text-slate-500">Enable this when the item should appear on kitchen order tickets.</p>
+                          <p className="text-xs text-slate-500">
+                            {kotEnabled
+                              ? 'Enable this when the item should appear on kitchen order tickets.'
+                              : 'KOT is disabled in App Configuration.'}
+                          </p>
                         </div>
                         <input
                           type="checkbox"
-                          checked={!!formData.isKotEnabled}
+                          checked={kotEnabled && !!formData.isKotEnabled}
+                          disabled={!kotEnabled}
                           onChange={(e) => setFormData({ ...formData, isKotEnabled: e.target.checked })}
                           className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                         />
@@ -1017,6 +1058,50 @@ const ItemFormPage = ({ mode }) => {
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+
+                  {formData.itemType === ItemType.RECIPE && (
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Recipe Overhead</label>
+                        <CustomSelect
+                          value={formData.overheadCostMode}
+                          onChange={(value) => setFormData((prev) => ({
+                            ...prev,
+                            overheadCostMode: value,
+                            overheadCostValue: value === OVERHEAD_COST_MODES.NONE ? "" : prev.overheadCostValue,
+                          }))}
+                          options={[
+                            { value: OVERHEAD_COST_MODES.NONE, label: "None" },
+                            { value: OVERHEAD_COST_MODES.FIXED, label: "Fixed Amount" },
+                            { value: OVERHEAD_COST_MODES.PERCENT, label: "Percent" },
+                          ]}
+                          valueKey="value"
+                          labelKey="label"
+                        />
+                        <p className="mt-1 text-xs text-slate-500">Use this for oil, spice, gas, packing or small kitchen overhead that is not tracked as ingredients.</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          {formData.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "Overhead Percent" : "Overhead Amount"}
+                        </label>
+                        <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formData.overheadCostValue}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, overheadCostValue: e.target.value }))}
+                            disabled={formData.overheadCostMode === OVERHEAD_COST_MODES.NONE}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                          />
+                          <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-600">
+                            {formData.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "%" : "LKR"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Reorder Level</label>

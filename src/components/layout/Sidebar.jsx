@@ -40,6 +40,7 @@ const Sidebar = () => {
 
   // 🔴 Mobile Menu State
   const [isOpen, setIsOpen] = useState(false);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
 
   // ✅ detect sub routes
   const isItemsRoute = location.pathname.startsWith("/items");
@@ -50,6 +51,7 @@ const Sidebar = () => {
   const isViewingCustomer = /^\/customers\/\d+$/.test(location.pathname);
 
   const isShiftsRoute = location.pathname.startsWith("/shifts");
+  const isExpensesRoute = location.pathname.startsWith("/expenses");
 
   const isStockRoute =
     location.pathname.startsWith("/stock") ||
@@ -80,51 +82,109 @@ const Sidebar = () => {
   const [openShifts, setOpenShifts] = useState(false);
   const [openStock, setOpenStock] = useState(false);
   const [openPurchase, setOpenPurchase] = useState(false);
+  const [openExpenses, setOpenExpenses] = useState(false);
   const [openSales, setOpenSales] = useState(false); // 🟢 Sales dropdown state
   const [openWarranties, setOpenWarranties] = useState(false);
   const [openReports, setOpenReports] = useState(false);
   const [openConfiguration, setOpenConfiguration] = useState(false);
 
+  const closeAllDropdowns = () => {
+    setOpenItems(false);
+    setOpenCustomers(false);
+    setOpenSuppliers(false);
+    setOpenShifts(false);
+    setOpenStock(false);
+    setOpenPurchase(false);
+    setOpenExpenses(false);
+    setOpenSales(false);
+    setOpenWarranties(false);
+    setOpenReports(false);
+    setOpenConfiguration(false);
+  };
+
+  const openOnlyDropdown = (key) => {
+    closeAllDropdowns();
+    if (key === "items") setOpenItems(true);
+    if (key === "customers") setOpenCustomers(true);
+    if (key === "suppliers") setOpenSuppliers(true);
+    if (key === "shifts") setOpenShifts(true);
+    if (key === "stock") setOpenStock(true);
+    if (key === "purchase") setOpenPurchase(true);
+    if (key === "expenses") setOpenExpenses(true);
+    if (key === "sales") setOpenSales(true);
+    if (key === "warranties") setOpenWarranties(true);
+    if (key === "reports") setOpenReports(true);
+    if (key === "configuration") setOpenConfiguration(true);
+  };
+
+  const toggleDropdown = (key, currentlyOpen) => {
+    if (currentlyOpen) {
+      closeAllDropdowns();
+      return;
+    }
+    openOnlyDropdown(key);
+  };
+
+  const handleSidebarOpen = () => {
+    if (window.innerWidth >= 1280) {
+      setIsDesktopCollapsed(false);
+      return;
+    }
+    setIsOpen(true);
+  };
+
+  const handleSidebarClose = () => {
+    if (window.innerWidth >= 1280) {
+      setIsDesktopCollapsed(true);
+      return;
+    }
+    setIsOpen(false);
+  };
+
   // ✅ auto open dropdown when inside those routes
   useEffect(() => {
-    if (isItemsRoute) setOpenItems(true);
+    if (isItemsRoute) openOnlyDropdown("items");
   }, [isItemsRoute]);
 
   useEffect(() => {
-    if (isCustomersRoute) setOpenCustomers(true);
+    if (isCustomersRoute) openOnlyDropdown("customers");
   }, [isCustomersRoute]);
 
   useEffect(() => {
-    if (isSuppliersRoute) setOpenSuppliers(true);
+    if (isSuppliersRoute) openOnlyDropdown("suppliers");
   }, [isSuppliersRoute]);
 
   useEffect(() => { 
-    if (isShiftsRoute) setOpenShifts(true);
+    if (isShiftsRoute) openOnlyDropdown("shifts");
    }, [isShiftsRoute]);
 
   useEffect(() => {
-    if (isStockRoute) setOpenStock(true);
+    if (isStockRoute) openOnlyDropdown("stock");
   }, [isStockRoute]);
 
   useEffect(() => {
-    if (isPurchaseRoute) setOpenPurchase(true);
+    if (isPurchaseRoute) openOnlyDropdown("purchase");
   }, [isPurchaseRoute]);
 
   useEffect(() => {
-    if (isWarrantyRoute) setOpenWarranties(true);
+    if (isExpensesRoute) openOnlyDropdown("expenses");
+  }, [isExpensesRoute]);
+
+  useEffect(() => {
+    if (isWarrantyRoute) openOnlyDropdown("warranties");
   }, [isWarrantyRoute]);
 
   useEffect(() => {
-    if (isConfigurationRoute) setOpenConfiguration(true);
+    if (isConfigurationRoute) openOnlyDropdown("configuration");
   }, [isConfigurationRoute]);
 
   useEffect(() => {
-    if (isReportsRoute) setOpenReports(true);
+    if (isReportsRoute) openOnlyDropdown("reports");
   }, [isReportsRoute]);
 
   // 🟢 Auto open Sales Dropdown
   useEffect(() => {
-    if (isSalesRoute) setOpenSales(true);
+    if (isSalesRoute) openOnlyDropdown("sales");
   }, [isSalesRoute]);
 
   // 🔴 Mobile එකේදී වෙනත් පිටුවකට ගියාම Sidebar එක Auto Close වෙන්න
@@ -200,6 +260,7 @@ const Sidebar = () => {
       icon: DollarSign,
       path: "/expenses",
       permission: "RECORD_EXPENSES",
+      type: "dropdown-expenses",
     },
     {
       name: "Cash Drops",
@@ -232,18 +293,18 @@ const Sidebar = () => {
       name: "Configuration",
       icon: Settings2,
       path: "/app-configuration",
-      permission: "MANAGE_BRANCHES",
+      permission: "MANAGE_APP_CONFIGURATION",
       type: "dropdown-configuration",
     },
   ];
 
 return (
     <>
-      {!isOpen && (
+      {!isOpen && !isDesktopCollapsed && (
         <button
           type="button"
           aria-label="Open sidebar menu"
-          onClick={() => setIsOpen(true)}
+          onClick={handleSidebarOpen}
           className="shell-panel-hover fixed left-4 top-4 z-[60] rounded-lg bg-slate-900 p-2 text-white shadow-lg transition-colors hover:bg-slate-800 xl:hidden"
         >
           <Menu size={24} />
@@ -258,34 +319,56 @@ return (
       )}
 
       <aside
-        className={`${isOpen ? "shell-sidebar-enter" : ""} fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0f172a] text-white shadow-2xl transform transition-transform duration-300 ease-in-out xl:static
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0`}
+        className={`${isOpen ? "shell-sidebar-enter" : ""} fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0f172a] text-white shadow-2xl transform transition-all duration-300 ease-in-out xl:static
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0 ${isDesktopCollapsed ? "xl:w-[72px] xl:min-w-[72px]" : "xl:w-64"}`}
       >
-        <div className="flex items-start justify-between border-b border-slate-800 p-6">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <img
+        <div
+          className={`border-b border-slate-800 ${isDesktopCollapsed ? "cursor-pointer px-3 py-5" : "p-6"}`}
+          onClick={isDesktopCollapsed ? handleSidebarOpen : undefined}
+          role={isDesktopCollapsed ? "button" : undefined}
+          tabIndex={isDesktopCollapsed ? 0 : undefined}
+          onKeyDown={
+            isDesktopCollapsed
+              ? (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleSidebarOpen();
+                  }
+                }
+              : undefined
+          }
+        >
+          <div className="flex items-start justify-between">
+            <div className="min-w-0">
+              <div className={`flex items-center ${isDesktopCollapsed ? "justify-center" : "gap-3"}`}>
+                <img
                 src={BRAND_MARK}
                 alt={`${BRAND_NAME} mark`}
                 className="sidebar-logo-spin h-14 w-14 shrink-0 object-contain"
               />
-              <img
-                src={BRAND_WORDMARK}
-                alt={BRAND_NAME}
-                className="h-12 w-auto max-w-[150px] object-contain"
-              />
+              {!isDesktopCollapsed ? (
+                <img
+                  src={BRAND_WORDMARK}
+                  alt={BRAND_NAME}
+                  className="h-12 w-auto max-w-[150px] object-contain"
+                />
+              ) : null}
+              </div>
             </div>
+            {!isDesktopCollapsed ? (
+              <button
+                type="button"
+                aria-label="Close sidebar menu"
+                onClick={handleSidebarClose}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            ) : null}
           </div>
-          <button
-            type="button"
-            aria-label="Close sidebar menu"
-            onClick={() => setIsOpen(false)}
-            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white xl:hidden"
-          >
-            <X size={20} />
-          </button>
         </div>
 
+        {!isDesktopCollapsed ? (
         <nav className="custom-scrollbar-dark flex-1 overflow-y-auto p-4 space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -297,6 +380,7 @@ return (
               item.type !== "dropdown-stock" &&
               item.type !== "dropdown-shifts" &&
               item.type !== "dropdown-purchase" &&
+              item.type !== "dropdown-expenses" &&
               item.type !== "dropdown-sales" &&
               item.type !== "dropdown-reports" &&
               item.type !== "dropdown-warranties" &&
@@ -320,7 +404,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenSales((v) => !v)}
+                    onClick={() => toggleDropdown("sales", openSales)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isSalesRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -374,7 +458,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenReports((value) => !value)}
+                    onClick={() => toggleDropdown("reports", openReports)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isReportsRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -451,7 +535,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenWarranties((v) => !v)}
+                    onClick={() => toggleDropdown("warranties", openWarranties)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isWarrantyRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -494,6 +578,7 @@ return (
 
             if (item.type === "dropdown-configuration") {
               const canSeeConfigurationMenu =
+                hasPermission(role, "MANAGE_APP_CONFIGURATION") ||
                 hasPermission(role, "MANAGE_BRANCHES") ||
                 hasPermission(role, "MANAGE_USERS") ||
                 hasPermission(role, "MANAGE_WARRANTY_SETTINGS");
@@ -503,7 +588,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenConfiguration((value) => !value)}
+                    onClick={() => toggleDropdown("configuration", openConfiguration)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isConfigurationRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -517,10 +602,10 @@ return (
 
                   {openConfiguration && (
                     <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
-                      {hasPermission(role, "MANAGE_BRANCHES") && (
-                        <NavLink
-                          to="/app-configuration"
-                          end
+                        {hasPermission(role, "MANAGE_APP_CONFIGURATION") && (
+                          <NavLink
+                            to="/app-configuration"
+                            end
                           className={({ isActive }) =>
                             `block px-3 py-2 rounded-lg text-sm transition-colors ${
                               isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -616,7 +701,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenItems((v) => !v)}
+                    onClick={() => toggleDropdown("items", openItems)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isItemsRoute
                         ? "bg-blue-600 text-white"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -723,7 +808,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenCustomers((v) => !v)}
+                    onClick={() => toggleDropdown("customers", openCustomers)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isCustomersRoute
                         ? "bg-blue-600 text-white"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -798,7 +883,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenSuppliers((v) => !v)}
+                    onClick={() => toggleDropdown("suppliers", openSuppliers)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isSuppliersRoute
                         ? "bg-blue-600 text-white"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -859,7 +944,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenShifts((v) => !v)}
+                    onClick={() => toggleDropdown("shifts", openShifts)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isShiftsRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -903,6 +988,53 @@ return (
             // =========================
             // ✅ Stock dropdown
             // =========================
+            if (item.type === "dropdown-expenses") {
+              if (!hasPermission(role, "RECORD_EXPENSES") || !canUseFeature("FINANCIALS")) return null;
+
+              return (
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
+                  <button
+                    onClick={() => toggleDropdown("expenses", openExpenses)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                      isExpensesRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon size={20} />
+                      <span className="font-medium">{t("Expenses")}</span>
+                    </div>
+                    {openExpenses ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  </button>
+
+                  {openExpenses && (
+                    <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                      <NavLink
+                        to="/expenses"
+                        end
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        {t("Expense List")}
+                      </NavLink>
+                      <NavLink
+                        to="/expenses/settings"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        {t("Manage")}
+                      </NavLink>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             if (item.type === "dropdown-stock") {
               if (!canUseFeature("STOCK_LEVELS")) return null;
               const canSeeStockMenu =
@@ -915,7 +1047,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenStock((v) => !v)}
+                    onClick={() => toggleDropdown("stock", openStock)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isStockRoute
                         ? "bg-blue-600 text-white"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -1006,7 +1138,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => setOpenPurchase((v) => !v)}
+                    onClick={() => toggleDropdown("purchase", openPurchase)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isPurchaseRoute
                         ? "bg-blue-600 text-white"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -1074,7 +1206,9 @@ return (
             );
           })}
         </nav>
+        ) : <div className="flex-1" />}
 
+        {!isDesktopCollapsed ? (
         <div className="page-section-enter border-t border-slate-800 p-4" style={{ animationDelay: '520ms' }}>
           <NavLink
             to="/version-history"
@@ -1094,6 +1228,7 @@ return (
             {t(user?.branchId ? `Branch: #${user.branchId}` : "All Branches")}
           </div>
         </div>
+        ) : null}
       </aside>
     </>
   );

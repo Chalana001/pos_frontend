@@ -20,6 +20,7 @@ const Cart = ({
   onUpdateQtyUnit,
   onUpdateWarranty,
   warrantyOptions = [],
+  warrantyEnabled = true,
   billPromotion,
   focusSearch,
   cartSummary,
@@ -74,12 +75,9 @@ const Cart = ({
     const qty = toFiniteNumber(item?.qty);
     if (qty <= 0) return 0;
 
-    let lineTotal = 0;
-    if (item?.weightItem && (item?.qtyUnit === 'G' || item?.qtyUnit === 'ML')) {
-      lineTotal = qty * toFiniteNumber(item?.perSmallUnitPrice ?? item?.perGramPrice);
-    } else {
-      lineTotal = qty * toFiniteNumber(item?.unitPrice);
-    }
+    let lineTotal = item?.weightItem && (item?.qtyUnit === 'G' || item?.qtyUnit === 'ML')
+      ? qty * toFiniteNumber(item?.perSmallUnitPrice ?? item?.perGramPrice)
+      : qty * toFiniteNumber(item?.unitPrice);
 
     const discountType = item?.effectiveDiscountType || item?.discountType;
     const discountValue = toFiniteNumber(item?.effectiveDiscountValue ?? item?.discountValue);
@@ -237,22 +235,24 @@ const Cart = ({
                         {item.promotionName}
                       </div>
                     )}
-                    <div className="mt-1 max-w-[144px]">
-                      <CustomSelect
-                        value={item.warrantyOptionValue || ""}
-                        onChange={(value) => {
-                          onUpdateWarranty?.(index, value);
-                          focusSearch();
-                        }}
-                        options={safeWarrantyOptions}
-                        valueKey="value"
-                        labelKey="label"
-                        className="w-full"
-                        buttonClassName={compactSelectButtonClass}
-                        menuClassName={compactSelectMenuClass}
-                        menuPlacement="top"
-                      />
-                    </div>
+                    {warrantyEnabled ? (
+                      <div className="mt-1 max-w-[144px]">
+                        <CustomSelect
+                          value={item.warrantyOptionValue || ""}
+                          onChange={(value) => {
+                            onUpdateWarranty?.(index, value);
+                            focusSearch();
+                          }}
+                          options={safeWarrantyOptions}
+                          valueKey="value"
+                          labelKey="label"
+                          className="w-full"
+                          buttonClassName={compactSelectButtonClass}
+                          menuClassName={compactSelectMenuClass}
+                          menuPlacement="top"
+                        />
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex flex-col items-end gap-1.5">

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw } from "lucide-react";
+import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronRight, Printer } from "lucide-react";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { itemsAPI } from "../api/items.api";
 import { ordersAPI } from "../api/orders.api";
@@ -19,6 +19,8 @@ import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import Button from "../components/common/Button";
+import Modal from "../components/common/Modal";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter";
 import KotPrinter from "../components/pos/KotPrinter";
 import InvoicePrinter from "../components/pos/InvoicePrinter";
@@ -28,6 +30,14 @@ import PanelResizeHandle from "../components/common/PanelResizeHandle";
 import { BRAND_NAME_UPPER } from "../utils/branding";
 import { getConfigurableFeatureAvailability, hasPlanFeature } from "../utils/subscriptionFeatures";
 import {
+  STOCK_BASE_UNITS_PER_UNIT,
+  baseToDisplayQuantity,
+  formatDisplayStockQuantity,
+  formatStockQuantity,
+  isBaseScaledStockItem,
+  isMeasuredStockItem,
+} from "../utils/stockQuantity";
+import {
   addOfflineSale,
   cacheItemsForBranch,
   cacheReceiptSettings,
@@ -36,30 +46,11 @@ import {
   getFreeLocalSalesSummary,
 } from "../offline/db";
 
-const SMALL_UNITS_PER_PRIMARY_UNIT = 1000;
-
 const isMeasuredItem = (item) =>
-  item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
-
-const isBaseScaledStockItem = (item) =>
-  item?.itemType === ItemType.NORMAL || item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
-
-const getPrimaryMeasuredUnit = (itemOrUnit) => {
-  const unit = typeof itemOrUnit === "string" ? itemOrUnit : itemOrUnit?.defaultUnit;
-  return String(unit || "").toUpperCase() === "ML" || String(unit || "").toUpperCase() === "L" ? "L" : "KG";
-};
-
-const getSmallMeasuredUnit = (itemOrUnit) => (getPrimaryMeasuredUnit(itemOrUnit) === "L" ? "ML" : "G");
-
-const getMeasuredUnitOptions = (item) => {
-  const primaryUnit = getPrimaryMeasuredUnit(item);
-  return primaryUnit === "L"
-    ? [{ value: "L", label: "L" }, { value: "ML", label: "ML" }]
-    : [{ value: "KG", label: "KG" }, { value: "G", label: "G" }];
-};
+  isMeasuredStockItem(item);
 
 const isUnlimitedStockItem = (item) =>
-  item?.itemType === ItemType.SERVICE || item?.stockUnmanaged === true;
+  item?.itemType === ItemType.SERVICE || item?.itemType === ItemType.RECIPE || item?.stockUnmanaged === true;
 
 const isBatchlessItem = (item) =>
   item?.itemType === ItemType.SERVICE || item?.itemType === ItemType.RECIPE;
@@ -73,8 +64,8 @@ const toBaseQuantity = (quantity, unit, measuredItem = false) => {
     return numeric;
   }
   const normalizedUnit = String(unit || "").toUpperCase();
-  return normalizedUnit === "KG" || normalizedUnit === "L" || normalizedUnit === "PCS"
-    ? numeric * SMALL_UNITS_PER_PRIMARY_UNIT
+    return normalizedUnit === "KG" || normalizedUnit === "L" || normalizedUnit === "PCS"
+    ? numeric * STOCK_BASE_UNITS_PER_UNIT
     : numeric;
 };
 
@@ -88,7 +79,7 @@ const fromBaseQuantity = (baseQuantity, unit, measuredItem = false) => {
   }
   const normalizedUnit = String(unit || "").toUpperCase();
   return normalizedUnit === "KG" || normalizedUnit === "L" || normalizedUnit === "PCS"
-    ? numeric / SMALL_UNITS_PER_PRIMARY_UNIT
+    ? numeric / STOCK_BASE_UNITS_PER_UNIT
     : numeric;
 };
 
@@ -101,48 +92,11 @@ const getPerSmallUnitPrice = (configuredPrice, measuredItem = false) => {
   if (!Number.isFinite(numeric)) {
     return 0;
   }
-  return measuredItem ? numeric / SMALL_UNITS_PER_PRIMARY_UNIT : numeric;
+  return measuredItem ? numeric / STOCK_BASE_UNITS_PER_UNIT : numeric;
 };
-
-const formatQty = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return String(value ?? "");
-  }
-  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, "");
-};
-
-const getStockDisplayQty = (item, batch = null) => {
-  if (item?.itemType === ItemType.NORMAL) {
-    if (batch) {
-      const displayQty = Number(batch.displayQty);
-      if (Number.isFinite(displayQty)) return displayQty;
-      const rawQty = Number(batch.qty ?? 0);
-      return Number.isFinite(rawQty) ? rawQty / SMALL_UNITS_PER_PRIMARY_UNIT : 0;
-    }
-    const displayQty = Number(item.availableQty);
-    if (Number.isFinite(displayQty)) return displayQty;
-    const rawQty = Number(item.availableBaseQty ?? 0);
-    return Number.isFinite(rawQty) ? rawQty / SMALL_UNITS_PER_PRIMARY_UNIT : 0;
-  }
-
-  if (!isMeasuredItem(item)) {
-    const rawQty = batch ? batch.qty : item.availableQty;
-    const numeric = Number(rawQty);
-    return Number.isFinite(numeric) ? numeric : 0;
-  }
-
-  const rawBaseQty = batch
-    ? batch.qty
-    : (item.availableBaseQty ?? item.availableQty ?? 0);
-  const numeric = Number(rawBaseQty);
-  return Number.isFinite(numeric) ? numeric / SMALL_UNITS_PER_PRIMARY_UNIT : 0;
-};
-
-const getStockDisplayUnit = (item) => (isMeasuredItem(item) ? getPrimaryMeasuredUnit(item) : (item.defaultUnit || "PCS"));
 
 const formatStockDisplay = (item, batch = null) =>
-  `${formatQty(getStockDisplayQty(item, batch))} ${getStockDisplayUnit(item)}`;
+  formatDisplayStockQuantity(batch || item, 0, item);
 
 const buildOfflineInvoiceNo = (clientSaleId) =>
   `OFF-${String(clientSaleId || "").replace(/-/g, "").slice(0, 8).toUpperCase()}`;
@@ -153,22 +107,42 @@ const getApiErrorMessage = (error, fallback = "Failed") =>
 const isStockOverrideRequiredError = (error) =>
   error?.response?.data?.code === "STOCK_OVERRIDE_REQUIRED";
 
-const formatStockOverrideConfirmation = (error) => {
+const getStockOverrideShortages = (error) => {
   const shortages = Array.isArray(error?.response?.data?.shortages) ? error.response.data.shortages : [];
-  const lines = shortages.map((shortage) => {
+  return shortages.map((shortage) => {
     const itemLabel = shortage.itemName && shortage.stockItemName && shortage.itemName !== shortage.stockItemName
       ? `${shortage.itemName} / ${shortage.stockItemName}`
       : (shortage.stockItemName || shortage.itemName || "Item");
     const unit = shortage.unit || "PCS";
-    return `${itemLabel}: need ${shortage.requiredQuantity} ${unit}, available ${shortage.availableQuantity} ${unit}`;
+    const baseScaledStockItem = ["PCS", "KG", "L"].includes(String(unit).toUpperCase());
+    return {
+      itemLabel,
+      unit,
+      requiredQuantity: baseScaledStockItem
+        ? baseToDisplayQuantity(shortage.requiredQuantity || 0)
+        : shortage.requiredQuantity,
+      availableQuantity: baseScaledStockItem
+        ? baseToDisplayQuantity(shortage.availableQuantity || 0)
+        : shortage.availableQuantity,
+    };
   });
+};
 
-  return [
-    "Stock is insufficient for this sale.",
-    ...lines,
-    "",
-    "Continue and allow negative stock?",
-  ].join("\n");
+const canRoleConfirmStockOverride = (role, configuration = {}) => {
+  if (role === "SUPER_ADMIN") return true;
+  if (role === "ADMIN") return configuration.adminStockOverrideAllowed !== false;
+  if (role === "MANAGER") return configuration.managerStockOverrideAllowed !== false;
+  if (role === "CASHIER") return configuration.cashierStockOverrideAllowed === true;
+  return false;
+};
+
+const canRoleAddWarranty = (role, configuration = {}) => {
+  if (configuration.warrantyEnabled === false) return false;
+  if (role === "SUPER_ADMIN") return true;
+  if (role === "ADMIN") return configuration.adminWarrantyAllowed !== false;
+  if (role === "MANAGER") return configuration.managerWarrantyAllowed !== false;
+  if (role === "CASHIER") return configuration.cashierWarrantyAllowed === true;
+  return false;
 };
 
 const CART_MODES = {
@@ -184,10 +158,12 @@ const POS = () => {
   const { selectedBranchId, branches } = useBranch();
   const { configuration } = useAppConfiguration();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
+  const kotEnabled = configuration?.kotEnabled !== false;
   const printRef = useRef(null);
   const invoicePrintRef = useRef(null);
   const kotPrintRef = useRef(null);
   const searchInputRef = useRef(null);
+  const categoryScrollRef = useRef(null);
   const kotPrintedQuantitiesRef = useRef({});
   const hydratedCartDraftKeysRef = useRef(new Set());
 
@@ -216,6 +192,7 @@ const POS = () => {
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentError, setPaymentError] = useState("");
+  const [stockOverrideDialog, setStockOverrideDialog] = useState(null);
   const [receiptSettings, setReceiptSettings] = useState(null);
   const [kotReceiptSettings, setKotReceiptSettings] = useState(null);
   const [printFullInvoice, setPrintFullInvoice] = useState(false);
@@ -232,6 +209,7 @@ const POS = () => {
   const [cartPanelWidth, setCartPanelWidth] = useState(470);
   const [isResizingPanels, setIsResizingPanels] = useState(false);
   const resizeStateRef = useRef({ startX: 0, startWidth: 470 });
+  const stockOverrideResolverRef = useRef(null);
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
   const canUseServer = isOnline && hasOnlineSession && !isOfflineSession;
@@ -256,7 +234,10 @@ const POS = () => {
     ? activeCartMode === CART_MODES.ONLINE && canUseServer && !isFreeLocalSalesPlan
     : canUseServer && !isFreeLocalSalesPlan;
   const stockOverrideCanProceed =
-    shouldUseServerForCheckout && configuration?.stockOverrideMode !== "BLOCK";
+    shouldUseServerForCheckout &&
+    configuration?.stockOverrideMode !== "BLOCK" &&
+    canRoleConfirmStockOverride(user?.role, configuration);
+  const canAddWarranty = canUseServer && canRoleAddWarranty(user?.role, configuration);
   const fallbackBranchId = isAdminUser ? (selectedBranchId || null) : (user?.branchId || null);
   const effectiveBranchId = myShift?.branchId || fallbackBranchId;
   const effectiveBranch = branches.find((branch) => Number(branch.id) === Number(effectiveBranchId)) || null;
@@ -327,7 +308,7 @@ const POS = () => {
     }
 
     if (item?.itemType === ItemType.RECIPE) {
-      return getRecipeAvailableQty(item);
+      return Infinity;
     }
 
     return Number(batchData ? batchData.qty : (item?.availableBaseQty ?? 0));
@@ -431,8 +412,15 @@ const POS = () => {
   }, [isFreeLocalSalesPlan]);
 
   useEffect(() => {
-    if (!canUseServer) {
+    if (!canAddWarranty) {
       setWarrantyOptions([{ value: "", label: "No Warranty" }]);
+      setCartItems((currentItems) => currentItems.map((item) => ({
+        ...item,
+        warrantyOptionValue: "",
+        warrantyLabel: "",
+        warrantyPeriodValue: null,
+        warrantyPeriodUnit: null,
+      })));
       return;
     }
 
@@ -453,7 +441,7 @@ const POS = () => {
         console.error("Failed to load warranty templates", error);
         setWarrantyOptions([{ value: "", label: "No Warranty" }]);
       });
-  }, [canUseServer]);
+  }, [canAddWarranty]);
 
   useEffect(() => {
     if (warrantyOptions.length <= 1) {
@@ -521,6 +509,19 @@ const POS = () => {
       return 0;
     }
     return Math.max(0, Math.round(parsed + Number.EPSILON));
+  };
+
+  const scrollCategoriesForward = () => {
+    const container = categoryScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    const firstButton = container.querySelector("button");
+    const buttonWidth = firstButton ? firstButton.getBoundingClientRect().width : 96;
+    const gap = window.innerWidth >= 1024 ? 8 : 6;
+    const nextOffset = (buttonWidth + gap) * 4;
+    container.scrollBy({ left: nextOffset, behavior: "smooth" });
   };
 
   const calculateItemBaseTotal = (item) => {
@@ -635,7 +636,7 @@ const POS = () => {
       ? toBaseQuantity(item.qty, item.qtyUnit || item.defaultUnit, true)
       : Number(item.qty || 0);
 
-  const getKotEligibleItems = (items) => items.filter((item) => item.isKotEnabled);
+  const getKotEligibleItems = (items) => kotEnabled ? items.filter((item) => item.isKotEnabled) : [];
 
   const getPendingKotItems = () => {
     const printedMap = kotPrintedQuantitiesRef.current[currentSessionKey] || {};
@@ -1086,7 +1087,7 @@ const POS = () => {
       if (itemToAdd) {
         const stockQty = getSellableStockBaseQty(itemToAdd);
 
-        if (!isUnlimitedStockItem(itemToAdd) && stockQty <= 0) {
+        if (!isUnlimitedStockItem(itemToAdd) && stockQty <= 0 && !stockOverrideCanProceed) {
           toast.error("Item is Out of Stock!");
           setSearchQuery("");
           return;
@@ -1100,24 +1101,21 @@ const POS = () => {
     const item = cartItems[index];
     const unlimitedStockItem = isUnlimitedStockItem(item);
 
-    let finalQty = newQty;
-    if (item.weightItem && (item.qtyUnit === "KG" || item.qtyUnit === "L")) {
-      finalQty = Math.round(newQty * 1000) / 1000;
-    } else if (item.weightItem && (item.qtyUnit === "G" || item.qtyUnit === "ML")) {
-      finalQty = Math.round(newQty);
-    } else {
-      finalQty = Math.round(newQty);
-    }
+    const finalQty = item.weightItem && (item.qtyUnit === "KG" || item.qtyUnit === "L")
+      ? Math.round(newQty * 1000) / 1000
+      : Math.round(newQty);
 
     if (finalQty < 0) return;
 
-    if (!unlimitedStockItem && item.stockBaseQty > 0) {
-      const compareQty = item.weightItem
+    if (!unlimitedStockItem) {
+      const compareQty = isBaseScaledStockItem(item)
         ? toBaseQuantity(finalQty, item.qtyUnit || item.defaultUnit, true)
         : finalQty;
-      if (compareQty > item.stockBaseQty) {
-        toast.error("Low stock.");
+      if (compareQty > item.stockBaseQty && !stockOverrideCanProceed) {
+        toast.error(item.stockBaseQty > 0 ? "Low stock." : "Item is Out of Stock!");
         return;
+      } else if (compareQty > item.stockBaseQty) {
+        toast.error("Low stock. Override will be required at checkout.");
       }
     }
 
@@ -1211,6 +1209,9 @@ const POS = () => {
   };
 
   const updateWarranty = (index, optionValue) => {
+    if (!canAddWarranty) {
+      return;
+    }
     const selectedOption = warrantyOptions.find((option) => option.value === optionValue) || warrantyOptions[0];
     const newItems = [...cartItems];
     newItems[index].warrantyOptionValue = selectedOption.value;
@@ -1220,18 +1221,25 @@ const POS = () => {
     setCartItems(newItems);
   };
 
-  const createOrderItemPayload = (item, useEffectiveDiscount = true) => ({
-    itemId: item.itemId,
-    batchId: item.batchId,
-    qty: item.qty,
-    qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
-    unitPrice: item.unitPrice,
-    discountType: useEffectiveDiscount ? getEffectiveDiscountType(item) : (item.discountType || DISCOUNT_TYPES.NONE),
-    discountValue: useEffectiveDiscount ? getEffectiveDiscountValue(item) : toNonNegativeNumber(item.discountValue),
-    warrantyLabel: item.warrantyLabel || undefined,
-    warrantyPeriodValue: item.warrantyPeriodValue || undefined,
-    warrantyPeriodUnit: item.warrantyPeriodUnit || undefined,
-  });
+  const createOrderItemPayload = (item, useEffectiveDiscount = true) => {
+    const payload = {
+      itemId: item.itemId,
+      batchId: item.batchId,
+      qty: item.qty,
+      qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : undefined,
+      unitPrice: item.unitPrice,
+      discountType: useEffectiveDiscount ? getEffectiveDiscountType(item) : (item.discountType || DISCOUNT_TYPES.NONE),
+      discountValue: useEffectiveDiscount ? getEffectiveDiscountValue(item) : toNonNegativeNumber(item.discountValue),
+    };
+
+    if (canAddWarranty) {
+      payload.warrantyLabel = item.warrantyLabel || undefined;
+      payload.warrantyPeriodValue = item.warrantyPeriodValue || undefined;
+      payload.warrantyPeriodUnit = item.warrantyPeriodUnit || undefined;
+    }
+
+    return payload;
+  };
 
   const promotionPreviewSignature = useMemo(() => JSON.stringify(cartItems.map((item) => ({
     itemId: item.itemId,
@@ -1410,7 +1418,85 @@ const POS = () => {
     setShowPayment(true);
   };
 
+  const handlePrintBill = () => {
+    if (cartItems.length === 0) return toast.error("Cart is empty");
+    if (!effectiveBranchId) return toast.error("Select a branch before printing bill");
+
+    const total = calculateTotal();
+    const subTotal = cartItems.reduce((acc, item) => acc + calculateItemBaseTotal(item), 0);
+    const effectiveBillDiscount = getEffectiveBillDiscount(subTotal);
+    const storeName = user?.shopName || BRAND_NAME_UPPER;
+    const branchName = effectiveBranch?.name || myShift?.branchName || `Branch ${effectiveBranchId}`;
+    const branchAddress = effectiveBranch?.address || myShift?.branchAddress || "";
+    const branchPhone = effectiveBranch?.phone || myShift?.branchPhone || "";
+    const branchLogo = effectiveBranch?.logoUrl || myShift?.branchLogo || "";
+    const cashierName = user?.name || user?.username || "Cashier";
+    const resolvedTableName = saleMode === SALE_MODES.DINE_IN
+      ? (selectedTable?.tableName || pendingOrdersByTable[Number(selectedTableId)]?.tableName || "")
+      : "";
+    const billData = {
+      orderId: saleMode === SALE_MODES.DINE_IN && selectedTableId ? `TABLE-${selectedTableId}` : "CURRENT",
+      invoiceNo: saleMode === SALE_MODES.DINE_IN && resolvedTableName ? resolvedTableName : "CURRENT BILL",
+      documentType: "PRE_BILL",
+      subTitle: "Unpaid Bill",
+      subTotal,
+      billDiscount: effectiveBillDiscount,
+      netTotal: total,
+      paidAmount: 0,
+      dueAmount: total,
+      paymentMethod: "UNPAID",
+      orderType: "UNPAID",
+      saleMode,
+      tableName: resolvedTableName,
+      customerName: customer?.name || "Walk-in Customer",
+      customerPhone: customer?.phone || "",
+      createdAt: new Date().toISOString(),
+      branchName,
+      branchAddress,
+      branchPhone,
+      branchLogo,
+      cashierName,
+      note: "Pre-bill",
+    };
+    const billItems = cartItems.map((item) => ({
+      ...item,
+      discountType: getEffectiveDiscountType(item),
+      discountValue: getEffectiveDiscountValue(item),
+      lineTotal: calculateCartItemTotal(item),
+    }));
+
+    printRef.current?.printOrder(
+      billData,
+      billItems,
+      storeName,
+      { branchName, branchAddress, branchPhone, branchLogo, cashierName },
+      customer,
+      receiptSettings
+    );
+  };
+
+  const handleStockOverrideDialogClose = (confirmed) => {
+    const resolver = stockOverrideResolverRef.current;
+    stockOverrideResolverRef.current = null;
+    setStockOverrideDialog(null);
+    if (resolver) {
+      resolver(confirmed);
+    }
+  };
+
+  const requestStockOverrideConfirmation = (error) => new Promise((resolve) => {
+    stockOverrideResolverRef.current = resolve;
+    setStockOverrideDialog({
+      message: getApiErrorMessage(error, "Stock is insufficient for this sale."),
+      shortages: getStockOverrideShortages(error),
+    });
+  });
+
   const handlePrintKot = async () => {
+    if (!kotEnabled) {
+      toast.error("KOT is disabled in app configuration");
+      return;
+    }
     if (!canUseServer || queueCartActive) {
       toast.error("KOT printing is unavailable while the current sale is in queue mode");
       return;
@@ -1600,7 +1686,7 @@ const POS = () => {
           setFreeLocalSalesSummary(await getFreeLocalSalesSummary());
         }
 
-        if (printRef.current) {
+        if (configuration.printReceiptAfterCheckout !== false && printRef.current) {
           printRef.current.printOrder(
             receiptOrderData,
             receiptCartItems,
@@ -1630,7 +1716,7 @@ const POS = () => {
         response = await ordersAPI.create(orderData);
       } catch (error) {
         if (isStockOverrideRequiredError(error) && error?.response?.data?.overrideAvailable) {
-          const confirmed = window.confirm(formatStockOverrideConfirmation(error));
+          const confirmed = await requestStockOverrideConfirmation(error);
           if (!confirmed) {
             throw error;
           }
@@ -1681,7 +1767,7 @@ const POS = () => {
         note: "",
       };
 
-      if (printRef.current) {
+      if (configuration.printReceiptAfterCheckout !== false && printRef.current) {
         printRef.current.printOrder(printData, cartItems, storeName, myShift, customer, receiptSettings);
       }
 
@@ -1691,7 +1777,7 @@ const POS = () => {
 
       const pendingKotItems = saleMode === SALE_MODES.TAKEAWAY ? getPendingKotItems() : kotItems;
 
-      if (saleMode === SALE_MODES.TAKEAWAY && pendingKotItems.length > 0 && kotPrintRef.current) {
+      if (kotEnabled && saleMode === SALE_MODES.TAKEAWAY && pendingKotItems.length > 0 && kotPrintRef.current) {
         kotPrintRef.current.printKot(
           {
             orderId: response.data.id || response.data.invoiceNo,
@@ -1903,7 +1989,8 @@ const POS = () => {
           ) : null}
 
           <div className="page-section-enter flex-shrink-0 border-b border-slate-100 bg-white px-2 py-1.5 lg:px-4 lg:py-2.5" style={{ animationDelay: "220ms" }}>
-            <div className="flex gap-1.5 lg:gap-2 overflow-x-auto scrollbar-hide pb-0.5 lg:pb-0">
+            <div className="relative">
+              <div ref={categoryScrollRef} className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5 pr-11 lg:gap-2 lg:pb-0 lg:pr-14">
               {categories.map((cat) => (
                 <button
                   key={cat}
@@ -1918,6 +2005,17 @@ const POS = () => {
                   {cat}
                 </button>
               ))}
+              </div>
+              {categories.length > 4 ? (
+                <button
+                  type="button"
+                  onClick={scrollCategoriesForward}
+                  className="absolute right-0 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:h-9 lg:w-9"
+                  aria-label="Scroll categories"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -1935,11 +2033,13 @@ const POS = () => {
                 <p className="text-sm lg:text-lg font-medium text-center">No items found</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-4 lg:gap-2 xl:grid-cols-5 2xl:grid-cols-6">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 lg:gap-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {filteredItems.map((item) => {
                   const unlimitedStockItem = isUnlimitedStockItem(item);
                   const stockQty = getSellableStockBaseQty(item);
                   const isOutOfStock = !unlimitedStockItem && stockQty <= 0;
+                  const canSelectOutOfStock = isOutOfStock && stockOverrideCanProceed;
+                  const tileDisabled = isOutOfStock && !canSelectOutOfStock;
                   const stockLabel = item.stockUnmanaged
                     ? "Available"
                     : item.itemType === ItemType.RECIPE
@@ -1949,10 +2049,10 @@ const POS = () => {
                   return (
                     <div
                       key={item.id}
-                      onClick={() => !isOutOfStock && addToCart(item)}
+                      onClick={() => !tileDisabled && addToCart(item)}
                       style={{ animationDelay: `${240 + (filteredItems.indexOf(item) % 12) * 32}ms` }}
-                      className={`sales-product-tile sales-panel-hover group relative flex flex-col items-center rounded-lg border border-slate-200 bg-white p-2 text-center transition-all lg:rounded-xl lg:px-3 lg:py-3 ${
-                        !isOutOfStock
+                      className={`sales-product-tile sales-panel-hover group relative flex min-h-[144px] flex-col rounded-lg border border-slate-200 bg-white px-2 py-3 text-center transition-all lg:min-h-[164px] lg:rounded-xl lg:px-4 lg:py-3 ${
+                        !tileDisabled
                           ? "hover:shadow-md cursor-pointer active:scale-95"
                           : "cursor-not-allowed opacity-90"
                       }`}
@@ -1965,17 +2065,27 @@ const POS = () => {
                             {item.isKotEnabled ? "Recipe • KOT" : "Recipe"}
                           </span>
                         ) : isOutOfStock ? (
-                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-red-50 text-red-500 text-[8px] lg:text-[10px] font-bold rounded border border-red-100 uppercase">Out</span>
+                          <span className={`px-1.5 lg:px-2 py-[1px] lg:py-0.5 text-[8px] lg:text-[10px] font-bold rounded border uppercase ${
+                            canSelectOutOfStock
+                              ? "border-amber-200 bg-amber-50 text-amber-600"
+                              : "border-red-100 bg-red-50 text-red-500"
+                          }`}>
+                            {canSelectOutOfStock ? "Override" : "Out"}
+                          </span>
                         ) : (
                           <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-emerald-50 text-emerald-600 text-[8px] lg:text-[10px] font-bold rounded border border-emerald-100 whitespace-nowrap">{stockLabel}</span>
                         )}
                       </div>
 
-                      <div className="mt-2 mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 lg:mt-2 lg:mb-2 lg:h-12 lg:w-12">
-                        <ChefHat className={`w-4 h-4 lg:w-6 lg:h-6 ${isOutOfStock ? "text-slate-200" : "text-slate-300"}`} />
+                      <div className="mt-1.5 flex h-8 w-8 items-center justify-center self-center rounded-full bg-slate-50 lg:mt-1.5 lg:h-10 lg:w-10">
+                        <ChefHat className={`w-4 h-4 lg:w-6 lg:h-6 ${tileDisabled ? "text-slate-200" : "text-slate-300"}`} />
                       </div>
-                      <h3 className="mb-0.5 min-h-[1.25rem] text-[9px] font-semibold leading-tight text-slate-800 line-clamp-2 lg:mb-2 lg:min-h-[2rem] lg:text-[13px]">{item.name}</h3>
-                      <p className="text-[10px] font-bold text-blue-600 lg:text-[13px]">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
+                      <div className="mt-auto flex w-full flex-col items-center gap-0.5 pt-2">
+                        <h3 className="h-[2.3rem] overflow-hidden text-[10px] font-medium leading-[1.15rem] text-slate-700 line-clamp-2 break-all lg:h-[2.7rem] lg:text-[13px] lg:leading-[1.35rem] lg:line-clamp-2">
+                          {item.name}
+                        </h3>
+                        <p className="text-[11px] font-bold text-blue-600 lg:text-[14px]">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
+                      </div>
                     </div>
                   );
                 })}
@@ -2003,6 +2113,7 @@ const POS = () => {
             onUpdateQtyUnit={updateQtyUnit}
             onUpdateWarranty={updateWarranty}
             warrantyOptions={warrantyOptions}
+            warrantyEnabled={canAddWarranty}
             billDiscount={billDiscount}
             setBillDiscount={setBillDiscount}
             billPromotion={billPromotionPreview}
@@ -2016,7 +2127,7 @@ const POS = () => {
               <button
                 type="button"
                 onClick={handlePrintKot}
-                disabled={!canUseServer || queueCartActive || printingKot || !hasKotItems || !canPrintKot}
+                disabled={!kotEnabled || !canUseServer || queueCartActive || printingKot || !hasKotItems || !canPrintKot}
                 className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ChefHat size={16} />
@@ -2026,6 +2137,15 @@ const POS = () => {
             footerActions={(
               <>
                 <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePrintBill}
+                    disabled={cartItems.length === 0}
+                    className="inline-flex h-[40px] items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Printer size={16} />
+                    Print Bill
+                  </button>
                   {saleMode === SALE_MODES.DINE_IN ? (
                     <button
                       type="button"
@@ -2039,9 +2159,10 @@ const POS = () => {
                   ) : (
                     <div />
                   )}
-                  <div />
                 </div>
-                {saleMode === SALE_MODES.DINE_IN && !selectedTableId ? (
+                {!kotEnabled ? (
+                  <div className="text-[11px] text-slate-500">KOT is disabled in App Configuration.</div>
+                ) : saleMode === SALE_MODES.DINE_IN && !selectedTableId ? (
                   <div className="text-[11px] text-slate-500">Select a table before saving or sending KOT.</div>
                 ) : !canUseServer || queueCartActive ? (
                   <div className="text-[11px] text-slate-500">KOT printing is available only for server-mode sales.</div>
@@ -2075,6 +2196,66 @@ const POS = () => {
         customer={customer}
         errorMessage={checkoutError}
       />
+      <Modal
+        isOpen={!!stockOverrideDialog}
+        onClose={() => handleStockOverrideDialogClose(false)}
+        title="Confirm Stock Override"
+        size="sm"
+      >
+        <div className="space-y-5">
+          <div className="flex gap-3">
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-100">
+              <AlertTriangle size={22} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Stock is insufficient for this sale.</p>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                Continuing will complete the sale and allow negative stock for the shortage items.
+              </p>
+            </div>
+          </div>
+
+          {stockOverrideDialog?.shortages?.length ? (
+            <div className="overflow-hidden rounded-xl border border-amber-100 bg-amber-50/50">
+              <div className="border-b border-amber-100 px-4 py-2 text-xs font-bold uppercase text-amber-700">
+                Shortage Items
+              </div>
+              <div className="divide-y divide-amber-100 bg-white">
+                {stockOverrideDialog.shortages.map((shortage, index) => (
+                  <div key={`${shortage.itemLabel}-${index}`} className="px-4 py-3">
+                    <div className="text-sm font-semibold text-slate-800">{shortage.itemLabel}</div>
+                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                      <span>Need: <span className="font-semibold text-slate-700">{formatStockQuantity(shortage.requiredQuantity)} {shortage.unit}</span></span>
+                      <span>Available: <span className="font-semibold text-red-600">{formatStockQuantity(shortage.availableQuantity)} {shortage.unit}</span></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {stockOverrideDialog?.message}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleStockOverrideDialogClose(false)}
+            >
+              Go Back
+            </Button>
+            <Button
+              type="button"
+              className="bg-amber-600 text-white shadow-md shadow-amber-200 hover:bg-amber-700"
+              onClick={() => handleStockOverrideDialogClose(true)}
+            >
+              Allow Override
+            </Button>
+          </div>
+        </div>
+      </Modal>
       <ReceiptPrinter ref={printRef} />
       <InvoicePrinter ref={invoicePrintRef} />
       <KotPrinter ref={kotPrintRef} />

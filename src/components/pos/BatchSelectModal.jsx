@@ -1,38 +1,18 @@
 import React from "react";
-import { X, Calendar, Package, AlertCircle } from "lucide-react";
+import { Calendar, Package, AlertCircle } from "lucide-react";
+import Modal from "../common/Modal";
 import { formatCurrency } from "../../utils/formatters";
-import { ItemType } from "../../utils/constants";
-
-const formatQty = (value) => {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return String(value ?? "");
-  }
-  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, "");
-};
-
-const isMeasuredItem = (item) =>
-  item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
-
-const getPrimaryUnit = (item) => item?.itemType === ItemType.VOLUME || item?.defaultUnit === "L" || item?.defaultUnit === "ML" ? "L" : "KG";
+import { formatDisplayStockQuantity } from "../../utils/stockQuantity";
 
 const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
   if (!isOpen || !item) return null;
 
   return (
-    <div className="modal-overlay-enter fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="modal-panel-enter shell-surface mx-4 w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div>
-            <h3 className="text-lg font-bold text-slate-800">Select Batch</h3>
-            <p className="text-sm text-slate-500 font-medium line-clamp-1">{item.name}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 bg-white border border-slate-200 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
-          >
-            <X size={20} />
-          </button>
+    <Modal isOpen={isOpen} onClose={onClose} title="Select Batch">
+      <div className="-m-6 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="text-lg font-bold text-slate-800">Select Batch</h3>
+          <p className="text-sm text-slate-500 font-medium line-clamp-1">{item.name}</p>
         </div>
 
         <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
@@ -40,10 +20,7 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
             item.batches.map((batch) => {
               const availableQty = Number(batch.qty || 0);
               const isAvailable = availableQty > 0;
-              const displayQty = isMeasuredItem(item)
-                ? availableQty / 1000
-                : Number(batch.displayQty ?? batch.qty ?? 0);
-              const displayUnit = isMeasuredItem(item) ? getPrimaryUnit(item) : (batch.displayUnit ?? item.defaultUnit ?? "");
+              const stockLabel = formatDisplayStockQuantity(batch, 0, item);
 
               return (
                 <button
@@ -89,7 +66,7 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
                     </div>
                     <div className="text-xs font-semibold text-slate-400 mt-1">
                       <span className={isAvailable ? "text-emerald-600" : "text-red-500"}>
-                        {displayUnit ? `${formatQty(displayQty)} ${displayUnit}` : formatQty(displayQty)}
+                        {stockLabel}
                       </span>{" "}
                       Available
                     </div>
@@ -111,7 +88,7 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
           </p>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

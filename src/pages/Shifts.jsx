@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Clock, User, Store } from "lucide-react"; 
 import { shiftsAPI } from "../api/shifts.api";
-import { usersAPI } from "../api/users.api"; 
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { useShift } from "../context/ShiftContext";
@@ -11,7 +10,6 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import CustomSelect from "../components/common/CustomSelect";
 
 const Shifts = () => {
   const { user } = useAuth();
@@ -34,44 +32,14 @@ const Shifts = () => {
   const [openingCash, setOpeningCash] = useState("");
   const [countedCash, setCountedCash] = useState("");
 
-  const [branchUsers, setBranchUsers] = useState([]);
-  const [assignedCashierId, setAssignedCashierId] = useState("");
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const cashierOptions = useMemo(
-    () => [
-      { value: "0", label: `Myself (${user?.username})` },
-      ...branchUsers
-        .filter((cashier) => cashier.id !== user?.id)
-        .map((cashier) => ({
-          value: String(cashier.id),
-          label: `${cashier.username} (${cashier.role})`,
-        })),
-    ],
-    [branchUsers, user?.id, user?.username]
-  );
-
   const handleOpenClick = async () => {
-    setShowOpenModal(true);
-    
     if (isAdmin) {
       if (!selectedBranchId) {
         toast.error("Please select a branch first");
-        setShowOpenModal(false);
         return;
       }
-      
-      setLoadingUsers(true);
-      try {
-        const response = await usersAPI.getUsersByBranch(selectedBranchId);
-        setBranchUsers(response.data || []);
-        
-        setAssignedCashierId("0"); 
-      } catch (error) {
-        toast.error("Failed to load cashiers");
-      } finally {
-        setLoadingUsers(false);
-      }
     }
+    setShowOpenModal(true);
   };
 
   const shiftsList = useMemo(() => {
@@ -98,12 +66,10 @@ const Shifts = () => {
       const payload = { 
         openingCash: parseFloat(openingCash), 
         note: "",
-        ...(isAdmin && { assignedCashierId: parseInt(assignedCashierId) }) 
       };
 
       if (isAdmin) {
         if (!selectedBranchId) return toast.error("Please select a branch");
-        if (assignedCashierId === "") return toast.error("Please select a cashier");
         await shiftsAPI.openByBranch(selectedBranchId, payload);
       } else {
         await shiftsAPI.openMine(payload);
@@ -265,25 +231,7 @@ const Shifts = () => {
       {/* Modals */}
       <Modal isOpen={showOpenModal} onClose={() => setShowOpenModal(false)} title="Open New Shift">
         <form onSubmit={handleOpenShift} className="space-y-4">
-          {isAdmin && (
-            <div className="page-section-enter" style={{ animationDelay: "60ms" }}>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Select Cashier *</label>
-              {loadingUsers ? (
-                <div className="text-sm text-slate-500 mb-2">Loading cashiers...</div>
-              ) : (
-                <CustomSelect
-                  value={assignedCashierId}
-                  onChange={setAssignedCashierId}
-                  options={cashierOptions}
-                  valueKey="value"
-                  labelKey="label"
-                  buttonClassName="input"
-                />
-              )}
-            </div>
-          )}
-
-          <div className="page-section-enter" style={{ animationDelay: isAdmin ? "100ms" : "60ms" }}>
+          <div className="page-section-enter" style={{ animationDelay: "60ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">Opening Cash Amount *</label>
             <input
               type="number"
@@ -293,11 +241,11 @@ const Shifts = () => {
               className="input"
               placeholder="0.00"
               required
-              autoFocus={!isAdmin} 
+              autoFocus
             />
           </div>
-          <div className="page-section-enter flex gap-2" style={{ animationDelay: isAdmin ? "140ms" : "100ms" }}>
-            <Button type="submit" className="flex-1" disabled={isAdmin && loadingUsers}>Open Shift</Button>
+          <div className="page-section-enter flex gap-2" style={{ animationDelay: "100ms" }}>
+            <Button type="submit" className="flex-1">Open Shift</Button>
             <Button type="button" variant="secondary" onClick={() => setShowOpenModal(false)}>Cancel</Button>
           </div>
         </form>

@@ -7,13 +7,16 @@ import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ReceiptTemplate from '../components/receipt/ReceiptTemplate';
 import InvoiceTemplate from '../components/invoice/InvoiceTemplate';
+import CustomSelect from '../components/common/CustomSelect';
 import { useBranch } from '../context/BranchContext';
 import { useAuth } from '../context/AuthContext';
+import { useAppConfiguration } from '../context/AppConfigurationContext';
 import {
   DEFAULT_RECEIPT_SETTINGS,
   getReceiptSettingsDefaults,
   normalizeReceiptSettings,
   PRINT_TEMPLATE_TYPES,
+  RECEIPT_FONT_OPTIONS,
   RECEIPT_SECTION_FIELDS,
 } from '../utils/receiptSettings';
 import { receiptSettingsAPI } from '../api/receiptSettings.api';
@@ -45,7 +48,9 @@ const toSavePayload = (settings, templateType) => {
     showThanksMessage: normalized.showThanksMessage,
     showCredits: true,
     logoWidthPercent: normalized.logoWidthPercent,
+    logoTopSpacing: normalized.logoTopSpacing,
     invoiceLogoWidthPercent: normalized.invoiceLogoWidthPercent,
+    receiptFontFamily: normalized.receiptFontFamily,
     paperWidthMm: templateType === PRINT_TEMPLATE_TYPES.A4 ? 210 : normalized.paperWidthMm,
     thanksMessage: normalized.thanksMessage,
     creditsLine1: normalized.creditsLine1,
@@ -184,7 +189,9 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType }) => {
 
 const ReceiptSettingsPage = () => {
   const { user } = useAuth();
+  const { configuration } = useAppConfiguration();
   const { branches, selectedBranchId } = useBranch();
+  const kotEnabled = configuration?.kotEnabled !== false;
   const branchOptions = useMemo(() => branches.filter((branch) => Number(branch.id) !== 0), [branches]);
   const branchSelectionRequired = !selectedBranchId || Number(selectedBranchId) === 0;
   const activeBranch = useMemo(
@@ -196,6 +203,12 @@ const ReceiptSettingsPage = () => {
   const [form, setForm] = useState(getReceiptSettingsDefaults(PRINT_TEMPLATE_TYPES.THERMAL));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!kotEnabled && activeTemplate === PRINT_TEMPLATE_TYPES.KOT) {
+      setActiveTemplate(PRINT_TEMPLATE_TYPES.THERMAL);
+    }
+  }, [activeTemplate, kotEnabled]);
 
   useEffect(() => {
     if (branchSelectionRequired || !activeBranch?.id) {
@@ -321,12 +334,20 @@ const ReceiptSettingsPage = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTemplate(PRINT_TEMPLATE_TYPES.KOT)}
+                  onClick={() => {
+                    if (kotEnabled) {
+                      setActiveTemplate(PRINT_TEMPLATE_TYPES.KOT);
+                    }
+                  }}
+                  disabled={!kotEnabled}
                   className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
                     activeTemplate === PRINT_TEMPLATE_TYPES.KOT
                       ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : kotEnabled
+                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        : 'cursor-not-allowed bg-slate-100 text-slate-400 opacity-70'
                   }`}
+                  title={!kotEnabled ? 'KOT is disabled in App Configuration' : undefined}
                 >
                   <ChefHat size={16} />
                   KOT
@@ -397,7 +418,7 @@ const ReceiptSettingsPage = () => {
                 </div>
               </Card>
 
-                  <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid gap-6 lg:grid-cols-2">
                 <Card className="admin-panel-card" title="Logo & Paper" style={{ animationDelay: "170ms" }}>
                   <div className="space-y-5">
                     <div>
@@ -422,6 +443,26 @@ const ReceiptSettingsPage = () => {
                           : 'Uploaded logos will auto-fit to this width, so every branch prints in a consistent size.'}
                       </p>
                     </div>
+
+                    {activeTemplate !== PRINT_TEMPLATE_TYPES.A4 ? (
+                      <div>
+                        <div className="flex items-center justify-between text-sm text-slate-700">
+                          <label className="font-medium">Logo Top Spacing</label>
+                          <span>{form.logoTopSpacing}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="20"
+                          value={form.logoTopSpacing}
+                          onChange={(event) => updateField('logoTopSpacing', Number(event.target.value))}
+                          className="mt-3 w-full accent-blue-600"
+                        />
+                        <p className="mt-2 text-xs text-slate-500">
+                          Logo eka tikak pahalata aran header block eka clean widiyata space karanna meka use karanna.
+                        </p>
+                      </div>
+                    ) : null}
 
                     {activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? (
                       <div>
@@ -454,6 +495,24 @@ const ReceiptSettingsPage = () => {
 
                 <Card className="admin-panel-card" title="Messages" style={{ animationDelay: "210ms" }}>
                   <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-slate-700">Receipt Font</label>
+                      <div className="mt-1">
+                        <CustomSelect
+                          value={form.receiptFontFamily}
+                          onChange={(value) => updateField('receiptFontFamily', value)}
+                          options={RECEIPT_FONT_OPTIONS}
+                          valueKey="value"
+                          labelKey="label"
+                          disabled={activeTemplate === PRINT_TEMPLATE_TYPES.A4}
+                          buttonClassName="h-[42px] rounded-xl px-4 py-2.5"
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">
+                        Thermal/KOT receipt walata clean akuru set ekak choose karanna puluwan. Full invoice font eka fixed.
+                      </p>
+                    </div>
+
                     <div>
                       <label className="text-sm font-medium text-slate-700">Thanks Message</label>
                       <input

@@ -9,6 +9,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import Modal from "../components/common/Modal";
 import { formatCurrency, formatDate, formatDateTime, formatQuantityWithUnit } from "../utils/formatters";
 
 const getStatusClassName = (status) => {
@@ -382,16 +383,7 @@ const WarrantyDetailsPage = () => {
         </div>
       </Card>
 
-      {showClaimModal ? (
-        <div className="modal-overlay-enter fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-          <div className="shell-surface modal-panel-enter mx-4 w-full max-w-md rounded-2xl p-6">
-            <div className="mb-4 flex items-center gap-3 text-blue-600">
-              <div className="rounded-full bg-blue-50 p-2">
-                <ClipboardPlus size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800">Open Warranty Claim</h3>
-            </div>
-
+      <Modal isOpen={showClaimModal} onClose={() => setShowClaimModal(false)} title="Open Warranty Claim" size="sm">
             <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Action</label>
             <CustomSelect
               value={claimActionType}
@@ -418,22 +410,12 @@ const WarrantyDetailsPage = () => {
                 {submittingClaim ? "Saving..." : "Open Claim"}
               </Button>
             </div>
-          </div>
-        </div>
-      ) : null}
+      </Modal>
 
-      {showClaimUpdateModal && activeClaim ? (
-        <div className="modal-overlay-enter fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-          <div className="shell-surface modal-panel-enter mx-4 w-full max-w-md rounded-2xl p-6">
-            <div className="mb-4 flex items-center gap-3 text-blue-600">
-              <div className="rounded-full bg-blue-50 p-2">
-                <Wrench size={24} />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-800">Update Claim</h3>
+      <Modal isOpen={showClaimUpdateModal && Boolean(activeClaim)} onClose={() => setShowClaimUpdateModal(false)} title="Update Claim" size="sm">
+              {activeClaim ? (
+                <>
                 <p className="text-sm text-slate-500">{activeClaim.claimNo}</p>
-              </div>
-            </div>
 
             <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Status</label>
             <CustomSelect
@@ -460,9 +442,9 @@ const WarrantyDetailsPage = () => {
                 {submittingClaim ? "Saving..." : "Save Update"}
               </Button>
             </div>
-          </div>
-        </div>
-      ) : null}
+                </>
+              ) : null}
+      </Modal>
     </div>
   );
 };

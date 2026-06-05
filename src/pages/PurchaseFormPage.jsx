@@ -4,6 +4,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import SupplierQuickAddModal from "../components/purchase/SupplierQuickAddModal";
 import CustomSelect from "../components/common/CustomSelect";
+import DatePicker from "../components/common/DatePicker";
 import PanelResizeHandle from "../components/common/PanelResizeHandle";
 import { suppliersAPI } from "../api/suppliers.api";
 import { itemsAPI } from "../api/items.api";
@@ -11,11 +12,19 @@ import { branchesAPI } from "../api/branches.api";
 import { purchasesAPI } from "../api/purchases.api";
 import { Plus, Trash2, Save, Copy, Search } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
 import { ItemType } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
+import {
+  formatDisplayStockQuantity,
+  formatStockQuantity,
+  getDisplayStockQuantity,
+  getPrimaryStockUnit,
+  isMeasuredStockItem,
+} from "../utils/stockQuantity";
 
 const isMeasuredItem = (item) =>
-  item?.itemType === ItemType.WEIGHT || item?.itemType === ItemType.VOLUME || item?.weightItem === true;
+  isMeasuredStockItem(item);
 
 const weightUnitOptions = [
   { value: "G", label: "G" },
@@ -31,8 +40,6 @@ const getMeasuredUnitOptions = (item) => item?.itemType === ItemType.VOLUME || i
   ? volumeUnitOptions
   : weightUnitOptions;
 
-const getPrimaryMeasuredUnit = (item) => item?.itemType === ItemType.VOLUME || item?.defaultUnit === "L" || item?.defaultUnit === "ML" ? "L" : "KG";
-
 const calculateMeasuredLineTotal = (qty, unit, costPrice, measuredItem) => {
   const normalizedQty = Number(qty || 0);
   const normalizedCost = Number(costPrice || 0);
@@ -42,6 +49,12 @@ const calculateMeasuredLineTotal = (qty, unit, costPrice, measuredItem) => {
     : normalizedQty * normalizedCost;
 };
 
+const getPrimaryUnitQty = (item) => {
+  const qty = Number(item?.qty || 0);
+  if (!item?.weightItem) return qty;
+  return item.qtyUnit === "G" || item.qtyUnit === "ML" ? qty / 1000 : qty;
+};
+
 const paymentMethodOptions = [
   { value: "CASH", label: "Cash" },
   { value: "CARD", label: "Card" },
@@ -49,8 +62,28 @@ const paymentMethodOptions = [
   { value: "CHEQUE", label: "Cheque" },
 ];
 
+const cashSourceOptions = [
+  { value: "BRANCH_CASH", label: "Branch Cash" },
+  { value: "CASH_DRAWER", label: "Cash Drawer" },
+];
+
+const getAutoCashSourceForPaymentMethod = (method) => {
+  if (method === "CASH") return null;
+  if (method === "BANK") return "BANK";
+  return "NONE";
+};
+
+const getCashSourceLabel = (value) => {
+  if (value === "BRANCH_CASH") return "Branch Cash";
+  if (value === "CASH_DRAWER") return "Cash Drawer";
+  if (value === "BANK") return "Bank";
+  return "No Cash Out";
+};
+
 const PurchaseFormPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isManager = user?.role === "MANAGER";
 
   // 🚀 Refs
   const searchInputRef = useRef(null);
@@ -67,6 +100,8 @@ const PurchaseFormPage = () => {
   const [discountAmount, setDiscountAmount] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [cashSource, setCashSource] = useState("BRANCH_CASH");
+  const [cashSourceBranchId, setCashSourceBranchId] = useState("");
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [selectionPanelWidth, setSelectionPanelWidth] = useState(null);
@@ -84,17 +119,15 @@ const PurchaseFormPage = () => {
   const [cartItems, setCartItems] = useState([]);
 
   const formatStockQty = (item) => {
-    if (isMeasuredItem(item)) {
-      const rawQty = item.batches && item.batches.length > 0
-        ? item.batches.reduce((sum, batch) => sum + Number(batch.qty || 0), 0)
-        : Number(item.availableBaseQty ?? item.availableQty ?? 0);
-      return `${(rawQty / 1000).toFixed(3).replace(/\.?0+$/, "")} ${getPrimaryMeasuredUnit(item)}`;
+    if (item.batches && item.batches.length > 0) {
+      const totalDisplayQty = item.batches.reduce(
+        (sum, batch) => sum + getDisplayStockQuantity(batch, 0, item),
+        0
+      );
+      return `${formatStockQuantity(totalDisplayQty)} ${getPrimaryStockUnit(item, item.defaultUnit || "PCS")}`;
     }
 
-    const totalStock = item.batches && item.batches.length > 0
-      ? item.batches.reduce((sum, batch) => sum + Number(batch.qty || 0), 0)
-      : Number(item.availableQty || 0);
-    return `${totalStock} ${item.defaultUnit || "PCS"}`;
+    return formatDisplayStockQuantity(item);
   };
 
   useEffect(() => {
@@ -169,7 +202,10 @@ const PurchaseFormPage = () => {
         branchesAPI.getAll()
       ]);
       setSuppliers(suppRes.data || []);
-      setBranches(branchRes.data || []);
+      const branchList = branchRes.data || [];
+      setBranches(isManager
+        ? branchList.filter((branch) => Number(branch.id) === Number(user?.branchId))
+        : branchList);
     } catch (e) {
       toast.error("Failed to load initial data");
     }
@@ -188,7 +224,8 @@ const PurchaseFormPage = () => {
       return;
     }
     try {
-      const res = await itemsAPI.search(q, 0);
+      const purchaseBranchId = isManager ? user?.branchId : 0;
+      const res = await itemsAPI.searchForPurchase(q, purchaseBranchId);
       setSearchResults(res.data || []);
     } catch (e) {
       console.error(e);
@@ -330,6 +367,14 @@ const PurchaseFormPage = () => {
     if (normalizedDiscountAmount > subtotal) return toast.error("Discount amount cannot exceed subtotal");
     if (normalizedPaidAmount < 0) return toast.error("Paid amount cannot be negative");
     if (normalizedPaidAmount > grandTotal) return toast.error("Paid amount cannot exceed grand total");
+    const autoCashSource = getAutoCashSourceForPaymentMethod(paymentMethod);
+    const effectiveCashSource = normalizedPaidAmount > 0
+      ? (autoCashSource || cashSource || "BRANCH_CASH")
+      : "NONE";
+    if (normalizedPaidAmount > 0 && paymentMethod === "CASH" && !cashSource) return toast.error("Please select a cash source");
+    const branchIdsInPurchase = [...new Set(cartItems.map((item) => Number(item.branchId)))];
+    const needsDrawerBranch = effectiveCashSource === "CASH_DRAWER" && branchIdsInPurchase.length > 1;
+    if (needsDrawerBranch && !cashSourceBranchId) return toast.error("Please select the drawer branch");
 
     const branchesMap = {};
 
@@ -360,6 +405,10 @@ const PurchaseFormPage = () => {
       discountAmount: normalizedDiscountAmount,
       paidAmount: normalizedPaidAmount,
       paymentMethod,
+      cashSource: effectiveCashSource,
+      cashSourceBranchId: effectiveCashSource === "CASH_DRAWER"
+        ? Number(cashSourceBranchId || branchIdsInPurchase[0] || 0)
+        : null,
       branches: branchesPayload
     };
 
@@ -378,6 +427,32 @@ const PurchaseFormPage = () => {
   const grandTotal = Math.max(0, subtotal - normalizedDiscountAmount);
   const normalizedPaidAmount = Math.max(0, Number(paidAmount || 0));
   const dueAmount = Math.max(0, grandTotal - normalizedPaidAmount);
+  const branchIdsInPurchase = [...new Set(cartItems.map((item) => Number(item.branchId)))];
+  const autoCashSource = getAutoCashSourceForPaymentMethod(paymentMethod);
+  const effectiveDisplayCashSource = normalizedPaidAmount > 0
+    ? (autoCashSource || cashSource || "BRANCH_CASH")
+    : "NONE";
+  const canSelectCashSource = normalizedPaidAmount > 0 && paymentMethod === "CASH";
+  const drawerBranchOptions = branches
+    .filter((branch) => branchIdsInPurchase.includes(Number(branch.id)))
+    .map((branch) => ({ value: String(branch.id), label: branch.name }));
+  const effectiveCostForLine = (item, index) => {
+    if (normalizedDiscountAmount <= 0 || subtotal <= 0) {
+      return item.costPrice;
+    }
+
+    const allocatedBefore = cartItems.slice(0, index).reduce((sum, line) => {
+      const lineDiscount = (normalizedDiscountAmount * line.lineTotal) / subtotal;
+      return sum + Number(lineDiscount.toFixed(2));
+    }, 0);
+    const lineDiscount = index === cartItems.length - 1
+      ? normalizedDiscountAmount - allocatedBefore
+      : Number(((normalizedDiscountAmount * item.lineTotal) / subtotal).toFixed(2));
+    const netLineTotal = Math.max(0, item.lineTotal - lineDiscount);
+    const qty = getPrimaryUnitQty(item);
+
+    return qty > 0 ? netLineTotal / qty : item.costPrice;
+  };
 
   return (
     <div className="page-enter space-y-6 pb-10">
@@ -402,7 +477,7 @@ const PurchaseFormPage = () => {
 
       <Card className="sales-panel-enter overflow-visible p-0" style={{ animationDelay: "120ms" }}>
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "150ms" }}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
             {/* Supplier Select */}
             <div>
               <label className="label-text">Supplier</label>
@@ -433,7 +508,7 @@ const PurchaseFormPage = () => {
             </div>
             <div>
               <label className="label-text">Date</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input w-full" />
+              <DatePicker value={date} onChange={setDate} buttonClassName="input h-10 w-full" />
             </div>
             <div>
               <label className="label-text">Supplier Discount</label>
@@ -478,10 +553,52 @@ const PurchaseFormPage = () => {
               <label className="label-text">Payment Method</label>
               <CustomSelect
                 value={paymentMethod}
-                onChange={setPaymentMethod}
+                onChange={(value) => {
+                  setPaymentMethod(value);
+                  if (value !== "CASH") setCashSourceBranchId("");
+                  if (value === "CASH" && cashSource === "BANK") setCashSource("BRANCH_CASH");
+                }}
                 options={paymentMethodOptions}
               />
             </div>
+            <div>
+              <label className="label-text">Cash Source</label>
+              <CustomSelect
+                value={effectiveDisplayCashSource}
+                onChange={(value) => {
+                  setCashSource(value);
+                  if (value !== "CASH_DRAWER") setCashSourceBranchId("");
+                }}
+                options={canSelectCashSource
+                  ? cashSourceOptions
+                  : [{ value: effectiveDisplayCashSource, label: getCashSourceLabel(effectiveDisplayCashSource) }]
+                }
+                disabled={!canSelectCashSource}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                {canSelectCashSource
+                  ? "Cash payments can use branch cash or your open drawer shift."
+                  : paymentMethod === "CASH"
+                    ? "Enter a paid amount to select a cash source."
+                    : "Cash source is set automatically for this payment method."}
+              </p>
+            </div>
+            {effectiveDisplayCashSource === "CASH_DRAWER" && branchIdsInPurchase.length > 1 && (
+              <div>
+                <label className="label-text">Drawer Branch</label>
+                <CustomSelect
+                  value={cashSourceBranchId}
+                  onChange={setCashSourceBranchId}
+                  options={drawerBranchOptions}
+                  valueKey="value"
+                  labelKey="label"
+                  placeholder="Select branch"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Uses your open shift in this branch.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -616,11 +733,10 @@ const PurchaseFormPage = () => {
                                 </td>
                               )}
                               <td className="px-2 py-2">
-                                <input
-                                  type="date"
-                                  className="input h-9 w-full min-w-[140px] px-2 text-sm"
+                                <DatePicker
                                   value={inputs.expiry}
-                                  onChange={(e) => handleInputChange(branch.id, 'expiry', e.target.value)}
+                                  onChange={(value) => handleInputChange(branch.id, 'expiry', value)}
+                                  buttonClassName="input h-9 w-full min-w-[140px] px-2 text-sm"
                                 />
                               </td>
                               <td className="px-2 py-2 text-center">
@@ -701,7 +817,14 @@ const PurchaseFormPage = () => {
                           <div className="font-medium text-slate-700">{item.name}</div>
                           <div className="text-xs text-slate-400">{item.barcode}</div>
                         </td>
-                        <td className="p-3 text-right text-slate-600">{item.costPrice.toFixed(2)}</td>
+                        <td className="p-3 text-right text-slate-600">
+                          <div>{item.costPrice.toFixed(2)}</div>
+                          {normalizedDiscountAmount > 0 ? (
+                            <div className="text-[11px] font-semibold text-emerald-600">
+                              Eff. {effectiveCostForLine(item, index).toFixed(2)}
+                            </div>
+                          ) : null}
+                        </td>
                         <td className="p-3 text-right text-slate-600">{item.sellingPrice.toFixed(2)}</td>
                         <td className="p-3 text-center font-bold text-slate-800">
                           {item.weightItem ? item.qty.toFixed(2) : item.qty}

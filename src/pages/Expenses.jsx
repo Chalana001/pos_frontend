@@ -2,18 +2,19 @@ import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Plus, Search } from "lucide-react";
 import { expensesAPI } from "../api/expenses.api";
+import { expenseTypesAPI } from "../api/expenseTypes.api";
 import { usersAPI } from "../api/users.api";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { useShift } from "../context/ShiftContext";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
-import { EXPENSE_CATEGORIES } from "../utils/constants";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import DatePicker from "../components/common/DatePicker";
 import TablePagination from "../components/common/TablePagination";
 
 const toLocalDateTimeParam = (date, endOfDay = false) => {
@@ -43,6 +44,8 @@ const Expenses = () => {
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [cashierId, setCashierId] = useState("ALL");
   const [cashierOptions, setCashierOptions] = useState([{ value: "ALL", label: "All Users" }]);
+  const [expenseTypes, setExpenseTypes] = useState([]);
+  const [activeExpenseTypes, setActiveExpenseTypes] = useState([]);
   const [page, setPage] = useState(0);
   const [pageInput, setPageInput] = useState("1");
   const [pageSize] = useState(10);
@@ -51,20 +54,20 @@ const Expenses = () => {
 
   const [formData, setFormData] = useState({
     amount: "",
-    category: EXPENSE_CATEGORIES.OTHER,
+    expenseTypeId: "",
     description: "",
     isFromDrawer: true,
   });
 
   const categoryOptions = useMemo(
     () => [
-      { value: "ALL", label: "All Categories" },
-      ...Object.values(EXPENSE_CATEGORIES).map((category) => ({
-        value: category,
-        label: formatCategoryLabel(category),
+      { value: "ALL", label: "All Expense Types" },
+      ...expenseTypes.map((expenseType) => ({
+        value: String(expenseType.id),
+        label: expenseType.name,
       })),
     ],
-    []
+    [expenseTypes]
   );
 
   const modalCategoryOptions = useMemo(
@@ -84,6 +87,34 @@ const Expenses = () => {
   useEffect(() => {
     setPageInput(String(page + 1));
   }, [page]);
+
+  useEffect(() => {
+    const loadExpenseTypes = async () => {
+      try {
+        const [allResponse, activeResponse] = await Promise.all([
+          expenseTypesAPI.list(),
+          expenseTypesAPI.listActive(),
+        ]);
+        const allTypes = Array.isArray(allResponse.data) ? allResponse.data : [];
+        const activeTypes = Array.isArray(activeResponse.data) ? activeResponse.data : [];
+        setExpenseTypes(allTypes);
+        setActiveExpenseTypes(activeTypes);
+        setFormData((prev) => {
+          const hasSelected = activeTypes.some((type) => String(type.id) === String(prev.expenseTypeId));
+          return {
+            ...prev,
+            expenseTypeId: hasSelected ? prev.expenseTypeId : String(activeTypes[0]?.id || ""),
+          };
+        });
+      } catch (error) {
+        console.error("Failed to load expense types", error);
+        setExpenseTypes([]);
+        setActiveExpenseTypes([]);
+      }
+    };
+
+    loadExpenseTypes();
+  }, []);
 
   useEffect(() => {
     const loadCashiers = async () => {
@@ -122,7 +153,7 @@ const Expenses = () => {
         from: toLocalDateTimeParam(startDate),
         to: toLocalDateTimeParam(endDate, true),
         search: search.trim() || undefined,
-        category: categoryFilter !== "ALL" ? categoryFilter : undefined,
+        expenseTypeId: categoryFilter !== "ALL" ? Number(categoryFilter) : undefined,
         cashierId: cashierId !== "ALL" ? cashierId : undefined,
         page,
         size: pageSize,
@@ -172,6 +203,10 @@ const Expenses = () => {
       toast.error("Invalid amount");
       return;
     }
+    if (!formData.expenseTypeId) {
+      toast.error("Expense type is required");
+      return;
+    }
 
     const branchId = isCashier ? user?.branchId : selectedBranchId;
     if (!branchId) {
@@ -182,7 +217,7 @@ const Expenses = () => {
     try {
       const payload = {
         amount,
-        category: formData.category,
+        expenseTypeId: Number(formData.expenseTypeId),
         description: formData.description.trim(),
         branchId,
       };
@@ -205,7 +240,7 @@ const Expenses = () => {
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setFormData({ amount: "", category: EXPENSE_CATEGORIES.OTHER, description: "", isFromDrawer: true });
+    setFormData({ amount: "", expenseTypeId: String(activeExpenseTypes[0]?.id || ""), description: "", isFromDrawer: true });
   };
 
   const columns = [
@@ -232,7 +267,11 @@ const Expenses = () => {
     { header: "Recorded By", accessor: "cashierName" },
     {
       header: "Shift",
-      render: (expense) => <span className="text-slate-500">#{expense.shiftId}</span>,
+      render: (expense) => (
+        <span className="text-slate-500">
+          {expense.shiftId ? `#${expense.shiftId}` : "Branch Expense"}
+        </span>
+      ),
     },
   ];
 
@@ -246,9 +285,9 @@ const Expenses = () => {
 
         <Button
           onClick={() => setShowModal(true)}
-          disabled={isCashier && !hasActiveShift}
-          className={isCashier && !hasActiveShift ? "opacity-50 cursor-not-allowed" : ""}
-          title={isCashier && !hasActiveShift ? "You need an open shift to record expenses" : ""}
+          disabled={(isCashier && !hasActiveShift) || activeExpenseTypes.length === 0}
+          className={(isCashier && !hasActiveShift) || activeExpenseTypes.length === 0 ? "opacity-50 cursor-not-allowed" : ""}
+          title={isCashier && !hasActiveShift ? "You need an open shift to record expenses" : activeExpenseTypes.length === 0 ? "Add at least one active expense type first" : ""}
         >
           <Plus size={20} className="mr-2" />
           Record Expense
@@ -265,11 +304,21 @@ const Expenses = () => {
         </Card>
       )}
 
+      {activeExpenseTypes.length === 0 && (
+        <Card className="ops-alert-card" style={{ animationDelay: "95ms" }}>
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm font-medium text-amber-800">
+              No active expense types found. Add one from Expense Settings before recording expenses.
+            </p>
+          </div>
+        </Card>
+      )}
+
       <div className={`space-y-6 transition-all duration-300 ${isCashier && !hasActiveShift ? "opacity-40 grayscale pointer-events-none select-none" : ""}`}>
         <Card className="sales-panel-enter sales-panel-hover overflow-hidden p-0" style={{ animationDelay: "120ms" }}>
           <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "150ms" }}>
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_200px_auto] xl:items-center">
-              <div className="relative w-full">
+            <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_200px_auto] xl:items-center">
+              <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-2 xl:col-span-1 w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
                 <input
                   type="text"
@@ -283,57 +332,65 @@ const Expenses = () => {
                 />
               </div>
 
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  resetPage();
-                }}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  resetPage();
-                }}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <CustomSelect
-                value={categoryFilter}
-                onChange={(value) => {
-                  setCategoryFilter(value);
-                  resetPage();
-                }}
-                options={categoryOptions}
-                valueKey="value"
-                labelKey="label"
-                placeholder="All Categories"
-                buttonClassName="h-[42px]"
-              />
-
-              {isAdminOrManager && (
-                <CustomSelect
-                  value={cashierId}
+              <div className="col-span-1">
+                <DatePicker
+                  value={startDate}
                   onChange={(value) => {
-                    setCashierId(value);
+                    setStartDate(value);
                     resetPage();
                   }}
-                  options={cashierOptions}
+                  buttonClassName="h-[42px] rounded-xl"
+                />
+              </div>
+
+              <div className="col-span-1">
+                <DatePicker
+                  value={endDate}
+                  onChange={(value) => {
+                    setEndDate(value);
+                    resetPage();
+                  }}
+                  buttonClassName="h-[42px] rounded-xl"
+                />
+              </div>
+
+              <div className="col-span-1">
+                <CustomSelect
+                  value={categoryFilter}
+                  onChange={(value) => {
+                    setCategoryFilter(value);
+                    resetPage();
+                  }}
+                  options={categoryOptions}
                   valueKey="value"
                   labelKey="label"
-                  placeholder="All Users"
+                  placeholder="All Categories"
                   buttonClassName="h-[42px]"
                 />
+              </div>
+
+              {isAdminOrManager && (
+                <div className="col-span-1">
+                  <CustomSelect
+                    value={cashierId}
+                    onChange={(value) => {
+                      setCashierId(value);
+                      resetPage();
+                    }}
+                    options={cashierOptions}
+                    valueKey="value"
+                    labelKey="label"
+                    placeholder="All Users"
+                    buttonClassName="h-[42px]"
+                  />
+                </div>
               )}
 
-              <Button type="button" variant="secondary" onClick={clearFilters} disabled={loading} className="h-[42px] px-4 text-sm">
-                Clear
-              </Button>
+              <div className="col-span-1">
+                <Button type="button" variant="secondary" onClick={clearFilters} disabled={loading} className="h-[42px] w-full px-4 text-sm">
+                  Clear
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -378,12 +435,12 @@ const Expenses = () => {
           <div className="page-section-enter relative z-10" style={{ animationDelay: "100ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
             <CustomSelect
-              value={formData.category}
-              onChange={(value) => setFormData({ ...formData, category: value })}
+              value={formData.expenseTypeId}
+              onChange={(value) => setFormData({ ...formData, expenseTypeId: value })}
               options={modalCategoryOptions}
               valueKey="value"
               labelKey="label"
-              placeholder="Select Category"
+              placeholder="Select Expense Type"
             />
           </div>
 

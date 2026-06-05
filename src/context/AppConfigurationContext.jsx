@@ -2,8 +2,9 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 
 import { appConfigurationAPI } from '../api/appConfiguration.api';
 import { useAuth } from './AuthContext';
+import { useBranch } from './BranchContext';
 
-const STORAGE_KEY = 'app_configuration';
+const getStorageKey = (branchId) => `app_configuration:${branchId || 'default'}`;
 
 export const DEFAULT_APP_CONFIGURATION = {
   recipeItemsEnabled: true,
@@ -13,6 +14,15 @@ export const DEFAULT_APP_CONFIGURATION = {
   dineInEnabled: true,
   categoryMode: 'MAIN_AND_SUB',
   stockOverrideMode: 'MANAGER_OVERRIDE',
+  adminStockOverrideAllowed: true,
+  managerStockOverrideAllowed: true,
+  cashierStockOverrideAllowed: false,
+  warrantyEnabled: true,
+  kotEnabled: true,
+  printReceiptAfterCheckout: true,
+  adminWarrantyAllowed: true,
+  managerWarrantyAllowed: true,
+  cashierWarrantyAllowed: false,
 };
 
 const AppConfigurationContext = createContext(null);
@@ -27,11 +37,29 @@ const normalizeConfiguration = (value = {}) => ({
   stockOverrideMode: ['BLOCK', 'MANAGER_OVERRIDE', 'ALWAYS_ALLOW'].includes(value.stockOverrideMode)
     ? value.stockOverrideMode
     : 'MANAGER_OVERRIDE',
+  adminStockOverrideAllowed: value.adminStockOverrideAllowed !== false,
+  managerStockOverrideAllowed: value.managerStockOverrideAllowed !== false,
+  cashierStockOverrideAllowed: value.cashierStockOverrideAllowed === true,
+  warrantyEnabled: value.warrantyEnabled !== false,
+  kotEnabled: value.kotEnabled !== false,
+  printReceiptAfterCheckout: value.printReceiptAfterCheckout !== false,
+  adminWarrantyAllowed: value.adminWarrantyAllowed !== false,
+  managerWarrantyAllowed: value.managerWarrantyAllowed !== false,
+  cashierWarrantyAllowed: value.cashierWarrantyAllowed === true,
 });
 
 const readCachedConfiguration = () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getStorageKey(null));
+    return raw ? normalizeConfiguration(JSON.parse(raw)) : DEFAULT_APP_CONFIGURATION;
+  } catch {
+    return DEFAULT_APP_CONFIGURATION;
+  }
+};
+
+const readCachedConfigurationForBranch = (branchId) => {
+  try {
+    const raw = localStorage.getItem(getStorageKey(branchId));
     return raw ? normalizeConfiguration(JSON.parse(raw)) : DEFAULT_APP_CONFIGURATION;
   } catch {
     return DEFAULT_APP_CONFIGURATION;
@@ -39,16 +67,27 @@ const readCachedConfiguration = () => {
 };
 
 export const AppConfigurationProvider = ({ children }) => {
-  const { isAuthenticated, hasOnlineSession, isOnline } = useAuth();
-  const [configuration, setConfiguration] = useState(readCachedConfiguration);
+  const { user, isAuthenticated, hasOnlineSession, isOnline } = useAuth();
+  const { selectedBranchId } = useBranch();
+  const activeBranchId = useMemo(() => {
+    if (user?.role === 'ADMIN') {
+      return selectedBranchId && Number(selectedBranchId) > 0 ? Number(selectedBranchId) : null;
+    }
+    return user?.branchId ? Number(user.branchId) : null;
+  }, [selectedBranchId, user?.branchId, user?.role]);
+  const [configuration, setConfiguration] = useState(() => readCachedConfigurationForBranch(activeBranchId));
   const [loading, setLoading] = useState(false);
 
-  const persistConfiguration = useCallback((value) => {
+  const persistConfiguration = useCallback((value, branchId = activeBranchId) => {
     const normalized = normalizeConfiguration(value);
     setConfiguration(normalized);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    localStorage.setItem(getStorageKey(branchId), JSON.stringify(normalized));
     return normalized;
-  }, []);
+  }, [activeBranchId]);
+
+  useEffect(() => {
+    setConfiguration(readCachedConfigurationForBranch(activeBranchId));
+  }, [activeBranchId]);
 
   const refreshConfiguration = useCallback(async () => {
     if (!isAuthenticated || !hasOnlineSession || !isOnline) {
@@ -57,12 +96,12 @@ export const AppConfigurationProvider = ({ children }) => {
 
     try {
       setLoading(true);
-      const response = await appConfigurationAPI.get();
-      return persistConfiguration(response.data);
+      const response = await appConfigurationAPI.get(activeBranchId);
+      return persistConfiguration(response.data, activeBranchId);
     } finally {
       setLoading(false);
     }
-  }, [hasOnlineSession, isAuthenticated, isOnline, persistConfiguration]);
+  }, [activeBranchId, hasOnlineSession, isAuthenticated, isOnline, persistConfiguration]);
 
   useEffect(() => {
     refreshConfiguration().catch(() => {
@@ -71,17 +110,24 @@ export const AppConfigurationProvider = ({ children }) => {
   }, [refreshConfiguration]);
 
   const saveConfiguration = useCallback(async (nextConfiguration) => {
+    if (user?.role === 'ADMIN' && !activeBranchId) {
+      throw new Error('Select a branch before saving app configuration');
+    }
     const payload = normalizeConfiguration(nextConfiguration);
-    const response = await appConfigurationAPI.update(payload);
-    return persistConfiguration(response.data);
-  }, [persistConfiguration]);
+    const response = await appConfigurationAPI.update(payload, activeBranchId);
+    return persistConfiguration({
+      ...payload,
+      ...(response.data || {}),
+    }, activeBranchId);
+  }, [activeBranchId, persistConfiguration, user?.role]);
 
   const value = useMemo(() => ({
     configuration,
     loading,
+    activeBranchId,
     refreshConfiguration,
     saveConfiguration,
-  }), [configuration, loading, refreshConfiguration, saveConfiguration]);
+  }), [activeBranchId, configuration, loading, refreshConfiguration, saveConfiguration]);
 
   return (
     <AppConfigurationContext.Provider value={value}>

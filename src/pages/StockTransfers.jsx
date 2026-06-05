@@ -10,6 +10,7 @@ import Button from "../components/common/Button";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
+import DatePicker from "../components/common/DatePicker";
 import TablePagination from "../components/common/TablePagination";
 
 const transferStatusOptions = [
@@ -318,8 +319,8 @@ const StockTransfers = () => {
 
       <Card className="sales-panel-enter sales-panel-hover overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "100ms" }}>
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "140ms" }}>
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-            <div className="relative w-full xl:min-w-[320px] xl:flex-1">
+          <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
+            <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
@@ -333,7 +334,7 @@ const StockTransfers = () => {
               />
             </div>
 
-            <div className="w-full xl:w-48 xl:shrink-0">
+            <div className="col-span-1 xl:col-span-2">
               <CustomSelect
                 value={status}
                 onChange={(value) => {
@@ -347,32 +348,30 @@ const StockTransfers = () => {
               />
             </div>
 
-            <div className="w-full xl:w-44 xl:shrink-0">
-              <input
-                type="date"
+            <div className="col-span-1 xl:col-span-2">
+              <DatePicker
                 value={fromDate}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
+                onChange={(value) => {
+                  setFromDate(value);
                   resetCurrentPage();
                 }}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                buttonClassName="h-[42px] rounded-xl"
               />
             </div>
 
-            <div className="w-full xl:w-44 xl:shrink-0">
-              <input
-                type="date"
+            <div className="col-span-1 xl:col-span-2">
+              <DatePicker
                 value={toDate}
-                onChange={(e) => {
-                  setToDate(e.target.value);
+                onChange={(value) => {
+                  setToDate(value);
                   resetCurrentPage();
                 }}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                buttonClassName="h-[42px] rounded-xl"
               />
             </div>
 
-            <div className="w-full xl:w-auto xl:shrink-0">
-              <Button type="button" variant="secondary" onClick={clearFilters} className="h-[42px] w-full px-4 text-sm xl:w-auto" disabled={loading}>
+            <div className="col-span-1 xl:col-span-2">
+              <Button type="button" variant="secondary" onClick={clearFilters} className="h-[42px] w-full px-4 text-sm" disabled={loading}>
                 Clear
               </Button>
             </div>

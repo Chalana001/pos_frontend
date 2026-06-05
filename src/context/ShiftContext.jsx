@@ -36,13 +36,13 @@ export const ShiftProvider = ({ children }) => {
 
       // ✅ ADMIN/MANAGER: selected branch shift
       if (isAdmin) {
-        if (selectedBranchId === null || selectedBranchId === undefined) {
+        if (selectedBranchId === null || selectedBranchId === undefined || selectedBranchId === 0) {
           setActiveShift(null);
           return;
         }
 
         // 0 වුණත්, වෙන Branch එකක් වුණත් අදාළ කෝල් එක යනවා
-        const res = await shiftsAPI.getActiveByBranch(selectedBranchId);
+        const res = await shiftsAPI.getAdminCurrent(selectedBranchId);
         setActiveShift(res.data || null);
         return;
       }

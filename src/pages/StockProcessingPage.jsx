@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Eye, Plus, RefreshCw, Save } from "lucide-react";
+import { Eye, Plus, RefreshCw, Save, Ban } from "lucide-react";
 
 import Button from "../components/common/Button";
 import Card from "../components/common/Card";
@@ -13,6 +13,7 @@ import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
 import { ItemType } from "../utils/constants";
 import { formatCurrency, formatDateTime, formatQuantityWithUnit } from "../utils/formatters";
+import { formatDisplayStockQuantity } from "../utils/stockQuantity";
 
 const unitOptions = [
   { value: "PCS", label: "PCS" },
@@ -65,6 +66,8 @@ const StockProcessingPage = () => {
   const [saving, setSaving] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailsRecord, setDetailsRecord] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelingId, setCancelingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
   const selectedSource = useMemo(
@@ -80,9 +83,9 @@ const StockProcessingPage = () => {
   const batchOptions = useMemo(
     () => sourceBatches.map((batch) => ({
       ...batch,
-      label: `${batch.batchId || batch.id} | ${formatQty(batch.displayQty ?? batch.qty, batch.displayUnit || selectedSource?.defaultUnit)} | ${formatCurrency(batch.price)}`,
+      label: `${batch.batchId || batch.id} | ${formatDisplayStockQuantity(batch, 0, selectedSource)} | ${formatCurrency(batch.price)}`,
     })),
-    [selectedSource?.defaultUnit, sourceBatches]
+    [selectedSource, sourceBatches]
   );
 
   const loadSources = async () => {
@@ -127,6 +130,12 @@ const StockProcessingPage = () => {
     if (saving) return;
     setCreateOpen(false);
     setForm(emptyForm);
+  };
+
+  const closeDetailsModal = () => {
+    if (cancelingId) return;
+    setDetailsRecord(null);
+    setCancelReason("");
   };
 
   const handleHistorySourceFilter = async (sourceId) => {
@@ -226,6 +235,28 @@ const StockProcessingPage = () => {
     }
   };
 
+  const handleCancelProcessing = async () => {
+    if (!detailsRecord?.id) return;
+    if (!cancelReason.trim()) {
+      toast.error("Cancel reason is required");
+      return;
+    }
+
+    setCancelingId(detailsRecord.id);
+    try {
+      const response = await stockAPI.cancelProcessing(detailsRecord.id, { reason: cancelReason.trim() });
+      const updated = response.data;
+      toast.success("Stock processing canceled");
+      setDetailsRecord(updated);
+      setCancelReason("");
+      await refreshAll();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to cancel stock processing");
+    } finally {
+      setCancelingId(null);
+    }
+  };
+
   const historyColumns = useMemo(
     () => [
       { header: "Date", render: (row) => formatDateTime(row.processedAt) },
@@ -246,6 +277,16 @@ const StockProcessingPage = () => {
               <div className="text-xs font-semibold text-slate-500">+{row.outputs.length - 3} more</div>
             )}
           </div>
+        ),
+      },
+      {
+        header: "Status",
+        render: (row) => (
+          <span className={`rounded px-2 py-1 text-xs font-bold ${
+            row.status === "CANCELED" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"
+          }`}>
+            {row.status === "CANCELED" ? "Canceled" : "Completed"}
+          </span>
         ),
       },
       { header: "Cost", render: (row) => formatCurrency(row.sourceCost) },
@@ -319,7 +360,7 @@ const StockProcessingPage = () => {
                 <div className="font-semibold text-slate-800">{selectedSource.name}</div>
                 <div className="mt-1 text-slate-500">{selectedSource.barcode || "No barcode"}</div>
                 <div className="mt-3 rounded-lg bg-white px-3 py-2 font-semibold text-emerald-700">
-                  Available: {formatQty(selectedSource.availableQty, primaryUnit(selectedSource))}
+                  Available: {formatDisplayStockQuantity(selectedSource)}
                 </div>
               </div>
             )}
@@ -471,7 +512,7 @@ const StockProcessingPage = () => {
 
       <Modal
         isOpen={!!detailsRecord}
-        onClose={() => setDetailsRecord(null)}
+        onClose={closeDetailsModal}
         title={detailsRecord ? `Processing #${detailsRecord.id}` : "Processing Details"}
         size="xl"
       >
@@ -491,9 +532,20 @@ const StockProcessingPage = () => {
                 <div className="text-xs text-slate-500">Batch {detailsRecord.sourceBatchCode || detailsRecord.sourceBatchId}</div>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="text-xs font-semibold uppercase text-slate-500">Status</div>
+                <div className="mt-1">
+                  <span className={`rounded px-2 py-1 text-xs font-bold ${
+                    detailsRecord.status === "CANCELED" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"
+                  }`}>
+                    {detailsRecord.status === "CANCELED" ? "Canceled" : "Completed"}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-slate-500">{formatDateTime(detailsRecord.processedAt)}</div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="text-xs font-semibold uppercase text-slate-500">Cost</div>
                 <div className="mt-1 font-semibold text-slate-800">{formatCurrency(detailsRecord.sourceCost)}</div>
-                <div className="text-xs text-slate-500">{formatDateTime(detailsRecord.processedAt)}</div>
+                <div className="text-xs text-slate-500">{detailsRecord.branchName || "-"}</div>
               </div>
             </div>
 
@@ -529,6 +581,36 @@ const StockProcessingPage = () => {
                 <div className="mt-1 text-sm text-slate-700">{detailsRecord.note || "-"}</div>
               </div>
             </div>
+
+            {detailsRecord.status === "CANCELED" ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                <div className="text-xs font-semibold uppercase text-red-600">Canceled</div>
+                <div className="mt-1 text-sm font-medium text-slate-800">{detailsRecord.cancelReason || "-"}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {detailsRecord.canceledByUsername || "-"} | {detailsRecord.canceledAt ? formatDateTime(detailsRecord.canceledAt) : "-"}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-800">Cancel Processing</div>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  rows={3}
+                  placeholder="Reason for cancellation"
+                  className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button type="button" variant="secondary" onClick={closeDetailsModal} disabled={!!cancelingId}>
+                    Close
+                  </Button>
+                  <Button type="button" variant="danger" onClick={handleCancelProcessing} disabled={!!cancelingId}>
+                    <Ban size={16} className="mr-2" />
+                    {cancelingId ? "Canceling..." : "Cancel Processing"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Building2, ChefHat, FileText, Save, Scale, Settings2, ShieldCheck, Table2, Users, Wrench } from 'lucide-react';
+import { Building2, ChefHat, FileText, Printer, ReceiptText, Save, Scale, Settings2, ShieldCheck, ShieldPlus, Table2, Ticket, Users, Wrench } from 'lucide-react';
 
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import CustomSelect from '../components/common/CustomSelect';
 import { useAppConfiguration } from '../context/AppConfigurationContext';
 import { useAuth } from '../context/AuthContext';
+import { useBranch } from '../context/BranchContext';
 import { getConfigurableFeatureAvailability, hasPlanFeature } from '../utils/subscriptionFeatures';
 
 const featureDefinitions = [
@@ -43,10 +44,47 @@ const featureDefinitions = [
   },
 ];
 
+const stockOverrideRoleDefinitions = [
+  {
+    key: 'adminStockOverrideAllowed',
+    label: 'Admin',
+    description: 'Admins can confirm POS stock override when shortage handling allows it.',
+  },
+  {
+    key: 'managerStockOverrideAllowed',
+    label: 'Manager',
+    description: 'Managers can confirm POS stock override from assigned branches.',
+  },
+  {
+    key: 'cashierStockOverrideAllowed',
+    label: 'Cashier',
+    description: 'Cashiers can confirm zero or low stock sales without manager login.',
+  },
+];
+
+const warrantyRoleDefinitions = [
+  {
+    key: 'adminWarrantyAllowed',
+    label: 'Admin',
+    description: 'Admins can add warranty coverage while creating sales.',
+  },
+  {
+    key: 'managerWarrantyAllowed',
+    label: 'Manager',
+    description: 'Managers can add warranty coverage from POS and table drafts.',
+  },
+  {
+    key: 'cashierWarrantyAllowed',
+    label: 'Cashier',
+    description: 'Cashiers can select warranty periods during checkout.',
+  },
+];
+
 const AppConfigurationPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { configuration, loading, saveConfiguration } = useAppConfiguration();
+  const { branches, selectedBranchId } = useBranch();
+  const { configuration, loading, saveConfiguration, activeBranchId } = useAppConfiguration();
   const [form, setForm] = useState(configuration);
   const [saving, setSaving] = useState(false);
   const featureAvailability = useMemo(
@@ -57,6 +95,12 @@ const AppConfigurationPage = () => {
   React.useEffect(() => {
     setForm(configuration);
   }, [configuration]);
+
+  const selectedBranch = useMemo(
+    () => branches.find((branch) => Number(branch.id) === Number(activeBranchId || selectedBranchId)) || null,
+    [activeBranchId, branches, selectedBranchId]
+  );
+  const branchSelectionRequired = user?.role === 'ADMIN' && !activeBranchId;
 
   const quickLinks = useMemo(() => [
     {
@@ -96,6 +140,13 @@ const AppConfigurationPage = () => {
       path: '/warranties/settings',
       icon: ShieldCheck,
       visible: user?.role === 'ADMIN' || user?.role === 'MANAGER',
+    },
+    {
+      label: 'Expense Types',
+      description: 'Maintain tenant expense names and profit-report treatment.',
+      path: '/expenses/settings',
+      icon: ReceiptText,
+      visible: hasPlanFeature(user?.planName, 'FINANCIALS'),
     },
   ].filter((link) => link.visible), [configuration.tableManagementEnabled, user?.planName, user?.role]);
 
@@ -138,8 +189,8 @@ const AppConfigurationPage = () => {
   const stockOverrideModeOptions = [
     {
       value: 'MANAGER_OVERRIDE',
-      label: 'Manager Override',
-      description: 'Warn on shortage and continue only after manager/admin confirmation.',
+      label: 'Require Confirmation',
+      description: 'Warn on shortage and continue only after a permitted role confirms.',
     },
     {
       value: 'BLOCK',
@@ -149,7 +200,7 @@ const AppConfigurationPage = () => {
     {
       value: 'ALWAYS_ALLOW',
       label: 'Always Allow',
-      description: 'Allow negative stock without an extra checkout confirmation.',
+      description: 'Allow stock override mode, still limited by the role permissions below.',
     },
   ];
 
@@ -163,11 +214,13 @@ const AppConfigurationPage = () => {
           </div>
           <h1 className="text-3xl font-bold text-slate-800">App Configuration</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Keep shop-level modules and operational settings in one place.
+            {branchSelectionRequired
+              ? 'Select a branch from the header to edit its operational settings.'
+              : `Operational settings for ${selectedBranch?.name || `Branch #${activeBranchId}`}.`}
           </p>
         </div>
 
-        <Button onClick={handleSave} disabled={saving || loading}>
+        <Button onClick={handleSave} disabled={saving || loading || branchSelectionRequired}>
           <Save size={16} className="mr-2" />
           {saving ? 'Saving...' : 'Save Configuration'}
         </Button>
@@ -207,6 +260,36 @@ const AppConfigurationPage = () => {
                 placeholder="Select stock handling"
               />
             </div>
+
+            <div className="mt-5">
+              <div className="font-semibold text-slate-800">Stock Override Permissions</div>
+              <div className="mt-1 text-xs leading-5 text-slate-500">Choose which roles can confirm a sale that will make stock negative.</div>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                {stockOverrideRoleDefinitions.map((role) => {
+                  const disabled = form.stockOverrideMode === 'BLOCK';
+                  return (
+                    <label
+                      key={role.key}
+                      className={`flex h-full items-start justify-between gap-3 rounded-xl border px-4 py-4 ${
+                        disabled ? 'border-slate-200 bg-slate-50 opacity-75' : 'border-slate-200 bg-white'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-semibold text-slate-800">{role.label}</div>
+                        <div className="mt-1 text-xs leading-5 text-slate-500">{role.description}</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={!!form[role.key]}
+                        disabled={disabled}
+                        onChange={(event) => updateField(role.key, event.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -240,6 +323,91 @@ const AppConfigurationPage = () => {
                 </label>
               );
             })}
+          </div>
+
+          <div className="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex gap-3">
+                <div className="mt-0.5 rounded-lg bg-slate-100 p-2 text-slate-600">
+                  <Ticket size={18} />
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-800">Kitchen Order Tickets</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">Allow KOT item tagging, manual KOT printing, and automatic KOT after takeaway payment.</div>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={!!form.kotEnabled}
+                onChange={(event) => updateField('kotEnabled', event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex gap-3">
+                <div className="mt-0.5 rounded-lg bg-slate-100 p-2 text-slate-600">
+                  <Printer size={18} />
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-800">Print Receipt After Checkout</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">When disabled, use Print Bill before checkout and skip the automatic paid receipt print.</div>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={form.printReceiptAfterCheckout !== false}
+                onChange={(event) => updateField('printReceiptAfterCheckout', event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex gap-3">
+                <div className="mt-0.5 rounded-lg bg-slate-100 p-2 text-slate-600">
+                  <ShieldPlus size={18} />
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-800">Sales Warranty</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">Show warranty selection in POS sales. Existing warranty records remain visible.</div>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={!!form.warrantyEnabled}
+                onChange={(event) => updateField('warrantyEnabled', event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {warrantyRoleDefinitions.map((role) => {
+                const disabled = !form.warrantyEnabled;
+                return (
+                  <label
+                    key={role.key}
+                    className={`flex h-full items-start justify-between gap-3 rounded-xl border px-4 py-4 ${
+                      disabled ? 'border-slate-200 bg-slate-50 opacity-75' : 'border-slate-200 bg-white'
+                    }`}
+                  >
+                    <div>
+                      <div className="font-semibold text-slate-800">{role.label}</div>
+                      <div className="mt-1 text-xs leading-5 text-slate-500">{role.description}</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={!!form[role.key]}
+                      disabled={disabled}
+                      onChange={(event) => updateField(role.key, event.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </label>
+                );
+              })}
+            </div>
           </div>
         </Card>
 

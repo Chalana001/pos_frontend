@@ -9,5 +9,6 @@ export const stockAPI = {
   processingSources: (params = {}) => api.get('/stock-processing/sources', { params }),
   processingOutputs: (sourceItemId) => api.get(`/stock-processing/sources/${sourceItemId}/outputs`),
   createProcessing: (payload) => api.post('/stock-processing', payload),
+  cancelProcessing: (id, payload) => api.post(`/stock-processing/${id}/cancel`, payload),
   processingHistory: (params = {}) => api.get('/stock-processing', { params }),
 };

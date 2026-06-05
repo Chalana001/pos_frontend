@@ -10,6 +10,7 @@ import { promotionsAPI } from "../api/promotions.api";
 import Button from "../components/common/Button";
 import Card from "../components/common/Card";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import Modal from "../components/common/Modal";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { DISCOUNT_TYPES } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
@@ -45,6 +46,7 @@ const PromotionsPage = () => {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
   const [targetSearch, setTargetSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const selectedTargetIds = form.scope === "ITEM"
     ? form.itemIds
@@ -229,12 +231,12 @@ const PromotionsPage = () => {
   };
 
   const deletePromotion = async (promotion) => {
-    if (!window.confirm(`Delete promotion "${promotion.name}"?`)) return;
     try {
       await promotionsAPI.remove(promotion.id);
       toast.success("Promotion deleted");
       await loadData();
       if (Number(form.id) === Number(promotion.id)) resetForm();
+      setDeleteTarget(null);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to delete promotion");
     }
@@ -425,7 +427,7 @@ const PromotionsPage = () => {
                         <td className="app-table-cell">
                           <div className="flex justify-end gap-2">
                             <Button size="sm" variant="secondary" onClick={() => editPromotion(promotion)}><Pencil size={14} /></Button>
-                            <Button size="sm" variant="danger" onClick={() => deletePromotion(promotion)}><Trash2 size={14} /></Button>
+                            <Button size="sm" variant="danger" onClick={() => setDeleteTarget(promotion)}><Trash2 size={14} /></Button>
                           </div>
                         </td>
                       </tr>
@@ -437,6 +439,28 @@ const PromotionsPage = () => {
           )}
         </Card>
       </div>
+
+      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Promotion" size="sm">
+        <div className="space-y-5">
+          <div className="flex gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+              <Trash2 size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                Delete "{deleteTarget?.name}"?
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                This removes the promotion rule immediately.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="danger" onClick={() => deletePromotion(deleteTarget)}>Delete</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -1,6 +1,300 @@
-export const APP_VERSION = "1.9.0";
+export const APP_VERSION = "1.12.0";
 
 export const VERSION_HISTORY = [
+  {
+    version: "1.12.0",
+    title: "Purchase Cash Sources, Branch Purchase Rules, Bill Printing, Recipe Flexibility",
+    releaseDate: "2026-06-06",
+    summary:
+      "This release tightens purchase cash handling, limits manager purchase work to their own branch, adds restaurant-style pre-bill printing, and allows recipe items to be created and sold before ingredients are linked.",
+    highlights: [
+      "Purchases now record whether cash came from branch cash, an open cash drawer, bank, or no cash source depending on the payment method.",
+      "Old purchases are migrated to Branch Cash automatically so previous records keep a valid source after the update.",
+      "Managers can only create, search, and view purchase stock for their assigned branch, while admins can still work across branches.",
+      "Admin and manager drawer purchases now resolve against the logged-in user's open branch shift without a manual shift selector.",
+      "POS now supports printing an unpaid bill before checkout, with a setting to decide whether a final receipt should also print after checkout.",
+      "Recipe items can now be saved with zero ingredients and sold even when ingredient stock is empty or ingredients will be linked later.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Purchase cash source tracking with Branch Cash, Cash Drawer, Bank, and None source states.",
+          "Cash source fields on purchase and supplier payment records, including linked shift, cashier, source amount, and source branch.",
+          "Startup migration that backfills existing purchases to Branch Cash.",
+          "App Configuration option to control whether POS prints the final receipt automatically after checkout.",
+          "POS Print Bill action before checkout for restaurant-style unpaid bills.",
+          "Unpaid bill receipt label so pre-checkout prints are not confused with paid receipts.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "Purchase payment UI now shows the cash source selector only for Cash payments with a paid amount.",
+          "Bank, card, cheque, and non-cash payment methods now set their source automatically and cannot be changed incorrectly.",
+          "Admin drawer purchases now use the admin's own open shift in the selected branch.",
+          "Managers now see available purchase stock only from their assigned branch.",
+          "Shift context now loads the logged-in user's open shift per branch for admin and manager users.",
+          "Recipe checkout now allows empty ingredient lists and can continue even when linked ingredient stock is zero.",
+        ],
+      },
+      {
+        label: "Changed",
+        items: [
+          "Only one open shift per branch is allowed for the same admin or manager user.",
+          "Opening a branch shift now uses the logged-in user instead of selecting another cashier user.",
+          "Cash Drawer source requires an open shift for the selected branch and current logged-in user.",
+          "Recipe items are treated as sellable POS items without direct stock availability blocking.",
+          "Ingredient stock consumption for recipes can go negative when checkout is allowed.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Managers can no longer purchase for another branch.",
+          "Purchase source selection no longer appears for non-cash payments.",
+          "Cash source selection no longer gets stuck after changing payment method.",
+          "Drawer source errors are clearer because the system now resolves the user's own open shift.",
+          "Recipe item creation no longer fails when no ingredients are added.",
+          "Blank recipe ingredient rows are ignored instead of blocking a zero-ingredient recipe save.",
+          "POS no longer blocks adding or checking out recipe items only because ingredients are missing or out of stock.",
+        ],
+      },
+    ],
+    flowMap: [
+      {
+        title: "Purchase Cash Source Flow",
+        steps: [
+          "Select the purchase branch and payment method.",
+          "If the payment method is Cash, choose Branch Cash or Cash Drawer.",
+          "Cash Drawer uses the logged-in user's open shift for that branch.",
+          "Non-cash methods automatically use Bank or None and keep the source locked.",
+        ],
+      },
+      {
+        title: "Manager Purchase Branch Flow",
+        steps: [
+          "Manager users open purchase screens from their assigned branch context.",
+          "Purchase create and search requests are restricted to that assigned branch.",
+          "Available stock search only returns the manager's branch stock.",
+          "Admin users keep cross-branch purchase access.",
+        ],
+      },
+      {
+        title: "Bill And Receipt Printing Flow",
+        steps: [
+          "Cashier can print an unpaid bill before checkout.",
+          "Customer pays after reviewing the bill.",
+          "Checkout completes the sale.",
+          "The App Configuration receipt toggle decides whether the final paid receipt prints automatically.",
+        ],
+      },
+      {
+        title: "Zero-Ingredient Recipe Flow",
+        steps: [
+          "Create a recipe item without adding ingredient rows.",
+          "Add ingredients later when the kitchen costing is ready.",
+          "Recipe items remain sellable on POS even before ingredients are linked.",
+          "Checkout is not blocked by missing ingredients or zero ingredient stock.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.11.0",
+    title: "Branch Configuration, Expense Branch Mode, Processing Cancel, Timezone Fixes",
+    releaseDate: "2026-05-29",
+    summary:
+      "This release makes app configuration branch-aware, allows non-drawer branch expenses without an open shift, adds reversible stock processing with cancel history, and fixes production time offsets by pinning the app to Sri Lanka time.",
+    highlights: [
+      "App Configuration is now managed per branch, so admins can switch branch context and managers can edit only their assigned branch settings.",
+      "Expenses now support true branch expenses for admin and manager users without forcing an open cashier shift when the cost does not come from the drawer.",
+      "Stock Processing history now supports a cancel flow that restores source stock and removes untouched processing output batches.",
+      "Existing stock processing records are normalized during startup so old rows do not appear canceled by mistake.",
+      "Application time handling is now pinned to Asia/Colombo to stop the 3-hour production timestamp drift.",
+      "POS item tiles, receipt logo flow, and other operational layout details were tightened for cleaner day-to-day use.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Branch-scoped App Configuration APIs and UI flow.",
+          "Branch-aware configuration fallback behavior with per-role access rules.",
+          "Stock Processing cancel endpoint, status tracking, cancel reason, cancel user, and cancel time.",
+          "One-time startup migration to normalize old stock processing rows that were backfilled with the wrong canceled state.",
+          "Application-wide timezone configuration for Sri Lanka time handling.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "Expense recording now distinguishes drawer expenses from branch expenses more cleanly.",
+          "Expense history now shows non-drawer rows as branch expenses instead of forcing a fake shift context.",
+          "Stock Processing history now shows status clearly and exposes cancel behavior from the details flow.",
+          "Receipt logo layout now keeps large logos in normal flow so the rest of the receipt content moves down cleanly.",
+          "POS product tiles now balance icon, title, and price spacing better for longer item names.",
+        ],
+      },
+      {
+        label: "Changed",
+        items: [
+          "App Configuration ownership moved from tenant-wide only to branch-first configuration with tenant fallback.",
+          "Stock processing records now carry a completed/canceled lifecycle state.",
+          "Expense `shift_id` is now optional so branch expenses can exist without a cashier drawer session.",
+          "Backend date serialization and persistence now assume Asia/Colombo instead of the host machine timezone.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Managers can no longer accidentally edit another branch's app configuration.",
+          "Admin and manager users are no longer blocked from recording non-drawer expenses when no shift is open.",
+          "Old stock processing history rows are no longer shown as canceled because of the new status rollout.",
+          "Production-created timestamps no longer appear roughly three hours behind Sri Lanka local time.",
+          "Receipt headers no longer let large logos overlap branch and address text.",
+        ],
+      },
+    ],
+    flowMap: [
+      {
+        title: "Branch Configuration Flow",
+        steps: [
+          "Select a branch from the header branch selector.",
+          "Open App Configuration and save settings for that selected branch.",
+          "Managers only see and update their assigned branch configuration.",
+          "If a branch-specific setting is missing, the tenant default is used as fallback.",
+        ],
+      },
+      {
+        title: "Expense Recording Flow",
+        steps: [
+          "Choose an expense type and branch, then decide whether the cost comes from the drawer.",
+          "Drawer expenses still require an open shift and increase shift expense totals.",
+          "Branch expenses can be saved by admin or manager users without an open shift.",
+          "Expense history labels rows without a shift as branch expenses.",
+        ],
+      },
+      {
+        title: "Stock Processing Cancel Flow",
+        steps: [
+          "Open a stock processing history row and review the processing details.",
+          "Use Cancel Processing with a reason when the produced output stock is still untouched.",
+          "The system restores the consumed source stock and removes created processing batches.",
+          "If any output stock was already sold or adjusted, cancellation is blocked.",
+        ],
+      },
+      {
+        title: "Production Time Flow",
+        steps: [
+          "Backend startup now pins the application timezone to Asia/Colombo.",
+          "New timestamps are created and serialized in Sri Lanka time.",
+          "Frontend date displays now line up with the actual recorded business time.",
+          "Production no longer shows records several hours behind the real event time.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.10.0",
+    title: "KOT Control, Expense Types, Stock Override Roles, Warranty Permissions",
+    releaseDate: "2026-05-28",
+    summary:
+      "This release adds tenant-wide KOT control, configurable expense types for cleaner profit reporting, role-aware stock override permissions, and stronger warranty controls across POS, receipts, and invoices.",
+    highlights: [
+      "KOT can now be enabled or disabled from App Configuration for the full tenant, while item-level KOT flags stay preserved for when KOT is re-enabled.",
+      "POS now disables manual KOT printing and skips automatic takeaway KOT after payment when the tenant KOT setting is off.",
+      "Expense Types can be managed from configuration, including whether each type counts as a real profit-report expense or a recovered/non-profit cost.",
+      "Stock shortage behavior now supports Block, Require Confirmation, and Always Allow modes with role-specific override permissions.",
+      "Warranty usage can now be enabled or disabled globally and controlled per role for Admin, Manager, and Cashier users.",
+      "Thermal receipts and A4 invoices now respect warranty visibility settings more consistently.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Tenant-wide Kitchen Order Tickets toggle in App Configuration.",
+          "KOT-aware POS behavior for manual Print KOT and automatic takeaway KOT after payment.",
+          "Expense Types settings page with active/inactive state and profit-report inclusion control.",
+          "Expense type APIs, persistence, migration, delete/deactivate behavior, and active type selection on expense entry.",
+          "Stock shortage handling modes in App Configuration: Block Shortages, Require Confirmation, and Always Allow.",
+          "Role-level stock override permissions for Admin, Manager, and Cashier.",
+          "Warranty enable/disable setting plus role-level warranty permissions.",
+          "Database migrations for KOT configuration, expense type defaults, stock override permissions, warranty permissions, and related item/stock defaults.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "KOT item controls remain visible but disabled when tenant KOT is off, so users understand why KOT cannot be selected.",
+          "Existing item KOT flags are not wiped when KOT is disabled; re-enabling KOT restores previous item eligibility.",
+          "Item list KOT badges and KOT filters now follow the tenant KOT setting.",
+          "Receipt Design keeps the KOT tab visible but disabled when KOT is turned off.",
+          "Expenses now use configured expense types instead of only free-form category text.",
+          "Dashboard and profit report expense totals now ignore expense types marked as recovered/non-profit-report costs.",
+          "POS stock shortage confirmation now checks the current user's role permission before allowing an override.",
+          "Warranty selection in POS follows App Configuration and role permissions.",
+        ],
+      },
+      {
+        label: "Changed",
+        items: [
+          "KOT availability is now tenant-level first and item-level second.",
+          "Expense categories are now centrally managed as tenant settings.",
+          "Stock override behavior is controlled by App Configuration instead of relying on a single fixed confirmation flow.",
+          "Warranty availability is now part of App Configuration rather than only receipt/item setup.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Automatic KOT no longer appears after payment when KOT is disabled.",
+          "Disabled KOT controls no longer allow frontend bypass to enable KOT on items.",
+          "Backend item create and update now reject attempts to enable KOT while tenant KOT is disabled.",
+          "Expense totals in profit-focused dashboard/report areas now exclude expense types configured outside profit reporting.",
+          "Warranty rows in printed layouts now follow the saved receipt/invoice layout settings.",
+          "Stock override permission defaults are migrated safely for existing tenants.",
+        ],
+      },
+    ],
+    flowMap: [
+      {
+        title: "Tenant KOT Control Flow",
+        steps: [
+          "Open App Configuration and enable or disable Kitchen Order Tickets.",
+          "When disabled, item KOT checkboxes, import KOT selectors, receipt KOT design, and POS Print KOT stay visible but cannot be used.",
+          "Takeaway checkout completes normally without opening the automatic KOT print popup.",
+          "When KOT is enabled again, previously tagged KOT items become eligible without re-tagging.",
+        ],
+      },
+      {
+        title: "Expense Type Flow",
+        steps: [
+          "Open Expense Types from App Configuration and create tenant-specific expense names.",
+          "Mark each type as included in profit reports or recovered/non-profit-report cost.",
+          "Record expenses using active types only.",
+          "Dashboard and profit reports count only the configured expense types that affect profit.",
+        ],
+      },
+      {
+        title: "Stock Override Flow",
+        steps: [
+          "Choose Block, Require Confirmation, or Always Allow from App Configuration.",
+          "Select which roles can confirm shortage sales.",
+          "During checkout, POS asks for confirmation only when the mode and role permit an override.",
+          "Backend stock processing records override context for shortage sales.",
+        ],
+      },
+      {
+        title: "Warranty Permission Flow",
+        steps: [
+          "Enable or disable Sales Warranty from App Configuration.",
+          "Choose which roles can add warranty coverage during checkout.",
+          "POS hides or disables warranty selection when the current role is not allowed.",
+          "Receipt and invoice layout settings control whether warranty details print.",
+        ],
+      },
+    ],
+  },
   {
     version: "1.9.0",
     title: "Stock Processing, Actual Recipe Costing, Promotions, Import Refinements",

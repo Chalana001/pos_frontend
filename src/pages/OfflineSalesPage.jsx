@@ -35,8 +35,12 @@ import { useShift } from "../context/ShiftContext";
 import { formatCurrency } from "../utils/formatters";
 import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
 import { BRAND_NAME_UPPER } from "../utils/branding";
-
-const GRAMS_PER_KILOGRAM = 1000;
+import {
+  displayToBaseQuantity,
+  formatDisplayStockBaseQuantity,
+  formatDisplayStockQuantity,
+  formatStockQuantity,
+} from "../utils/stockQuantity";
 
 const isBatchTracked = (cachedItem) =>
   cachedItem && cachedItem.itemType !== "SERVICE" && cachedItem.itemType !== "RECIPE";
@@ -104,24 +108,16 @@ const normalizeRequestedQty = (cachedItem, qty, qtyUnit) => {
   if (!Number.isFinite(numericQty) || numericQty <= 0) {
     return 0;
   }
-
-  if (cachedItem?.itemType === "WEIGHT" || cachedItem?.itemType === "VOLUME") {
-    const unit = String(qtyUnit || cachedItem?.defaultUnit || (cachedItem?.itemType === "VOLUME" ? "ML" : "G")).toUpperCase();
-    return unit === "KG" || unit === "L"
-      ? Math.round(numericQty * GRAMS_PER_KILOGRAM)
-      : Math.round(numericQty);
-  }
-
-  return Math.round(numericQty);
+  return Math.round(displayToBaseQuantity(numericQty, cachedItem, qtyUnit || cachedItem?.defaultUnit));
 };
 
 const buildInventoryState = (items = []) =>
   new Map(
     items.map((item) => {
-      const aggregateQty =
-        Number(item.availableBaseQty ?? item.availableQty ?? 0) > 0
-          ? Number(item.availableBaseQty ?? item.availableQty ?? 0)
-          : 0;
+      const rawAggregateQty = item.availableBaseQty !== undefined && item.availableBaseQty !== null
+        ? Number(item.availableBaseQty)
+        : displayToBaseQuantity(item.availableQty ?? 0, item, item.defaultUnit);
+      const aggregateQty = Number(rawAggregateQty) > 0 ? Number(rawAggregateQty) : 0;
 
       return [
         Number(item.id),
@@ -134,7 +130,9 @@ const buildInventoryState = (items = []) =>
           batches: sortBatchesForFifo(Array.isArray(item.batches) ? item.batches : [])
             .map((batch) => ({
               batchId: Number(batch.batchId),
-              qty: Number(batch.qty || 0),
+              qty: batch.qty !== undefined && batch.qty !== null
+                ? Number(batch.qty || 0)
+                : Math.round(displayToBaseQuantity(batch.displayQty ?? 0, item, batch.qtyUnit || item.defaultUnit)),
               qtyUnit: batch.qtyUnit || item.defaultUnit,
             })),
         },
@@ -230,7 +228,7 @@ const simulateRowStockValidation = (queueRows, itemLookupByBranch) => {
           issues.push({
             index,
             itemId,
-            message: `${itemName}: selected batch ${payloadItem.batchId} has only ${targetBatch.qty} left.`,
+            message: `${itemName}: selected batch ${payloadItem.batchId} has only ${formatDisplayStockQuantity(targetBatch, 0, requestedItem)} left.`,
           });
           return;
         }
@@ -272,10 +270,11 @@ const simulateRowStockValidation = (queueRows, itemLookupByBranch) => {
       }
 
       if (Number(inventoryItem.aggregateQty || 0) < requiredQty) {
+        const availableLabel = formatDisplayStockBaseQuantity(inventoryItem.aggregateQty, requestedItem, requestedItem.defaultUnit || "");
         issues.push({
           index,
           itemId,
-          message: `${itemName}: available stock is lower than queued quantity.`,
+          message: `${itemName}: available stock is lower than queued quantity. Available: ${availableLabel}.`,
         });
         return;
       }
@@ -989,7 +988,7 @@ const OfflineSalesPage = () => {
                               {item.itemName || cachedItem?.name || `Item ${item.itemId}`}
                             </div>
                             <div className="mt-1 text-xs text-slate-500">
-                              Qty {item.qty} {item.qtyUnit || cachedItem?.defaultUnit || ""}
+                              Qty {formatStockQuantity(item.qty)} {item.qtyUnit || cachedItem?.defaultUnit || ""}
                             </div>
                             {itemIssue ? (
                               <div className="mt-2 text-xs font-medium text-red-700">{itemIssue}</div>
@@ -1012,7 +1011,7 @@ const OfflineSalesPage = () => {
                                   { value: "", label: "Auto FIFO / oldest batch" },
                                   ...batchOptions.map((batch) => ({
                                     value: batch.batchId,
-                                    label: `Batch ${batch.batchId} | ${batch.qty} ${batch.qtyUnit || cachedItem?.defaultUnit || ""}`,
+                                    label: `Batch ${batch.batchId} | ${formatDisplayStockQuantity(batch, 0, cachedItem)}`,
                                   })),
                                 ]}
                                 buttonClassName="rounded-lg py-2"
