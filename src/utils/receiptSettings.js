@@ -39,6 +39,9 @@ export const DEFAULT_RECEIPT_SETTINGS = {
   invoiceLogoWidthPercent: 78,
   receiptFontFamily: RECEIPT_FONT_OPTIONS[0].value,
   paperWidthMm: 72,
+  directPrintEnabled: false,
+  printerName: '',
+  printerCopies: 1,
   thanksMessage: 'Thank You, Come Again!',
   creditsLine1: 'SOFTWARE BY CHALA',
   creditsLine2: 'Smart Retail Solutions | 0704589764',
@@ -62,6 +65,9 @@ export const normalizeReceiptSettings = (settings) => {
       ? merged.receiptFontFamily
       : DEFAULT_RECEIPT_SETTINGS.receiptFontFamily,
     paperWidthMm: Math.min(210, Math.max(48, Number(merged.paperWidthMm) || DEFAULT_RECEIPT_SETTINGS.paperWidthMm)),
+    directPrintEnabled: !!merged.directPrintEnabled,
+    printerName: String(merged.printerName || '').trim(),
+    printerCopies: Math.min(10, Math.max(1, Number(merged.printerCopies) || 1)),
     thanksMessage: (merged.thanksMessage || DEFAULT_RECEIPT_SETTINGS.thanksMessage).trim(),
   };
 };

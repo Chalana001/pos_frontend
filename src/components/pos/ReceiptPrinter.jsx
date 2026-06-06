@@ -1,16 +1,30 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import toast from 'react-hot-toast';
 import ReceiptTemplate from '../receipt/ReceiptTemplate';
 import { normalizeReceiptSettings, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
+import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
 
 const ReceiptPrinter = forwardRef((props, ref) => {
   const printFrameRef = useRef(null);
 
-  useImperativeHandle(ref, () => ({
-    printOrder: (orderData, cartItems, storeName, shiftData, customerData, receiptSettings) => {
-      const frame = printFrameRef.current;
-      if (!frame) return;
+  const printInBrowser = (html) => {
+    const frame = printFrameRef.current;
+    if (!frame) return;
 
+    const doc = frame.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    setTimeout(() => {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    }, 500);
+  };
+
+  useImperativeHandle(ref, () => ({
+    printOrder: async (orderData, cartItems, storeName, shiftData, customerData, receiptSettings) => {
       const settings = normalizeReceiptSettings(receiptSettings);
       const branchData = {
         name: orderData?.branchName || shiftData?.branchName || 'Main Branch',
@@ -19,9 +33,6 @@ const ReceiptPrinter = forwardRef((props, ref) => {
         logo: orderData?.branchLogo || shiftData?.branchLogo || '',
         cashierName: orderData?.cashierName || shiftData?.cashierName || 'Cashier',
       };
-
-      const doc = frame.contentWindow.document;
-      doc.open();
 
       const itemList = Array.isArray(cartItems) ? cartItems : [];
       const itemsPerPage = 15;
@@ -64,13 +75,21 @@ const ReceiptPrinter = forwardRef((props, ref) => {
         </html>
       `;
 
-      doc.write(receiptHtml);
-      doc.close();
+      if (settings.directPrintEnabled && settings.printerName) {
+        try {
+          await printerAgentAPI.printReceipt({
+            printerName: settings.printerName,
+            html: receiptHtml,
+            paperWidth: getPrintPaperWidth(settings),
+            copies: settings.printerCopies,
+          });
+          return;
+        } catch (error) {
+          toast.error(`${error.message || 'Direct print failed'}. Opening browser print.`);
+        }
+      }
 
-      setTimeout(() => {
-        frame.contentWindow.focus();
-        frame.contentWindow.print();
-      }, 500);
+      printInBrowser(receiptHtml);
     },
   }));
 

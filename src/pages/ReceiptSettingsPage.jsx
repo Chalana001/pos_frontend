@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { Building2, Printer, Save, Ticket, FileText, ChefHat } from 'lucide-react';
+import { Building2, Printer, Save, Ticket, FileText, ChefHat, RefreshCw } from 'lucide-react';
 
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -20,6 +20,7 @@ import {
   RECEIPT_SECTION_FIELDS,
 } from '../utils/receiptSettings';
 import { receiptSettingsAPI } from '../api/receiptSettings.api';
+import { printerAgentAPI } from '../api/printerAgent.api';
 import { BRAND_NAME_UPPER } from '../utils/branding';
 
 const toSavePayload = (settings, templateType) => {
@@ -52,6 +53,9 @@ const toSavePayload = (settings, templateType) => {
     invoiceLogoWidthPercent: normalized.invoiceLogoWidthPercent,
     receiptFontFamily: normalized.receiptFontFamily,
     paperWidthMm: templateType === PRINT_TEMPLATE_TYPES.A4 ? 210 : normalized.paperWidthMm,
+    directPrintEnabled: normalized.directPrintEnabled,
+    printerName: normalized.printerName,
+    printerCopies: normalized.printerCopies,
     thanksMessage: normalized.thanksMessage,
     creditsLine1: normalized.creditsLine1,
     creditsLine2: normalized.creditsLine2,
@@ -203,6 +207,10 @@ const ReceiptSettingsPage = () => {
   const [form, setForm] = useState(getReceiptSettingsDefaults(PRINT_TEMPLATE_TYPES.THERMAL));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [printerLoading, setPrinterLoading] = useState(false);
+  const [printerTesting, setPrinterTesting] = useState(false);
+  const [printAgentOnline, setPrintAgentOnline] = useState(false);
+  const [printerOptions, setPrinterOptions] = useState([]);
 
   useEffect(() => {
     if (!kotEnabled && activeTemplate === PRINT_TEMPLATE_TYPES.KOT) {
@@ -239,6 +247,52 @@ const ReceiptSettingsPage = () => {
 
   const updateField = (field, value) => {
     setForm((prev) => normalizeReceiptSettings({ ...prev, [field]: value }));
+  };
+
+  const loadPrinters = async ({ silent = false } = {}) => {
+    try {
+      setPrinterLoading(true);
+      const response = await printerAgentAPI.printers();
+      const printers = Array.isArray(response.printers) ? response.printers : [];
+      setPrinterOptions(printers.map((printer) => ({
+        value: printer.name,
+        label: printer.isDefault ? `${printer.name} (Default)` : printer.name,
+      })));
+      setPrintAgentOnline(true);
+      if (!silent) toast.success('Printer service connected');
+    } catch (error) {
+      setPrintAgentOnline(false);
+      setPrinterOptions([]);
+      if (!silent) toast.error(error.message || 'Printer service not available');
+    } finally {
+      setPrinterLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPrinters({ silent: true });
+  }, []);
+
+  const handleTestPrint = async () => {
+    if (!form.printerName) {
+      toast.error('Select a printer first');
+      return;
+    }
+
+    try {
+      setPrinterTesting(true);
+      await printerAgentAPI.testPrint({
+        printerName: form.printerName,
+        paperWidth: activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 'A4' : Number(form.paperWidthMm) <= 60 ? '58mm' : '80mm',
+        copies: form.printerCopies,
+        label: activeTemplate === PRINT_TEMPLATE_TYPES.KOT ? 'KOT Printer' : 'Receipt Printer',
+      });
+      toast.success('Test print sent');
+    } catch (error) {
+      toast.error(error.message || 'Test print failed');
+    } finally {
+      setPrinterTesting(false);
+    }
   };
 
   const handleSave = async () => {
@@ -492,6 +546,65 @@ const ReceiptSettingsPage = () => {
                     )}
                   </div>
                 </Card>
+
+                {activeTemplate !== PRINT_TEMPLATE_TYPES.A4 ? (
+                  <Card className="admin-panel-card" title="Direct Printer" style={{ animationDelay: "190ms" }}>
+                    <div className="space-y-4">
+                      <label className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                        <div>
+                          <div className="text-sm font-medium text-slate-800">Use Local Printer Service</div>
+                          <div className="text-xs text-slate-500">
+                            {printAgentOnline ? 'Printer service connected on this device.' : 'Browser print fallback will be used if this is off or unavailable.'}
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={!!form.directPrintEnabled}
+                          onChange={(event) => updateField('directPrintEnabled', event.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </label>
+
+                      <div>
+                        <div className="mb-1 flex items-center justify-between gap-3">
+                          <label className="text-sm font-medium text-slate-700">Printer</label>
+                          <Button type="button" size="sm" variant="secondary" onClick={() => loadPrinters()} disabled={printerLoading}>
+                            <RefreshCw size={14} className={`mr-1 ${printerLoading ? 'animate-spin' : ''}`} />
+                            Refresh
+                          </Button>
+                        </div>
+                        <CustomSelect
+                          value={form.printerName}
+                          onChange={(value) => updateField('printerName', value)}
+                          options={printerOptions}
+                          valueKey="value"
+                          labelKey="label"
+                          placeholder={printAgentOnline ? 'Select installed printer' : 'Printer service offline'}
+                          disabled={!printAgentOnline || printerLoading}
+                          buttonClassName="h-[42px] rounded-xl px-4 py-2.5"
+                          emptyMessage="No printers found"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">Copies</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={form.printerCopies}
+                          onChange={(event) => updateField('printerCopies', Number(event.target.value))}
+                          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        />
+                      </div>
+
+                      <Button type="button" variant="secondary" onClick={handleTestPrint} disabled={!form.printerName || printerTesting}>
+                        <Printer size={16} className="mr-2" />
+                        {printerTesting ? 'Printing...' : 'Test Print'}
+                      </Button>
+                    </div>
+                  </Card>
+                ) : null}
 
                 <Card className="admin-panel-card" title="Messages" style={{ animationDelay: "210ms" }}>
                   <div className="space-y-4">

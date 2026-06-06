@@ -1,6 +1,46 @@
-export const APP_VERSION = "1.12.0";
+export const APP_VERSION = "1.13.0";
 
 export const VERSION_HISTORY = [
+  {
+    version: "1.13.0",
+    title: "Printer Service Integration, Direct Printing, and Receipt Stability",
+    releaseDate: "2026-06-07",
+    summary:
+      "This release adds direct printer service integration for faster local receipt and KOT printing, improves printer discovery, and fixes printer reliability for the POS workflow.",
+    highlights: [
+      "Printer service is now connected and available for local direct printing from the POS.",
+      "Receipt and KOT printing use the printer agent for faster, more reliable output.",
+      "Test print support was added so users can verify printer service connectivity before checkout.",
+      "Printer options are now refreshed from the local agent and selected printer names are preserved.",
+      "Browser fallback printing remains available when the local printer service is unavailable.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Local printer service integration for direct receipt and KOT printing.",
+          "Printer health and discovery flow in receipt settings so printers can be loaded from the agent.",
+          "Test print action for validating the selected printer before using it in the live POS.",
+          "Receipt settings now show printer service connection status and enable direct printer selection.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "POS print reliability for receipts and kitchen orders when the printer agent is available.",
+          "Printer state handling no longer blocks checkout if the service is offline; fallback printing is used instead.",
+          "Printer errors are shown with clearer messages for unavailable or failed local service calls.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Printer options were not always refreshed after reconnecting the print agent.",
+          "Direct print service communication failures now trigger browser fallback instead of silent failures.",
+        ],
+      },
+    ],
+  },
   {
     version: "1.12.0",
     title: "Purchase Cash Sources, Branch Purchase Rules, Bill Printing, Recipe Flexibility",

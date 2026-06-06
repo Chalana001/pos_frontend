@@ -1,16 +1,30 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import toast from 'react-hot-toast';
 import ReceiptTemplate from '../receipt/ReceiptTemplate';
 import { normalizeReceiptSettings, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
+import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
 
 const KotPrinter = forwardRef((props, ref) => {
   const printFrameRef = useRef(null);
 
-  useImperativeHandle(ref, () => ({
-    printKot: (orderMeta, items, storeName, shiftData, receiptSettings) => {
-      const frame = printFrameRef.current;
-      if (!frame) return;
+  const printInBrowser = (html) => {
+    const frame = printFrameRef.current;
+    if (!frame) return;
 
+    const doc = frame.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    setTimeout(() => {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    }, 500);
+  };
+
+  useImperativeHandle(ref, () => ({
+    printKot: async (orderMeta, items, storeName, shiftData, receiptSettings) => {
       const settings = normalizeReceiptSettings(receiptSettings);
       const branchData = {
         name: orderMeta?.branchName || shiftData?.branchName || 'Main Branch',
@@ -19,9 +33,6 @@ const KotPrinter = forwardRef((props, ref) => {
         logo: orderMeta?.branchLogo || shiftData?.branchLogo || '',
         cashierName: orderMeta?.cashierName || shiftData?.cashierName || 'Cashier',
       };
-
-      const doc = frame.contentWindow.document;
-      doc.open();
 
       const html = renderToStaticMarkup(
         <ReceiptTemplate
@@ -53,13 +64,21 @@ const KotPrinter = forwardRef((props, ref) => {
         </html>
       `;
 
-      doc.write(documentHtml);
-      doc.close();
+      if (settings.directPrintEnabled && settings.printerName) {
+        try {
+          await printerAgentAPI.printKot({
+            printerName: settings.printerName,
+            html: documentHtml,
+            paperWidth: getPrintPaperWidth(settings),
+            copies: settings.printerCopies,
+          });
+          return;
+        } catch (error) {
+          toast.error(`${error.message || 'Direct KOT print failed'}. Opening browser print.`);
+        }
+      }
 
-      setTimeout(() => {
-        frame.contentWindow.focus();
-        frame.contentWindow.print();
-      }, 500);
+      printInBrowser(documentHtml);
     },
   }));
 
