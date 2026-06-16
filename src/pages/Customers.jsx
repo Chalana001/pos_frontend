@@ -12,6 +12,7 @@ import CustomSelect from "../components/common/CustomSelect";
 import DatePicker from "../components/common/DatePicker";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDate } from "../utils/formatters";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const statusOptions = [
   { value: "ALL", label: "All Status" },
@@ -25,6 +26,7 @@ const CustomersListPage = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useSearchOnType(setSearchQuery);
   const [status, setStatus] = useState("ALL");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -150,6 +152,7 @@ const CustomersListPage = () => {
                   resetPage();
                 }}
                 placeholder="Search customer, phone, or address..."
+                ref={searchRef}
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

@@ -11,6 +11,7 @@ import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
 import { Search, ChevronRight, ShoppingCart } from "lucide-react";
 import { formatCurrency, formatDate, formatTime } from "../utils/formatters";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const datePresetOptions = [
   { value: "ALL", label: "All Dates" },
@@ -98,6 +99,7 @@ const SalesListPage = () => {
   const [cashierOptions, setCashierOptions] = useState([{ value: "ALL", label: "All Cashiers" }]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const searchRef = useSearchOnType(setSearch);
   const [datePreset, setDatePreset] = useState("ALL");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -253,6 +255,7 @@ const SalesListPage = () => {
             <input
               type="text"
               placeholder="Search invoice, customer, or phone..."
+              ref={searchRef}
               className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={search}
               onChange={handleSearch}

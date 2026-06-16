@@ -10,6 +10,7 @@ import DatePicker from "../components/common/DatePicker";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const purchaseStatusOptions = [
   { value: "ALL", label: "All Status" },
@@ -32,6 +33,7 @@ const PurchaseListPage = () => {
   const [suppliers, setSuppliers] = useState([{ value: "ALL", label: "All Suppliers" }]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const searchRef = useSearchOnType(setSearch);
   const [supplierId, setSupplierId] = useState("ALL");
   const [status, setStatus] = useState("ALL");
   const [fromDate, setFromDate] = useState("");
@@ -142,6 +144,7 @@ const PurchaseListPage = () => {
               <input
                 type="text"
                 placeholder="Search invoice, supplier, or GRN..."
+                ref={searchRef}
                 className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={search}
                 onChange={(event) => {

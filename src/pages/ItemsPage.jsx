@@ -17,6 +17,7 @@ import CustomSelect from "../components/common/CustomSelect";
 import TablePagination from "../components/common/TablePagination";
 import Modal from "../components/common/Modal";
 import { ItemType } from "../utils/constants"; // 🟢 Constant එක Import කළා
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const buildItemTypeOptions = (configuration, availability) => [
   { value: "ALL", label: "All Types" },
@@ -75,6 +76,7 @@ const ItemsPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useSearchOnType(setSearchQuery);
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [categoryId, setCategoryId] = useState("");
@@ -423,6 +425,7 @@ const ItemsPage = () => {
                 value={searchQuery}
                 onChange={handleSearch}
                 placeholder="Search name, barcode, or category..."
+                ref={searchRef}
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

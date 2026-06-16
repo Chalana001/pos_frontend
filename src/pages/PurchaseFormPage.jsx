@@ -15,6 +15,7 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import { ItemType } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 import {
   formatDisplayStockQuantity,
   formatStockQuantity,
@@ -86,7 +87,6 @@ const PurchaseFormPage = () => {
   const isManager = user?.role === "MANAGER";
 
   // 🚀 Refs
-  const searchInputRef = useRef(null);
   const firstQtyInputRef = useRef(null);
   const panelsContainerRef = useRef(null);
 
@@ -110,6 +110,7 @@ const PurchaseFormPage = () => {
 
   // --- ITEM SELECTION & DISTRIBUTION STATE ---
   const [search, setSearch] = useState("");
+  const searchInputRef = useSearchOnType(setSearch);
   const [searchResults, setSearchResults] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
@@ -132,9 +133,6 @@ const PurchaseFormPage = () => {
 
   useEffect(() => {
     loadInitialData();
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
   }, []);
 
   useEffect(() => {
@@ -344,17 +342,10 @@ const PurchaseFormPage = () => {
     setCartItems(prev => [...prev, ...newRows]);
     setSelectedItem(null);
     setBranchInputs({});
-
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
   };
 
   const handleRemoveItem = (index) => {
     setCartItems((prev) => prev.filter((_, i) => i !== index));
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
   };
 
   // --- 4. SUBMIT ---
@@ -624,7 +615,6 @@ const PurchaseFormPage = () => {
                   onChange={(e) => searchItems(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
                   className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
                 />
                 {searchResults.length > 0 && (
                   <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-100 bg-white py-1 shadow-xl custom-scrollbar">
@@ -658,7 +648,7 @@ const PurchaseFormPage = () => {
                       <div className="truncate font-bold text-slate-800">{selectedItem.name}</div>
                       <div className="truncate text-xs text-slate-500">{selectedItem.barcode}</div>
                     </div>
-                    <button onClick={() => { setSelectedItem(null); if (searchInputRef.current) searchInputRef.current.focus(); }} className="shrink-0 text-xs font-semibold text-red-500 hover:underline">
+                    <button onClick={() => { setSelectedItem(null); }} className="shrink-0 text-xs font-semibold text-red-500 hover:underline">
                       Cancel
                     </button>
                   </div>
@@ -859,7 +849,7 @@ const PurchaseFormPage = () => {
 
       <SupplierQuickAddModal
         isOpen={showSupplierModal}
-        onClose={() => { setShowSupplierModal(false); if (searchInputRef.current) searchInputRef.current.focus(); }}
+        onClose={() => { setShowSupplierModal(false); }}
         onCreated={handleSupplierCreated}
       />
     </div>

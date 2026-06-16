@@ -9,6 +9,7 @@ import CustomSelect from "../components/common/CustomSelect";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import TablePagination from "../components/common/TablePagination";
 import { formatDateTime } from "../utils/formatters";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const statusOptions = [
   { value: "ALL", label: "All Status" },
@@ -42,6 +43,7 @@ const WarrantyClaimsPage = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const searchRef = useSearchOnType(setSearch);
   const [status, setStatus] = useState("ALL");
   const [page, setPage] = useState(0);
   const [pageInput, setPageInput] = useState("1");
@@ -116,6 +118,7 @@ const WarrantyClaimsPage = () => {
                 }}
                 className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Search claim, warranty, barcode, invoice, customer, or item..."
+                ref={searchRef}
               />
             </div>
             <div className="w-full lg:w-48">

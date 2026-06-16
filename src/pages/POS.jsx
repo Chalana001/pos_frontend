@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronRight, Printer } from "lucide-react";
 import { useKeyboard } from "../hooks/useKeyboard";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 import { itemsAPI } from "../api/items.api";
 import { ordersAPI } from "../api/orders.api";
 import { promotionsAPI } from "../api/promotions.api";
@@ -175,6 +176,7 @@ const POS = () => {
   const [cartItems, setCartItems] = useState([]);
   const [warrantyOptions, setWarrantyOptions] = useState([{ value: "", label: "No Warranty" }]);
   const [searchQuery, setSearchQuery] = useState("");
+  useSearchOnType(setSearchQuery, searchInputRef);
   const [activeCategory, setActiveCategory] = useState("All");
   const [categories, setCategories] = useState(["All"]);
   const [showBatchModal, setShowBatchModal] = useState(false);
@@ -314,11 +316,6 @@ const POS = () => {
     return Number(batchData ? batchData.qty : (item?.availableBaseQty ?? 0));
   };
 
-  useEffect(() => {
-    if (searchInputRef.current && !loadingShift && canSell) {
-      searchInputRef.current.focus();
-    }
-  }, [canSell, loadingShift]);
 
   useEffect(() => {
     if (!cartDraftKey || hydratedCartDraftKeysRef.current.has(cartDraftKey)) {
@@ -998,7 +995,6 @@ const POS = () => {
 
     if (!unlimitedStockItem && stockBaseQty < requestedBaseQty && !stockOverrideCanProceed) {
       toast.error(item.itemType === ItemType.RECIPE ? "Item is Out of Stock!" : `Insufficient stock! Available: ${formatStockDisplay(item, batchData)}`);
-      if (searchInputRef.current) searchInputRef.current.focus();
       return;
     } else if (!unlimitedStockItem && stockBaseQty < requestedBaseQty) {
       toast.error(item.itemType === ItemType.RECIPE ? "Recipe ingredient stock is low. Override will be required at checkout." : `Low stock. Override will be required at checkout. Available: ${formatStockDisplay(item, batchData)}`);
@@ -1021,7 +1017,6 @@ const POS = () => {
 
       if (!unlimitedStockItem && nextBaseQty > currentItem.stockBaseQty && !stockOverrideCanProceed) {
         toast.error(item.itemType === ItemType.RECIPE ? "Low stock." : `Low stock. Available: ${formatStockDisplay(item, batchData)}`);
-        if (searchInputRef.current) searchInputRef.current.focus();
         return;
       } else if (!unlimitedStockItem && nextBaseQty > currentItem.stockBaseQty) {
         toast.error(item.itemType === ItemType.RECIPE ? "Recipe ingredient stock is low. Override will be required at checkout." : `Low stock. Override will be required at checkout. Available: ${formatStockDisplay(item, batchData)}`);
@@ -1063,9 +1058,6 @@ const POS = () => {
     }
 
     setSearchQuery("");
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
   };
 
   const handleSearchKeyDown = (e) => {
@@ -1123,9 +1115,6 @@ const POS = () => {
     newItems[index].qty = finalQty;
     setCartItems(newItems);
 
-    if (!preventFocus && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
   };
 
   const updateUnitPrice = (index, newPrice) => {
@@ -1140,9 +1129,6 @@ const POS = () => {
   };
 
   const focusSearch = () => {
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
   };
 
   const handleResizeStart = (event) => {
@@ -1191,7 +1177,6 @@ const POS = () => {
     }
 
     setCartItems(nextItems);
-    if (searchInputRef.current) searchInputRef.current.focus();
   };
 
   const handleInlineDiscount = (index, type, value) => {
@@ -1705,9 +1690,6 @@ const POS = () => {
 
         toast.success(isFreeLocalSalesPlan ? "Sale saved locally" : "Sale saved to offline queue");
         clearCartState();
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-        }
         return;
       }
 
@@ -1809,9 +1791,6 @@ const POS = () => {
 
       clearCartState();
 
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
     } catch (error) {
       const message = getApiErrorMessage(error, "Failed");
       setPaymentError(message);
@@ -2177,10 +2156,10 @@ const POS = () => {
         </div>
       </div>
 
-      <CustomerSelect isOpen={showCustomerSelect} onClose={() => { setShowCustomerSelect(false); if (searchInputRef.current) searchInputRef.current.focus(); }} onSelectCustomer={setCustomer} />
+      <CustomerSelect isOpen={showCustomerSelect} onClose={() => { setShowCustomerSelect(false); }} onSelectCustomer={setCustomer} />
       <CheckoutOverlay
         isOpen={showPayment}
-        onClose={() => { setShowPayment(false); setPaymentError(""); if (searchInputRef.current) searchInputRef.current.focus(); }}
+        onClose={() => { setShowPayment(false); setPaymentError(""); }}
         total={checkoutTotal}
         orderType={orderType}
         setOrderType={setOrderType}

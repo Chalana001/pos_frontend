@@ -15,6 +15,7 @@ import DatePicker from "../components/common/DatePicker";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import Table from "../components/common/Table";
 import TablePagination from "../components/common/TablePagination";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const adjustmentTypeOptions = [
   { value: "ALL", label: "All Types" },
@@ -32,6 +33,7 @@ const StockAdjustments = () => {
   const [users, setUsers] = useState([{ value: "ALL", label: "All Users" }]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const searchRef = useSearchOnType(setSearch);
   const [type, setType] = useState("ALL");
   const [userId, setUserId] = useState("ALL");
   const [fromDate, setFromDate] = useState("");
@@ -206,6 +208,7 @@ const StockAdjustments = () => {
                   resetPage();
                 }}
                 placeholder="Search item, barcode, or reason..."
+                ref={searchRef}
                 className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

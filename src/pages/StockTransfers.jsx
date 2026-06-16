@@ -12,6 +12,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
 import DatePicker from "../components/common/DatePicker";
 import TablePagination from "../components/common/TablePagination";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const transferStatusOptions = [
   { value: "ALL", label: "All Status" },
@@ -26,6 +27,7 @@ const StockTransfers = () => {
 
   const [activeTab, setActiveTab] = useState("outgoing");
   const [search, setSearch] = useState("");
+  const searchRef = useSearchOnType(setSearch);
   const [status, setStatus] = useState("ALL");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -330,6 +332,7 @@ const StockTransfers = () => {
                   resetCurrentPage();
                 }}
                 placeholder="Search transfer no, item, barcode, or note..."
+                ref={searchRef}
                 className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

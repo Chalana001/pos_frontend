@@ -28,6 +28,7 @@ import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import CustomSelect from "../components/common/CustomSelect";
 import TablePagination from "../components/common/TablePagination";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const isMeasuredItem = isMeasuredStockItem;
 const getDisplayQty = getDisplayStockQuantity;
@@ -91,6 +92,7 @@ const Stock = () => {
   const [loading, setLoading] = useState(false);
   const [loadingCounts, setLoadingCounts] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useSearchOnType(setSearchQuery);
   const [branches, setBranches] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
@@ -575,6 +577,7 @@ const Stock = () => {
                 value={searchQuery}
                 onChange={handleSearch}
                 placeholder="Search name, barcode, or category..."
+                ref={searchRef}
                 className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

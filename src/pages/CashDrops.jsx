@@ -16,6 +16,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
 import DatePicker from "../components/common/DatePicker";
 import TablePagination from "../components/common/TablePagination";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const toLocalDateTimeParam = (date, endOfDay = false) => {
   if (!date) return undefined;
@@ -42,6 +43,7 @@ const CashDrops = () => {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
+  const searchRef = useSearchOnType(setSearch);
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [cashierId, setCashierId] = useState("ALL");
@@ -317,6 +319,7 @@ const CashDrops = () => {
                   resetPage();
                 }}
                 placeholder="Search reason..."
+                ref={searchRef}
                 className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

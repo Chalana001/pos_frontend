@@ -9,12 +9,14 @@ import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency } from "../utils/formatters";
+import { useSearchOnType } from "../hooks/useSearchOnType";
 
 const SuppliersPage = () => {
   const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const searchRef = useSearchOnType(setQuery);
   const [page, setPage] = useState(0);
   const [pageInput, setPageInput] = useState("1");
   const [pageSize] = useState(10);
@@ -97,6 +99,7 @@ const SuppliersPage = () => {
               onChange={(event) => setQuery(event.target.value)}
               className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Search supplier, phone, email, or address..."
+              ref={searchRef}
             />
           </div>
         </div>
