@@ -121,6 +121,7 @@ const priceUnitLabel = (itemType) => {
 const emptyDraft = () => ({
   imageUrl: "",
   name: "",
+  altName: "",
   barcode: "",
   categoryId: "", 
   subCategoryId: "",
@@ -698,6 +699,7 @@ export default function BulkAddItems() {
     const newItem = {
       tempId: uuid(),
       name: draft.name.trim(),
+      altName: draft.altName?.trim() || null,
       barcode: nextBarcode,
       categoryId: draft.categoryId, 
       subCategoryId: Number(draft.subCategoryId),
@@ -830,6 +832,7 @@ export default function BulkAddItems() {
       // 🟢 weightItem ඉවත් කළා
       const payload = cart.map((item) => ({
         name: item.name,
+        altName: item.altName || null,
         barcode: item.barcode,
         subCategoryId: item.subCategoryId,
         costPrice: item.costPrice,
@@ -968,6 +971,19 @@ export default function BulkAddItems() {
                   value={draft.name}
                   onChange={(e) => updateDraft("name", e.target.value)}
                   placeholder="Ex: Sugar 1Kg"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Alt Name (Sinhala)
+                  <span className="ml-2 text-xs text-slate-400 font-normal">Optional — used on receipts when set to Alt Name.</span>
+                </label>
+                <input
+                  className="w-full border rounded-lg px-3 py-2"
+                  value={draft.altName}
+                  onChange={(e) => updateDraft("altName", e.target.value)}
+                  placeholder="e.g. සකර 1kg"
                 />
               </div>
 

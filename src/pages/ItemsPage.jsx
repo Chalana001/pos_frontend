@@ -303,7 +303,7 @@ const ItemsPage = () => {
       render: (i) => (
         <div className="flex flex-col">
           <span className="font-medium text-slate-800">{i.name}</span>
-          {/* 🟢 Enum එක පාවිච්චි කිරීම */}
+          {i.altName && <span className="text-xs text-slate-400">{i.altName}</span>}
           {i.itemType === ItemType.SERVICE && <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded w-fit mt-1">Service</span>}
           {i.itemType === ItemType.WEIGHT && <span className="text-[10px] uppercase font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded w-fit mt-1">Weight Item</span>}
           {i.itemType === ItemType.VOLUME && <span className="text-[10px] uppercase font-bold text-cyan-600 bg-cyan-100 px-1.5 py-0.5 rounded w-fit mt-1">Volume Item</span>}

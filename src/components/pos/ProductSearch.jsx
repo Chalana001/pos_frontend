@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Search, Barcode, Box } from "lucide-react";
 import { itemsAPI } from "../../api/items.api";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -13,6 +13,9 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
+  // BUG-11 FIX: AbortController ref to cancel stale in-flight requests when the
+  // search term changes rapidly (race condition — later response arriving before earlier one).
+  const abortRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -25,12 +28,18 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
   }, [debouncedSearch, isOpen]);
 
   const searchItems = async (name) => {
+    // Cancel any previous in-flight request
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+
     setLoading(true);
     try {
-      const response = await itemsAPI.searchForPos(name, branchId);
+      const response = await itemsAPI.searchForPos(name, branchId, abortRef.current.signal);
       setItems(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
-      setItems([]);
+      if (error?.name !== "CanceledError" && error?.code !== "ERR_CANCELED") {
+        setItems([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -73,6 +82,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
                 >
                   <div>
                     <h3 className="font-bold text-slate-800 group-hover:text-blue-700">{item.name}</h3>
+                    {item.altName && <p className="text-xs text-slate-400">{item.altName}</p>}
                     <div className="flex gap-3 text-sm text-slate-500 mt-1">
                       <span className="flex items-center gap-1"><Barcode size={14} /> {item.barcode}</span>
                       <span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">{item.category}</span>

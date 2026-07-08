@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { Search, UserPlus, User } from 'lucide-react';
 import { customersAPI } from '../../api/customers.api';
@@ -13,6 +13,8 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
+  // BUG-11 FIX: cancel stale in-flight requests when search term changes rapidly
+  const abortRef = useRef(null);
 
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', address: '', creditLimit: '' });
 
@@ -23,19 +25,27 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
   }, [isOpen, debouncedSearch]);
 
   const fetchCustomers = async () => {
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
     setLoading(true);
     try {
-      const response = await customersAPI.getAll({ active: true, size: 50 });
+      const response = await customersAPI.getAll({ active: true, size: 50 }, abortRef.current.signal);
       setCustomers(response.data?.content || response.data || []);
-    } catch(e) { setCustomers([]) } finally { setLoading(false); }
+    } catch(e) {
+      if (e?.name !== 'CanceledError' && e?.code !== 'ERR_CANCELED') setCustomers([]);
+    } finally { setLoading(false); }
   };
 
   const searchCustomers = async () => {
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
     setLoading(true);
     try {
-      const response = await customersAPI.search(debouncedSearch);
+      const response = await customersAPI.search(debouncedSearch, abortRef.current.signal);
       setCustomers(response.data);
-    } catch(e) { setCustomers([]) } finally { setLoading(false); }
+    } catch(e) {
+      if (e?.name !== 'CanceledError' && e?.code !== 'ERR_CANCELED') setCustomers([]);
+    } finally { setLoading(false); }
   };
 
   const handleAddCustomer = async (e) => {

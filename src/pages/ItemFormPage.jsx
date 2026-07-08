@@ -66,6 +66,7 @@ const buildEmptyProcessingOutput = () => ({
   defaultUnit: "PCS",
   defaultQty: "",
   defaultQtyUnit: "PCS",
+  defaultSellingPrice: "",
   waste: false,
   search: "",
 });
@@ -146,6 +147,7 @@ const ItemFormPage = ({ mode }) => {
 
   const [formData, setFormData] = useState({
     name: "",
+    altName: "",
     barcode: "",
     categoryId: "",
     subCategoryId: "",
@@ -248,6 +250,7 @@ const ItemFormPage = ({ mode }) => {
 
         setFormData({
           name: item.name ?? "",
+          altName: item.altName ?? "",
           barcode: item.barcode ?? "",
           categoryId: singleCategoryMode ? item.subCategoryId ?? "" : item.categoryId ?? "",
           subCategoryId: item.subCategoryId ?? "",
@@ -283,6 +286,7 @@ const ItemFormPage = ({ mode }) => {
                 defaultUnit: output.defaultUnit || "PCS",
                 defaultQty: output.defaultQty ?? "",
                 defaultQtyUnit: output.defaultQtyUnit || "PCS",
+                defaultSellingPrice: output.defaultSellingPrice ?? "",
                 waste: !!output.waste,
                 search: output.outputName || "",
               }))
@@ -698,6 +702,7 @@ const ItemFormPage = ({ mode }) => {
     try {
       const payload = {
         name: formData.name.trim(),
+        altName: formData.altName?.trim() || null,
         barcode: formData.barcode.trim(),
         subCategoryId: Number(formData.subCategoryId),
         costPrice: Number(formData.costPrice || 0),
@@ -735,6 +740,7 @@ const ItemFormPage = ({ mode }) => {
           ? formData.processingOutputs.map((output) => ({
               outputItemId: Number(output.outputItemId),
               defaultQty: Number(output.defaultQty),
+              defaultSellingPrice: output.waste || !output.defaultSellingPrice ? null : Number(output.defaultSellingPrice),
               waste: !!output.waste,
             }))
           : [],
@@ -837,6 +843,20 @@ const ItemFormPage = ({ mode }) => {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Alt Name (Sinhala)
+                      <span className="ml-2 text-xs text-slate-400 font-normal">Used on receipts when the design's name source is set to Alt Name.</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.altName}
+                      onChange={(e) => setFormData({ ...formData, altName: e.target.value })}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. සුදු බත්"
                     />
                   </div>
 
@@ -1170,7 +1190,7 @@ const ItemFormPage = ({ mode }) => {
                             {formData.processingOutputs.map((output, index) => (
                               <div
                                 key={`${output.outputItemId || "new"}-${index}`}
-                                className={`relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_140px_120px_52px] ${
+                                className={`relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_140px_130px_120px_52px] ${
                                   processingOutputSearchResults[index]?.loading || (processingOutputSearchResults[index]?.items || []).length > 0 ? "z-50" : "z-0"
                                 }`}
                               >
@@ -1237,6 +1257,20 @@ const ItemFormPage = ({ mode }) => {
                                       {output.defaultQtyUnit || output.defaultUnit || "PCS"}
                                     </div>
                                   </div>
+                                </div>
+
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-slate-700">Default Sell Price</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={output.defaultSellingPrice}
+                                    onChange={(e) => updateProcessingOutput(index, "defaultSellingPrice", e.target.value)}
+                                    disabled={!!output.waste}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    placeholder="Item price"
+                                  />
                                 </div>
 
                                 <label className="flex items-end gap-2 pb-2 text-sm font-medium text-slate-700">

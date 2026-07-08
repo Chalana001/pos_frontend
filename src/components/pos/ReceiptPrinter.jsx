@@ -2,10 +2,13 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import toast from 'react-hot-toast';
 import ReceiptTemplate from '../receipt/ReceiptTemplate';
-import { normalizeReceiptSettings, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
+import { normalizeReceiptSettings, PRINT_TEMPLATE_TYPES, parseTemplateLines } from '../../utils/receiptSettings';
+import { buildPosReceiptHtml } from '../../utils/buildPosReceiptHtml';
 import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ReceiptPrinter = forwardRef((props, ref) => {
+  const { language } = useLanguage();
   const printFrameRef = useRef(null);
 
   const printInBrowser = (html) => {
@@ -35,6 +38,40 @@ const ReceiptPrinter = forwardRef((props, ref) => {
       };
 
       const itemList = Array.isArray(cartItems) ? cartItems : [];
+
+      // ── Template-line based printing ──────────────────────────────────────
+      // If the branch has configured a line-by-line template, use the HTML
+      // string renderer (buildPosReceiptHtml) which respects the template design.
+      const configuredLines = parseTemplateLines(settings.templateLines);
+      if (configuredLines.length > 0) {
+        const receiptHtml = buildPosReceiptHtml({
+          settings,
+          branchData,
+          storeName,
+          orderData,
+          items: itemList,
+          customerData,
+          options: { includeCopies: true },
+        });
+
+        if (settings.directPrintEnabled && settings.printerName) {
+          try {
+            await printerAgentAPI.printReceipt({
+              printerName: settings.printerName,
+              html: receiptHtml,
+              paperWidth: getPrintPaperWidth(settings),
+              copies: settings.printerCopies,
+            });
+            return;
+          } catch (error) {
+            toast.error(`${error.message || 'Direct print failed'}. Opening browser print.`);
+          }
+        }
+        printInBrowser(receiptHtml);
+        return;
+      }
+
+      // ── Legacy React-component based printing (fallback) ──────────────────
       const itemsPerPage = 15;
       const totalPages = Math.max(1, Math.ceil(itemList.length / itemsPerPage));
 
@@ -57,13 +94,14 @@ const ReceiptPrinter = forwardRef((props, ref) => {
             showCredits={isLastPage}
             showContinued={!isLastPage}
             mode="print"
+            language={language}
           />
         );
       }).join('');
 
       const receiptHtml = `
         <!DOCTYPE html>
-        <html>
+        <html lang="${language === 'si' ? 'si' : 'en'}">
         <head>
           <style>
             @page { size: auto; margin: 0; }

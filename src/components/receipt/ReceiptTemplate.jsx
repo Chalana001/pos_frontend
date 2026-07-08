@@ -1,6 +1,7 @@
 import React from 'react';
 import { formatCurrency, formatQuantityWithUnit } from '../../utils/formatters';
 import { normalizeReceiptSettings, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
+import { translateText, LANGUAGES } from '../../utils/translations';
 
 export const formatReceiptTemplateQty = (qty, qtyUnit) =>
   formatQuantityWithUnit(qty, qtyUnit).replace(/\bSERVICE\b/g, 'S');
@@ -9,17 +10,18 @@ const mmToPx = (mm) => `${Math.round(mm * 3.78)}px`;
 
 const templateUnit = (mode, mm, pxFallback) => (mode === 'print' ? `${mm}mm` : pxFallback || mmToPx(mm));
 
-const getReceiptFontFamily = (settings) => {
+const getReceiptFontFamily = (settings, language) => {
+  const si = language === LANGUAGES.SI ? "'Iskoola Pota', 'Noto Sans Sinhala', 'Nirmala UI', " : '';
   switch (settings.receiptFontFamily) {
     case 'ARIAL':
-      return 'Arial, Helvetica, sans-serif';
+      return `${si}Arial, Helvetica, sans-serif`;
     case 'VERDANA':
-      return 'Verdana, Geneva, sans-serif';
+      return `${si}Verdana, Geneva, sans-serif`;
     case 'TAHOMA':
-      return 'Tahoma, Geneva, sans-serif';
+      return `${si}Tahoma, Geneva, sans-serif`;
     case 'COURIER_NEW':
     default:
-      return "'Courier New', Courier, monospace";
+      return `${si}'Courier New', Courier, monospace`;
   }
 };
 
@@ -68,25 +70,80 @@ const calculateItemTotal = (item) => {
     ? qty * perSmallUnitPrice
     : qty * unitPrice;
 
-  if (item?.discountType === 'FIXED') {
-    itemTotal -= Number(item?.discountValue || 0);
+  const discountType = item?.discountType || item?.effectiveDiscountType;
+  const discountValue = Number((item?.discountValue ?? item?.effectiveDiscountValue) || 0);
+
+  if (discountType === 'FIXED') {
+    itemTotal -= discountValue;
+  } else if (discountType === 'PERCENT') {
+    itemTotal -= (itemTotal * discountValue) / 100;
   }
 
-  if (item?.discountType === 'PERCENT') {
-    itemTotal -= (itemTotal * Number(item?.discountValue || 0)) / 100;
+  const promotionDiscountAmount = Number(item?.promotionDiscountAmount || 0);
+  if (promotionDiscountAmount > 0) {
+    itemTotal -= promotionDiscountAmount;
   }
 
   return Math.max(0, itemTotal);
 };
 
-const getStyles = (settings, mode, templateType) => ({
+const calculateItemBaseTotal = (item) => {
+  const qty = Number(item?.qty || 0);
+  const unitPrice = Number(item?.unitPrice || 0);
+  const perSmallUnitPrice = Number(item?.perSmallUnitPrice ?? item?.perGramPrice);
+  const qtyUnit = String(item?.qtyUnit || '').toUpperCase();
+
+  if (qtyUnit === 'G' || qtyUnit === 'ML') {
+    return qty * (Number.isFinite(perSmallUnitPrice) ? perSmallUnitPrice : 0);
+  }
+
+  return qty * (Number.isFinite(unitPrice) ? unitPrice : 0);
+};
+
+const calculateItemDiscountAmount = (item) => {
+  const promotionDiscountAmount = Number(item?.promotionDiscountAmount || 0);
+  const discountType = item?.discountType || item?.effectiveDiscountType;
+  const discountValue = Number((item?.discountValue ?? item?.effectiveDiscountValue) || 0);
+
+  let explicitDiscountAmount = 0;
+  if (discountType === 'FIXED') {
+    explicitDiscountAmount = discountValue;
+  } else if (discountType === 'PERCENT') {
+    const qty = Number(item?.qty || 0);
+    const unitPrice = Number(item?.unitPrice || 0);
+    const perSmallUnitPrice = Number(item?.perSmallUnitPrice ?? item?.perGramPrice);
+    const qtyUnit = String(item?.qtyUnit || '').toUpperCase();
+    const baseAmount = (qtyUnit === 'G' || qtyUnit === 'ML') && Number.isFinite(perSmallUnitPrice)
+      ? qty * perSmallUnitPrice
+      : qty * unitPrice;
+    explicitDiscountAmount = (baseAmount * discountValue) / 100;
+  } else {
+    const baseTotal = calculateItemBaseTotal(item);
+    const finalTotal = calculateItemTotal(item);
+    if (Number.isFinite(baseTotal) && Number.isFinite(finalTotal) && baseTotal > finalTotal) {
+      explicitDiscountAmount = baseTotal - finalTotal - promotionDiscountAmount;
+    }
+  }
+
+  return Math.max(0, explicitDiscountAmount + promotionDiscountAmount);
+};
+
+const calculateTotalDiscount = (items, billDiscount, promotionDiscountTotal = 0) => {
+  const itemDiscountTotal = Array.isArray(items)
+    ? items.reduce((sum, item) => sum + calculateItemDiscountAmount(item), 0)
+    : 0;
+  const effectiveItemDiscount = itemDiscountTotal > 0 ? itemDiscountTotal : Number(promotionDiscountTotal || 0);
+  return Math.max(0, effectiveItemDiscount + Number(billDiscount || 0));
+};
+
+const getStyles = (settings, mode, templateType, language) => ({
   page: {
     width: '100%',
     boxSizing: 'border-box',
     pageBreakAfter: 'always',
   },
   receipt: {
-    fontFamily: getReceiptFontFamily(settings),
+    fontFamily: getReceiptFontFamily(settings, language),
     width: '100%',
     boxSizing: 'border-box',
     fontSize: templateUnit(mode, 3, '12px'),
@@ -252,11 +309,13 @@ const ReceiptTemplate = ({
   showCredits = true,
   showContinued = false,
   mode = 'preview',
+  language = LANGUAGES.EN,
 }) => {
   const normalized = normalizeReceiptSettings(settings);
   const isKot = templateType === PRINT_TEMPLATE_TYPES.KOT;
   const isPreBill = orderData?.documentType === 'PRE_BILL';
-  const styles = getStyles(normalized, mode, templateType);
+  const styles = getStyles(normalized, mode, templateType, language);
+  const t = (s) => translateText(language, s);
   const createdAt = orderData?.createdAt ? new Date(orderData.createdAt) : new Date();
   const customerName = customerData?.name || orderData?.customerName;
   const invoiceValue = orderData?.invoiceNo || orderData?.orderId || '-';
@@ -283,27 +342,27 @@ const ReceiptTemplate = ({
           {normalized.showStoreName ? <h1 style={styles.title}>{storeName || 'Store Name'}</h1> : null}
           {normalized.showBranchName ? (
             <p style={{ ...styles.headerParagraph, ...styles.branchName }}>
-              Branch: {branchData.name || 'Main Branch'}
+              {t(`Branch: ${branchData.name || 'Main Branch'}`)}
             </p>
           ) : null}
 
           <div style={styles.contactInfo}>
             {normalized.showAddress && branchData.address ? (
               <p style={styles.contactParagraph}>
-                {normalized.showAddressLabel ? 'Address: ' : ''}
+                {normalized.showAddressLabel ? `${t('Address:')} ` : ''}
                 {branchData.address}
               </p>
             ) : null}
             {normalized.showPhone && branchData.phone ? (
               <p style={styles.contactParagraph}>
-                {normalized.showPhoneLabel ? 'Phone: ' : ''}
+                {normalized.showPhoneLabel ? `${t('Phone:')} ` : ''}
                 {branchData.phone}
               </p>
             ) : null}
           </div>
 
-          {isKot ? <div style={styles.subtitle}>{orderData?.subTitle || 'Kitchen Order Ticket'}</div> : null}
-          {!isKot && isPreBill ? <div style={styles.subtitle}>{orderData?.subTitle || 'Unpaid Bill'}</div> : null}
+          {isKot ? <div style={styles.subtitle}>{orderData?.subTitle || t('Kitchen Order Ticket')}</div> : null}
+          {!isKot && isPreBill ? <div style={styles.subtitle}>{orderData?.subTitle || t('Unpaid Bill')}</div> : null}
         </div>
 
         <div style={styles.divider} />
@@ -311,30 +370,30 @@ const ReceiptTemplate = ({
         <div style={styles.infoSection}>
           {normalized.showInvoiceNumber ? (
             <p style={styles.infoParagraph}>
-              {isKot || isPreBill ? 'Order ID' : 'Invoice'}: <b>{invoiceValue}</b>{' '}
-              {!isKot && totalPages > 1 ? `(Page ${pageNumber} of ${totalPages})` : ''}
+              {t(isKot || isPreBill ? 'Order ID' : 'Invoice')}: <b>{invoiceValue}</b>{' '}
+              {!isKot && totalPages > 1 ? `(${t(`Page ${pageNumber} of ${totalPages}`)})` : ''}
             </p>
           ) : null}
-          {isPreBill ? <p style={styles.infoParagraph}>Status: <b>UNPAID - NOT A RECEIPT</b></p> : null}
-          {normalized.showDateTime ? <p style={styles.infoParagraph}>Date: {createdAt.toLocaleString()}</p> : null}
+          {isPreBill ? <p style={styles.infoParagraph}>{t('Status:')} <b>{t('UNPAID - NOT A RECEIPT')}</b></p> : null}
+          {normalized.showDateTime ? <p style={styles.infoParagraph}>{t(`Date: ${createdAt.toLocaleString()}`)}</p> : null}
           {normalized.showCashier ? (
             <p style={styles.infoParagraph}>
-              {isKot ? 'Prepared By' : 'Cashier'}: {branchData.cashierName || orderData?.cashierName || 'Cashier'}
+              {t(`${isKot ? 'Prepared By' : 'Cashier'}: ${branchData.cashierName || orderData?.cashierName || 'Cashier'}`)}
             </p>
           ) : null}
           {normalized.showCustomer && customerName ? (
             <p style={styles.infoParagraph}>
-              {orderData?.customerLabel || 'Customer'}: <b>{customerName}</b>
+              {t(orderData?.customerLabel || 'Customer')}: <b>{customerName}</b>
             </p>
           ) : null}
           {isKot && orderData?.saleMode ? (
             <p style={styles.infoParagraph}>
-              Mode: <b>{orderData.saleMode}</b>
+              {t(`Mode: ${orderData.saleMode}`)}
             </p>
           ) : null}
           {isKot && orderData?.tableName ? (
             <p style={styles.infoParagraph}>
-              Table: <b>{orderData.tableName}</b>
+              {t(`Table: ${orderData.tableName}`)}
             </p>
           ) : null}
         </div>
@@ -345,38 +404,90 @@ const ReceiptTemplate = ({
             <table style={styles.table}>
               <thead>
                 <tr style={styles.tableHeaderRow}>
-                  <th style={{ ...styles.tableHeader, textAlign: 'left', width: isKot ? '72%' : '50%' }}>ITEM</th>
-                  <th style={{ ...styles.tableHeader, textAlign: 'center', width: isKot ? '28%' : '15%' }}>QTY</th>
+                  <th style={{ ...styles.tableHeader, textAlign: 'left', width: isKot ? '72%' : '50%' }}>{t('ITEM')}</th>
+                  <th style={{ ...styles.tableHeader, textAlign: 'center', width: isKot ? '28%' : '15%' }}>{t('QTY')}</th>
                   {!isKot ? (
-                    <th style={{ ...styles.tableHeader, textAlign: 'right', width: '35%' }}>AMOUNT</th>
+                    <th style={{ ...styles.tableHeader, textAlign: 'right', width: '35%' }}>{t('AMOUNT')}</th>
                   ) : null}
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, index) => (
-                  <tr key={`${item.name || item.itemName || 'item'}-${index}`}>
-                    <td style={{ ...styles.tableCell, paddingRight: isKot ? 0 : mode === 'print' ? '1mm' : '8px' }}>
-                      <div style={styles.itemName}>{item.name || item.itemName}</div>
-                      {!isKot ? <div style={styles.itemPrice}>@ {formatCurrency(Number(item.unitPrice || 0))}</div> : null}
-                      {!isKot && normalized.showWarranty && item.warrantyLabel ? (
-                        <div style={styles.itemPrice}>
-                          Warranty: {item.warrantyLabel}
-                          {item.warrantyPeriodValue && item.warrantyPeriodUnit
-                            ? ` (${item.warrantyPeriodValue} ${item.warrantyPeriodUnit})`
-                            : ''}
-                        </div>
+                {items.map((item, index) => {
+                  const primaryName = item.name || item.itemName || 'Item';
+                  const resolvedItemName = normalized.itemNameSource === 'ALT' && item.altName && item.altName.trim()
+                    ? item.altName
+                    : primaryName;
+                  const discountType = item?.discountType || item?.effectiveDiscountType;
+                  const discountValue = Number((item?.discountValue ?? item?.effectiveDiscountValue) || 0);
+                  const promotionDiscountAmount = Number(item?.promotionDiscountAmount || 0);
+                  const explicitDiscountAmount = discountType === 'FIXED'
+                    ? discountValue
+                    : discountType === 'PERCENT'
+                      ? (() => {
+                        const qty = Number(item?.qty || 0);
+                        const unitPrice = Number(item?.unitPrice || 0);
+                        const perSmallUnitPrice = Number(item?.perSmallUnitPrice ?? item?.perGramPrice);
+                        const qtyUnit = String(item?.qtyUnit || '').toUpperCase();
+                        const baseAmount = (qtyUnit === 'G' || qtyUnit === 'ML') && Number.isFinite(perSmallUnitPrice)
+                          ? qty * perSmallUnitPrice
+                          : qty * unitPrice;
+                        return (baseAmount * discountValue) / 100;
+                      })()
+                      : 0;
+                  const discountAmount = calculateItemDiscountAmount(item);
+                  const hasDiscount = discountAmount > 0;
+                  const labelParts = [];
+                  if (explicitDiscountAmount > 0) {
+                    labelParts.push(
+                      discountType === 'FIXED'
+                        ? `${t('Discount')}: -${formatCurrency(explicitDiscountAmount)}`
+                        : `${discountValue}% ${t('Off')}: -${formatCurrency(explicitDiscountAmount)}`
+                    );
+                  }
+                  if (promotionDiscountAmount > 0) {
+                    labelParts.push(item?.promotionName
+                      ? `${item.promotionName}: -${formatCurrency(promotionDiscountAmount)}`
+                      : `${t('Discount')}: -${formatCurrency(promotionDiscountAmount)}`);
+                  }
+                  const discountLabel = labelParts.join(' + ');
+                  return (
+                    <React.Fragment key={`${primaryName}-${index}`}>
+                      <tr>
+                        <td style={{ ...styles.tableCell, paddingRight: isKot ? 0 : mode === 'print' ? '1mm' : '8px' }}>
+                          <div style={styles.itemName}>{resolvedItemName}</div>
+                          {!isKot ? <div style={styles.itemPrice}>@ {formatCurrency(Number(item.unitPrice || 0))}</div> : null}
+                          {!isKot && normalized.showWarranty && item.warrantyLabel ? (
+                            <div style={styles.itemPrice}>
+                              {t('Warranty:')} {item.warrantyLabel}
+                              {item.warrantyPeriodValue && item.warrantyPeriodUnit
+                                ? ` (${item.warrantyPeriodValue} ${item.warrantyPeriodUnit})`
+                                : ''}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td style={{ ...styles.tableCell, textAlign: 'center' }}>
+                          {formatReceiptTemplateQty(item.qty, item.qtyUnit || item.defaultUnit)}
+                        </td>
+                        {!isKot ? (
+                          <td style={{ ...styles.tableCell, textAlign: 'right' }}>
+                            {formatCurrency(calculateItemTotal(item))}
+                          </td>
+                        ) : null}
+                      </tr>
+                      {!isKot && normalized.showLineDiscount && hasDiscount ? (
+                        <tr>
+                          <td style={{ ...styles.tableCell, paddingRight: isKot ? 0 : mode === 'print' ? '1mm' : '8px', color: '#94a3b8', fontSize: mode === 'print' ? '2.4mm' : '11px' }}>
+                            <div style={{ paddingLeft: mode === 'print' ? '2mm' : '12px', fontStyle: 'italic' }}>
+                              {discountLabel}
+                            </div>
+                          </td>
+                          <td />
+                          <td />
+                        </tr>
                       ) : null}
-                    </td>
-                    <td style={{ ...styles.tableCell, textAlign: 'center' }}>
-                      {formatReceiptTemplateQty(item.qty, item.qtyUnit || item.defaultUnit)}
-                    </td>
-                    {!isKot ? (
-                      <td style={{ ...styles.tableCell, textAlign: 'right' }}>
-                        {formatCurrency(calculateItemTotal(item))}
-                      </td>
-                    ) : null}
-                  </tr>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </>
@@ -388,37 +499,37 @@ const ReceiptTemplate = ({
           <div style={styles.totalsWrap}>
             {normalized.showSubtotal ? (
               <div style={styles.totalRow}>
-                <span>Sub Total</span>
+                <span>{t('Sub Total')}</span>
                 <span>{formatCurrency(subTotal)}</span>
               </div>
             ) : null}
             {normalized.showDiscount ? (
               <div style={styles.totalRow}>
-                <span>Discount</span>
-                <span>-{formatCurrency(billDiscount)}</span>
+                <span>{t('Discount')}</span>
+                <span>-{formatCurrency(calculateTotalDiscount(items, billDiscount, orderData?.promotionDiscountTotal ?? orderData?.billPromotionDiscountAmount ?? 0))}</span>
               </div>
             ) : null}
             {normalized.showNetTotal ? (
               <div style={styles.netTotalRow}>
-                <span>Net Total</span>
+                <span>{t('Net Total')}</span>
                 <span>{formatCurrency(grandTotal)}</span>
               </div>
             ) : null}
             {normalized.showPaid && !isPreBill ? (
               <div style={styles.totalRow}>
-                <span>Paid ({orderType})</span>
+                <span>{t(`Paid (${orderType})`)}</span>
                 <span>{formatCurrency(paidAmount)}</span>
               </div>
             ) : null}
             {normalized.showBalance && orderType === 'CASH' ? (
               <div style={{ ...styles.totalRow, fontWeight: 700 }}>
-                <span>Balance</span>
+                <span>{t('Balance')}</span>
                 <span>{formatCurrency(paidAmount - grandTotal)}</span>
               </div>
             ) : null}
             {(normalized.showDueAmount || isPreBill) && dueAmount > 0 ? (
               <div style={{ ...styles.totalRow, fontWeight: 700 }}>
-                <span>{isPreBill ? 'Amount Due' : 'Credit Due'}</span>
+                <span>{t(isPreBill ? 'Amount Due' : 'Credit Due')}</span>
                 <span>{formatCurrency(dueAmount)}</span>
               </div>
             ) : null}
@@ -436,7 +547,7 @@ const ReceiptTemplate = ({
           </div>
         ) : null}
 
-        {showContinued ? <div style={styles.continued}>Continued on next page...</div> : null}
+        {showContinued ? <div style={styles.continued}>{t('Continued on next page...')}</div> : null}
       </div>
     </div>
   );

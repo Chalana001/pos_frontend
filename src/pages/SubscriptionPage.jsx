@@ -36,7 +36,7 @@ const SubscriptionPage = () => {
 
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        console.log("No active subscription found for this shop.");
+        // 404 = no active subscription — silently set null (expected state for new tenants)
         setMySubscription(null);
       }
       else {

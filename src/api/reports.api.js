@@ -19,4 +19,10 @@ export const reportsAPI = {
   supplierPerformance: (params) => api.get("/reports/supplier-performance", { params }),
   salesReport: (params) => api.get("/reports/sales", { params }),
   exportReport: (params) => api.get("/reports/export", { params, responseType: "blob" }),
+
+  // Returns Reports
+  returnsSummary: (params) => api.get("/reports/returns-summary", { params }),
+  topReturnedItems: (params) => api.get("/reports/top-returned-items", { params }),
+  returnReasons: (params) => api.get("/reports/return-reasons", { params }),
+  returnTrend: (params) => api.get("/reports/return-trend", { params }),
 };

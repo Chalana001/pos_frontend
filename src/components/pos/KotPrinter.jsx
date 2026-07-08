@@ -4,8 +4,10 @@ import toast from 'react-hot-toast';
 import ReceiptTemplate from '../receipt/ReceiptTemplate';
 import { normalizeReceiptSettings, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
 import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const KotPrinter = forwardRef((props, ref) => {
+  const { language } = useLanguage();
   const printFrameRef = useRef(null);
 
   const printInBrowser = (html) => {
@@ -47,12 +49,13 @@ const KotPrinter = forwardRef((props, ref) => {
           showCredits
           showContinued={false}
           mode="print"
+          language={language}
         />
       );
 
       const documentHtml = `
         <!DOCTYPE html>
-        <html>
+        <html lang="${language === 'si' ? 'si' : 'en'}">
         <head>
           <style>
             @page { size: auto; margin: 0; }

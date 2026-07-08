@@ -144,7 +144,7 @@ const WarrantiesPage = () => {
                       <td className="app-table-cell">
                         <div className="flex items-center gap-2">
                           <ShieldCheck size={16} className="text-blue-600" />
-                          <span>{row.itemName}</span>
+                          <div className="flex flex-col"><span>{row.itemName}</span>{row.altName && <span className="text-xs text-slate-400">{row.altName}</span>}</div>
                         </div>
                       </td>
                       <td className="app-table-cell">{row.warrantyLabel}</td>

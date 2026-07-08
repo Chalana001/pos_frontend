@@ -183,6 +183,7 @@ const Cart = ({
                 <div className="flex items-center gap-2 p-2">
                   <div className="flex-1">
                     <h4 className="line-clamp-1 text-[13px] font-bold leading-tight text-slate-800">{item.name}</h4>
+                    {item.altName && <p className="text-[10px] leading-tight text-slate-400 line-clamp-1">{item.altName}</p>}
                     <div className="mt-0.5 flex items-center gap-1.5">
                       
                       {item.itemType === ItemType.SERVICE ? (
@@ -216,9 +217,9 @@ const Cart = ({
                       )}
                       {(item.effectiveDiscountValue ?? item.discountValue) > 0 && (
                         <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
-                          -{(item.effectiveDiscountType || item.discountType) === DISCOUNT_TYPES.PERCENT
-                            ? `${item.effectiveDiscountValue ?? item.discountValue}%`
-                            : formatCurrency(item.effectiveDiscountValue ?? item.discountValue)}
+                          {(item.effectiveDiscountType || item.discountType) === DISCOUNT_TYPES.PERCENT
+                            ? `-${item.effectiveDiscountValue ?? item.discountValue}%`
+                            : `-${formatCurrency(item.effectiveDiscountValue ?? item.discountValue)}`}
                         </span>
                       )}
                       {item.promotionApplied && (

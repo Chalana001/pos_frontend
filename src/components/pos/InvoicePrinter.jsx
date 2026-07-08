@@ -2,8 +2,10 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import InvoiceTemplate from '../invoice/InvoiceTemplate';
 import { getReceiptSettingsDefaults, normalizeReceiptSettings, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
+import { useLanguage } from '../../context/LanguageContext';
 
 const InvoicePrinter = forwardRef((props, ref) => {
+  const { language } = useLanguage();
   const printFrameRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
@@ -37,12 +39,13 @@ const InvoicePrinter = forwardRef((props, ref) => {
           items={Array.isArray(cartItems) ? cartItems : []}
           customerData={customerData}
           mode="print"
+          language={language}
         />
       );
 
       const documentHtml = `
         <!DOCTYPE html>
-        <html>
+        <html lang="${language === 'si' ? 'si' : 'en'}">
         <head>
           <style>
             @page { size: A4 portrait; margin: 0; }

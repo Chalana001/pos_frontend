@@ -142,7 +142,7 @@ const StockAdjustments = () => {
         header: "Date & Time",
         render: (adj) => formatDateTime(adj.createdAt),
       },
-      { header: "Item", accessor: "itemName" },
+      { header: "Item", render: (adj) => <div className="flex flex-col"><span className="font-medium text-slate-800">{adj.itemName}</span>{adj.altName && <span className="text-xs text-slate-400">{adj.altName}</span>}</div> },
       {
         header: "Type",
         render: (adj) => {

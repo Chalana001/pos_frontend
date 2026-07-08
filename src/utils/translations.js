@@ -93,6 +93,7 @@ const exactTranslations = {
     'Items Registry': 'භාණ්ඩ ලේඛනය',
     'Manage products and pricing': 'භාණ්ඩ සහ මිල ගණන් කළමනාකරණය කරන්න',
     Barcode: 'බාර්කෝඩ්',
+    'Barcode:': 'බාර්කෝඩ්:',
     Name: 'නම',
     Category: 'ප්‍රවර්ගය',
     Uncategorized: 'වර්ගීකරණය නොකළ',
@@ -317,6 +318,7 @@ const exactTranslations = {
     'Discount given on this invoice.': 'මෙම ඉන්වොයිසියේ ලබා දෙන වට්ටම.',
     'Drawer Branch': 'ලාච්චු ශාඛාව',
     Due: 'ගෙවිය යුතු',
+    'Amount Due': 'ගෙවිය යුතු මුදල',
     'Due Amount': 'ගෙවිය යුතු මුදල',
     'Due Amount (Rs):': 'ගෙවිය යුතු මුදල (රු.):',
     'Due Amount:': 'ගෙවිය යුතු මුදල:',
@@ -388,6 +390,14 @@ const exactTranslations = {
     'Item Description': 'භාණ්ඩ විස්තරය',
     'Item Name': 'භාණ්ඩ නාමය',
     'Item Name *': 'භාණ්ඩ නාමය *',
+    'Alt Name': 'විකල්ප නාමය',
+    'Alt Name (Sinhala)': 'විකල්ප නාමය (සිංහල)',
+    'Item Line Name': 'භාණ්ඩ පේළි නාමය',
+    'Primary Name': 'ප්‍රධාන නාමය',
+    'Alt Name (e.g. Sinhala)': 'විකල්ප නාමය (සිංහල)',
+    'Choose which name to print on the item line. If Alt Name is empty for an item, the Primary Name is used.': 'භාණ්ඩ පේළියේ මුද්‍රණය කළ යුතු නාමය තෝරන්න. Alt Name හිස් නම් Primary Name භාවිතා වේ.',
+    'Optional — used on receipts when set to Alt Name.': 'විකල්පිත — Alt Name ලෙස සැකසූ විට රිසිට්පතේ භාවිතා වේ.',
+    "Used on receipts when the design's name source is set to Alt Name.": "Alt Name ලෙස සැකසූ රිසිට් සැලසුමේ භාවිතා වේ.",
     'Item Type:': 'භාණ්ඩ වර්ගය:',
     'Items List': 'භාණ්ඩ ලැයිස්තුව',
 
@@ -395,6 +405,7 @@ const exactTranslations = {
     'KOT Printer': 'KOT මුද්‍රකය',
     'KOT is disabled in App Configuration.': 'KOT, යෙදුම් සැකසුම්වල අක්‍රීය කර ඇත.',
     'KOT printing is available only for server-mode sales.': 'KOT මුද්‍රණය සේවාදායක-මාදිලි විකිණීම් සඳහා පමණයි.',
+    'Kitchen Order Ticket': 'කුස්සිය ඇණවුම් ටිකට්',
     'Kitchen Order Tickets': 'කුස්සිය ඇණවුම් ටිකට්',
 
     // L
@@ -486,6 +497,7 @@ const exactTranslations = {
     'Opening Cash Amount *': 'ආරම්භක මුදල් ප්‍රමාණය *',
     'Optional note': 'අත්‍යවශ්‍ය නොවන සටහන',
     'Optional. Backend will generate a barcode if this is empty.': 'අත්‍යවශ්‍ය නොවේ. හිස් නම් බැකෙන්ඩ් බාර්කෝඩ් ජනනය කරයි.',
+    'Order ID': 'ඇණවුම් හැඳුනුම',
     Orders: 'ඇණවුම්',
     'Output Details': 'ප්‍රතිදාන විස්තර',
     'Output Item': 'ප්‍රතිදාන භාණ්ඩය',
@@ -731,6 +743,7 @@ const exactTranslations = {
 
     // U
     'UNPAID - NOT A RECEIPT': 'ගෙවා නැත - රිසිට්පතක් නොවේ',
+    'Unpaid Bill': 'ගෙවා නොමැති බිල',
     Unit: 'ඒකකය',
     'Unit Price': 'ඒකක මිල',
     'Unit:': 'ඒකකය:',
@@ -753,6 +766,7 @@ const exactTranslations = {
     // W
     Warranties: 'වගකීම්',
     Warranty: 'වගකීම',
+    'Warranty:': 'වගකීම:',
     'Warranty Claims': 'වගකීම් හිමිකම්',
     'Warranty No': 'වගකීම් අංකය',
     'Warranty Record': 'වගකීම් වාර්තාව',
@@ -823,6 +837,14 @@ const patternTranslations = {
     {
       regex: /^Table: (.+)$/,
       translate: ([, value]) => `මේසය: ${value}`,
+    },
+    {
+      regex: /^Paid \((.+)\)$/,
+      translate: ([, method]) => `ගෙවා ඇත (${method})`,
+    },
+    {
+      regex: /^Prepared By: (.+)$/,
+      translate: ([, name]) => `සකස් කළේ: ${name}`,
     },
   ],
 };

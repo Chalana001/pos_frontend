@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, ChevronRight } from "lucide-react";
+import { Plus, Search, ChevronRight, Upload } from "lucide-react";
 import { purchasesAPI } from "../api/purchases.api";
 import { suppliersAPI } from "../api/suppliers.api";
 import Card from "../components/common/Card";
@@ -131,9 +131,18 @@ const PurchaseListPage = () => {
           <h1 className="text-3xl font-bold text-slate-800">Purchase History</h1>
           <p className="mt-1 text-sm text-slate-500">Manage supplier invoices and GRN records.</p>
         </div>
-        <Button onClick={() => navigate("/purchases/new")} className="w-full justify-center sm:w-auto">
-          <Plus size={18} className="mr-2" /> New Purchase
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/purchases/import-excel")}
+            className="w-full justify-center sm:w-auto"
+          >
+            <Upload size={18} className="mr-2" /> Import Excel
+          </Button>
+          <Button onClick={() => navigate("/purchases/new")} className="w-full justify-center sm:w-auto">
+            <Plus size={18} className="mr-2" /> New Purchase
+          </Button>
+        </div>
       </div>
 
       <Card className="sales-panel-enter sales-panel-hover overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "90ms" }}>

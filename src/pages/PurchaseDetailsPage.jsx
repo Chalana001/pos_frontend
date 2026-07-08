@@ -2,16 +2,21 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { purchasesAPI } from "../api/purchases.api";
 import { suppliersAPI } from "../api/suppliers.api";
+import { purchaseReturnsAPI } from "../api/purchaseReturns.api";
+import DebitNotePrinter from "../components/pos/DebitNotePrinter";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
 import Modal from "../components/common/Modal";
 import PurchaseA4Print from "../components/purchase/PurchaseA4Print";
 import { useAuth } from "../context/AuthContext"; 
-import { 
-  ArrowLeft, Printer, Calendar, FileText, 
-  Truck, ChevronDown, ChevronUp, MapPin, Package, Ban, Wallet
+import {
+  ArrowLeft, Printer, Calendar, FileText,
+  Truck, ChevronDown, ChevronUp, MapPin, Package, Ban, Wallet, RotateCcw
 } from "lucide-react";
+import { hasPermission } from "../utils/permissions";
+import { hasPlanFeature } from "../utils/subscriptionFeatures";
+import { BRAND_NAME_UPPER } from "../utils/branding";
 import { toast } from "react-hot-toast"; 
 import { formatCurrency } from "../utils/formatters";
 
@@ -46,6 +51,9 @@ const PurchaseDetailsPage = () => {
   const [isCanceling, setIsCanceling] = useState(false); 
 
   const [expandedGrnIds, setExpandedGrnIds] = useState([]);
+  const [existingReturns, setExistingReturns] = useState([]);
+
+  const debitNotePrinterRef = useRef(null);
 
   // Modal States
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -69,12 +77,21 @@ const PurchaseDetailsPage = () => {
       setLoading(true);
       const res = await purchasesAPI.getById(id);
       setPurchase(res.data);
+      purchaseReturnsAPI.listByPurchase(id)
+        .then((r) => setExistingReturns(r.data || []))
+        .catch(() => setExistingReturns([]));
     } catch (error) {
       console.error("Failed to load Purchase details", error);
       toast.error("Failed to load purchase details");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrintDebitNote = (ret) => {
+    if (!debitNotePrinterRef.current || !purchase) return;
+    const storeName = user?.shopName || BRAND_NAME_UPPER;
+    debitNotePrinterRef.current.printDebitNote(ret, storeName, null);
   };
 
   const toggleGrn = (grnId) => {
@@ -165,6 +182,10 @@ const PurchaseDetailsPage = () => {
 
   const isCanceled = purchase.status === 'CANCELED';
   const canCancel = user?.role !== 'CASHIER' && !isCanceled;
+  const canProcessReturn =
+    !isCanceled &&
+    hasPermission(user?.role, "PROCESS_PURCHASE_RETURNS") &&
+    hasPlanFeature(user?.planName, "PURCHASE_RETURNS");
   const purchaseDue = Number(purchase.dueAmount || 0);
   const canPaySupplier = user?.role !== 'CASHIER' && !isCanceled && purchaseDue > 0;
   const purchaseBranchOptions = [...new Map((purchase.grnList || [])
@@ -176,13 +197,28 @@ const PurchaseDetailsPage = () => {
     <div className="page-enter mx-auto max-w-6xl space-y-6 pb-20">
       
       <PurchaseA4Print ref={printRef} />
+      <DebitNotePrinter ref={debitNotePrinterRef} />
 
       <div className="page-section-enter print:hidden flex items-center justify-between" style={{ animationDelay: "40ms" }}>
         <Button variant="secondary" onClick={() => navigate("/purchases")}>
           <ArrowLeft size={18} className="mr-2" /> Back to History
         </Button>
         
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          {canProcessReturn && (
+            <Button
+              className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shadow-sm"
+              onClick={() => navigate(`/purchases/${id}/return`)}
+            >
+              <RotateCcw size={18} className="mr-2 text-blue-500" />
+              Process Return
+              {existingReturns.length > 0 && (
+                <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">
+                  {existingReturns.length}
+                </span>
+              )}
+            </Button>
+          )}
           {canPaySupplier && (
             <Button
               className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
@@ -376,7 +412,7 @@ const PurchaseDetailsPage = () => {
                                             {grn.items.map((item, idx) => (
                                                 <tr key={idx} className="hover:bg-blue-50/30">
                                                     <td className="p-3 pl-6 text-slate-400">{idx + 1}</td>
-                                                    <td className="p-3 font-medium text-slate-700">{item.itemName}</td>
+                                                    <td className="p-3"><span className="font-medium text-slate-700">{item.itemName}</span>{item.altName && <span className="block text-xs text-slate-400">{item.altName}</span>}</td>
                                                     <td className="p-3 text-slate-500 font-mono text-xs">{item.barcode}</td>
                                                     <td className="p-3 text-right">{item.costPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                                                     <td className="p-3 text-right text-slate-400">{item.sellingPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
@@ -400,6 +436,52 @@ const PurchaseDetailsPage = () => {
             );
         })}
       </div>
+
+      {/* ── Debit Note History ── */}
+      {existingReturns.length > 0 && (
+        <>
+          <div className="flex items-center gap-4 py-2 opacity-70">
+            <div className="h-px bg-slate-300 flex-1"></div>
+            <span className="text-slate-400 text-sm font-semibold uppercase">Return / Debit Note History</span>
+            <div className="h-px bg-slate-300 flex-1"></div>
+          </div>
+          <div className="space-y-3">
+            {existingReturns.map((ret) => (
+              <div
+                key={ret.id}
+                className="rounded-2xl border border-blue-200 bg-blue-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <RotateCcw size={14} className="text-blue-500" />
+                    <span className="font-mono font-bold text-blue-700 text-sm">{ret.debitNoteNo}</span>
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-200 text-blue-800">
+                      {ret.grnNo}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {new Date(ret.createdAt).toLocaleString()} · {ret.items?.length || 0} item(s) · {ret.reason}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400 uppercase font-semibold">Returned</div>
+                    <div className="font-bold text-red-600 text-base">
+                      -{Number(ret.totalReturnAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} LKR
+                    </div>
+                  </div>
+                  <Button
+                    className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs shadow-sm"
+                    onClick={() => handlePrintDebitNote(ret)}
+                  >
+                    <Printer size={14} className="mr-1" /> Reprint
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Supplier Payment" size="sm">
             <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">

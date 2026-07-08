@@ -420,7 +420,7 @@ const Stock = () => {
   const columns = useMemo(
     () => [
       { header: "Barcode", render: (item) => <span>{item.barcode ?? "-"}</span> },
-      { header: "Name", render: (item) => <span className="font-medium text-slate-800">{item.itemName ?? "-"}</span> },
+      { header: "Name", render: (item) => <div className="flex flex-col"><span className="font-medium text-slate-800">{item.itemName ?? "-"}</span>{item.altName && <span className="text-xs text-slate-400">{item.altName}</span>}</div> },
       { header: "Category", render: (item) => <span>{singleCategoryMode ? item.subCategoryName || item.categoryName || "-" : item.categoryName || item.subCategoryName || "-"}</span> },
       { header: "Cost", render: (item) => <span>LKR {Number(item.costPrice || 0).toFixed(2)}</span> },
       { header: "Selling", render: (item) => <span>LKR {Number(item.sellingPrice || 0).toFixed(2)}</span> },
@@ -659,7 +659,7 @@ const Stock = () => {
         onClose={() => setShowAdjustModal(false)}
         title={selectedItem ? `Adjust Stock: ${selectedItem.itemName}` : "Adjust Stock"}
       >
-        <form onSubmit={handleAdjustSubmit} className="space-y-4 p-4">
+        <form onSubmit={handleAdjustSubmit} className="space-y-4">
           {loadingBatches ? (
             <div className="py-8"><LoadingSpinner text="Loading batches..." /></div>
           ) : (
@@ -700,39 +700,41 @@ const Stock = () => {
                 />
               </div>
 
-              {/* ✅ Updated Quantity Input for Weight Items */}
+              {/* Quantity Input */}
               <div className="page-section-enter" style={{ animationDelay: "150ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Quantity *</label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-[110px_1fr] gap-2">
                   <CustomSelect
                     value={adjustFormData.direction}
                     onChange={(value) => setAdjustFormData({ ...adjustFormData, direction: value })}
                     options={adjustmentDirectionOptions}
                     valueKey="value"
                     labelKey="label"
-                    className="w-[118px] shrink-0"
                     buttonClassName="h-[42px] rounded-lg"
                   />
                   <input
                     type="number"
+                    min="0"
                     step={isMeasuredItem(selectedItem) ? getMeasuredStep(adjustFormData.qtyUnit) : "1"}
                     value={adjustFormData.qty}
                     onChange={(e) => setAdjustFormData({ ...adjustFormData, qty: e.target.value })}
-                    className="flex-1 p-2 border border-slate-300 rounded-lg w-full"
-                    placeholder="Enter quantity"
+                    className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Quantity"
                     required
                   />
-                  {isMeasuredItem(selectedItem) && (
+                </div>
+                {isMeasuredItem(selectedItem) && (
+                  <div className="mt-2">
                     <CustomSelect
                       value={adjustFormData.qtyUnit}
                       onChange={(value) => setAdjustFormData({ ...adjustFormData, qtyUnit: value })}
                       options={getMeasuredUnitOptions(selectedItem)}
                       valueKey="value"
                       labelKey="label"
-                      className="min-w-[150px]"
+                      buttonClassName="h-[42px] rounded-lg"
                     />
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               <div className="page-section-enter" style={{ animationDelay: "190ms" }}>
@@ -740,7 +742,9 @@ const Stock = () => {
                 <textarea
                   value={adjustFormData.reason}
                   onChange={(e) => setAdjustFormData({ ...adjustFormData, reason: e.target.value })}
-                  className="w-full p-2 border border-slate-300 rounded-lg"
+                  className="w-full p-2 border border-slate-300 rounded-lg resize-none"
+                  rows={3}
+                  placeholder="Describe the reason for this adjustment..."
                   required
                 />
               </div>
@@ -760,7 +764,7 @@ const Stock = () => {
         onClose={() => setShowTransferModal(false)}
         title={selectedItem ? `Transfer Stock: ${selectedItem.itemName}` : "Transfer Stock"}
       >
-        <form onSubmit={handleTransferSubmit} className="space-y-4 p-4">
+        <form onSubmit={handleTransferSubmit} className="space-y-4">
           {loadingBatches ? (
             <div className="py-8"><LoadingSpinner text="Loading batches..." /></div>
           ) : (
@@ -800,28 +804,28 @@ const Stock = () => {
 
               <div className="page-section-enter" style={{ animationDelay: "150ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Quantity to Transfer *</label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="0.1"
-                    step={isMeasuredItem(selectedItem) ? getMeasuredStep(transferFormData.qtyUnit) : "1"}
-                    value={transferFormData.qty}
-                    onChange={(e) => setTransferFormData({ ...transferFormData, qty: e.target.value })}
-                    className="flex-1 p-2 border border-slate-300 rounded-lg"
-                    placeholder="e.g., 5"
-                    required
-                  />
-                  {isMeasuredItem(selectedItem) && (
+                <input
+                  type="number"
+                  min="0"
+                  step={isMeasuredItem(selectedItem) ? getMeasuredStep(transferFormData.qtyUnit) : "1"}
+                  value={transferFormData.qty}
+                  onChange={(e) => setTransferFormData({ ...transferFormData, qty: e.target.value })}
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                  placeholder="e.g., 5"
+                  required
+                />
+                {isMeasuredItem(selectedItem) && (
+                  <div className="mt-2">
                     <CustomSelect
                       value={transferFormData.qtyUnit}
                       onChange={(value) => setTransferFormData({ ...transferFormData, qtyUnit: value })}
                       options={getMeasuredUnitOptions(selectedItem)}
                       valueKey="value"
                       labelKey="label"
-                      className="min-w-[150px]"
+                      buttonClassName="h-[42px] rounded-lg"
                     />
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               <div className="page-section-enter" style={{ animationDelay: "190ms" }}>

@@ -62,7 +62,8 @@ export const BranchProvider = ({ children }) => {
           setBranches(nextBranches);
         }
       } catch (error) {
-        console.log("Failed to load branches", error);
+        // FIX: use console.error instead of console.log for actual errors
+        console.error("Failed to load branches", error);
         if ((!isAdmin || isSingleBranchMode) && user?.branchId) {
           setBranches([{ id: user.branchId, name: `Branch ${user.branchId}` }]);
           setStoredSelectedBranchId(Number(user.branchId));

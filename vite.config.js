@@ -4,6 +4,16 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
+    // Warn when any chunk exceeds 500 kB
+    chunkSizeWarningLimit: 500,
+    // Strip console.log in production — console.error/warn are kept for monitoring
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        pure_funcs: ['console.log'],
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {

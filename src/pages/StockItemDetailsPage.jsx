@@ -272,6 +272,7 @@ const StockItemDetailsPage = () => {
             <ArrowLeft size={18} className="mr-2" /> Back to Stock
           </Button>
           <h1 className="text-3xl font-bold text-slate-800">{itemDetails.itemName}</h1>
+          {itemDetails.altName && <p className="text-sm text-slate-400 mt-1">{itemDetails.altName}</p>}
           <div className="mt-2 flex flex-wrap gap-2">
             {metaBadges.map((badge) => (
               <span

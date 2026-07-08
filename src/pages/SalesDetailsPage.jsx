@@ -1,18 +1,20 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { salesAPI } from "../api/sales.api"; 
+import { salesAPI } from "../api/sales.api";
+import { returnsAPI } from "../api/returns.api";
 import { receiptSettingsAPI } from "../api/receiptSettings.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
 import Modal from "../components/common/Modal";
-import ReceiptPrinter from "../components/pos/ReceiptPrinter"; 
+import ReceiptPrinter from "../components/pos/ReceiptPrinter";
 import InvoicePrinter from "../components/pos/InvoicePrinter";
+import ReturnReceiptPrinter from "../components/pos/ReturnReceiptPrinter";
 import { useAuth } from "../context/AuthContext"; 
 import { formatQuantityWithUnit } from "../utils/formatters";
-import { 
-  ArrowLeft, Printer, Calendar, User, 
-  CreditCard, Package, Ban, Wallet 
+import {
+  ArrowLeft, Printer, Calendar, User,
+  CreditCard, Package, Ban, Wallet, RotateCcw
 } from "lucide-react";
 import { toast } from "react-hot-toast"; // 🟢 Toast එක Import කළා
 import { hasPermission } from "../utils/permissions";
@@ -56,8 +58,11 @@ const SalesDetailsPage = () => {
   const [paymentNote, setPaymentNote] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(false);
 
+  const [existingReturns, setExistingReturns] = useState([]);
+
   const printRef = useRef(null);
   const invoicePrintRef = useRef(null);
+  const returnPrinterRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -68,6 +73,12 @@ const SalesDetailsPage = () => {
       setLoading(true);
       const res = await salesAPI.getById(id);
       setSale(res.data);
+
+      // Load returns in parallel
+      returnsAPI.listByInvoice(res.data.invoiceNo)
+        .then((r) => setExistingReturns(r.data || []))
+        .catch(() => setExistingReturns([]));
+
       if (res.data?.branchId) {
         try {
           const settingsRes = await receiptSettingsAPI.getByBranch(res.data.branchId);
@@ -85,6 +96,22 @@ const SalesDetailsPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrintReturnReceipt = (ret) => {
+    if (!returnPrinterRef.current || !sale) return;
+    const storeName = user?.shopName || BRAND_NAME_UPPER;
+    returnPrinterRef.current.printReturn(
+      {
+        ...ret,
+        branchName: sale.branchName,
+        branchAddress: sale.branchAddress,
+        branchPhone: sale.branchPhone,
+        branchLogo: sale.branchLogo,
+      },
+      storeName,
+      receiptSettings
+    );
   };
 
   // 🖨️ Print Function
@@ -109,10 +136,11 @@ const SalesDetailsPage = () => {
 
     const cartItems = sale.items.map(item => ({
       name: item.itemName,
+      altName: item.altName || null,
       unitPrice: item.unitPrice,
       qty: item.qty,
       qtyUnit: item.qtyUnit,
-      discountType: item.discountType || 'FIXED', 
+      discountType: item.discountType || 'FIXED',
       discountValue: item.discountValue || 0,
       lineTotal: item.lineTotal,
       warrantyLabel: item.warrantyLabel,
@@ -156,6 +184,7 @@ const SalesDetailsPage = () => {
 
     const cartItems = sale.items.map((item) => ({
       name: item.itemName,
+      altName: item.altName || null,
       barcode: item.barcode,
       unitPrice: item.unitPrice,
       qty: item.qty,
@@ -256,15 +285,20 @@ const SalesDetailsPage = () => {
   const canCancelOrder =
     hasPermission(user?.role, "CANCEL_ORDERS") &&
     hasPlanFeature(user?.planName, "ORDER_CANCEL");
+  const canProcessReturn =
+    !isCanceled &&
+    hasPermission(user?.role, "PROCESS_RETURNS") &&
+    hasPlanFeature(user?.planName, "ORDER_RETURNS");
   const saleDue = Number(sale.dueAmount || 0);
   const canPaySale = !isCanceled && sale.customerId && saleDue > 0;
 
   return (
     <div className="page-enter space-y-6 pb-20">
       
-      {/* 🖨️ Hidden Receipt Printer Component */}
+      {/* 🖨️ Hidden Printer Components */}
       <ReceiptPrinter ref={printRef} />
       <InvoicePrinter ref={invoicePrintRef} />
+      <ReturnReceiptPrinter ref={returnPrinterRef} />
 
       {/* --- TOP BAR --- */}
       <div className="page-section-enter print:hidden flex items-center justify-between" style={{ animationDelay: "80ms" }}>
@@ -272,7 +306,22 @@ const SalesDetailsPage = () => {
           <ArrowLeft size={18} className="mr-2" /> Back to History
         </Button>
         
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+            {/* Process Return button */}
+            {canProcessReturn && (
+                <Button
+                    className="bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 shadow-sm"
+                    onClick={() => navigate(`/sales/${sale.invoiceNo}/return`)}
+                >
+                    <RotateCcw size={18} className="mr-2 text-orange-500" />
+                    Process Return
+                    {existingReturns.length > 0 && (
+                        <span className="ml-2 bg-orange-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">
+                            {existingReturns.length}
+                        </span>
+                    )}
+                </Button>
+            )}
             {canPaySale && (
                 <Button
                     className="bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm"
@@ -427,7 +476,7 @@ const SalesDetailsPage = () => {
                         {sale.items.map((item, idx) => (
                             <tr key={idx} className="hover:bg-slate-50">
                                 <td className="p-4 text-slate-400">{idx + 1}</td>
-                                <td className="p-4 font-medium text-slate-700">{item.itemName}</td>
+                                <td className="p-4"><span className="font-medium text-slate-700">{item.itemName}</span>{item.altName && <span className="block text-xs text-slate-400">{item.altName}</span>}</td>
                                 <td className="p-4 text-slate-500 font-mono text-xs">{item.barcode}</td>
                                 <td className="p-4 text-right text-slate-600">
                                     {item.unitPrice?.toLocaleString(undefined, {minimumFractionDigits: 2})}
@@ -453,6 +502,53 @@ const SalesDetailsPage = () => {
             </div>
         )}
       </Card>
+
+      {/* ── Returns History Section ── */}
+      {existingReturns.length > 0 && (
+        <>
+          <div className="page-section-enter flex items-center gap-4 py-2 opacity-70" style={{ animationDelay: "260ms" }}>
+            <div className="h-px bg-slate-300 flex-1"></div>
+            <span className="text-slate-400 text-sm font-semibold uppercase">Return History</span>
+            <div className="h-px bg-slate-300 flex-1"></div>
+          </div>
+
+          <div className="space-y-3" style={{ animationDelay: "300ms" }}>
+            {existingReturns.map((ret) => (
+              <div
+                key={ret.id}
+                className="rounded-2xl border border-orange-200 bg-orange-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <RotateCcw size={14} className="text-orange-500" />
+                    <span className="font-mono font-bold text-orange-700 text-sm">{ret.returnNo}</span>
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-orange-200 text-orange-800">
+                      {ret.refundMethod}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {new Date(ret.createdAt).toLocaleString()} · {ret.items?.length || 0} item(s) · {ret.reason}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400 uppercase font-semibold">Refunded</div>
+                    <div className="font-bold text-red-600 text-base">
+                      -{Number(ret.totalRefundAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} LKR
+                    </div>
+                  </div>
+                  <Button
+                    className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs shadow-sm"
+                    onClick={() => handlePrintReturnReceipt(ret)}
+                  >
+                    <Printer size={14} className="mr-1" /> Reprint
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="Sale Due Payment" size="sm">
             <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">

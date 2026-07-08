@@ -96,7 +96,7 @@ const CustomSelect = ({
   };
 
   return (
-    <div className={`relative w-full overflow-visible ${className}`} ref={dropdownRef} data-no-auto-translate="true">
+    <div className={`relative overflow-visible ${className || "w-full"}`} ref={dropdownRef} data-no-auto-translate="true">
       <button
         type="button"
         disabled={disabled}

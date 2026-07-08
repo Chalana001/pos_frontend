@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import SupplierQuickAddModal from "../components/purchase/SupplierQuickAddModal";
+import Modal from "../components/common/Modal";
 import CustomSelect from "../components/common/CustomSelect";
 import DatePicker from "../components/common/DatePicker";
 import PanelResizeHandle from "../components/common/PanelResizeHandle";
@@ -112,6 +113,7 @@ const PurchaseFormPage = () => {
   const [search, setSearch] = useState("");
   const searchInputRef = useSearchOnType(setSearch);
   const [searchResults, setSearchResults] = useState([]);
+  const currentSearchRef = useRef("");
   const [selectedItem, setSelectedItem] = useState(null);
 
   const [branchInputs, setBranchInputs] = useState({});
@@ -217,44 +219,62 @@ const PurchaseFormPage = () => {
   // --- 1. SEARCH ITEM ---
   const searchItems = async (q) => {
     setSearch(q);
-    if (!q) {
+    currentSearchRef.current = q;
+    if (!q.trim() || q.trim().length < 3) {
       setSearchResults([]);
       return;
     }
     try {
       const purchaseBranchId = isManager ? user?.branchId : 0;
       const res = await itemsAPI.searchForPurchase(q, purchaseBranchId);
-      setSearchResults(res.data || []);
+      if (currentSearchRef.current === q) {
+        setSearchResults(res.data || []);
+      }
     } catch (e) {
       console.error(e);
     }
   };
 
-  const handleSearchKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (!search.trim() || searchResults.length === 0) {
+  const handleSearchKeyDown = async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const q = search.trim();
+    if (!q) return;
+
+    // Results already loaded — select from dropdown (manual typing case)
+    if (searchResults.length > 0) {
+      const exactMatch = searchResults.find(
+        (item) => item.barcode?.toLowerCase() === q.toLowerCase()
+      );
+      selectItem(exactMatch || searchResults[0]);
+      return;
+    }
+
+    // No results yet — barcode endpoint (handles barcode reader race condition)
+    currentSearchRef.current = "__ENTER__";
+
+    try {
+      const purchaseBranchId = isManager ? user?.branchId : 0;
+      const res = await itemsAPI.getByBarcode(q, purchaseBranchId);
+      if (currentSearchRef.current === "__ENTER__") {
+        selectItem(res.data);
+      }
+    } catch {
+      if (currentSearchRef.current === "__ENTER__") {
         toast.error("Item not found!");
         setSearch("");
-        return;
-      }
-
-      const exactMatch = searchResults.find(
-        item => item.barcode?.toLowerCase() === search.toLowerCase()
-      );
-
-      const itemToSelect = exactMatch || searchResults[0];
-
-      if (itemToSelect) {
-        selectItem(itemToSelect);
+        currentSearchRef.current = "";
       }
     }
   };
 
   // --- 2. SELECT ITEM & INITIALIZE BRANCH INPUTS ---
-  const selectItem = (item) => {
-    setSelectedItem(item);
+  const [pendingNegativeStockItem, setPendingNegativeStockItem] = useState(null);
+
+  const applySelectItem = (item, zeroNegativeStock) => {
+    setSelectedItem({ ...item, zeroNegativeStock });
     setSearch("");
+    currentSearchRef.current = "";
     setSearchResults([]);
 
     const initialInputs = {};
@@ -274,6 +294,21 @@ const PurchaseFormPage = () => {
         firstQtyInputRef.current.focus();
       }
     }, 100);
+  };
+
+  const selectItem = (item) => {
+    if (Number(item.availableQty) < 0) {
+      setPendingNegativeStockItem(item);
+      return;
+    }
+    applySelectItem(item, false);
+  };
+
+  const resolveNegativeStockDialog = (zeroOut) => {
+    if (pendingNegativeStockItem) {
+      applySelectItem(pendingNegativeStockItem, zeroOut);
+    }
+    setPendingNegativeStockItem(null);
   };
 
   const handleInputChange = (branchId, field, value) => {
@@ -329,6 +364,7 @@ const PurchaseFormPage = () => {
           costPrice: Number(data.cost),
           sellingPrice: Number(data.sell),
           expiryDate: data.expiry || null,
+          zeroNegativeStock: !!selectedItem.zeroNegativeStock,
           lineTotal: calculateMeasuredLineTotal(qty, data.qtyUnit, data.cost, weightItem)
         });
       }
@@ -383,7 +419,8 @@ const PurchaseFormPage = () => {
         qtyUnit: item.qtyUnit,
         costPrice: item.costPrice,
         sellingPrice: item.sellingPrice,
-        expiryDate: item.expiryDate
+        expiryDate: item.expiryDate,
+        zeroNegativeStock: !!item.zeroNegativeStock
       });
     });
 
@@ -479,14 +516,12 @@ const PurchaseFormPage = () => {
                     onChange={setSupplierId}
                     options={suppliers}
                     placeholder="Select Supplier"
-                    disabled={cartItems.length > 0}
                   />
                 </div>
                 <Button
                   onClick={() => setShowSupplierModal(true)}
                   variant="secondary"
                   className="shrink-0 px-3"
-                  disabled={cartItems.length > 0}
                 >
                   <Plus size={18} />
                 </Button>
@@ -629,9 +664,14 @@ const PurchaseFormPage = () => {
                         >
                           <div className="min-w-0">
                             <div className="truncate font-medium text-slate-800">{item.name}</div>
+                            {item.altName && (
+                              <div className="truncate text-xs text-slate-400">{item.altName}</div>
+                            )}
                             <div className="truncate text-xs text-slate-500">{item.barcode}</div>
                           </div>
-                          <div className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                          <div className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold ${
+                            Number(item.availableQty) < 0 ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-600"
+                          }`}>
                             Stock: {formatStockQty(item)}
                           </div>
                         </button>
@@ -646,7 +686,16 @@ const PurchaseFormPage = () => {
                   <div className="purchase-summary-card mb-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3" style={{ animationDelay: "250ms" }}>
                     <div className="min-w-0">
                       <div className="truncate font-bold text-slate-800">{selectedItem.name}</div>
+                      {selectedItem.altName && (
+                        <div className="truncate text-xs text-slate-400">{selectedItem.altName}</div>
+                      )}
                       <div className="truncate text-xs text-slate-500">{selectedItem.barcode}</div>
+                      {Number(selectedItem.availableQty) < 0 && (
+                        <div className="mt-0.5 text-xs font-semibold text-red-600">
+                          Current stock: {formatDisplayStockQuantity(selectedItem)}
+                          {selectedItem.zeroNegativeStock ? " (will be adjusted to 0)" : ""}
+                        </div>
+                      )}
                     </div>
                     <button onClick={() => { setSelectedItem(null); }} className="shrink-0 text-xs font-semibold text-red-500 hover:underline">
                       Cancel
@@ -852,6 +901,34 @@ const PurchaseFormPage = () => {
         onClose={() => { setShowSupplierModal(false); }}
         onCreated={handleSupplierCreated}
       />
+
+      <Modal
+        isOpen={!!pendingNegativeStockItem}
+        onClose={() => resolveNegativeStockDialog(false)}
+        title="Negative Stock Detected"
+        size="sm"
+      >
+        {pendingNegativeStockItem && (
+          <div>
+            <p className="text-sm text-slate-600">
+              <span className="font-semibold text-slate-800">{pendingNegativeStockItem.name}</span> currently has{" "}
+              <span className="font-bold text-red-600">{formatDisplayStockQuantity(pendingNegativeStockItem)}</span> stock.
+            </p>
+            <p className="mt-2 text-sm text-slate-600">
+              Do you want to adjust this back to 0 before adding the new purchase quantity? If you choose No, the purchased
+              quantity will simply be added on top of the current negative stock.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => resolveNegativeStockDialog(false)}>
+                No, just add on top
+              </Button>
+              <Button onClick={() => resolveNegativeStockDialog(true)}>
+                Yes, adjust to 0 first
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

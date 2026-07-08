@@ -523,6 +523,18 @@ return (
                       >
                         Supplier Reports
                       </NavLink>
+                      {hasPlanFeature(user?.planName, "RETURNS_REPORTS") && (
+                        <NavLink
+                          to="/reports/returns"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          Returns Reports
+                        </NavLink>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1179,6 +1191,20 @@ return (
                           }
                         >
                           {t("New Purchase")}
+                        </NavLink>
+                      )}
+
+                      {hasPermission(role, "NEW_PURCHASE") && (
+                        <NavLink
+                          to="/purchases/import-excel"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Import from Excel")}
                         </NavLink>
                       )}
                     </div>

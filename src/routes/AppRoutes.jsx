@@ -16,6 +16,7 @@ const POS = lazy(() => import('../pages/POS'));
 const OfflineSalesPage = lazy(() => import('../pages/OfflineSalesPage'));
 const SalesListPage = lazy(() => import('../pages/SalesListPage'));
 const SalesDetailsPage = lazy(() => import('../pages/SalesDetailsPage'));
+const SaleReturnPage = lazy(() => import('../pages/SaleReturnPage'));
 const PromotionsPage = lazy(() => import('../pages/PromotionsPage'));
 const WarrantiesPage = lazy(() => import('../pages/WarrantiesPage'));
 const WarrantyClaimsPage = lazy(() => import('../pages/WarrantyClaimsPage'));
@@ -41,7 +42,9 @@ const StockAdjustments = lazy(() => import('../pages/StockAdjustments'));
 const StockTransfers = lazy(() => import('../pages/StockTransfers'));
 const StockProcessingPage = lazy(() => import('../pages/StockProcessingPage'));
 const Purchases = lazy(() => import('../pages/PurchaseListPage'));
+const PurchaseReturnPage = lazy(() => import('../pages/PurchaseReturnPage'));
 const NewPurchase = lazy(() => import('../pages/PurchaseFormPage'));
+const PurchaseExcelImportPage = lazy(() => import('../pages/PurchaseExcelImportPage'));
 const PurchaseDetailsPage = lazy(() => import('../pages/PurchaseDetailsPage'));
 const SuppliersPage = lazy(() => import('../pages/SuppliersPage'));
 const SupplierViewPage = lazy(() => import('../pages/SupplierViewPage'));
@@ -54,6 +57,7 @@ const DiningTablesPage = lazy(() => import('../pages/DiningTablesPage'));
 const Users = lazy(() => import('../pages/Users'));
 const SubscriptionPage = lazy(() => import('../pages/SubscriptionPage'));
 const VersionHistoryPage = lazy(() => import('../pages/VersionHistoryPage'));
+const RecipeIngredientsImportPage = lazy(() => import('../pages/RecipeIngredientsImportPage'));
 
 const RouteFallback = () => (
   <div className="flex min-h-[40vh] items-center justify-center">
@@ -106,6 +110,7 @@ const AppRoutes = () => {
 
         <Route path="sales" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<SalesListPage />)}</ProtectedRoute>} />
         <Route path="sales/:id" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<SalesDetailsPage />)}</ProtectedRoute>} />
+        <Route path="sales/:id/return" element={<ProtectedRoute permission="PROCESS_RETURNS" feature="ORDER_RETURNS" requiresOnline>{withSuspense(<SaleReturnPage />)}</ProtectedRoute>} />
         <Route path="promotions" element={<ProtectedRoute permission="MANAGE_PROMOTIONS" requiresOnline>{withSuspense(<PromotionsPage />)}</ProtectedRoute>} />
         <Route path="warranties" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantiesPage />)}</ProtectedRoute>} />
         <Route path="warranties/claims" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantyClaimsPage />)}</ProtectedRoute>} />
@@ -117,7 +122,7 @@ const AppRoutes = () => {
         <Route path="items/:id/edit" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline>{withSuspense(<ItemFormPage mode="edit" />)}</ProtectedRoute>} />
         <Route path="items/bulk-add" element={<ProtectedRoute permission="MANAGE_ITEMS" feature="BULK_ITEMS" requiresOnline>{withSuspense(<BulkAddItems />)}</ProtectedRoute>} />
         <Route path="items/import-excel" element={<ProtectedRoute permission="MANAGE_ITEMS" feature="BULK_ITEMS" requiresOnline>{withSuspense(<ItemExcelImportPage />)}</ProtectedRoute>} />
-        <Route path="items/import-recipe-ingredients" element={<ProtectedRoute permission="MANAGE_ITEMS" feature="BULK_ITEMS" requiresOnline>{withSuspense(<ItemExcelImportPage initialTab="recipe-ingredients" />)}</ProtectedRoute>} />
+        <Route path="items/import-recipe-ingredients" element={<ProtectedRoute permission="MANAGE_ITEMS" feature="BULK_ITEMS" requiresOnline>{withSuspense(<RecipeIngredientsImportPage />)}</ProtectedRoute>} />
         <Route path="items/print-barcodes" element={<ProtectedRoute permission="VIEW_ITEMS" feature="BARCODE_PRINT" requiresOnline>{withSuspense(<BarcodePrintPage />)}</ProtectedRoute>} />
 
         <Route path="customers" element={<ProtectedRoute permission="MANAGE_CUSTOMERS" requiresOnline>{withSuspense(<Customers />)}</ProtectedRoute>} />
@@ -141,7 +146,9 @@ const AppRoutes = () => {
 
         <Route path="purchases" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline>{withSuspense(<Purchases />)}</ProtectedRoute>} />
         <Route path="purchases/new" element={<ProtectedRoute permission="NEW_PURCHASE" feature="PURCHASES" requiresOnline>{withSuspense(<NewPurchase />)}</ProtectedRoute>} />
+        <Route path="purchases/import-excel" element={<ProtectedRoute permission="NEW_PURCHASE" feature="PURCHASES" requiresOnline>{withSuspense(<PurchaseExcelImportPage />)}</ProtectedRoute>} />
         <Route path="purchases/:id" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline>{withSuspense(<PurchaseDetailsPage />)}</ProtectedRoute>} />
+        <Route path="purchases/:id/return" element={<ProtectedRoute permission="PROCESS_PURCHASE_RETURNS" feature="PURCHASE_RETURNS" requiresOnline>{withSuspense(<PurchaseReturnPage />)}</ProtectedRoute>} />
         <Route path="suppliers" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline>{withSuspense(<SuppliersPage />)}</ProtectedRoute>} />
         <Route path="suppliers/new" element={<ProtectedRoute permission="NEW_PURCHASE" feature="PURCHASES" requiresOnline>{withSuspense(<SupplierFormPage />)}</ProtectedRoute>} />
         <Route path="suppliers/:id" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline>{withSuspense(<SupplierViewPage />)}</ProtectedRoute>} />
@@ -151,6 +158,7 @@ const AppRoutes = () => {
         <Route path="reports/products" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="product" />)}</ProtectedRoute>} />
         <Route path="reports/customers" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="customer" />)}</ProtectedRoute>} />
         <Route path="reports/suppliers" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="supplier" />)}</ProtectedRoute>} />
+        <Route path="reports/returns" element={<ProtectedRoute permission="VIEW_REPORTS" feature="RETURNS_REPORTS" requiresOnline>{withSuspense(<Reports mode="returns" />)}</ProtectedRoute>} />
         <Route path="app-configuration" element={<ProtectedRoute permission="MANAGE_APP_CONFIGURATION" requiresOnline>{withSuspense(<AppConfigurationPage />)}</ProtectedRoute>} />
         <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<Branches />)}</ProtectedRoute>} />
         <Route path="dining-tables" element={<ProtectedRoute permission="MANAGE_BRANCHES" feature="DINING_TABLES" requiresOnline>{withSuspense(<DiningTablesPage />)}</ProtectedRoute>} />

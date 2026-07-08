@@ -1,10 +1,11 @@
 import api from './axios';
 
 export const customersAPI = {
-  getAll: (params = {}) => api.get('/customers/page', { params }),
+  // BUG-11 FIX: accepts optional AbortSignal to cancel stale in-flight requests
+  getAll: (params = {}, signal) => api.get('/customers/page', { params, signal }),
   getList: (params = {}) => api.get('/customers', { params }),
-  
-  search: (name) => api.get('/customers/search', { params: { name } }),
+
+  search: (name, signal) => api.get('/customers/search', { params: { name }, signal }),
 
   getById: (id) => api.get(`/customers/${id}`),
   

@@ -8,6 +8,7 @@ import {
   Download,
   FileText,
   PieChart as PieIcon,
+  RotateCcw,
   ShoppingCart,
   TrendingUp,
   Truck,
@@ -122,6 +123,7 @@ const allTabs = [
   { id: "customerPerformance", label: "Customer Performance", icon: Users },
   { id: "supplierPerformance", label: "Supplier Performance", icon: Truck },
   { id: "profit", label: "Profit Analysis", icon: DollarSign },
+  { id: "returnsReports", label: "Returns", icon: RotateCcw },
   { id: "lowStock", label: "Low Stock", icon: AlertCircle },
   { id: "creditDue", label: "Credit Due", icon: FileText },
 ];
@@ -132,6 +134,7 @@ const tabsByMode = {
   product: ["productPerformance"],
   customer: ["customerPerformance"],
   supplier: ["supplierPerformance"],
+  returns: ["returnsReports"],
 };
 
 const pageTitleByMode = {
@@ -140,6 +143,7 @@ const pageTitleByMode = {
   product: "Product Reports",
   customer: "Customer Reports",
   supplier: "Supplier Reports",
+  returns: "Returns Reports",
 };
 
 const getPresetDateRange = (type) => {
@@ -185,6 +189,13 @@ const Reports = ({ mode = "basic" }) => {
   const [profitSummary, setProfitSummary] = useState(null);
   const [salesSummary, setSalesSummary] = useState(null);
   const [salesTrend, setSalesTrend] = useState({ data: [], type: "DAILY" });
+  const [returnsData, setReturnsData] = useState({
+    summary: null,
+    topSaleItems: [],
+    topPurchaseItems: [],
+    reasons: [],
+    trend: [],
+  });
   const [basicOverview, setBasicOverview] = useState({
     categories: [],
     products: [],
@@ -372,6 +383,7 @@ const Reports = ({ mode = "basic" }) => {
     setProfitSummary(null);
     setSalesSummary(null);
     setSalesTrend({ data: [], type: "DAILY" });
+    setReturnsData({ summary: null, topSaleItems: [], topPurchaseItems: [], reasons: [], trend: [] });
 
     try {
       const params = commonParams();
@@ -432,6 +444,22 @@ const Reports = ({ mode = "basic" }) => {
       } else if (type === "creditDue") {
         response = await reportsAPI.creditDue();
         setReportData(Array.isArray(response.data) ? response.data : []);
+      } else if (type === "returnsReports") {
+        const [summaryRes, topSaleRes, topPurRes, reasonsRes, trendRes] = await Promise.all([
+          reportsAPI.returnsSummary(params),
+          reportsAPI.topReturnedItems({ ...params, type: "SALE", limit: 10 }),
+          reportsAPI.topReturnedItems({ ...params, type: "PURCHASE", limit: 10 }),
+          reportsAPI.returnReasons(params),
+          reportsAPI.returnTrend(params),
+        ]);
+        setReturnsData({
+          summary: summaryRes.data,
+          topSaleItems: Array.isArray(topSaleRes.data) ? topSaleRes.data : [],
+          topPurchaseItems: Array.isArray(topPurRes.data) ? topPurRes.data : [],
+          reasons: Array.isArray(reasonsRes.data) ? reasonsRes.data : [],
+          trend: Array.isArray(trendRes.data) ? trendRes.data : [],
+        });
+        setReportData([]);
       }
 
       setLoadedTab(type);
@@ -1003,7 +1031,7 @@ const Reports = ({ mode = "basic" }) => {
       <Card className="admin-panel-card" title="Profit Details">
         <Table
           columns={[
-            { header: "Product", accessor: "itemName" },
+            { header: "Product", render: (i) => <div className="flex flex-col"><span className="font-medium">{i.itemName}</span>{i.altName && <span className="text-xs text-slate-400">{i.altName}</span>}</div> },
             { header: "Qty Sold", accessor: "qtySold" },
             { header: "Cost", render: (i) => formatCurrency(i.cost) },
             { header: "Revenue", render: (i) => formatCurrency(i.revenue) },
@@ -1020,7 +1048,7 @@ const Reports = ({ mode = "basic" }) => {
       <Table
         columns={[
           { header: "#", render: (_, i) => pageData.page * pageData.size + i + 1 },
-          { header: "Item", render: (i) => <div><p className="font-semibold">{i.itemName}</p><p className="text-xs text-slate-500">{i.itemType || "UNKNOWN"}</p></div> },
+          { header: "Item", render: (i) => <div><p className="font-semibold">{i.itemName}</p>{i.altName && <p className="text-xs text-slate-400">{i.altName}</p>}<p className="text-xs text-slate-500">{i.itemType || "UNKNOWN"}</p></div> },
           { header: "Qty Sold", render: (i) => formatQty(i.qtySold, i.qtyUnit) },
           { header: "Revenue", render: (i) => formatCurrency(i.revenue) },
           { header: "Cost", render: (i) => formatCurrency(i.cost) },
@@ -1031,6 +1059,161 @@ const Reports = ({ mode = "basic" }) => {
       />
     </Card>
   );
+
+  // ─── Returns Report Component ─────────────────────────────────────────
+  const ReturnsReport = ({ data }) => {
+    const { summary, topSaleItems, topPurchaseItems, reasons, trend } = data;
+
+    const saleReasons = reasons.filter((r) => r.type === "SALE");
+    const purchaseReasons = reasons.filter((r) => r.type === "PURCHASE");
+
+    // Pie chart data for reasons
+    const saleReasonPieData = saleReasons.slice(0, 6).map((r, i) => ({
+      name: r.reason.length > 30 ? r.reason.substring(0, 30) + "…" : r.reason,
+      value: Number(r.count),
+      fill: CHART_COLORS[i % CHART_COLORS.length],
+    }));
+
+    const trendChartData = trend.map((t) => ({
+      label: t.label,
+      "Sale Returns": Number(t.saleReturns || 0),
+      "Purchase Returns": Number(t.purchaseReturns || 0),
+    }));
+
+    const StatCard = ({ label, value, sub, color = "text-slate-900" }) => (
+      <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+        <p className={`mt-1 text-2xl font-black tabular-nums ${color}`}>{value}</p>
+        {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
+      </div>
+    );
+
+    return (
+      <div className="space-y-6">
+        {/* ── KPI Summary Cards ── */}
+        {summary ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <StatCard label="Sale Returns" value={summary.saleReturnCount} sub={`${formatCurrency(summary.saleReturnTotal)} total`} color="text-orange-600" />
+            <StatCard label="Items Returned (Sale)" value={summary.saleReturnItemCount} />
+            <StatCard label="Purchase Returns" value={summary.purchaseReturnCount} sub={`${formatCurrency(summary.purchaseReturnTotal)} total`} color="text-blue-600" />
+            <StatCard label="Items Returned (Purchase)" value={summary.purchaseReturnItemCount} />
+            <StatCard label="Net Revenue" value={formatCurrency(summary.netRevenue)} sub={`Gross: ${formatCurrency(summary.grossSales)}`} color="text-emerald-600" />
+            <StatCard label="Return Rate" value={`${summary.returnRate}%`} sub="Sale returns / total orders" color={summary.returnRate > 10 ? "text-red-600" : "text-slate-900"} />
+          </div>
+        ) : (
+          <div className="flex h-20 items-center justify-center text-slate-400">No data for this period</div>
+        )}
+
+        {/* ── Return Trend Chart ── */}
+        {trend.length > 0 && (
+          <Card className="admin-panel-card" title="Return Trend">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={trendChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: CHART_TEXT }} />
+                <YAxis tick={{ fontSize: 11, fill: CHART_TEXT }} tickFormatter={(v) => formatCurrency(v)} width={70} />
+                <Tooltip formatter={(v) => formatCurrency(v)} />
+                <Legend />
+                <Bar dataKey="Sale Returns" fill="#f97316" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Purchase Returns" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        )}
+
+        {/* ── Top Returned Items ── */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card className="admin-panel-card" title="Top Returned Items (Sales)">
+            {topSaleItems.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-400">No sale returns in this period</p>
+            ) : (
+              <Table
+                columns={[
+                  { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-400">{i.barcode}</p>}</div> },
+                  { header: "Returns", render: (i) => <span className="font-semibold text-orange-600">{i.returnCount}×</span> },
+                  { header: "Qty", accessor: "totalReturnedQty" },
+                  { header: "Amount", render: (i) => <span className="font-bold">{formatCurrency(i.totalReturnAmount)}</span> },
+                ]}
+                data={topSaleItems}
+              />
+            )}
+          </Card>
+
+          <Card className="admin-panel-card" title="Top Returned Items (Purchases)">
+            {topPurchaseItems.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-400">No purchase returns in this period</p>
+            ) : (
+              <Table
+                columns={[
+                  { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-400">{i.barcode}</p>}</div> },
+                  { header: "Returns", render: (i) => <span className="font-semibold text-blue-600">{i.returnCount}×</span> },
+                  { header: "Qty", accessor: "totalReturnedQty" },
+                  { header: "Amount", render: (i) => <span className="font-bold">{formatCurrency(i.totalReturnAmount)}</span> },
+                ]}
+                data={topPurchaseItems}
+              />
+            )}
+          </Card>
+        </div>
+
+        {/* ── Return Reasons ── */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Sale return reasons pie */}
+          {saleReasonPieData.length > 0 && (
+            <Card className="admin-panel-card" title="Sale Return Reasons">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={saleReasonPieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={false}>
+                      {saleReasonPieData.map((entry, index) => (
+                        <Cell key={index} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v, name) => [v, name]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                  {saleReasons.map((r, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 text-sm">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                        <span className="truncate text-slate-700">{r.reason}</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="font-semibold text-slate-900">{r.count}</span>
+                        <span className="text-xs text-slate-400">{formatCurrency(r.totalAmount)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Purchase return reasons table */}
+          {purchaseReasons.length > 0 && (
+            <Card className="admin-panel-card" title="Purchase Return Reasons">
+              <Table
+                columns={[
+                  { header: "Reason", render: (r) => <span className="text-sm">{r.reason}</span> },
+                  { header: "Count", render: (r) => <span className="font-semibold text-blue-600">{r.count}</span> },
+                  { header: "Total Amount", render: (r) => formatCurrency(r.totalAmount) },
+                ]}
+                data={purchaseReasons}
+              />
+            </Card>
+          )}
+        </div>
+
+        {/* Empty reasons state */}
+        {saleReasons.length === 0 && purchaseReasons.length === 0 && (
+          <Card className="admin-panel-card" title="Return Reasons">
+            <p className="py-8 text-center text-sm text-slate-400">No return reason data available for this period.</p>
+          </Card>
+        )}
+      </div>
+    );
+  };
 
   const renderPagedTable = () => {
     if (activeTab === "salesReport") {
@@ -1121,7 +1304,7 @@ const Reports = ({ mode = "basic" }) => {
         <Card className="admin-panel-card" title="Low Stock Alerts">
           <Table
             columns={[
-              { header: "Item", accessor: "itemName" },
+              { header: "Item", render: (i) => <div className="flex flex-col"><span className="font-medium">{i.itemName}</span>{i.altName && <span className="text-xs text-slate-400">{i.altName}</span>}</div> },
               { header: "Stock", render: (i) => <span className="font-bold text-red-600">{formatDisplayStockBaseQuantity(i.totalQty, i, i.defaultUnit)}</span> },
               { header: "Reorder Level", render: (i) => formatDisplayStockBaseQuantity(i.reorderLevel, i, i.defaultUnit) },
               { header: "Status", render: () => <span className="rounded bg-red-100 px-2 py-1 text-xs font-bold text-red-700">LOW</span> },
@@ -1130,6 +1313,9 @@ const Reports = ({ mode = "basic" }) => {
           />
         </Card>
       );
+    }
+    if (activeTab === "returnsReports") {
+      return <ReturnsReport data={returnsData} />;
     }
     return null;
   };

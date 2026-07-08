@@ -353,7 +353,7 @@ const PromotionsPage = () => {
                   const checked = selectedTargetIds.some((id) => Number(id) === Number(target.id));
                   return (
                     <label key={target.id} className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm ${checked ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50"}`}>
-                      <span className="min-w-0 truncate font-medium">{target.name}{form.scope === "ITEM" && target.barcode ? ` (${target.barcode})` : ""}</span>
+                      <span className="min-w-0 truncate"><span className="font-medium">{target.name}</span>{target.altName && <span className="text-xs text-slate-400 ml-1">{target.altName}</span>}{form.scope === "ITEM" && target.barcode ? <span className="text-slate-400"> ({target.barcode})</span> : ""}</span>
                       <input type="checkbox" checked={checked} onChange={() => toggleTarget(target.id)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                     </label>
                   );

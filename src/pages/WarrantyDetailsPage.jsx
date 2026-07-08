@@ -212,6 +212,7 @@ const WarrantyDetailsPage = () => {
               <div>
                 <h1 className="text-2xl font-bold text-slate-800">{warranty.warrantyNo}</h1>
                 <div className="mt-1 text-sm text-slate-500">{warranty.itemName}</div>
+                {warranty.altName && <div className="text-xs text-slate-400">{warranty.altName}</div>}
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">

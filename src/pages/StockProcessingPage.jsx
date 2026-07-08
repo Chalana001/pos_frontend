@@ -39,6 +39,33 @@ const scaledDefaultQty = (defaultQty, sourceQty) => {
   return Number.isFinite(calculated) ? String(calculated) : "";
 };
 
+/**
+ * Compute per-row allocated cost using the Sales Value Method (mirrors backend logic).
+ * Returns array of { allocatedCost } in same order as outputs.
+ */
+const computeAllocatedCosts = (outputs, sourceCost) => {
+  const cost = Number(sourceCost || 0);
+  if (!cost || outputs.length === 0) return outputs.map(() => null);
+
+  const revenues = outputs.map((o) =>
+    o.waste ? 0 : Number(o.qty || 0) * Number(o.sellingPrice || 0)
+  );
+  const totalRevenue = revenues.reduce((s, r) => s + r, 0);
+
+  if (totalRevenue <= 0) return outputs.map(() => null);
+
+  let running = 0;
+  const lastNonWaste = outputs.reduce((last, o, i) => (!o.waste ? i : last), -1);
+
+  return outputs.map((o, i) => {
+    if (o.waste) return 0;
+    if (i === lastNonWaste) return Math.max(0, Number((cost - running).toFixed(2)));
+    const allocated = Number(((cost * revenues[i]) / totalRevenue).toFixed(2));
+    running += allocated;
+    return allocated;
+  });
+};
+
 const applyOutputTemplate = (outputs, sourceQty) =>
   outputs.map((output) => ({
     ...output,
@@ -74,6 +101,26 @@ const StockProcessingPage = () => {
     () => sources.find((source) => String(source.id) === String(form.selectedSourceId)),
     [form.selectedSourceId, sources]
   );
+
+  const selectedBatch = useMemo(
+    () => (selectedSource?.batches || []).find((b) => String(b.batchId || b.id) === String(form.selectedBatchId)),
+    [form.selectedBatchId, selectedSource]
+  );
+
+  const costPreview = useMemo(() => {
+    const batchCost = Number(selectedBatch?.price || 0);
+    const sourceQty = Number(form.sourceQty || 0);
+    if (!batchCost || !sourceQty) return { costs: form.outputs.map(() => null), totalRevenue: 0, margin: null };
+    // Approximate source cost for preview (unit cost × qty)
+    const approxSourceCost = batchCost * sourceQty;
+    const costs = computeAllocatedCosts(form.outputs, approxSourceCost);
+    const totalRevenue = form.outputs.reduce(
+      (s, o) => s + (o.waste ? 0 : Number(o.qty || 0) * Number(o.sellingPrice || 0)),
+      0
+    );
+    const margin = totalRevenue > 0 ? ((totalRevenue - approxSourceCost) / totalRevenue) * 100 : null;
+    return { costs, totalRevenue, margin, approxSourceCost };
+  }, [form.outputs, form.sourceQty, selectedBatch]);
 
   const sourceBatches = useMemo(
     () => (selectedSource?.batches || []).filter((batch) => Number(batch.qty || 0) > 0),
@@ -422,16 +469,17 @@ const StockProcessingPage = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="hidden md:grid md:grid-cols-[minmax(0,1.6fr)_120px_120px_110px_72px] md:gap-3 md:px-1">
+                    <div className="hidden md:grid md:grid-cols-[minmax(0,1.6fr)_120px_120px_110px_100px_72px] md:gap-3 md:px-1">
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Output Item</div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Qty</div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sell Price</div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unit</div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Est. Cost</div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Type</div>
                     </div>
 
                     {form.outputs.map((output, index) => (
-                      <div key={output.outputItemId} className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1.6fr)_120px_120px_110px_72px]">
+                      <div key={output.outputItemId} className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1.6fr)_120px_120px_110px_100px_72px]">
                         <div className="min-w-0">
                           <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Output Item</div>
                           <div className="truncate font-semibold text-slate-800">{output.outputName}</div>
@@ -477,6 +525,18 @@ const StockProcessingPage = () => {
                         </div>
 
                         <div>
+                          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Est. Cost</div>
+                          <div className="flex h-[42px] items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-blue-700">
+                            {output.waste
+                              ? <span className="text-slate-400">—</span>
+                              : costPreview.costs[index] != null
+                                ? formatCurrency(costPreview.costs[index])
+                                : <span className="text-slate-400">—</span>
+                            }
+                          </div>
+                        </div>
+
+                        <div>
                           <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Type</div>
                           <div className={`flex h-[42px] items-center justify-center rounded-lg px-2 text-xs font-bold ${output.waste ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"}`}>
                             {output.waste ? "Waste" : "Stock"}
@@ -484,6 +544,17 @@ const StockProcessingPage = () => {
                         </div>
                       </div>
                     ))}
+
+                    {costPreview.totalRevenue > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-800">
+                        <span>Est. Revenue: {formatCurrency(costPreview.totalRevenue)}</span>
+                        {costPreview.margin != null && (
+                          <span className={costPreview.margin >= 0 ? "text-emerald-700" : "text-red-600"}>
+                            Margin: {costPreview.margin.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
 

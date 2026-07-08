@@ -21,9 +21,11 @@ export const itemsAPI = {
       params: (branchId !== undefined && branchId !== null) ? { name, branchId } : { name },
     }),
 
-  searchForPos: (name, branchId) =>
+  // BUG-11 FIX: accepts optional AbortSignal to cancel stale in-flight requests
+  searchForPos: (name, branchId, signal) =>
     api.get("/items/searchForPos", {
       params: (branchId !== undefined && branchId !== null) ? { name, branchId } : { name },
+      signal,
     }),
 
   searchForPrint: (query) => api.get("/items/search-print", { params: { query } }),

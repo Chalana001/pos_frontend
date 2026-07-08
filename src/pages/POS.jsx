@@ -65,7 +65,7 @@ const toBaseQuantity = (quantity, unit, measuredItem = false) => {
     return numeric;
   }
   const normalizedUnit = String(unit || "").toUpperCase();
-    return normalizedUnit === "KG" || normalizedUnit === "L" || normalizedUnit === "PCS"
+  return normalizedUnit === "KG" || normalizedUnit === "L" || normalizedUnit === "PCS"
     ? numeric * STOCK_BASE_UNITS_PER_UNIT
     : numeric;
 };
@@ -730,10 +730,10 @@ const POS = () => {
     setCustomer(
       pendingOrder?.customerId
         ? {
-            id: pendingOrder.customerId,
-            name: pendingOrder.customerName,
-            phone: "",
-          }
+          id: pendingOrder.customerId,
+          name: pendingOrder.customerName,
+          phone: "",
+        }
         : null
     );
   };
@@ -950,6 +950,7 @@ const POS = () => {
       const lowerQuery = searchQuery.toLowerCase();
       result = result.filter((item) =>
         item.name.toLowerCase().includes(lowerQuery) ||
+        item.altName?.toLowerCase().includes(lowerQuery) ||
         item.barcode?.toLowerCase().includes(lowerQuery)
       );
     }
@@ -1034,6 +1035,7 @@ const POS = () => {
           itemId: item.id,
           batchId,
           name: item.name,
+          altName: item.altName || null,
           barcode: item.barcode,
           unitPrice,
           perSmallUnitPrice: smallUnitPrice,
@@ -1574,6 +1576,7 @@ const POS = () => {
 
     setLoading(true);
     try {
+      const orderItems = cartItems.map((item) => createOrderItemPayload(item, shouldUseServerForCheckout ? false : true));
       const orderData = {
         branchId: effectiveBranchId,
         orderType,
@@ -1583,7 +1586,7 @@ const POS = () => {
         billDiscount,
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
         paymentMethod: orderType === ORDER_TYPES.CASH ? paymentMethod : "CREDIT",
-        items: cartItems.map((item) => createOrderItemPayload(item, true)),
+        items: orderItems,
         note: "",
       };
 
@@ -1603,6 +1606,10 @@ const POS = () => {
           invoiceNo: offlineInvoiceNo,
           subTotal,
           billDiscount: effectiveBillDiscount,
+          promotionDiscountTotal: receiptCartItems.reduce(
+            (sum, item) => sum + Number(item?.promotionDiscountAmount || 0),
+            0
+          ),
           netTotal: total,
           paidAmount,
           paymentMethod: orderData.paymentMethod,
@@ -1729,6 +1736,7 @@ const POS = () => {
         invoiceNo: response.data.invoiceNo,
         subTotal,
         billDiscount,
+        promotionDiscountTotal: Number(response.data?.promotionDiscountTotal || response.data?.billPromotionDiscountAmount || 0),
         netTotal: response.data.grandTotal ?? total,
         paidAmount: response.data.paidAmount ?? (orderType === ORDER_TYPES.CASH ? paidAmount : 0),
         dueAmount: response.data.dueAmount ?? creditAmount,
@@ -1841,7 +1849,7 @@ const POS = () => {
                   New Sale {branchLabel ? `(Branch: ${branchLabel})` : ""}
                 </h1>
                 {!shouldUseServerForCheckout ? (
-              <p className="mt-1 text-xs font-medium text-amber-600">
+                  <p className="mt-1 text-xs font-medium text-amber-600">
                     {isFreeLocalSalesPlan
                       ? `FREE package active. Today local: ${formatCurrency(freeLocalSalesSummary.total)} (${freeLocalSalesSummary.count})`
                       : "Queue mode active. This sale will stay local until you import it."}
@@ -1870,9 +1878,8 @@ const POS = () => {
                 <button
                   type="button"
                   onClick={() => handleSaleModeChange(SALE_MODES.TAKEAWAY)}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    saleMode === SALE_MODES.TAKEAWAY ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  }`}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${saleMode === SALE_MODES.TAKEAWAY ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    }`}
                 >
                   <ShoppingBag size={16} />
                   Quick Sale
@@ -1882,9 +1889,8 @@ const POS = () => {
                     type="button"
                     onClick={() => handleSaleModeChange(SALE_MODES.DINE_IN)}
                     disabled={!canUseServer || queueCartActive}
-                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                      saleMode === SALE_MODES.DINE_IN ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    }`}
+                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${saleMode === SALE_MODES.DINE_IN ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      }`}
                   >
                     <UtensilsCrossed size={16} />
                     Dine In
@@ -1939,19 +1945,17 @@ const POS = () => {
                         key={table.id}
                         type="button"
                         onClick={() => handleSelectTable(table)}
-                        className={`sales-panel-hover rounded-xl border px-3 py-3 text-left transition ${
-                          isSelected
-                            ? "border-blue-500 bg-blue-50 shadow-sm"
-                            : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                        }`}
+                        className={`sales-panel-hover rounded-xl border px-3 py-3 text-left transition ${isSelected
+                          ? "border-blue-500 bg-blue-50 shadow-sm"
+                          : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="text-sm font-semibold text-slate-900">{table.tableName}</div>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                            table.status === "OCCUPIED"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-emerald-100 text-emerald-700"
-                          }`}>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${table.status === "OCCUPIED"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-emerald-100 text-emerald-700"
+                            }`}>
                             {table.status}
                           </span>
                         </div>
@@ -1970,20 +1974,19 @@ const POS = () => {
           <div className="page-section-enter flex-shrink-0 border-b border-slate-100 bg-white px-2 py-1.5 lg:px-4 lg:py-2.5" style={{ animationDelay: "220ms" }}>
             <div className="relative">
               <div ref={categoryScrollRef} className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5 pr-11 lg:gap-2 lg:pb-0 lg:pr-14">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  disabled={!canSell}
-                  className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-[10px] lg:text-sm font-semibold transition-all ${
-                    activeCategory === cat
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    disabled={!canSell}
+                    className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-[10px] lg:text-sm font-semibold transition-all ${activeCategory === cat
                       ? "bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200"
                       : "bg-slate-50 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+                      }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
               </div>
               {categories.length > 4 ? (
                 <button
@@ -2030,11 +2033,10 @@ const POS = () => {
                       key={item.id}
                       onClick={() => !tileDisabled && addToCart(item)}
                       style={{ animationDelay: `${240 + (filteredItems.indexOf(item) % 12) * 32}ms` }}
-                      className={`sales-product-tile sales-panel-hover group relative flex min-h-[144px] flex-col rounded-lg border border-slate-200 bg-white px-2 py-3 text-center transition-all lg:min-h-[164px] lg:rounded-xl lg:px-4 lg:py-3 ${
-                        !tileDisabled
-                          ? "hover:shadow-md cursor-pointer active:scale-95"
-                          : "cursor-not-allowed opacity-90"
-                      }`}
+                      className={`sales-product-tile sales-panel-hover group relative flex min-h-[144px] flex-col rounded-lg border border-slate-200 bg-white px-2 py-3 text-center transition-all lg:min-h-[164px] lg:rounded-xl lg:px-4 lg:py-3 ${!tileDisabled
+                        ? "hover:shadow-md cursor-pointer active:scale-95"
+                        : "cursor-not-allowed opacity-90"
+                        }`}
                     >
                       <div className="absolute top-1 right-1 lg:top-2 lg:right-2 flex flex-col items-end gap-1">
                         {item.itemType === ItemType.SERVICE ? (
@@ -2044,11 +2046,10 @@ const POS = () => {
                             {item.isKotEnabled ? "Recipe • KOT" : "Recipe"}
                           </span>
                         ) : isOutOfStock ? (
-                          <span className={`px-1.5 lg:px-2 py-[1px] lg:py-0.5 text-[8px] lg:text-[10px] font-bold rounded border uppercase ${
-                            canSelectOutOfStock
-                              ? "border-amber-200 bg-amber-50 text-amber-600"
-                              : "border-red-100 bg-red-50 text-red-500"
-                          }`}>
+                          <span className={`px-1.5 lg:px-2 py-[1px] lg:py-0.5 text-[8px] lg:text-[10px] font-bold rounded border uppercase ${canSelectOutOfStock
+                            ? "border-amber-200 bg-amber-50 text-amber-600"
+                            : "border-red-100 bg-red-50 text-red-500"
+                            }`}>
                             {canSelectOutOfStock ? "Override" : "Out"}
                           </span>
                         ) : (
@@ -2063,6 +2064,7 @@ const POS = () => {
                         <h3 className="h-[2.3rem] overflow-hidden text-[10px] font-medium leading-[1.15rem] text-slate-700 line-clamp-2 break-all lg:h-[2.7rem] lg:text-[13px] lg:leading-[1.35rem] lg:line-clamp-2">
                           {item.name}
                         </h3>
+                        {item.altName && <p className="text-[8px] leading-tight text-slate-400 line-clamp-1 lg:text-[10px]">{item.altName}</p>}
                         <p className="text-[11px] font-bold text-blue-600 lg:text-[14px]">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
                       </div>
                     </div>

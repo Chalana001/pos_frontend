@@ -1,6 +1,126 @@
-export const APP_VERSION = "1.13.0";
+export const APP_VERSION = "2.1.0";
 
 export const VERSION_HISTORY = [
+  {
+    version: "2.1.0",
+    title: "Sales Value Costing, Item Alt Names, Super Admin Fix",
+    releaseDate: "2026-06-20",
+    summary:
+      "Stock processing cost allocation now uses the sales value method so each output part receives a cost share proportional to its expected selling revenue, not its weight. Items can now carry an alternative name for multilingual receipt printing, and a bug that blocked super admin login after a session expired has been fixed.",
+    highlights: [
+      "Stock processing cost is now allocated by selling price × quantity ratio — a chicken leg gets a bigger cost share than bones because it sells for more, not just because it weighs more.",
+      "A default selling price per processing output can be saved on the item setup form so the right ratio is pre-filled every time stock is processed.",
+      "The processing modal now shows a live estimated cost, expected revenue, and margin preview before you confirm.",
+      "Items can now store an alternative name — useful for Sinhala or Tamil names alongside the primary English name.",
+      "Receipt template settings now let you choose whether to print the primary item name or the alternative name on customer receipts.",
+      "Super admin panel login no longer fails with a token expiry error when the previous session had already expired.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Sales Value Method for stock processing cost allocation — allocated cost = source cost × (output qty × selling price) / total expected revenue.",
+          "Default selling price field per processing output link on the item setup form.",
+          "Real-time estimated cost, expected revenue, and margin preview per output row in the New Processing modal.",
+          "alt_name column on items for storing a secondary item name (e.g. Sinhala or Tamil).",
+          "item_name_source setting in receipt template so receipts can print the primary or alternative item name.",
+          "alt_name captured on order items at time of sale so historical receipts always reflect the name used at checkout.",
+          "DB migration V5 adding default_selling_price to stock_processing_output_links.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "Stock processing cost allocation is now revenue-aware — output parts with higher market value absorb proportionally more of the source cost.",
+          "Waste outputs continue to receive zero cost allocation; only usable outputs participate in the ratio.",
+          "Rounding drift is absorbed by the last non-waste output row so the sum of all allocated costs always equals the exact source cost.",
+          "Selling price priority in processing: request override → link default → item selling price.",
+          "If all selling prices are zero the system falls back to the previous quantity-based ratio to avoid divide-by-zero.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Super admin panel login was blocked by the JWT auth filter when an expired Bearer token was sent in the login request headers. JwtAuthFilter now skips the /auth/login endpoint entirely.",
+          "Debug token print statement (System.out.println) removed from JwtAuthFilter.",
+        ],
+      },
+    ],
+    flowMap: [
+      {
+        title: "Sales Value Cost Allocation Flow",
+        steps: [
+          "Open an item with stock processing enabled and set a default selling price for each non-waste output.",
+          "When processing stock, the selling price is pre-filled from the link default or the item's current price.",
+          "The modal shows an estimated allocated cost per row and a total revenue and margin preview.",
+          "On save, each output batch receives a cost proportional to its share of total expected revenue.",
+        ],
+      },
+      {
+        title: "Alt Name Receipt Flow",
+        steps: [
+          "Open an item and enter an alternative name in the Alt Name field (e.g. the Sinhala product name).",
+          "Open Receipt Template Settings and choose Primary Name or Alternative Name as the item name source.",
+          "At checkout, the alt name is captured on the order line so the receipt always prints the name that was active at the time of sale.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "2.0.0",
+    title: "Multi-DB Architecture — Per-Tenant Isolated Databases",
+    releaseDate: "2026-06-19",
+    summary:
+      "Each shop now runs in its own dedicated database (pos_<slug>) instead of sharing a single database with all other tenants. This eliminates cross-tenant data risk, improves query performance, and lays the foundation for per-tenant backups and scaling.",
+    highlights: [
+      "Every shop's data is now stored in a fully isolated database — no shared tables with other tenants.",
+      "Tenant routing is handled automatically at the connection level; no changes are required in the app workflow.",
+      "The legacy shared database (pos_db) is preserved as a read-only rollback anchor and is no longer written to.",
+      "New shops onboarded via the SaaS admin panel get their own database provisioned instantly with Flyway.",
+      "All queries are faster — no tenant_id filter predicate on every table scan.",
+      "The migration runner copies existing tenant data with row-count verification per table before cutover.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Per-tenant database provisioning (pos_<slug>) via Flyway baseline on new shop onboarding.",
+          "TenantDataMigrationRunner with explicit-column copy, FK-order awareness, and per-table row-count verification.",
+          "COPIED migration status so tenant data can be verified before traffic is switched over.",
+          "Master Flyway V2 migration that adds COPIED to the tenant_databases status enum.",
+          "SaasApiIntegrationTest re-enabled with Testcontainers MySQL (skips gracefully when Docker is absent).",
+          "application-tc.properties test profile for real MySQL integration tests.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "Query performance across all tenant-scoped tables — tenant_id predicate removed from every query.",
+          "Unique constraints are now tighter — e.g. barcode is unique per shop DB, not per (barcode, tenant_id) composite.",
+          "TenantProvisioningService now uses Flyway migrate instead of schema LIKE clone, so new DBs always match the current baseline.",
+          "MasterFlywayRunner and MasterDataCopyRunner are profile-guarded and handle empty legacy DB gracefully.",
+        ],
+      },
+      {
+        label: "Changed",
+        items: [
+          "TenantEntity is now an empty @MappedSuperclass — tenant_id column removed from all 45 per-tenant tables.",
+          "All repository native queries rewritten to drop tenant_id predicate (DashboardRepository, ReportRepository, and others).",
+          "TenantFilterAspect deleted — Hibernate session filter is no longer needed with per-DB isolation.",
+          "allow-legacy-fallback is now false in production — all tenants must be MIGRATED before deploy.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Migration runner no longer picks up ad-hoc backup tables from pos_db (table list sourced from provisioned target schema).",
+          "ItemService native queries that still referenced tenant_id column causing 500 on item delete.",
+          "Branch unique constraint violations in integration tests after removing tenant_id from composite keys.",
+        ],
+      },
+    ],
+    flowMap: [],
+  },
   {
     version: "1.13.0",
     title: "Printer Service Integration, Direct Printing, and Receipt Stability",
