@@ -72,6 +72,13 @@ export const printerAgentAPI = {
       body: JSON.stringify({ printerName, html, paperWidth, copies }),
       timeoutMs: 20000,
     }),
+
+  printBarcodes: ({ printerName, html, paperWidth, copies = 1 }) =>
+    requestPrintAgent('/print/barcode', {
+      method: 'POST',
+      body: JSON.stringify({ printerName, html, paperWidth, copies }),
+      timeoutMs: 20000,
+    }),
 };
 
 export const getPrintPaperWidth = (settings, fallback = '80mm') => {

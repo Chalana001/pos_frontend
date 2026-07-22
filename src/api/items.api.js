@@ -28,7 +28,10 @@ export const itemsAPI = {
       signal,
     }),
 
-  searchForPrint: (query) => api.get("/items/search-print", { params: { query } }),
+  searchForPrint: (query, branchId) =>
+    api.get("/items/search-print", {
+      params: (branchId !== undefined && branchId !== null) ? { query, branchId } : { query },
+    }),
 
   getById: (id) => api.get(`/items/${id}`),
   create: (data) => api.post("/items", data),
@@ -64,5 +67,8 @@ export const itemsAPI = {
       responseType: "blob",
     }),
 
-  getRecent: (limit = 50) => api.get("/items/recent", { params: { limit } }),
+  getRecent: (limit = 50, branchId) =>
+    api.get("/items/recent", {
+      params: (branchId !== undefined && branchId !== null) ? { limit, branchId } : { limit },
+    }),
 };
