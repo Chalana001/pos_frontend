@@ -211,6 +211,8 @@ const POS = () => {
   const [cartPanelWidth, setCartPanelWidth] = useState(470);
   const [isResizingPanels, setIsResizingPanels] = useState(false);
   const resizeStateRef = useRef({ startX: 0, startWidth: 470 });
+  const cartPanelRef = useRef(null);
+  const resizeFrameRef = useRef(null);
   const stockOverrideResolverRef = useRef(null);
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
@@ -472,10 +474,22 @@ const POS = () => {
     const handleMouseMove = (event) => {
       const deltaX = resizeStateRef.current.startX - event.clientX;
       const nextWidth = Math.max(360, Math.min(720, resizeStateRef.current.startWidth + deltaX));
-      setCartPanelWidth(nextWidth);
+      resizeStateRef.current.nextWidth = nextWidth;
+      if (resizeFrameRef.current !== null) return;
+      resizeFrameRef.current = requestAnimationFrame(() => {
+        resizeFrameRef.current = null;
+        if (cartPanelRef.current) {
+          cartPanelRef.current.style.width = `min(100%, ${resizeStateRef.current.nextWidth}px)`;
+        }
+      });
     };
 
     const handleMouseUp = () => {
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+      setCartPanelWidth(resizeStateRef.current.nextWidth || resizeStateRef.current.startWidth);
       setIsResizingPanels(false);
     };
 
@@ -489,6 +503,10 @@ const POS = () => {
       document.body.style.userSelect = '';
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
     };
   }, [isResizingPanels]);
 
@@ -1131,12 +1149,14 @@ const POS = () => {
   };
 
   const focusSearch = () => {
+    searchInputRef.current?.focus({ preventScroll: true });
   };
 
   const handleResizeStart = (event) => {
     resizeStateRef.current = {
       startX: event.clientX,
       startWidth: cartPanelWidth,
+      nextWidth: cartPanelWidth,
     };
     setIsResizingPanels(true);
   };
@@ -1576,7 +1596,7 @@ const POS = () => {
 
     setLoading(true);
     try {
-      const orderItems = cartItems.map((item) => createOrderItemPayload(item, shouldUseServerForCheckout ? false : true));
+      const orderItems = cartItems.map((item) => createOrderItemPayload(item, true));
       const orderData = {
         branchId: effectiveBranchId,
         orderType,
@@ -1601,6 +1621,12 @@ const POS = () => {
         const cashierName = user?.name || user?.username || "Cashier";
         const customerName = customer?.name || "Walk-in Customer";
         const offlineInvoiceNo = buildOfflineInvoiceNo(clientSaleId);
+        const receiptCartItems = cartItems.map((item) => ({
+          ...item,
+          discountType: getEffectiveDiscountType(item),
+          discountValue: getEffectiveDiscountValue(item),
+          lineTotal: calculateCartItemTotal(item),
+        }));
         const receiptOrderData = {
           orderId: clientSaleId,
           invoiceNo: offlineInvoiceNo,
@@ -1626,13 +1652,6 @@ const POS = () => {
           cashierName,
           note: isFreeLocalSalesPlan ? "Local FREE sale" : "Offline queued sale",
         };
-        const receiptCartItems = cartItems.map((item) => ({
-          ...item,
-          discountType: getEffectiveDiscountType(item),
-          discountValue: getEffectiveDiscountValue(item),
-          lineTotal: calculateCartItemTotal(item),
-        }));
-
         await addOfflineSale({
           clientSaleId,
           localOnly: isFreeLocalSalesPlan,
@@ -2016,7 +2035,7 @@ const POS = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 lg:gap-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {filteredItems.map((item) => {
+                {filteredItems.map((item, index) => {
                   const unlimitedStockItem = isUnlimitedStockItem(item);
                   const stockQty = getSellableStockBaseQty(item);
                   const isOutOfStock = !unlimitedStockItem && stockQty <= 0;
@@ -2032,7 +2051,7 @@ const POS = () => {
                     <div
                       key={item.id}
                       onClick={() => !tileDisabled && addToCart(item)}
-                      style={{ animationDelay: `${240 + (filteredItems.indexOf(item) % 12) * 32}ms` }}
+                      style={{ animationDelay: `${240 + (index % 12) * 32}ms` }}
                       className={`sales-product-tile sales-panel-hover group relative flex min-h-[144px] flex-col rounded-lg border border-slate-200 bg-white px-2 py-3 text-center transition-all lg:min-h-[164px] lg:rounded-xl lg:px-4 lg:py-3 ${!tileDisabled
                         ? "hover:shadow-md cursor-pointer active:scale-95"
                         : "cursor-not-allowed opacity-90"
@@ -2080,6 +2099,7 @@ const POS = () => {
           minHeightClassName="min-h-full"
         />
         <div
+          ref={cartPanelRef}
           className={`sales-surface sales-panel-enter w-full min-w-0 flex-shrink-0 flex-col h-max rounded-xl transition-opacity duration-300 lg:h-full lg:overflow-hidden lg:rounded-2xl ${!canSell ? "pointer-events-none opacity-50 grayscale" : ""}`}
           style={{ width: `min(100%, ${cartPanelWidth}px)`, animationDelay: "130ms" }}
         >

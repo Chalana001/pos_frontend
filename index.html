@@ -6,6 +6,19 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1d4ed8" />
+    <script>
+      (() => {
+        try {
+          const storedLevel = localStorage.getItem("pos_animation_level");
+          const validLevel = ["off", "balanced", "high"].includes(storedLevel);
+          document.documentElement.dataset.animationLevel = validLevel
+            ? storedLevel
+            : matchMedia("(prefers-reduced-motion: reduce)").matches ? "off" : "balanced";
+        } catch {
+          document.documentElement.dataset.animationLevel = "balanced";
+        }
+      })();
+    </script>
     <title>ZenSys POS</title>
   </head>
   <body>

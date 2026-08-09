@@ -32,6 +32,7 @@ const CustomSelect = ({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const menuRef = useRef(null);
+  const positionFrameRef = useRef(null);
   const [menuStyle, setMenuStyle] = useState(null);
 
   useEffect(() => {
@@ -65,18 +66,26 @@ const CustomSelect = ({
     }
 
     const updateMenuStyle = () => {
-      const rect = dropdownRef.current?.getBoundingClientRect();
-      if (!rect) {
-        return;
-      }
-
-      setMenuStyle({
-        position: "fixed",
-        left: rect.left,
-        top: menuPlacement === "top" ? rect.top - 4 : rect.bottom + 4,
-        width: rect.width,
-        zIndex: 1000,
-        transform: menuPlacement === "top" ? "translateY(-100%)" : "none",
+      if (positionFrameRef.current !== null) return;
+      positionFrameRef.current = requestAnimationFrame(() => {
+        positionFrameRef.current = null;
+        const rect = dropdownRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const nextStyle = {
+          position: "fixed",
+          left: rect.left,
+          top: menuPlacement === "top" ? rect.top - 4 : rect.bottom + 4,
+          width: rect.width,
+          zIndex: 1000,
+          transform: menuPlacement === "top" ? "translateY(-100%)" : "none",
+        };
+        setMenuStyle((current) => current
+          && current.left === nextStyle.left
+          && current.top === nextStyle.top
+          && current.width === nextStyle.width
+          && current.transform === nextStyle.transform
+          ? current
+          : nextStyle);
       });
     };
 
@@ -87,6 +96,10 @@ const CustomSelect = ({
     return () => {
       window.removeEventListener("resize", updateMenuStyle);
       window.removeEventListener("scroll", updateMenuStyle, true);
+      if (positionFrameRef.current !== null) {
+        cancelAnimationFrame(positionFrameRef.current);
+        positionFrameRef.current = null;
+      }
     };
   }, [isOpen, menuPlacement]);
 

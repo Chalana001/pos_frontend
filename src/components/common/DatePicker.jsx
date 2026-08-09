@@ -43,6 +43,7 @@ const DatePicker = ({
 }) => {
   const wrapperRef = useRef(null);
   const menuRef = useRef(null);
+  const positionFrameRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState(null);
 
@@ -76,15 +77,24 @@ const DatePicker = ({
     }
 
     const updateMenuStyle = () => {
-      const rect = wrapperRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      setMenuStyle({
-        position: "fixed",
-        left: rect.left,
-        top: rect.bottom + 6,
-        width: Math.max(rect.width, 280),
-        zIndex: 1100,
+      if (positionFrameRef.current !== null) return;
+      positionFrameRef.current = requestAnimationFrame(() => {
+        positionFrameRef.current = null;
+        const rect = wrapperRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const nextStyle = {
+          position: "fixed",
+          left: rect.left,
+          top: rect.bottom + 6,
+          width: Math.max(rect.width, 280),
+          zIndex: 1100,
+        };
+        setMenuStyle((current) => current
+          && current.left === nextStyle.left
+          && current.top === nextStyle.top
+          && current.width === nextStyle.width
+          ? current
+          : nextStyle);
       });
     };
 
@@ -95,6 +105,10 @@ const DatePicker = ({
     return () => {
       window.removeEventListener("resize", updateMenuStyle);
       window.removeEventListener("scroll", updateMenuStyle, true);
+      if (positionFrameRef.current !== null) {
+        cancelAnimationFrame(positionFrameRef.current);
+        positionFrameRef.current = null;
+      }
     };
   }, [isOpen]);
 

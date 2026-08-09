@@ -31,8 +31,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 
 import { reportsAPI } from "../api/reports.api";
 import { formatCurrency } from "../utils/formatters";
@@ -207,6 +205,7 @@ const Reports = ({ mode = "basic" }) => {
   const [datePreset, setDatePreset] = useState("thisMonth");
   const [dateRange, setDateRange] = useState(() => getPresetDateRange("thisMonth"));
   const [filterVersion, setFilterVersion] = useState(0);
+  const [exporting, setExporting] = useState(null);
   const [filters, setFilters] = useState({
     sortDirection: "DESC",
     salesSortBy: "DATE",
@@ -485,25 +484,62 @@ const Reports = ({ mode = "basic" }) => {
   }, [page]);
 
   const exportToPDF = async () => {
-    if (!reportRef.current) return;
-    const canvas = await html2canvas(reportRef.current, { scale: 2 });
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`report_${activeTab}_${dateRange.from}.pdf`);
-    toast.success("PDF downloaded");
+    if (!reportRef.current || exporting) return;
+    setExporting("pdf");
+    try {
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 1,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+      });
+      const imgData = canvas.toDataURL("image/jpeg", 0.9);
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pageCount = Math.max(1, Math.ceil(pdfHeight / pageHeight));
+      for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+        if (pageIndex > 0) {
+          pdf.addPage();
+        }
+        const y = -(pageIndex * pageHeight);
+        pdf.addImage(imgData, "JPEG", 0, y, pdfWidth, pdfHeight);
+      }
+      pdf.save(`report_${activeTab}_${dateRange.from || "all-time"}.pdf`);
+      toast.success("PDF downloaded");
+    } catch (error) {
+      console.error("PDF export failed", error);
+      toast.error("Failed to export PDF");
+    } finally {
+      setExporting(null);
+    }
   };
 
   const exportChartAsImage = async () => {
-    if (!reportRef.current) return;
-    const canvas = await html2canvas(reportRef.current);
-    const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = `report_${activeTab}.png`;
-    link.click();
-    toast.success("Image downloaded");
+    if (!reportRef.current || exporting) return;
+    setExporting("image");
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 1,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+      });
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = `report_${activeTab}.png`;
+      link.click();
+      toast.success("Image downloaded");
+    } catch (error) {
+      console.error("Image export failed", error);
+      toast.error("Failed to save image");
+    } finally {
+      setExporting(null);
+    }
   };
 
   const reportTypeByTab = {
@@ -1445,11 +1481,11 @@ const Reports = ({ mode = "basic" }) => {
                 </Button>
               ) : (
                 <>
-                  <Button variant="outline" size="sm" onClick={exportChartAsImage}>
-                    <PieIcon size={16} className="mr-2" /> Save Image
+                  <Button variant="outline" size="sm" onClick={exportChartAsImage} disabled={!!exporting}>
+                    <PieIcon size={16} className="mr-2" /> {exporting === "image" ? "Saving..." : "Save Image"}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={exportToPDF}>
-                    <Download size={16} className="mr-2" /> Download PDF
+                  <Button variant="outline" size="sm" onClick={exportToPDF} disabled={!!exporting}>
+                    <Download size={16} className="mr-2" /> {exporting === "pdf" ? "Preparing..." : "Download PDF"}
                   </Button>
                 </>
               )}

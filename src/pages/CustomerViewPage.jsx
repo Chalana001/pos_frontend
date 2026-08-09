@@ -119,7 +119,7 @@ const CustomerViewPage = () => {
                 >
                   <div className="flex aspect-[4/3] items-center justify-center bg-slate-100">
                     {customer?.imageUrl ? (
-                      <img src={customer.imageUrl} alt="customer" className="h-full w-full object-cover" />
+                      <img src={customer.imageUrl} alt="customer" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     ) : (
                       <div className="px-4 text-center text-sm text-slate-500">No image</div>
                     )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { dashboardAPI } from "../api/dashboard.api";
 import { formatCurrency } from "../utils/formatters";
@@ -18,24 +18,31 @@ import {
   Users,
 } from "lucide-react";
 import { useBranch } from "../context/BranchContext";
+import { useAnimationLevel } from "../hooks/useAnimationLevel";
+import { ANIMATION_LEVELS } from "../utils/animationPreferences";
 
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from "recharts";
+const SalesOverviewChart = lazy(() => import("../components/dashboard/SalesOverviewChart"));
 
-const useCountUp = (value, duration = 950) => {
+const getChartDateRange = () => {
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const to = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
+  const from = new Date(firstDay.getTime() - (firstDay.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
+  return { from, to };
+};
+
+const useCountUp = (value, enabled, duration = 950) => {
   const [displayValue, setDisplayValue] = useState(0);
 
   useEffect(() => {
     const target = Number(value || 0);
     if (!Number.isFinite(target)) {
       setDisplayValue(0);
+      return undefined;
+    }
+
+    if (!enabled) {
+      setDisplayValue(target);
       return undefined;
     }
 
@@ -56,13 +63,13 @@ const useCountUp = (value, duration = 950) => {
 
     frameId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frameId);
-  }, [value, duration]);
+  }, [value, enabled, duration]);
 
   return displayValue;
 };
 
-const AnimatedValue = ({ value, type = "number" }) => {
-  const animated = useCountUp(value);
+const AnimatedValue = ({ value, type = "number", enabled = false }) => {
+  const animated = useCountUp(value, enabled);
 
   if (type === "currency") {
     return formatCurrency(animated);
@@ -75,6 +82,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { selectedBranchId } = useBranch();
+  const [animationLevel] = useAnimationLevel();
+  const highMotion = animationLevel === ANIMATION_LEVELS.HIGH;
 
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState(null);
@@ -82,67 +91,64 @@ const Dashboard = () => {
   const [chartData, setChartData] = useState([]);
   const [chartMode, setChartMode] = useState("daily"); 
   const [chartLoading, setChartLoading] = useState(false);
-
-  // 🚀 හැම තැනටම ලේසියෙන් Dates ගන්න Helper Function එකක් හැදුවා
-  const getChartDateRange = () => {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const toStr = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-    const fromStr = new Date(firstDay.getTime() - (firstDay.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-    
-    return { from: fromStr, to: toStr };
-  };
+  const [chartReady, setChartReady] = useState(false);
+  const branchId = canAccessAllBranches(user?.role) ? selectedBranchId : user?.branchId;
 
   useEffect(() => {
-    fetchDashboardData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranchId, user?.role, user?.branchId]);
-
-  useEffect(() => {
-    if (selectedBranchId !== null && selectedBranchId !== undefined) {
-      fetchChartData(chartMode);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chartMode]);
-
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const branchId = canAccessAllBranches(user?.role) ? selectedBranchId : user?.branchId;
-      if (branchId === null || branchId === undefined) return;
-
-      const { from, to } = getChartDateRange(); // 🚀 Dates ගත්තා
-
-      const [kpiRes, chartRes] = await Promise.all([
-        dashboardAPI.getKPIs(branchId),
-        // 🚀 දැන් පේජ් එක ලෝඩ් වෙද්දිම Dates යනවා! 500 Error එක එන්නේ නෑ
-        dashboardAPI.getDailyChart({ branchId, from, to }) 
-      ]);
-
-      setKpis(kpiRes.data);
-      setChartData(chartRes.data);
-      setChartMode("daily");
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
-      setKpis(null);
-    } finally {
+    if (branchId === null || branchId === undefined) {
       setLoading(false);
+      return undefined;
     }
-  };
 
-  const fetchChartData = async (mode) => {
+    let active = true;
+    setLoading(true);
+    setChartReady(false);
+    setChartMode("daily");
+
+    const loadDashboard = async () => {
+      try {
+        const { from, to } = getChartDateRange();
+        const [kpiRes, chartRes] = await Promise.all([
+          dashboardAPI.getKPIs(branchId),
+          dashboardAPI.getDailyChart({ branchId, from, to }),
+        ]);
+        if (!active) return;
+        setKpis(kpiRes.data);
+        setChartData(chartRes.data);
+      } catch (error) {
+        if (!active) return;
+        console.error("Failed to fetch dashboard data:", error);
+        setKpis(null);
+        setChartData([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadDashboard();
+    return () => {
+      active = false;
+    };
+  }, [branchId]);
+
+  useEffect(() => {
+    if (loading) return undefined;
+    const schedule = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 120));
+    const cancel = window.cancelIdleCallback || window.clearTimeout;
+    const handle = schedule(() => setChartReady(true), { timeout: 500 });
+    return () => cancel(handle);
+  }, [loading]);
+
+  const selectChartMode = useCallback(async (mode) => {
+    if (mode === chartMode || branchId === null || branchId === undefined) return;
+    setChartMode(mode);
     setChartLoading(true);
     try {
-      const branchId = canAccessAllBranches(user?.role) ? selectedBranchId : user?.branchId;
-      const { from, to } = getChartDateRange(); // 🚀 Dates ගත්තා
-      
+      const { from, to } = getChartDateRange();
       const params = { branchId, from, to };
-      
-      const response = mode === "daily" 
+      const response = mode === "daily"
         ? await dashboardAPI.getDailyChart(params)
         : await dashboardAPI.getMonthlyChart(params);
-        
       setChartData(response.data);
     } catch (error) {
       console.error(`Failed to fetch ${mode} chart data:`, error);
@@ -150,7 +156,7 @@ const Dashboard = () => {
     } finally {
       setChartLoading(false);
     }
-  };
+  }, [branchId, chartMode]);
 
   if (loading) {
     return (
@@ -223,7 +229,7 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm text-slate-600 mb-1">{stat.title}</p>
                     <p className="text-2xl font-bold text-slate-800 tabular-nums">
-                      <AnimatedValue value={stat.value} type={stat.type} />
+                      <AnimatedValue value={stat.value} type={stat.type} enabled={highMotion} />
                     </p>
                     {stat.change && <p className="text-sm text-green-600 mt-1">{stat.change}</p>}
                   </div>
@@ -250,7 +256,7 @@ const Dashboard = () => {
               
               <div className="flex bg-slate-100 p-1 rounded-lg">
                 <button
-                  onClick={() => setChartMode("daily")}
+                  onClick={() => selectChartMode("daily")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
                     chartMode === "daily" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
                   }`}
@@ -258,7 +264,7 @@ const Dashboard = () => {
                   Daily
                 </button>
                 <button
-                  onClick={() => setChartMode("monthly")}
+                  onClick={() => selectChartMode("monthly")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
                     chartMode === "monthly" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
                   }`}
@@ -275,61 +281,12 @@ const Dashboard = () => {
                 </div>
               )}
               
-              {/* 🚀 Recharts Warning එක නවත්තන්න Data තියෙනවා නම් විතරක් Render කරනවා */}
-              {chartData && chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorSalesDash" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(str) => {
-                        if (!str) return "";
-                        const d = new Date(str);
-                        return chartMode === "monthly" 
-                          ? d.toLocaleDateString('en-US', { month: 'short' }) 
-                          : `${d.getDate()}/${d.getMonth()+1}`;
-                      }} 
-                      style={{ fontSize: '12px', fill: '#64748B' }} 
-                      axisLine={false}
-                      tickLine={false}
-                      dy={10}
-                    />
-                    <YAxis 
-                      style={{ fontSize: '12px', fill: '#64748B' }} 
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(val) => `Rs.${val >= 1000 ? (val/1000)+'k' : val}`}
-                    />
-                    <Tooltip 
-                      formatter={(value) => formatCurrency(value)}
-                      labelFormatter={(label) => {
-                        if (!label) return "";
-                        const d = new Date(label);
-                        return chartMode === "monthly" 
-                          ? d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                          : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                      }}
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="sales" 
-                      stroke="#3B82F6" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorSalesDash)" 
-                      activeDot={{ r: 6, strokeWidth: 0, fill: '#2563EB' }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+              {chartReady && chartData && chartData.length > 0 ? (
+                <Suspense fallback={<div className="h-full rounded-lg bg-slate-50" />}>
+                  <SalesOverviewChart data={chartData} chartMode={chartMode} animate={highMotion} />
+                </Suspense>
               ) : (
-                !chartLoading && (
+                !chartLoading && chartReady && (
                   <div className="flex items-center justify-center h-full text-slate-400 text-sm">
                     No data available for this period.
                   </div>

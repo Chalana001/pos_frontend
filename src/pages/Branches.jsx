@@ -207,6 +207,10 @@ const Branches = () => {
           <img
             src={b.logo}
             alt={`${b.name} logo`}
+            loading="lazy"
+            decoding="async"
+            width="40"
+            height="40"
             className="h-10 w-10 rounded-lg border border-slate-200 object-contain bg-white p-1"
           />
         ) : (

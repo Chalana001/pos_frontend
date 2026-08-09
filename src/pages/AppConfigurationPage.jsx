@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Building2, ChefHat, FileText, Printer, ReceiptText, Save, Scale, Settings2, ShieldCheck, ShieldPlus, Table2, Ticket, Users, Wrench } from 'lucide-react';
+import { Activity, Building2, ChefHat, FileText, Printer, ReceiptText, Save, Scale, Settings2, ShieldCheck, ShieldPlus, Table2, Ticket, Users, Wrench } from 'lucide-react';
 
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
@@ -9,6 +9,8 @@ import CustomSelect from '../components/common/CustomSelect';
 import { useAppConfiguration } from '../context/AppConfigurationContext';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
+import { useAnimationLevel } from '../hooks/useAnimationLevel';
+import { ANIMATION_LEVELS } from '../utils/animationPreferences';
 import { getConfigurableFeatureAvailability, hasPlanFeature } from '../utils/subscriptionFeatures';
 
 const featureDefinitions = [
@@ -87,6 +89,7 @@ const AppConfigurationPage = () => {
   const { configuration, loading, saveConfiguration, activeBranchId } = useAppConfiguration();
   const [form, setForm] = useState(configuration);
   const [saving, setSaving] = useState(false);
+  const [animationLevel, setAnimationLevel] = useAnimationLevel();
   const featureAvailability = useMemo(
     () => getConfigurableFeatureAvailability(user?.planName),
     [user?.planName]
@@ -202,6 +205,12 @@ const AppConfigurationPage = () => {
       label: 'Always Allow',
       description: 'Allow stock override mode, still limited by the role permissions below.',
     },
+  ];
+
+  const animationLevelOptions = [
+    { value: ANIMATION_LEVELS.OFF, label: 'Off' },
+    { value: ANIMATION_LEVELS.BALANCED, label: 'Balanced' },
+    { value: ANIMATION_LEVELS.HIGH, label: 'High' },
   ];
 
   return (
@@ -413,6 +422,28 @@ const AppConfigurationPage = () => {
 
         <Card className="admin-panel-card" title="Management" style={{ animationDelay: '130ms' }}>
           <div className="space-y-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <div className="mb-3 flex gap-3">
+                <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
+                  <Activity size={18} />
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-800">Animation Level</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    This device only. Balanced is recommended; Off is best for older computers.
+                  </div>
+                </div>
+              </div>
+              <CustomSelect
+                value={animationLevel}
+                onChange={setAnimationLevel}
+                options={animationLevelOptions}
+                valueKey="value"
+                labelKey="label"
+                buttonClassName="h-11 rounded-xl bg-white"
+                placeholder="Select animation level"
+              />
+            </div>
             {quickLinks.map((link) => {
               const Icon = link.icon;
               return (

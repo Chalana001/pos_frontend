@@ -45,6 +45,7 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
                     <img
                       src={formData.imageUrl}
                       alt="preview"
+                      decoding="async"
                       className="w-full h-full object-cover"
                       onError={() => setImgError(true)}
                     />

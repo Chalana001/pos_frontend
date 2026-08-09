@@ -147,6 +147,91 @@
   --motion-panel-shadow: 0 26px 60px rgb(15 23 42 / 0.14);
 }
 
+html[data-animation-level="off"] {
+  scroll-behavior: auto !important;
+}
+
+html[data-animation-level="off"] *,
+html[data-animation-level="off"] *::before,
+html[data-animation-level="off"] *::after {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-animation-level="off"] .shell-surface,
+html[data-animation-level="off"] .auth-card,
+html[data-animation-level="balanced"] .shell-surface,
+html[data-animation-level="balanced"] .auth-card {
+  backdrop-filter: none;
+}
+
+html[data-animation-level="off"] .page-enter,
+html[data-animation-level="off"] .page-section-enter,
+html[data-animation-level="off"] .shell-header-enter,
+html[data-animation-level="off"] .shell-sidebar-enter,
+html[data-animation-level="off"] .shell-nav-item-enter,
+html[data-animation-level="off"] .auth-panel-enter,
+html[data-animation-level="off"] .modal-overlay-enter,
+html[data-animation-level="off"] .modal-panel-enter,
+html[data-animation-level="off"] .dashboard-rise-in,
+html[data-animation-level="off"] .dashboard-card-in,
+html[data-animation-level="off"] .dashboard-icon-pop,
+html[data-animation-level="off"] .dashboard-chart-in,
+html[data-animation-level="off"] .sales-panel-enter,
+html[data-animation-level="off"] .sales-product-tile,
+html[data-animation-level="off"] .sales-cart-item,
+html[data-animation-level="off"] .sales-queue-card,
+html[data-animation-level="off"] .profile-stat-card,
+html[data-animation-level="off"] .profile-detail-card,
+html[data-animation-level="off"] .profile-note-card,
+html[data-animation-level="off"] .inventory-filter-bar,
+html[data-animation-level="off"] .inventory-kpi-card,
+html[data-animation-level="off"] .inventory-detail-card,
+html[data-animation-level="off"] .purchase-summary-card,
+html[data-animation-level="off"] .purchase-line-card,
+html[data-animation-level="off"] .purchase-split-panel,
+html[data-animation-level="off"] .ops-summary-card,
+html[data-animation-level="off"] .ops-alert-card,
+html[data-animation-level="off"] .ops-audit-card,
+html[data-animation-level="off"] .admin-panel-card,
+html[data-animation-level="off"] .admin-kpi-card,
+html[data-animation-level="off"] .report-tab-chip,
+html[data-animation-level="off"] #root table tbody tr {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+html[data-animation-level="balanced"] .sidebar-logo-spin,
+html[data-animation-level="balanced"] .shell-kpi-glow,
+html[data-animation-level="balanced"] .dashboard-soft-glow,
+html[data-animation-level="balanced"] .scan-effect {
+  animation: none !important;
+}
+
+html[data-animation-level="balanced"] .page-enter,
+html[data-animation-level="balanced"] .page-section-enter,
+html[data-animation-level="balanced"] .auth-panel-enter,
+html[data-animation-level="balanced"] .modal-panel-enter,
+html[data-animation-level="balanced"] .dashboard-rise-in,
+html[data-animation-level="balanced"] .dashboard-card-in {
+  filter: none !important;
+  animation-duration: 180ms !important;
+  animation-delay: 0ms !important;
+}
+
+html[data-animation-level="balanced"] .shell-nav-item-enter,
+html[data-animation-level="balanced"] .dashboard-icon-pop,
+html[data-animation-level="balanced"] .dashboard-chart-in,
+html[data-animation-level="balanced"] #root table tbody tr,
+html[data-animation-level="balanced"] .custom-select-option {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
 /* Print styles */
 @media print {
   body * {
@@ -702,6 +787,23 @@
   #root table tbody tr:nth-child(9) { animation-delay: 220ms; }
   #root table tbody tr:nth-child(10) { animation-delay: 245ms; }
   #root table tbody tr:nth-child(n + 11) { animation-delay: 270ms; }
+}
+
+html[data-animation-level="balanced"] #root table tbody tr {
+  animation: none !important;
+}
+
+html[data-animation-level="off"] #root table tbody tr,
+html[data-animation-level="balanced"] #root table tbody tr {
+  transition: background-color 120ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-animation-level="off"] #root table tbody tr:hover,
+  html[data-animation-level="balanced"] #root table tbody tr:hover {
+    transform: none;
+    box-shadow: inset 3px 0 0 rgb(37 99 235 / 0.55);
+  }
 }
 
 #root table tbody tr {

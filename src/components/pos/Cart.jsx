@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Trash2, Minus, Plus, Tag, UserPlus, Receipt, X } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { DISCOUNT_TYPES, ItemType } from "../../utils/constants";
@@ -94,20 +94,16 @@ const Cart = ({
 
   const safeBillDiscount = Math.max(0, toFiniteNumber(billDiscount));
   
-  const computedSubTotal = cartItems.reduce((acc, item) => {
+  const { computedSubTotal, lineTotalAfterItemDiscounts } = useMemo(() => cartItems.reduce((totals, item) => {
     const qty = toFiniteNumber(item?.qty);
-    if (qty <= 0) {
-      return acc;
-    }
-
+    if (qty <= 0) return totals;
     const lineBaseTotal = item?.weightItem && (item?.qtyUnit === "G" || item?.qtyUnit === "ML")
       ? qty * toFiniteNumber(item?.perSmallUnitPrice ?? item?.perGramPrice)
       : qty * toFiniteNumber(item?.unitPrice);
-
-    return acc + Math.max(0, lineBaseTotal);
-  }, 0);
-  
-  const lineTotalAfterItemDiscounts = cartItems.reduce((acc, item) => acc + calculateItemTotal(item), 0);
+    totals.computedSubTotal += Math.max(0, lineBaseTotal);
+    totals.lineTotalAfterItemDiscounts += calculateItemTotal(item);
+    return totals;
+  }, { computedSubTotal: 0, lineTotalAfterItemDiscounts: 0 }), [cartItems]);
   const previewBillDiscount = Number(billPromotion?.appliedBillDiscountAmount);
   const effectiveBillDiscount = Math.max(0, Math.min(
     lineTotalAfterItemDiscounts,

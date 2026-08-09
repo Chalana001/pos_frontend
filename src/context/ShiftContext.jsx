@@ -62,8 +62,13 @@ export const ShiftProvider = ({ children }) => {
     refreshShift();
   }, [refreshShift]);
 
+  const contextValue = useMemo(
+    () => ({ activeShift, loadingShift, refreshShift }),
+    [activeShift, loadingShift, refreshShift]
+  );
+
   return (
-    <ShiftContext.Provider value={{ activeShift, loadingShift, refreshShift }}>
+    <ShiftContext.Provider value={contextValue}>
       {children}
     </ShiftContext.Provider>
   );

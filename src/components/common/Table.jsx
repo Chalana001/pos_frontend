@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Table = ({ columns, data, onRowClick }) => {
+const Table = ({ columns, data, onRowClick, getRowKey }) => {
   return (
     <div className="app-table-wrap">
       <table className="app-table min-w-full">
@@ -8,7 +8,7 @@ const Table = ({ columns, data, onRowClick }) => {
           <tr>
             {columns.map((column, index) => (
               <th
-                key={index}
+                key={column.key ?? column.accessor ?? column.header ?? index}
                 className="app-table-head-cell"
               >
                 {column.header}
@@ -29,12 +29,12 @@ const Table = ({ columns, data, onRowClick }) => {
           ) : (
             data.map((row, rowIndex) => (
               <tr
-                key={rowIndex}
+                key={getRowKey?.(row, rowIndex) ?? row.id ?? rowIndex}
                 onClick={() => onRowClick?.(row)}
                 className={onRowClick ? 'app-table-row-clickable' : ''}
               >
                 {columns.map((column, colIndex) => (
-                  <td key={colIndex} className="app-table-cell whitespace-nowrap text-slate-900">
+                  <td key={column.key ?? column.accessor ?? column.header ?? colIndex} className="app-table-cell whitespace-nowrap text-slate-900">
                     {column.render ? column.render(row, rowIndex) : row[column.accessor]}
                   </td>
                 ))}

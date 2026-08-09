@@ -1,10 +1,18 @@
-const CACHE_NAME = "pos-shell-v2";
-const RUNTIME_CACHE = "pos-runtime-v2";
-const PRECACHE_URLS = ["/", "/index.html", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE_NAME = "pos-shell-v3";
+const RUNTIME_CACHE = "pos-runtime-v3";
+const PRECACHE_URLS = ["/", "/index.html", "/manifest.webmanifest", "/branding/zensys-logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.all(PRECACHE_URLS.map(async (url) => {
+        try {
+          await cache.add(url);
+        } catch (error) {
+          console.warn(`Unable to precache ${url}`, error);
+        }
+      }));
+    })
   );
   self.skipWaiting();
 });
@@ -31,7 +39,11 @@ self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
   const isSameOrigin = requestUrl.origin === self.location.origin;
 
-  if (requestUrl.pathname.startsWith("/api/")) {
+  if (
+    requestUrl.pathname.startsWith("/api/")
+    || requestUrl.pathname.startsWith("/auth/")
+    || requestUrl.pathname.startsWith("/graphql")
+  ) {
     return;
   }
 
@@ -40,12 +52,16 @@ self.addEventListener("fetch", (event) => {
       fetch(event.request)
         .then(async (networkResponse) => {
           const cache = await caches.open(CACHE_NAME);
-          cache.put("/index.html", networkResponse.clone());
+          if (networkResponse.ok && networkResponse.headers.get("content-type")?.includes("text/html")) {
+            cache.put("/index.html", networkResponse.clone());
+          }
           return networkResponse;
         })
         .catch(async () => {
           const cache = await caches.open(CACHE_NAME);
-          return cache.match("/index.html");
+          const fallback = await cache.match("/index.html");
+          if (fallback) return fallback;
+          throw new Error("Offline shell is unavailable");
         })
     );
     return;
@@ -58,8 +74,12 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(event.request)
       .then(async (networkResponse) => {
-        const cache = await caches.open(RUNTIME_CACHE);
-        cache.put(event.request, networkResponse.clone());
+        const contentType = networkResponse.headers.get("content-type") || "";
+        const isDataResponse = contentType.includes("application/json") || contentType.includes("text/event-stream");
+        if (networkResponse.ok && !isDataResponse) {
+          const cache = await caches.open(RUNTIME_CACHE);
+          cache.put(event.request, networkResponse.clone());
+        }
         return networkResponse;
       })
       .catch(async () => {

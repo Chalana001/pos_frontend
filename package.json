@@ -7,7 +7,20 @@
     "dev": "vite",
     "lint": "eslint src",
     "build": "vite build",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
+    "build:check": "npm run build && npm run check:bundle",
     "preview": "vite preview"
+  },
+  "browserslist": {
+    "production": [
+      "Chrome >= 100",
+      "Edge >= 100",
+      "Firefox >= 100",
+      "Safari >= 15"
+    ],
+    "development": [
+      "last 1 Chrome version"
+    ]
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

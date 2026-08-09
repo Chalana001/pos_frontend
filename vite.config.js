@@ -4,13 +4,15 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
+    target: ['chrome100', 'edge100', 'firefox100', 'safari15'],
     // Warn when any chunk exceeds 500 kB
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 450,
     // Strip console.log in production — console.error/warn are kept for monitoring
     minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: false,
+        drop_debugger: true,
         pure_funcs: ['console.log'],
       },
     },
@@ -29,6 +31,14 @@ export default defineConfig({
 
           if (/[\\/]node_modules[\\/]html2canvas[\\/]/.test(id)) {
             return 'html2canvas-vendor';
+          }
+
+          if (/[\\/]node_modules[\\/]jspdf[\\/]/.test(id)) {
+            return 'pdf-vendor';
+          }
+
+          if (/[\\/]node_modules[\\/](react-hot-toast|goober)[\\/]/.test(id)) {
+            return 'toast-vendor';
           }
 
           if (/[\\/]node_modules[\\/]lucide-react[\\/]/.test(id)) {

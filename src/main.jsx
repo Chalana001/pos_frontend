@@ -6,6 +6,9 @@ import "./index.css";
 
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
+import { applyAnimationLevel, getAnimationLevel } from "./utils/animationPreferences.js";
+
+applyAnimationLevel(getAnimationLevel());
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

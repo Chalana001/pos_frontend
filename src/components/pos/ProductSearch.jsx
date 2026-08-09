@@ -16,9 +16,11 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
   // BUG-11 FIX: AbortController ref to cancel stale in-flight requests when the
   // search term changes rapidly (race condition — later response arriving before earlier one).
   const abortRef = useRef(null);
+  const visibleItems = items.slice(0, 50);
 
   useEffect(() => {
     if (!isOpen) {
+      abortRef.current?.abort();
       setSearchQuery("");
       setItems([]);
       return;
@@ -69,7 +71,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
               <p>No products found</p>
             </div>
           ) : (
-            items.map((item) => {
+            visibleItems.map((item) => {
               const isService = item.itemType === ItemType.SERVICE;
               const stockQty = getDisplayStockQuantity(item);
               const qtyLabel = formatDisplayStockQuantity(item);
@@ -78,7 +80,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
                 <button
                   key={item.id}
                   onClick={() => { onSelectItem(item); onClose(); }}
-                  className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-blue-400 hover:shadow-md hover:bg-blue-50/30 transition-all text-left group"
+                  className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-blue-400 hover:bg-blue-50/30 transition-colors text-left group"
                 >
                   <div>
                     <h3 className="font-bold text-slate-800 group-hover:text-blue-700">{item.name}</h3>
@@ -98,6 +100,11 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
               );
             })
           )}
+          {!loading && items.length > visibleItems.length ? (
+            <div className="py-3 text-center text-xs font-medium text-slate-500">
+              Showing the first {visibleItems.length} results. Refine your search to see more.
+            </div>
+          ) : null}
         </div>
       </div>
     </Modal>
