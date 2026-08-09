@@ -1,20 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import Barcode from "react-barcode";
 import { Search, Plus, Trash2, Printer, Minus, RefreshCw } from "lucide-react";
 
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import BarcodeLabel from "../components/barcode/BarcodeLabel";
 
-import { itemsAPI } from "../api/items.api"; 
+import { itemsAPI } from "../api/items.api";
+import { barcodeLabelSettingsAPI } from "../api/barcodeLabelSettings.api";
+import { printerAgentAPI } from "../api/printerAgent.api";
 
 import { useSearchOnType } from "../hooks/useSearchOnType";
+import { useBranch } from "../context/BranchContext";
+import { useAuth } from "../context/AuthContext";
+import { DEFAULT_BARCODE_LABEL_SETTINGS, normalizeBarcodeLabelSettings } from "../utils/barcodeLabelSettings";
+import { buildBarcodePrintHtml } from "../utils/buildBarcodePrintHtml";
+import { BRAND_NAME_UPPER } from "../utils/branding";
 
 const BarcodePrintPage = () => {
+  const { user } = useAuth();
+  const { selectedBranchId } = useBranch();
+  const shopName = user?.shopName || BRAND_NAME_UPPER;
+  const printContainerRef = useRef(null);
+
+  const [labelSettings, setLabelSettings] = useState(DEFAULT_BARCODE_LABEL_SETTINGS);
   const [printList, setPrintList] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+  const [directPrinting, setDirectPrinting] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useSearchOnType(setSearchQuery);
   const [searchResults, setSearchResults] = useState([]);
@@ -22,12 +36,36 @@ const BarcodePrintPage = () => {
   // 🔴 අලුතින් එකතු කරපු state එක: Recent Items කීයක් ගන්නවද කියන එක
   const [recentLimit, setRecentLimit] = useState(20);
 
+  // Branch-wise barcode label design (falls back to defaults for "All Branches" / offline)
+  useEffect(() => {
+    const branchId = Number(selectedBranchId);
+    if (!branchId) {
+      setLabelSettings(DEFAULT_BARCODE_LABEL_SETTINGS);
+      return;
+    }
+
+    let cancelled = false;
+    barcodeLabelSettingsAPI
+      .getByBranch(branchId)
+      .then((res) => {
+        if (!cancelled) setLabelSettings(normalizeBarcodeLabelSettings(res.data));
+      })
+      .catch((err) => {
+        console.error(err);
+        if (!cancelled) setLabelSettings(DEFAULT_BARCODE_LABEL_SETTINGS);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBranchId]);
+
   // 1. Live API Call: අලුත්ම Items ටික ගැනීම (Limit එකත් එක්ක)
   const loadRecentItems = async (limitToFetch) => {
     setLoading(true);
     try {
       // 🔴 මෙතන limit එක backend එකට යවනවා
-      const res = await itemsAPI.getRecent(limitToFetch);
+      const res = await itemsAPI.getRecent(limitToFetch, Number(selectedBranchId) || undefined);
       const data = res.data || [];
       
       const initialCart = data.map(item => ({ ...item, printQty: 1 }));
@@ -62,7 +100,7 @@ const BarcodePrintPage = () => {
 
     if (query.trim().length > 2) {
       try {
-        const res = await itemsAPI.searchForPrint(query); 
+        const res = await itemsAPI.searchForPrint(query, Number(selectedBranchId) || undefined);
         setSearchResults(res.data || []);
       } catch (err) {
         console.error("Search error:", err);
@@ -101,12 +139,85 @@ const BarcodePrintPage = () => {
     setPrintList(printList.filter(i => i.id !== id));
   };
 
-  const handlePrint = () => {
+  // Browser printing for barcode labels.
+  // We DON'T use window.print() on the live page: that relies on a
+  // `visibility:hidden` hack over the whole app, which leaves the app's full
+  // layout occupying space (blank pages) and breaks on small label paper sizes
+  // because the absolutely-positioned labels can't paginate. Instead we print a
+  // clean standalone document (only the labels) inside a hidden iframe, with an
+  // explicit `@page { size: labelW×labelH }`, so it renders correctly whatever
+  // paper size the browser dialog is set to.
+  const printLabelsViaBrowser = () =>
+    new Promise((resolve) => {
+      const html = buildBarcodePrintHtml(printContainerRef.current?.outerHTML || "", labelSettings);
+
+      const iframe = document.createElement("iframe");
+      iframe.setAttribute("aria-hidden", "true");
+      Object.assign(iframe.style, {
+        position: "fixed",
+        right: "0",
+        bottom: "0",
+        width: "0",
+        height: "0",
+        border: "0",
+      });
+      document.body.appendChild(iframe);
+
+      const cleanup = () => {
+        // Keep the iframe around briefly so the print dialog can read from it.
+        window.setTimeout(() => {
+          iframe.remove();
+          resolve();
+        }, 1000);
+      };
+
+      iframe.onload = () => {
+        // Let the barcode <img> data URLs decode before printing.
+        window.setTimeout(() => {
+          try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+          } catch (err) {
+            console.error(err);
+          } finally {
+            cleanup();
+          }
+        }, 200);
+      };
+
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
+    });
+
+  const handlePrint = async () => {
     if (printList.length === 0) {
       toast.error("Print list is empty");
       return;
     }
-    window.print();
+
+    if (labelSettings.directPrintEnabled && labelSettings.printerName) {
+      try {
+        setDirectPrinting(true);
+        const html = buildBarcodePrintHtml(printContainerRef.current?.outerHTML || "", labelSettings);
+        await printerAgentAPI.printBarcodes({
+          printerName: labelSettings.printerName,
+          html,
+          paperWidth: `${labelSettings.labelWidthMm}mm`,
+          copies: labelSettings.printerCopies,
+        });
+        toast.success("Sent to printer");
+        return;
+      } catch (err) {
+        console.error(err);
+        toast.error(err.message || "Direct print failed — falling back to browser print");
+      } finally {
+        setDirectPrinting(false);
+      }
+    }
+
+    await printLabelsViaBrowser();
   };
 
   return (
@@ -115,9 +226,9 @@ const BarcodePrintPage = () => {
       {/* --- Header Section --- */}
       <div className="page-section-enter flex items-center justify-between gap-4 print:hidden" style={{ animationDelay: "80ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">Print Barcodes</h1>
-        <Button onClick={handlePrint} disabled={printList.length === 0 || loading}>
+        <Button onClick={handlePrint} disabled={printList.length === 0 || loading || directPrinting}>
           <Printer size={18} className="mr-2" />
-          Print All Barcodes
+          {directPrinting ? "Sending to Printer..." : "Print All Barcodes"}
         </Button>
       </div>
 
@@ -253,27 +364,14 @@ const BarcodePrintPage = () => {
       </div>
 
 
-      <div className="hidden print:flex print-container">
-        {printList.map(item => 
+      <div ref={printContainerRef} className="hidden print:flex print-container">
+        {printList.map(item =>
           Array.from({ length: item.printQty }).map((_, idx) => (
-            <div key={`${item.id}-${idx}`} className="barcode-sticker">
-              <div className="sticker-shop">Thoga POS</div>
-              <div className="sticker-name">{item.name.substring(0, 22)}</div>
-              <Barcode 
-                value={item.barcode} 
-                format="CODE128" 
-                width={1.5} 
-                height={35} 
-                fontSize={12}
-                margin={2}
-                displayValue={true}
-              />
-              <div className="sticker-price">Rs. {item.sellingPrice?.toLocaleString()}</div>
-            </div>
+            <BarcodeLabel key={`${item.id}-${idx}`} item={item} settings={labelSettings} shopName={shopName} />
           ))
         )}
       </div>
-      
+
     </div>
   );
 };

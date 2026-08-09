@@ -1,6 +1,61 @@
-export const APP_VERSION = "2.1.0";
+export const APP_VERSION = "2.2.0";
 
 export const VERSION_HISTORY = [
+  {
+    version: "2.2.0",
+    title: "Barcode Label Designer, Direct Printing & Print Fixes",
+    releaseDate: "2026-07-22",
+    summary:
+      "Barcode labels now have a full per-branch designer that works just like the receipt layout designer — reorder every element, add custom text lines, and style each line with its own font size, bold/italic/underline, and alignment. Direct and browser printing were made reliable, and the bugs that caused barcodes to disappear on label paper sizes are fixed.",
+    highlights: [
+      "New per-branch Barcode Label Designer — reorder Shop Name, Item Name, Barcode, Price, Expiry, and Footer, show/hide any element, and rename its text.",
+      "Add unlimited custom text lines (warranty, weight, made-in, etc.) anywhere on the label.",
+      "Each label element now has its own font size, bold, italic, underline, and left/center/right alignment.",
+      "Barcodes that were printing blank on smaller label paper sizes now print reliably.",
+      "The barcode number now prints in the same font as the price and other lines, instead of the old monospace style.",
+      "Direct printing through the local printer service, plus a browser-print fallback that prints only the labels at the correct label size.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Barcode Label Designer with a reorderable element list (up/down), per-element show/hide, rename, font size, bold/italic/underline, and alignment — mirroring the receipt layout designer.",
+          "Custom text lines on labels that can be placed anywhere in the label order.",
+          "Per-branch label layout stored as JSON, with automatic fallback to the previous fixed layout for branches that have not customized yet.",
+          "Label size presets plus custom width/height with mm and inch entry.",
+          "Expiry date on labels using the earliest-expiry sellable stock batch (FEFO), scoped per branch.",
+          "Branch-aware recent items and search on the Print Barcodes page.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "The label preview and the printed label are now rendered by one shared component, so the on-screen preview always matches the real print output.",
+          "Browser printing now prints an isolated document containing only the labels, at the correct label page size, instead of trying to print through the whole app screen.",
+          "Barcode value text is rendered as normal label text, so it lines up with the price and other elements in the same font.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Barcodes were printing as blank labels because the barcode canvas was not captured into the print output; the barcode is now an image that prints reliably.",
+          "Barcodes disappeared when a label paper size was selected in the browser print dialog.",
+          "The barcode number printed in a different (monospace) font than the rest of the label; it now matches the label font.",
+        ],
+      },
+    ],
+    flowMap: [
+      {
+        title: "Barcode Label Design Flow",
+        steps: [
+          "Open Receipt Design and switch to the Barcode tab for a selected branch.",
+          "Reorder, show/hide, rename, and style each label element, or add custom text lines.",
+          "Watch the live preview update as you edit, then Save.",
+          "Print from the Print Barcodes page — labels print with your saved layout.",
+        ],
+      },
+    ],
+  },
   {
     version: "2.1.0",
     title: "Sales Value Costing, Item Alt Names, Super Admin Fix",

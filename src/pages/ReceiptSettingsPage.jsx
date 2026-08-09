@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ArrowDown, ArrowUp, Bold, Building2, ChefHat, FileText, Italic, Layers, Plus, Printer, RefreshCw, Save, Ticket, Trash2, Type, Underline } from 'lucide-react';
+import { ArrowDown, ArrowUp, Barcode, Bold, Building2, ChefHat, FileText, Italic, Layers, Plus, Printer, RefreshCw, Save, Ticket, Trash2, Type, Underline } from 'lucide-react';
 
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -8,9 +8,11 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ReceiptTemplate from '../components/receipt/ReceiptTemplate';
 import InvoiceTemplate from '../components/invoice/InvoiceTemplate';
 import CustomSelect from '../components/common/CustomSelect';
+import BarcodeSettingsPanel, { BarcodePreview } from '../components/barcode/BarcodeSettingsPanel';
 import { useBranch } from '../context/BranchContext';
 import { useAuth } from '../context/AuthContext';
 import { useAppConfiguration } from '../context/AppConfigurationContext';
+import { hasPlanFeature } from '../utils/subscriptionFeatures';
 import {
   getReceiptSettingsDefaults,
   normalizeReceiptSettings,
@@ -25,6 +27,17 @@ import {
   createReceiptTemplateLine,
   getActiveTemplateLines,
 } from '../utils/receiptSettings';
+import {
+  DEFAULT_BARCODE_LABEL_SETTINGS,
+  normalizeBarcodeLabelSettings,
+  getActiveLabelElements,
+  createBarcodeElement,
+} from '../utils/barcodeLabelSettings';
+import { barcodeLabelSettingsAPI } from '../api/barcodeLabelSettings.api';
+
+// Sentinel value for the "Barcode" pill — not part of the backend PrintTemplateType
+// enum (THERMAL/A4/KOT); barcode settings are a separate table/entity/API.
+const BARCODE_TAB = 'BARCODE';
 
 // Line types where ALL formatting controls (font-size, align, B/I/U) are irrelevant
 const NO_FORMAT_LINE_TYPES = ['SEPARATOR', 'BLANK'];
@@ -282,6 +295,8 @@ const ReceiptSettingsPage = () => {
   );
 
   const [activeTemplate, setActiveTemplate] = useState(PRINT_TEMPLATE_TYPES.THERMAL);
+  const isBarcodeTab = activeTemplate === BARCODE_TAB;
+  const barcodeFeatureEnabled = hasPlanFeature(user?.planName, 'BARCODE_PRINT');
   const [form, setForm] = useState(getReceiptSettingsDefaults(PRINT_TEMPLATE_TYPES.THERMAL));
   // templateLines: the live array for the line-by-line editor (Thermal only)
   const [templateLines, setTemplateLines] = useState(null); // null = not yet initialised
@@ -293,6 +308,13 @@ const ReceiptSettingsPage = () => {
   const [printAgentOnline, setPrintAgentOnline] = useState(false);
   const [printerOptions, setPrinterOptions] = useState([]);
 
+  // Barcode label settings — separate domain/table/API from receipt settings above.
+  const [barcodeForm, setBarcodeForm] = useState(DEFAULT_BARCODE_LABEL_SETTINGS);
+  // barcodeElements: the live ordered element array for the Label Layout Designer.
+  const [barcodeElements, setBarcodeElements] = useState(() => getActiveLabelElements(DEFAULT_BARCODE_LABEL_SETTINGS));
+  const [barcodeLoading, setBarcodeLoading] = useState(true);
+  const [barcodeSaving, setBarcodeSaving] = useState(false);
+
   useEffect(() => {
     if (!kotEnabled && activeTemplate === PRINT_TEMPLATE_TYPES.KOT) {
       setActiveTemplate(PRINT_TEMPLATE_TYPES.THERMAL);
@@ -300,6 +322,8 @@ const ReceiptSettingsPage = () => {
   }, [activeTemplate, kotEnabled]);
 
   useEffect(() => {
+    if (isBarcodeTab) return;
+
     if (branchSelectionRequired || !activeBranch?.id) {
       setForm(getReceiptSettingsDefaults(activeTemplate));
       setTemplateLines(null);
@@ -335,8 +359,42 @@ const ReceiptSettingsPage = () => {
     loadSettings();
   }, [activeBranch, activeTemplate, branchSelectionRequired]);
 
+  useEffect(() => {
+    if (!isBarcodeTab) return;
+
+    if (branchSelectionRequired || !activeBranch?.id) {
+      setBarcodeForm(DEFAULT_BARCODE_LABEL_SETTINGS);
+      setBarcodeElements(getActiveLabelElements(DEFAULT_BARCODE_LABEL_SETTINGS));
+      setBarcodeLoading(false);
+      return;
+    }
+
+    const loadBarcodeSettings = async () => {
+      try {
+        setBarcodeLoading(true);
+        const response = await barcodeLabelSettingsAPI.getByBranch(activeBranch.id);
+        const normalized = normalizeBarcodeLabelSettings(response.data);
+        setBarcodeForm(normalized);
+        setBarcodeElements(getActiveLabelElements(normalized));
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to load barcode label settings');
+        setBarcodeForm(DEFAULT_BARCODE_LABEL_SETTINGS);
+        setBarcodeElements(getActiveLabelElements(DEFAULT_BARCODE_LABEL_SETTINGS));
+      } finally {
+        setBarcodeLoading(false);
+      }
+    };
+
+    loadBarcodeSettings();
+  }, [activeTemplate, activeBranch, branchSelectionRequired]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const updateField = (field, value) => {
     setForm((prev) => normalizeReceiptSettings({ ...prev, [field]: value }));
+  };
+
+  const updateBarcodeField = (field, value) => {
+    setBarcodeForm((prev) => normalizeBarcodeLabelSettings({ ...prev, [field]: value }));
   };
 
   const loadPrinters = async ({ silent = false } = {}) => {
@@ -364,7 +422,8 @@ const ReceiptSettingsPage = () => {
   }, []);
 
   const handleTestPrint = async () => {
-    if (!form.printerName) {
+    const printerName = isBarcodeTab ? barcodeForm.printerName : form.printerName;
+    if (!printerName) {
       toast.error('Select a printer first');
       return;
     }
@@ -372,10 +431,12 @@ const ReceiptSettingsPage = () => {
     try {
       setPrinterTesting(true);
       await printerAgentAPI.testPrint({
-        printerName: form.printerName,
-        paperWidth: activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 'A4' : `${form.paperWidthMm}mm`,
-        copies: form.printerCopies,
-        label: activeTemplate === PRINT_TEMPLATE_TYPES.KOT ? 'KOT Printer' : 'Receipt Printer',
+        printerName,
+        paperWidth: isBarcodeTab
+          ? `${barcodeForm.labelWidthMm}mm`
+          : activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 'A4' : `${form.paperWidthMm}mm`,
+        copies: isBarcodeTab ? barcodeForm.printerCopies : form.printerCopies,
+        label: isBarcodeTab ? 'Barcode Printer' : activeTemplate === PRINT_TEMPLATE_TYPES.KOT ? 'KOT Printer' : 'Receipt Printer',
       });
       toast.success('Test print sent');
     } catch (error) {
@@ -388,6 +449,25 @@ const ReceiptSettingsPage = () => {
   const handleSave = async () => {
     if (branchSelectionRequired || !activeBranch?.id) {
       toast.error('Select a branch from the header first');
+      return;
+    }
+
+    if (isBarcodeTab) {
+      try {
+        setBarcodeSaving(true);
+        const layoutJson = barcodeElements.length > 0 ? JSON.stringify(barcodeElements) : null;
+        const payload = normalizeBarcodeLabelSettings({ ...barcodeForm, layoutJson });
+        const response = await barcodeLabelSettingsAPI.updateByBranch(activeBranch.id, payload);
+        const normalized = normalizeBarcodeLabelSettings(response.data);
+        setBarcodeForm(normalized);
+        setBarcodeElements(getActiveLabelElements(normalized));
+        toast.success('Barcode label design saved');
+      } catch (error) {
+        console.error(error);
+        toast.error(error?.response?.data?.message || 'Failed to save barcode label settings');
+      } finally {
+        setBarcodeSaving(false);
+      }
       return;
     }
 
@@ -414,6 +494,13 @@ const ReceiptSettingsPage = () => {
 
   const handleReset = () => {
     if (!window.confirm('Reset all settings to default? Unsaved changes will be lost.')) return;
+
+    if (isBarcodeTab) {
+      setBarcodeForm(DEFAULT_BARCODE_LABEL_SETTINGS);
+      setBarcodeElements(getActiveLabelElements(DEFAULT_BARCODE_LABEL_SETTINGS));
+      return;
+    }
+
     const defaults = getReceiptSettingsDefaults(activeTemplate);
     setForm(defaults);
     if (activeTemplate === PRINT_TEMPLATE_TYPES.THERMAL) {
@@ -447,6 +534,32 @@ const ReceiptSettingsPage = () => {
     );
   }, []);
 
+  // ── Barcode label element editor helpers (mirror the template-line ones) ────
+
+  const addBarcodeElement = useCallback((type) => {
+    setBarcodeElements((prev) => [...(prev || []), createBarcodeElement(type)]);
+  }, []);
+
+  const removeBarcodeElement = useCallback((index) => {
+    setBarcodeElements((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const moveBarcodeElement = useCallback((index, direction) => {
+    setBarcodeElements((prev) => {
+      const arr = [...prev];
+      const target = index + direction;
+      if (target < 0 || target >= arr.length) return arr;
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+      return arr;
+    });
+  }, []);
+
+  const updateBarcodeElement = useCallback((index, field, value) => {
+    setBarcodeElements((prev) =>
+      prev.map((el, i) => (i === index ? { ...el, [field]: value } : el))
+    );
+  }, []);
+
   if (!branchOptions.length && !loading) {
     return (
       <div className="space-y-6">
@@ -475,9 +588,12 @@ const ReceiptSettingsPage = () => {
           <Button variant="secondary" onClick={handleReset}>
             Reset to Default
           </Button>
-          <Button onClick={handleSave} disabled={saving || loading || branchSelectionRequired || !activeBranch?.id}>
+          <Button
+            onClick={handleSave}
+            disabled={(isBarcodeTab ? barcodeSaving || barcodeLoading : saving || loading) || branchSelectionRequired || !activeBranch?.id}
+          >
             <Save size={16} className="mr-2" />
-            {saving ? 'Saving...' : 'Save Layout'}
+            {(isBarcodeTab ? barcodeSaving : saving) ? 'Saving...' : isBarcodeTab ? 'Save Design' : 'Save Layout'}
           </Button>
         </div>
       </div>
@@ -543,6 +659,24 @@ const ReceiptSettingsPage = () => {
                   <FileText size={16} />
                   Full Invoice
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (barcodeFeatureEnabled) setActiveTemplate(BARCODE_TAB);
+                  }}
+                  disabled={!barcodeFeatureEnabled}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                    isBarcodeTab
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : barcodeFeatureEnabled
+                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        : 'cursor-not-allowed bg-slate-100 text-slate-400 opacity-70'
+                  }`}
+                  title={!barcodeFeatureEnabled ? 'Barcode printing is not included in your plan' : undefined}
+                >
+                  <Barcode size={16} />
+                  Barcode
+                </button>
               </div>
             </div>
           </Card>
@@ -551,15 +685,32 @@ const ReceiptSettingsPage = () => {
             <Card className="ops-alert-card" style={{ animationDelay: "120ms" }}>
               <div className="py-16 text-center text-slate-500">
                 <Building2 className="mx-auto mb-3 opacity-40" size={34} />
-                Select a specific branch from the header branch selector to edit receipt settings.
+                Select a specific branch from the header branch selector to edit {isBarcodeTab ? 'barcode label' : 'receipt'} settings.
               </div>
             </Card>
-          ) : loading ? (
+          ) : (isBarcodeTab ? barcodeLoading : loading) ? (
             <Card>
               <div className="py-16">
-                <LoadingSpinner text="Loading receipt layout..." />
+                <LoadingSpinner text={isBarcodeTab ? 'Loading barcode label design...' : 'Loading receipt layout...'} />
               </div>
             </Card>
+          ) : isBarcodeTab ? (
+            <BarcodeSettingsPanel
+              form={barcodeForm}
+              updateField={updateBarcodeField}
+              shopName={user?.shopName || BRAND_NAME_UPPER}
+              elements={barcodeElements}
+              addElement={addBarcodeElement}
+              removeElement={removeBarcodeElement}
+              moveElement={moveBarcodeElement}
+              updateElement={updateBarcodeElement}
+              printerOptions={printerOptions}
+              printAgentOnline={printAgentOnline}
+              printerLoading={printerLoading}
+              printerTesting={printerTesting}
+              onRefreshPrinters={() => loadPrinters()}
+              onTestPrint={handleTestPrint}
+            />
           ) : (
             <>
               {/* Visible Sections only shown when NOT using the line editor (KOT / A4, or Thermal before lines are initialised) */}
@@ -1098,6 +1249,13 @@ const ReceiptSettingsPage = () => {
                 Preview appears after selecting a single branch from the header.
               </div>
             </Card>
+          ) : isBarcodeTab ? (
+            <div className="admin-panel-card" style={{ animationDelay: "120ms" }}>
+              <BarcodePreview
+                settings={{ ...barcodeForm, layoutElements: barcodeElements }}
+                shopName={user?.shopName || BRAND_NAME_UPPER}
+              />
+            </div>
           ) : (
             <div className="admin-panel-card" style={{ animationDelay: "120ms" }}>
             <ReceiptPreview

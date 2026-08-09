@@ -902,6 +902,16 @@ html[data-animation-level="balanced"] #root table tbody tr {
   }
 }
 
+/* Barcode canvas shrinks to fit its sticker regardless of label size — fixes
+   the barcode being clipped/invisible on smaller label presets, since the
+   canvas's own drawn resolution (from barcodeWidth/barcodeHeight settings)
+   doesn't otherwise scale down to match a small labelWidthMm/labelHeightMm. */
+.barcode-canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -921,10 +931,8 @@ html[data-animation-level="balanced"] #root table tbody tr {
     align-content: flex-start;
   }
 
-  /* 40mm x 25mm Thermal Sticker එකට ගැලපෙන සයිස් එක */
+  /* Sticker size/padding come from BarcodeLabel's inline styles (branch barcode-label settings) */
   .barcode-sticker {
-    width: 40mm;
-    height: 25mm;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -932,25 +940,6 @@ html[data-animation-level="balanced"] #root table tbody tr {
     text-align: center;
     page-break-inside: avoid;
     overflow: hidden;
-    padding-top: 1mm;
-  }
-
-  .sticker-shop {
-    font-size: 7px;
-    font-weight: bold;
-    text-transform: uppercase;
-  }
-
-  .sticker-name {
-    font-size: 8px;
-    margin-bottom: 1px;
-    white-space: nowrap;
-  }
-
-  .sticker-price {
-    font-size: 10px;
-    font-weight: bold;
-    margin-top: -2px;
   }
 
   @page {
