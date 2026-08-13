@@ -38,6 +38,8 @@ import {
 } from "recharts";
 
 import { reportsAPI } from "../api/reports.api";
+import { useAppConfiguration } from "../context/AppConfigurationContext";
+import { getCategoryFilterParams, getDisplayCategoryName, isSingleCategoryMode } from "../utils/categoryMode";
 import { categoriesAPI } from "../api/categories.api";
 import { suppliersAPI } from "../api/suppliers.api";
 import { formatCurrency } from "../utils/formatters";
@@ -237,6 +239,8 @@ const emptyPage = {
 };
 
 const Reports = ({ mode = "basic" }) => {
+  const { configuration } = useAppConfiguration();
+  const singleCategoryMode = isSingleCategoryMode(configuration);
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPreset = datePresetOptions.some((option) => option.id === searchParams.get("preset")) ? searchParams.get("preset") : "thisMonth";
   const visibleTabs = useMemo(() => {
@@ -285,13 +289,13 @@ const Reports = ({ mode = "basic" }) => {
 
   useEffect(() => {
     if (mode !== "forecast") return;
-    Promise.all([categoriesAPI.getAll(), suppliersAPI.list({ page: 0, size: 100 })])
+    Promise.all([singleCategoryMode ? categoriesAPI.getSingleCategories() : categoriesAPI.getAll(), suppliersAPI.list({ page: 0, size: 100 })])
       .then(([categoryResponse, supplierResponse]) => setForecastLookups({
         categories: Array.isArray(categoryResponse.data) ? categoryResponse.data : categoryResponse.data?.items || [],
         suppliers: supplierResponse.data?.items || supplierResponse.data?.content || (Array.isArray(supplierResponse.data) ? supplierResponse.data : []),
       }))
       .catch((error) => console.error("Failed to load forecast filters", error));
-  }, [mode]);
+  }, [mode, singleCategoryMode]);
   const [exporting, setExporting] = useState(null);
   const [exportJobs, setExportJobs] = useState([]);
   const [reportSchedules, setReportSchedules] = useState([]);
@@ -486,7 +490,7 @@ const Reports = ({ mode = "basic" }) => {
     ] = await Promise.all([
       reportsAPI.salesSummary(params),
       reportsAPI.salesTrend({ ...params, type: trendType }),
-      reportsAPI.salesByCategory(params),
+      reportsAPI.salesByCategory({ ...params, categoryMode: singleCategoryMode ? "SINGLE_CATEGORY" : "MAIN_AND_SUB" }),
       reportsAPI.productPerformance({ ...params, page: 0, size: BASIC_CHART_SIZE, sortBy: "REVENUE", sortDirection: "DESC" }),
       reportsAPI.customerPerformance({ ...params, page: 0, size: BASIC_CHART_SIZE, sortBy: "TOTAL_SPENT", sortDirection: "DESC" }),
       reportsAPI.supplierPerformance({ ...params, page: 0, size: BASIC_CHART_SIZE, sortBy: "TOTAL_PURCHASED", sortDirection: "DESC" }),
@@ -585,9 +589,7 @@ const Reports = ({ mode = "basic" }) => {
         response = await reportsAPI.lowStock(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
         setReportData(Array.isArray(response.data) ? response.data : []);
       } else if (type === "inventoryValuation") {
-        response = await reportsAPI.inventoryValuation(
-          selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}
-        );
+        response = await reportsAPI.inventoryValuation(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
         setInventorySummary(response.data);
         setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
       } else if (type === "stockHealth") {
@@ -596,7 +598,7 @@ const Reports = ({ mode = "basic" }) => {
         setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
       } else if (type === "demandForecast") {
         const [forecastResponse, accuracyResponse] = await Promise.all([
-          reportsAPI.demandForecast({ ...(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}), ...forecastOptions, categoryId: forecastOptions.categoryId || undefined, supplierId: forecastOptions.supplierId || undefined, confidence: forecastOptions.confidence || undefined }),
+          reportsAPI.demandForecast({ ...(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}), ...forecastOptions, ...getCategoryFilterParams(forecastOptions.categoryId, singleCategoryMode), supplierId: forecastOptions.supplierId || undefined, confidence: forecastOptions.confidence || undefined }),
           reportsAPI.forecastAccuracy(),
         ]);
         response = forecastResponse;
@@ -1620,7 +1622,7 @@ const Reports = ({ mode = "basic" }) => {
     const negativeStockItems = items.filter((item) => Number(item.qtyOnHand || 0) < 0).length;
     const visibleItems = items.slice(0, 50);
     const categoryMap = items.reduce((totals, item) => {
-      const category = item.categoryName || "Uncategorized";
+      const category = getDisplayCategoryName(item, singleCategoryMode);
       totals[category] = (totals[category] || 0) + Number(item.stockValue || 0);
       return totals;
     }, {});
@@ -1639,7 +1641,7 @@ const Reports = ({ mode = "basic" }) => {
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <PremiumChartCard title="Capital by Category" subtitle="Categories holding the most stock value">
+          <PremiumChartCard title={singleCategoryMode ? "Capital by Category" : "Capital by Main Category"} subtitle={singleCategoryMode ? "Visible categories holding the most stock value" : "Main categories holding the most stock value"}>
             <div className="h-[320px] min-h-[320px] min-w-0">
               {categoryData.length ? (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
@@ -1686,7 +1688,7 @@ const Reports = ({ mode = "basic" }) => {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-bold text-slate-900">{item.itemName}</p>
-                    <p className="mt-1 text-xs text-slate-500">{item.barcode || "No barcode"} · {item.categoryName || "Uncategorized"}</p>
+                    <p className="mt-1 text-xs text-slate-500">{item.barcode || "No barcode"} · {getDisplayCategoryName(item, singleCategoryMode)}</p>
                   </div>
                   <span className={Number(item.qtyOnHand || 0) <= 0 ? "font-black text-red-600" : "font-black text-slate-900"}>{formatQty(item.qtyOnHand, item.unit)}</span>
                 </div>
@@ -1700,7 +1702,7 @@ const Reports = ({ mode = "basic" }) => {
           <div className="hidden md:block">
             <Table
             columns={[
-              { header: "Item", render: (item) => <div><p className="font-semibold text-slate-900">{item.itemName}</p><p className="text-xs text-slate-500">{item.barcode || "No barcode"} · {item.categoryName || "Uncategorized"}</p></div> },
+              { header: "Item", render: (item) => <div><p className="font-semibold text-slate-900">{item.itemName}</p><p className="text-xs text-slate-500">{item.barcode || "No barcode"} · {getDisplayCategoryName(item, singleCategoryMode)}</p></div> },
               { header: "Qty", render: (item) => <span className={Number(item.qtyOnHand || 0) <= 0 ? "font-bold text-red-600" : "font-semibold"}>{formatQty(item.qtyOnHand, item.unit)}</span> },
               { header: "Avg Cost", render: (item) => formatCurrency(item.costPrice) },
               { header: "Stock Value", render: (item) => <span className="font-bold text-blue-700">{formatCurrency(item.stockValue)}</span> },
@@ -1972,7 +1974,7 @@ const Reports = ({ mode = "basic" }) => {
     if (activeTab === "commercialIntelligence") return <CommercialIntelligenceView promotions={commercialData.promotions} warranty={commercialData.warranty} returnsData={returnsData} />;
     if (activeTab === "exceptions") return <ExceptionCenterView data={reportData} />;
     if (activeTab === "stockHealth") return <StockHealthReportView summary={stockHealthSummary} data={reportData} />;
-    if (activeTab === "demandForecast") return <DemandForecastReportView summary={forecastSummary} accuracy={forecastAccuracy} data={reportData} options={forecastOptions} lookups={forecastLookups} onOptionsChange={(next) => { setForecastOptions(next); setLoadedTab(null); }} onRefresh={() => generateReport("demandForecast")} onExport={async () => { await reportsAPI.createExportJob({ reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, categoryId: forecastOptions.categoryId || null, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }); await loadExportJobs(); toast.success("Forecast export queued"); }} onSchedule={async (schedule) => { await reportsAPI.createReportSchedule({ report: { reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, categoryId: forecastOptions.categoryId || null, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }, ...schedule }); await loadReportSchedules(); toast.success("Recurring forecast scheduled"); }} />;
+    if (activeTab === "demandForecast") return <DemandForecastReportView summary={forecastSummary} accuracy={forecastAccuracy} data={reportData} options={forecastOptions} lookups={forecastLookups} onOptionsChange={(next) => { setForecastOptions(next); setLoadedTab(null); }} onRefresh={() => generateReport("demandForecast")} onExport={async () => { const categoryParams = getCategoryFilterParams(forecastOptions.categoryId, singleCategoryMode); await reportsAPI.createExportJob({ reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, ...categoryParams, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }); await loadExportJobs(); toast.success("Forecast export queued"); }} onSchedule={async (schedule) => { const categoryParams = getCategoryFilterParams(forecastOptions.categoryId, singleCategoryMode); await reportsAPI.createReportSchedule({ report: { reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, ...categoryParams, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }, ...schedule }); await loadReportSchedules(); toast.success("Recurring forecast scheduled"); }} />;
     return null;
   };
 
