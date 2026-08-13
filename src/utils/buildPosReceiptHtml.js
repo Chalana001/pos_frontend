@@ -140,7 +140,7 @@ const renderLine = (line, data, items) => {
       return `<div class="${cls}" style="${style}"><b>${lbl('Customer')}:</b> ${esc(customerName || 'Walk-in')}</div>`;
 
     case 'ITEM_TABLE': {
-      let cfg = {};
+      let cfg;
       try { cfg = JSON.parse(line.customText || '{}'); } catch { cfg = {}; }
       return `<table class="items">${buildItemRows(items, settings, {
         nameSize:    line.fontSize || 11,

@@ -93,7 +93,6 @@ const exactTranslations = {
     'Items Registry': 'භාණ්ඩ ලේඛනය',
     'Manage products and pricing': 'භාණ්ඩ සහ මිල ගණන් කළමනාකරණය කරන්න',
     Barcode: 'බාර්කෝඩ්',
-    'Barcode:': 'බාර්කෝඩ්:',
     Name: 'නම',
     Category: 'ප්‍රවර්ගය',
     Uncategorized: 'වර්ගීකරණය නොකළ',

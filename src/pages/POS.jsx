@@ -253,11 +253,6 @@ const POS = () => {
     [pendingOrders]
   );
 
-  const stockItemLookup = useMemo(
-    () => new Map((allItems || []).map((item) => [Number(item.id), item])),
-    [allItems]
-  );
-
   const selectedTable = useMemo(
     () => diningTables.find((table) => Number(table.id) === Number(selectedTableId)) || null,
     [diningTables, selectedTableId]
@@ -282,29 +277,6 @@ const POS = () => {
   const currentSessionKey = saleMode === SALE_MODES.DINE_IN && selectedTable
     ? `DINE_IN_TABLE_${selectedTable.id}`
     : "TAKEAWAY";
-
-  const getRecipeAvailableQty = (item) => {
-    const ingredients = Array.isArray(item?.ingredients) ? item.ingredients : [];
-    if (ingredients.length === 0) {
-      return 0;
-    }
-
-    let maxRecipeQty = Infinity;
-
-    for (const ingredient of ingredients) {
-      const ingredientItem = stockItemLookup.get(Number(ingredient.ingredientItemId));
-      const ingredientStock = Number(ingredientItem?.availableBaseQty ?? 0);
-      const requiredQty = Number(ingredient?.baseQuantity ?? 0);
-
-      if (ingredientStock <= 0 || requiredQty <= 0) {
-        return 0;
-      }
-
-      maxRecipeQty = Math.min(maxRecipeQty, Math.floor(ingredientStock / requiredQty));
-    }
-
-    return Number.isFinite(maxRecipeQty) ? Math.max(0, maxRecipeQty) : 0;
-  };
 
   const getSellableStockBaseQty = (item, batchData = null) => {
     if (item?.itemType === ItemType.SERVICE) {
@@ -1109,7 +1081,7 @@ const POS = () => {
     }
   };
 
-  const updateQuantity = (index, newQty, preventFocus = false) => {
+  const updateQuantity = (index, newQty) => {
     const item = cartItems[index];
     const unlimitedStockItem = isUnlimitedStockItem(item);
 

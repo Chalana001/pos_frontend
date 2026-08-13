@@ -48,15 +48,6 @@ const normalizeConfiguration = (value = {}) => ({
   cashierWarrantyAllowed: value.cashierWarrantyAllowed === true,
 });
 
-const readCachedConfiguration = () => {
-  try {
-    const raw = localStorage.getItem(getStorageKey(null));
-    return raw ? normalizeConfiguration(JSON.parse(raw)) : DEFAULT_APP_CONFIGURATION;
-  } catch {
-    return DEFAULT_APP_CONFIGURATION;
-  }
-};
-
 const readCachedConfigurationForBranch = (branchId) => {
   try {
     const raw = localStorage.getItem(getStorageKey(branchId));
