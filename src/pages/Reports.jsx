@@ -2173,18 +2173,18 @@ const Reports = ({ mode = "basic" }) => {
               </Card>
             )}
 
-            <div ref={reportRef} className="admin-panel-card rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-8 flex items-end justify-between border-b border-slate-100 pb-4">
+            <div ref={reportRef} className="admin-panel-card overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50/60 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-800">
+                  <h2 className="text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
                     {allTabs.find((tab) => tab.id === activeTab)?.label || "Report"}
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">{["creditAging", "supplierPayables", "stockHealth"].includes(mode) ? "Current position as of generation time" : `Period: ${datePreset === "allTime" ? "All Time" : `${dateRange.from} to ${dateRange.to}`}`}</p>
+                  <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">{["creditAging", "supplierPayables", "stockHealth"].includes(mode) ? "Current position as of generation time" : `Period: ${datePreset === "allTime" ? "All Time" : `${dateRange.from} to ${dateRange.to}`}`}</p>
                 </div>
-                <p className="text-right text-xs text-slate-400">Generated: {new Date().toLocaleString()}</p>
+                <p className="text-xs font-medium text-slate-400 sm:text-right">Generated: {new Date().toLocaleString()}</p>
               </div>
 
-              {chartsReady ? renderReportContent() : <div className="h-40" aria-hidden="true" />}
+              <div className="p-4 sm:p-5">{chartsReady ? renderReportContent() : <div className="h-40" aria-hidden="true" />}</div>
             </div>
 
             {isPagedTab && (

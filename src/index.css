@@ -113,15 +113,15 @@
   }
 
   .app-table {
-    @apply w-full text-left text-sm;
+    @apply w-full text-left text-sm leading-5;
   }
 
   .app-table-head {
-    @apply border-b bg-slate-50 text-xs uppercase tracking-wider text-slate-500;
+    @apply border-b border-slate-200 bg-slate-50/90 text-[11px] uppercase tracking-[0.06em] text-slate-600;
   }
 
   .app-table-head-cell {
-    @apply px-6 py-3 font-medium;
+    @apply px-4 py-3 font-bold align-bottom;
   }
 
   .app-table-body {
@@ -129,7 +129,36 @@
   }
 
   .app-table-cell {
-    @apply px-6 py-4 text-sm text-slate-700;
+    @apply px-4 py-3.5 align-top text-sm font-normal text-slate-700;
+    min-width: 7rem;
+    max-width: 20rem;
+    overflow-wrap: anywhere;
+  }
+
+  .app-table-cell:first-child,
+  .app-table-head-cell:first-child {
+    @apply pl-5;
+  }
+
+  .app-table-cell:last-child,
+  .app-table-head-cell:last-child {
+    @apply pr-5;
+  }
+
+  .app-table-compact .app-table-head-cell {
+    @apply py-2.5;
+  }
+
+  .app-table-compact .app-table-cell {
+    @apply py-2.5;
+  }
+
+  @media (max-width: 768px) {
+    .app-table-head-cell,
+    .app-table-cell {
+      @apply px-3;
+      min-width: 8rem;
+    }
   }
 
   .app-table-row-clickable {
