@@ -1,16 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   AlertCircle,
   BarChart3,
   Calendar,
+  Clock,
   DollarSign,
+  ArrowLeftRight,
   Download,
   FileText,
+  Package,
   PieChart as PieIcon,
   RotateCcw,
   ShoppingCart,
   TrendingUp,
+  TrendingDown,
   Truck,
   Users,
 } from "lucide-react";
@@ -43,8 +48,20 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
 import DatePicker from "../components/common/DatePicker";
 import { useBranch } from "../context/BranchContext";
+import { useAuth } from "../context/AuthContext";
+import AgingReportView from "../components/reports/AgingReportView";
+import StockMovementReportView from "../components/reports/StockMovementReportView";
+import StockHealthReportView from "../components/reports/StockHealthReportView";
+import GrnPurchaseReportView from "../components/reports/GrnPurchaseReportView";
+import StockTransferReportView from "../components/reports/StockTransferReportView";
+import ProductCategoryIntelligenceView from "../components/reports/ProductCategoryIntelligenceView";
+import CustomerBehaviorReportView from "../components/reports/CustomerBehaviorReportView";
+import CashierBranchComparisonView from "../components/reports/CashierBranchComparisonView";
+import CommercialIntelligenceView from "../components/reports/CommercialIntelligenceView";
+import ExceptionCenterView from "../components/reports/ExceptionCenterView";
 
 const PAGE_SIZE = 10;
+const defaultFilters = { sortDirection: "DESC", salesSortBy: "DATE", productSortBy: "REVENUE", customerSortBy: "TOTAL_SPENT", supplierSortBy: "TOTAL_PURCHASED", itemType: "ALL", orderType: "ALL" };
 const BASIC_CHART_SIZE = 8;
 const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#4f46e5", "#f43f5e"];
 const CHART_GRID = "#e2e8f0";
@@ -111,7 +128,7 @@ const orderTypeOptions = [
   { value: "CREDIT", label: "Credit" },
 ];
 
-const pagedTabs = ["salesReport", "productPerformance", "customerPerformance", "supplierPerformance"];
+const pagedTabs = ["salesReport", "productPerformance", "customerPerformance", "supplierPerformance", "shiftSummary", "stockMovement", "stockTransfers", "grnPurchases"];
 
 const allTabs = [
   { id: "overview", label: "Overview", icon: PieIcon },
@@ -123,6 +140,20 @@ const allTabs = [
   { id: "profit", label: "Profit Analysis", icon: DollarSign },
   { id: "returnsReports", label: "Returns", icon: RotateCcw },
   { id: "lowStock", label: "Low Stock", icon: AlertCircle },
+  { id: "stockHealth", label: "Stock Health", icon: Package },
+  { id: "inventoryValuation", label: "Inventory Valuation", icon: Package },
+  { id: "shiftSummary", label: "Shift / Z Report", icon: Calendar },
+  { id: "cashFlow", label: "Cash Flow", icon: TrendingUp },
+  { id: "profitLoss", label: "Profit & Loss", icon: BarChart3 },
+  { id: "creditAging", label: "Credit Aging", icon: Users },
+  { id: "supplierPayables", label: "Supplier Payables", icon: Truck },
+  { id: "stockMovement", label: "Stock Movement", icon: Package },
+  { id: "stockTransfers", label: "Stock Transfers", icon: ArrowLeftRight },
+  { id: "customerBehavior", label: "Customer Behavior", icon: Users },
+  { id: "performanceComparison", label: "Cashier / Branch", icon: BarChart3 },
+  { id: "commercialIntelligence", label: "Promotions / Returns / Warranty", icon: RotateCcw },
+  { id: "exceptions", label: "Exception Center", icon: AlertCircle },
+  { id: "grnPurchases", label: "GRN / Purchases", icon: Truck },
   { id: "creditDue", label: "Credit Due", icon: FileText },
 ];
 
@@ -133,6 +164,20 @@ const tabsByMode = {
   customer: ["customerPerformance"],
   supplier: ["supplierPerformance"],
   returns: ["returnsReports"],
+  inventory: ["inventoryValuation"],
+  stockHealth: ["stockHealth"],
+  shifts: ["shiftSummary"],
+  cashFlow: ["cashFlow"],
+  profitLoss: ["profitLoss"],
+  creditAging: ["creditAging"],
+  supplierPayables: ["supplierPayables"],
+  stockMovement: ["stockMovement"],
+  stockTransfers: ["stockTransfers"],
+  customerBehavior: ["customerBehavior"],
+  performanceComparison: ["performanceComparison"],
+  commercialIntelligence: ["commercialIntelligence"],
+  exceptions: ["exceptions"],
+  grnPurchases: ["grnPurchases"],
 };
 
 const pageTitleByMode = {
@@ -142,6 +187,20 @@ const pageTitleByMode = {
   customer: "Customer Reports",
   supplier: "Supplier Reports",
   returns: "Returns Reports",
+  inventory: "Inventory Valuation",
+  stockHealth: "Stock Health / Reorder",
+  shifts: "Shift / Z Reports",
+  cashFlow: "Cash Flow",
+  profitLoss: "Profit & Loss",
+  creditAging: "Customer Credit Aging",
+  supplierPayables: "Supplier Payables Aging",
+  stockMovement: "Stock Movement",
+  stockTransfers: "Stock Transfer Report",
+  customerBehavior: "Customer Retention & Behavior",
+  performanceComparison: "Cashier & Branch Comparison",
+  commercialIntelligence: "Promotions, Returns & Warranty",
+  exceptions: "Business Exception Center",
+  grnPurchases: "GRN / Purchase Report",
 };
 
 const getPresetDateRange = (type) => {
@@ -172,6 +231,8 @@ const emptyPage = {
 };
 
 const Reports = ({ mode = "basic" }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPreset = datePresetOptions.some((option) => option.id === searchParams.get("preset")) ? searchParams.get("preset") : "thisMonth";
   const visibleTabs = useMemo(() => {
     const visibleIds = tabsByMode[mode] || tabsByMode.basic;
     return allTabs.filter((tab) => visibleIds.includes(tab.id));
@@ -185,6 +246,9 @@ const Reports = ({ mode = "basic" }) => {
   const [page, setPage] = useState(0);
   const [pageInput, setPageInput] = useState("1");
   const [profitSummary, setProfitSummary] = useState(null);
+  const [ownerSummary, setOwnerSummary] = useState(null);
+  const [inventorySummary, setInventorySummary] = useState(null);
+  const [stockHealthSummary, setStockHealthSummary] = useState(null);
   const [salesSummary, setSalesSummary] = useState(null);
   const [salesTrend, setSalesTrend] = useState({ data: [], type: "DAILY" });
   const [returnsData, setReturnsData] = useState({
@@ -202,30 +266,71 @@ const Reports = ({ mode = "basic" }) => {
     lowStock: [],
     creditDue: [],
   });
-  const [datePreset, setDatePreset] = useState("thisMonth");
-  const [dateRange, setDateRange] = useState(() => getPresetDateRange("thisMonth"));
+  const [productIntelligenceData, setProductIntelligenceData] = useState([]);
+  const [comparisonData, setComparisonData] = useState({ cashiers: [], branches: [] });
+  const [commercialData, setCommercialData] = useState({ promotions: [], warranty: null });
+  const [datePreset, setDatePreset] = useState(initialPreset);
+  const [dateRange, setDateRange] = useState(() => initialPreset === "custom" ? { from: searchParams.get("from") || "", to: searchParams.get("to") || "" } : getPresetDateRange(initialPreset));
   const [filterVersion, setFilterVersion] = useState(0);
   const [exporting, setExporting] = useState(null);
-  const [filters, setFilters] = useState({
-    sortDirection: "DESC",
-    salesSortBy: "DATE",
-    productSortBy: "REVENUE",
-    customerSortBy: "TOTAL_SPENT",
-    supplierSortBy: "TOTAL_PURCHASED",
-    itemType: "ALL",
-    orderType: "ALL",
-  });
+  const [exportJobs, setExportJobs] = useState([]);
+  const [reportSchedules, setReportSchedules] = useState([]);
+  const [scheduleForm, setScheduleForm] = useState({ frequency: "DAILY", nextRunAt: "", emailTo: "" });
+  const [chartsReady, setChartsReady] = useState(false);
+  const [filters, setFilters] = useState(() => Object.fromEntries(Object.entries(defaultFilters).map(([key, value]) => [key, searchParams.get(key) || value])));
+  const [savedViews, setSavedViews] = useState([]);
 
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, setSelectedBranchId, branches } = useBranch();
+  const { user } = useAuth();
   const reportRef = useRef(null);
+  const restoredBranchRef = useRef(false);
+  const savedViewsKey = `reportViews:${window.location.hostname}:${user?.userId || user?.username || "anonymous"}:${mode}`;
+
+  useEffect(() => {
+    setChartsReady(false);
+    if (loadedTab !== activeTab) return undefined;
+    const timer = window.setTimeout(() => setChartsReady(true), 400);
+    return () => window.clearTimeout(timer);
+  }, [activeTab, loadedTab]);
+
+  useEffect(() => {
+    if (restoredBranchRef.current) return;
+    const branch = Number(searchParams.get("branch"));
+    if (Number.isFinite(branch) && branches.some((item) => Number(item.id) === branch)) {
+      setSelectedBranchId(branch);
+      restoredBranchRef.current = true;
+    }
+    try { setSavedViews(JSON.parse(localStorage.getItem(savedViewsKey) || "[]")); } catch { setSavedViews([]); }
+  }, [branches, savedViewsKey, searchParams, setSelectedBranchId]);
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    next.set("preset", datePreset);
+    if (datePreset === "custom") { if (dateRange.from) next.set("from", dateRange.from); if (dateRange.to) next.set("to", dateRange.to); }
+    next.set("branch", String(selectedBranchId || 0));
+    Object.entries(filters).forEach(([key, value]) => { if (value !== defaultFilters[key]) next.set(key, value); });
+    setSearchParams(next, { replace: true });
+  }, [datePreset, dateRange.from, dateRange.to, filters, selectedBranchId, setSearchParams]);
+
+  const saveCurrentView = () => {
+    const name = window.prompt("Saved view name");
+    if (!name?.trim()) return;
+    const view = { name: name.trim(), datePreset, dateRange, filters, branchId: selectedBranchId || 0 };
+    const next = [...savedViews.filter((item) => item.name !== view.name), view].slice(-20);
+    localStorage.setItem(savedViewsKey, JSON.stringify(next));
+    setSavedViews(next);
+    toast.success("Report view saved");
+  };
+  const loadSavedView = (view) => { setDatePreset(view.datePreset || "thisMonth"); setDateRange(view.dateRange || getPresetDateRange("thisMonth")); setFilters({ ...defaultFilters, ...(view.filters || {}) }); setSelectedBranchId(view.branchId || 0); setFilterVersion((value) => value + 1); };
+  const deleteSavedView = (name) => { const next = savedViews.filter((item) => item.name !== name); localStorage.setItem(savedViewsKey, JSON.stringify(next)); setSavedViews(next); };
 
   useEffect(() => {
     setActiveTab(defaultTab);
     setLoadedTab(null);
     setReportData([]);
     setPageData(emptyPage);
+    setStockHealthSummary(null);
     resetPage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultTab]);
 
   const activeDateLabel = useMemo(
@@ -258,6 +363,13 @@ const Reports = ({ mode = "basic" }) => {
   };
 
   const setQuickDate = (type) => {
+    if (type === "allTime" && (activeTab === "cashFlow" || activeTab === "profitLoss")) {
+      setDatePreset("thisYear");
+      setDateRange(getPresetDateRange("thisYear"));
+      resetPage();
+      setFilterVersion((version) => version + 1);
+      return;
+    }
     setDatePreset(type);
     if (type === "allTime") {
       setDateRange({ from: "", to: "" });
@@ -280,6 +392,7 @@ const Reports = ({ mode = "basic" }) => {
     setLoadedTab(null);
     setReportData([]);
     setPageData(emptyPage);
+    setStockHealthSummary(null);
     resetPage();
   };
 
@@ -345,6 +458,7 @@ const Reports = ({ mode = "basic" }) => {
       customerRes,
       supplierRes,
       profitSummaryRes,
+      ownerSummaryRes,
       lowStockRes,
       creditDueRes,
     ] = await Promise.all([
@@ -355,8 +469,9 @@ const Reports = ({ mode = "basic" }) => {
       reportsAPI.customerPerformance({ ...params, page: 0, size: BASIC_CHART_SIZE, sortBy: "TOTAL_SPENT", sortDirection: "DESC" }),
       reportsAPI.supplierPerformance({ ...params, page: 0, size: BASIC_CHART_SIZE, sortBy: "TOTAL_PURCHASED", sortDirection: "DESC" }),
       reportsAPI.profitSummary(params),
+      dateRange.from && dateRange.to ? reportsAPI.ownerCommandCenter(params) : Promise.resolve({ data: null }),
       reportsAPI.lowStock(branchOnlyParams),
-      reportsAPI.creditDue(),
+      reportsAPI.creditDue(branchOnlyParams),
     ]);
 
     setSalesSummary(summaryRes.data);
@@ -365,6 +480,7 @@ const Reports = ({ mode = "basic" }) => {
       type: trendType,
     });
     setProfitSummary(profitSummaryRes.data);
+    setOwnerSummary(ownerSummaryRes.data);
     setBasicOverview({
       categories: Array.isArray(categoryRes.data) ? categoryRes.data : [],
       products: Array.isArray(productRes.data?.items) ? productRes.data.items : [],
@@ -380,6 +496,9 @@ const Reports = ({ mode = "basic" }) => {
     setLoadedTab(null);
     setReportData([]);
     setProfitSummary(null);
+    setOwnerSummary(null);
+    setInventorySummary(null);
+    setStockHealthSummary(null);
     setSalesSummary(null);
     setSalesTrend({ data: [], type: "DAILY" });
     setReturnsData({ summary: null, topSaleItems: [], topPurchaseItems: [], reasons: [], trend: [] });
@@ -405,15 +524,17 @@ const Reports = ({ mode = "basic" }) => {
         });
         setPagedResponse(response.data);
       } else if (type === "productPerformance") {
-        response = await reportsAPI.productPerformance({
+        const commonProductParams = {
           ...params,
-          page,
-          size: PAGE_SIZE,
-          sortBy: filters.productSortBy,
-          sortDirection: filters.sortDirection,
           itemType: filters.itemType !== "ALL" ? filters.itemType : undefined,
-        });
-        setPagedResponse(response.data);
+        };
+        const [pageResponse, intelligenceResponse] = await Promise.all([
+          reportsAPI.productPerformance({ ...commonProductParams, page, size: PAGE_SIZE, sortBy: filters.productSortBy, sortDirection: filters.sortDirection }),
+          reportsAPI.productPerformance({ ...commonProductParams, page: 0, size: 100, sortBy: "REVENUE", sortDirection: "DESC" }),
+        ]);
+        response = pageResponse;
+        setPagedResponse(pageResponse.data);
+        setProductIntelligenceData(Array.isArray(intelligenceResponse.data?.items) ? intelligenceResponse.data.items : []);
       } else if (type === "customerPerformance") {
         response = await reportsAPI.customerPerformance({
           ...params,
@@ -440,8 +561,76 @@ const Reports = ({ mode = "basic" }) => {
       } else if (type === "lowStock") {
         response = await reportsAPI.lowStock(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
         setReportData(Array.isArray(response.data) ? response.data : []);
+      } else if (type === "inventoryValuation") {
+        response = await reportsAPI.inventoryValuation(
+          selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}
+        );
+        setInventorySummary(response.data);
+        setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
+      } else if (type === "stockHealth") {
+        response = await reportsAPI.stockHealth(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
+        setStockHealthSummary(response.data);
+        setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
+      } else if (type === "shiftSummary") {
+        response = await reportsAPI.shiftSummary({
+          ...params,
+          page,
+          size: PAGE_SIZE,
+        });
+        setPagedResponse(response.data);
+      } else if (type === "cashFlow") {
+        response = await reportsAPI.cashFlow(params);
+        setReportData(response.data);
+      } else if (type === "profitLoss") {
+        response = await reportsAPI.profitAndLoss(params);
+        setReportData(response.data);
+      } else if (type === "creditAging") {
+        response = await reportsAPI.creditAging(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
+        setReportData(Array.isArray(response.data) ? response.data : []);
+      } else if (type === "supplierPayables") {
+        response = await reportsAPI.supplierPayablesAging(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
+        setReportData(Array.isArray(response.data) ? response.data : []);
+      } else if (type === "stockMovement") {
+        response = await reportsAPI.stockMovement({ ...params, page, size: PAGE_SIZE });
+        setPagedResponse(response.data);
+      } else if (type === "stockTransfers") {
+        response = await reportsAPI.stockTransferReport({
+          ...params,
+          ...(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}),
+          page,
+          size: PAGE_SIZE,
+        });
+        setPagedResponse(response.data);
+      } else if (type === "customerBehavior") {
+        response = await reportsAPI.customerBehavior(params);
+        setReportData(response.data);
+      } else if (type === "performanceComparison") {
+        const [cashierResult, branchResult] = await Promise.allSettled([
+          reportsAPI.cashierPerformance(params),
+          reportsAPI.branchComparison(params),
+        ]);
+        const cashiers = cashierResult.status === "fulfilled" && Array.isArray(cashierResult.value.data) ? cashierResult.value.data : [];
+        const branches = branchResult.status === "fulfilled" && Array.isArray(branchResult.value.data) ? branchResult.value.data : [];
+        setComparisonData({ cashiers, branches });
+        setReportData([]);
+      } else if (type === "commercialIntelligence") {
+        const [promotionsResponse, warrantyResponse, summaryRes] = await Promise.all([
+          reportsAPI.promotionEffectiveness(params),
+          reportsAPI.warrantyReport(params),
+          reportsAPI.returnsSummary(params),
+        ]);
+        setCommercialData({ promotions: promotionsResponse.data || [], warranty: warrantyResponse.data || null });
+        setReturnsData({ summary: summaryRes.data, topSaleItems: [], topPurchaseItems: [], reasons: [], trend: [] });
+        setReportData([]);
+      } else if (type === "exceptions") {
+        response = await reportsAPI.exceptionCenter(params);
+        setReportData(response.data);
+      } else if (type === "grnPurchases") {
+        response = await reportsAPI.grnReport({ ...params, page, size: PAGE_SIZE });
+        setPagedResponse(response.data?.page || {});
+        setInventorySummary(response.data);
       } else if (type === "creditDue") {
-        response = await reportsAPI.creditDue();
+        response = await reportsAPI.creditDue(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
         setReportData(Array.isArray(response.data) ? response.data : []);
       } else if (type === "returnsReports") {
         const [summaryRes, topSaleRes, topPurRes, reasonsRes, trendRes] = await Promise.all([
@@ -549,44 +738,91 @@ const Reports = ({ mode = "basic" }) => {
     supplierPerformance: "SUPPLIER",
   };
 
+  const loadExportJobs = async () => {
+    try {
+      const response = await reportsAPI.exportJobs({ page: 0, size: 5 });
+      setExportJobs(response.data?.items || []);
+    } catch (error) {
+      console.error("Failed to load report exports", error);
+    }
+  };
+
+  const loadReportSchedules = async () => {
+    try {
+      const response = await reportsAPI.reportSchedules();
+      setReportSchedules(response.data || []);
+    } catch (error) {
+      console.error("Failed to load report schedules", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!isPagedTab) return undefined;
+    loadExportJobs();
+    loadReportSchedules();
+    const timer = window.setInterval(loadExportJobs, 5000);
+    return () => window.clearInterval(timer);
+  }, [isPagedTab]);
+
+  const buildExportParams = () => {
+    const params = { ...commonParams(), reportType: reportTypeByTab[activeTab], sortDirection: filters.sortDirection };
+    if (activeTab === "salesReport") { params.sortBy = filters.salesSortBy; if (filters.orderType !== "ALL") params.orderType = filters.orderType; }
+    if (activeTab === "productPerformance") { params.sortBy = filters.productSortBy; if (filters.itemType !== "ALL") params.itemType = filters.itemType; }
+    if (activeTab === "customerPerformance") params.sortBy = filters.customerSortBy;
+    if (activeTab === "supplierPerformance") params.sortBy = filters.supplierSortBy;
+    return params;
+  };
+
   const handleExcelExport = async () => {
     const reportType = reportTypeByTab[activeTab];
     if (!reportType) return;
 
     try {
-      const params = {
-        ...commonParams(),
-        reportType,
-        sortDirection: filters.sortDirection,
-      };
-
-      if (activeTab === "salesReport") {
-        params.sortBy = filters.salesSortBy;
-        if (filters.orderType !== "ALL") params.orderType = filters.orderType;
-      } else if (activeTab === "productPerformance") {
-        params.sortBy = filters.productSortBy;
-        if (filters.itemType !== "ALL") params.itemType = filters.itemType;
-      } else if (activeTab === "customerPerformance") {
-        params.sortBy = filters.customerSortBy;
-      } else if (activeTab === "supplierPerformance") {
-        params.sortBy = filters.supplierSortBy;
-      }
-
-      const response = await reportsAPI.exportReport(params);
-      const blob = new Blob([response.data], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const rangeLabel = datePreset === "allTime" ? "all-time" : `${dateRange.from || "start"}_${dateRange.to || "end"}`;
-      link.href = url;
-      link.download = `${reportType.toLowerCase()}-report-${rangeLabel}.xlsx`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-      toast.success("Excel exported");
+      await reportsAPI.createExportJob(buildExportParams());
+      await loadExportJobs();
+      toast.success("Excel export queued");
     } catch (error) {
       console.error(error);
       toast.error("Failed to export Excel");
+    }
+  };
+
+  const mutateExportJob = async (action, job) => {
+    try {
+      await reportsAPI[action](job.id);
+      await loadExportJobs();
+      toast.success(action === "deleteExportJob" ? "Export deleted" : action === "cancelExportJob" ? "Export cancelled" : "Export queued for retry");
+    } catch (error) {
+      console.error("Failed to update report export", error);
+      toast.error("Could not update export");
+    }
+  };
+
+  const createSchedule = async () => {
+    if (!scheduleForm.nextRunAt) return toast.error("Choose the first run time");
+    try {
+      await reportsAPI.createReportSchedule({ report: buildExportParams(), frequency: scheduleForm.frequency, nextRunAt: scheduleForm.nextRunAt, emailTo: scheduleForm.emailTo || null });
+      setScheduleForm((value) => ({ ...value, nextRunAt: "" }));
+      await loadReportSchedules();
+      toast.success("Recurring report scheduled");
+    } catch (error) {
+      console.error("Failed to schedule report", error);
+      toast.error("Could not schedule report");
+    }
+  };
+
+  const downloadExportJob = async (job) => {
+    try {
+      const response = await reportsAPI.downloadExportJob(job.id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = job.fileName || `${job.reportType.toLowerCase()}-report.xlsx`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download report export", error);
+      toast.error("Export download failed");
     }
   };
 
@@ -635,7 +871,7 @@ const Reports = ({ mode = "basic" }) => {
     return (
       <div className="grid min-h-[300px] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
         <div className="relative min-h-[260px] rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-2 shadow-inner">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
             <PieChart>
               <defs>
                 {data.map((entry, index) => (
@@ -735,6 +971,44 @@ const Reports = ({ mode = "basic" }) => {
     );
   };
 
+  const changePercent = (current, previous) => {
+    const currentValue = Number(current || 0);
+    const previousValue = Number(previous || 0);
+    if (previousValue === 0) return currentValue === 0 ? 0 : null;
+    return ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+  };
+
+  const ComparisonMetric = ({ title, current, previous, icon: Icon, accent = "blue", format = formatCurrency }) => {
+    const change = changePercent(current, previous);
+    const improved = change !== null && change >= 0;
+
+    return (
+      <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{title}</p>
+            <p className="mt-2 truncate text-xl font-black tabular-nums text-slate-900">{format(current)}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <span className={change === null ? "text-slate-500" : improved ? "text-emerald-600" : "text-red-600"}>
+                {change === null ? "New activity" : `${improved ? "+" : ""}${change.toFixed(1)}%`}
+              </span>
+              <span className="text-slate-400">vs {format(previous)}</span>
+            </div>
+          </div>
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ${{
+            blue: "bg-blue-50 text-blue-700 ring-blue-100",
+            emerald: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+            amber: "bg-amber-50 text-amber-700 ring-amber-100",
+            red: "bg-red-50 text-red-700 ring-red-100",
+            indigo: "bg-indigo-50 text-indigo-700 ring-indigo-100",
+          }[accent]}`}>
+            <Icon size={19} />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const SalesKpis = () => {
     if (!salesSummary) return null;
     const pieData = [
@@ -766,7 +1040,7 @@ const Reports = ({ mode = "basic" }) => {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card className="admin-panel-card" title="Payment Split">
             <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={58} outerRadius={95} paddingAngle={5}>
                     {pieData.map((entry, index) => (
@@ -782,7 +1056,7 @@ const Reports = ({ mode = "basic" }) => {
 
           <Card className="admin-panel-card" title={`Sales Trend (${salesTrend.type === "MONTHLY" ? "Monthly" : "Daily"})`}>
             <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                 <AreaChart data={salesTrend.data}>
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
@@ -816,7 +1090,7 @@ const Reports = ({ mode = "basic" }) => {
         ) : (
           <>
             <div className="min-h-[280px] rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-3 shadow-inner">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                 <BarChart data={data} margin={{ top: 12, right: 8, left: -8, bottom: 34 }}>
                   <defs>
                     <linearGradient id={`${valueKey}-bar-gradient`} x1="0" y1="0" x2="0" y2="1">
@@ -895,9 +1169,9 @@ const Reports = ({ mode = "basic" }) => {
       totalPurchased: Number(item.totalPurchased || 0),
     }));
     const totalCreditDue = basicOverview.creditDue.reduce((sum, item) => sum + Number(item.dueAmount || 0), 0);
-    const totalTopProductRevenue = productData.reduce((sum, item) => sum + item.revenue, 0);
-    const totalTopCustomerSpend = customerData.reduce((sum, item) => sum + item.totalSpent, 0);
-    const totalTopSupplierPurchased = supplierData.reduce((sum, item) => sum + item.totalPurchased, 0);
+    const topProductRevenue = productData[0]?.revenue || 0;
+    const topCustomerSpend = customerData[0]?.totalSpent || 0;
+    const topSupplierPurchased = supplierData[0]?.totalPurchased || 0;
     const averageOrder = Number(salesSummary.totalOrders || 0) > 0 ? Number(salesSummary.totalSales || 0) / Number(salesSummary.totalOrders || 1) : 0;
     const paymentData = [
       { name: "Cash", value: Number(salesSummary.cashSales || 0) },
@@ -908,7 +1182,7 @@ const Reports = ({ mode = "basic" }) => {
       .map((item) => ({ name: item.name, value: item.total }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
-    const categoryTotal = categoryChartData.reduce((sum, item) => sum + item.value, 0);
+    const categoryTotal = categoryData.reduce((sum, item) => sum + item.total, 0);
     const trendTotal = salesTrend.data.reduce((sum, item) => sum + Number(item.sales || 0), 0);
     const trendPeak = salesTrend.data.reduce(
       (peak, item) => (Number(item.sales || 0) > Number(peak.sales || 0) ? item : peak),
@@ -920,6 +1194,79 @@ const Reports = ({ mode = "basic" }) => {
 
     return (
       <div className="space-y-6">
+        {ownerSummary && (
+          <Card className="admin-panel-card dashboard-premium-card overflow-hidden border-slate-200/80 bg-slate-900 p-5 text-white shadow-[0_20px_60px_rgb(15_23_42/0.18)]">
+            <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">Owner Command Center</p>
+                <h2 className="mt-1 text-xl font-black">Current period versus previous period</h2>
+              </div>
+              <p className="text-xs font-semibold text-slate-300">
+                {ownerSummary.comparisonPeriod.from} to {ownerSummary.comparisonPeriod.to}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <ComparisonMetric title="Sales Growth" current={ownerSummary.current.totalSales} previous={ownerSummary.comparison.totalSales} icon={TrendingUp} accent="blue" />
+              <ComparisonMetric title="Net Profit" current={ownerSummary.current.netProfit} previous={ownerSummary.comparison.netProfit} icon={DollarSign} accent="emerald" />
+              <ComparisonMetric title="Average Order" current={ownerSummary.current.averageOrderValue} previous={ownerSummary.comparison.averageOrderValue} icon={ShoppingCart} accent="indigo" />
+              <ComparisonMetric title="Expenses" current={ownerSummary.current.totalExpenses} previous={ownerSummary.comparison.totalExpenses} icon={AlertCircle} accent="red" />
+              <ComparisonMetric title="Orders" current={ownerSummary.current.totalOrders} previous={ownerSummary.comparison.totalOrders} icon={ShoppingCart} accent="amber" format={(value) => Number(value || 0).toLocaleString()} />
+              <ComparisonMetric title="Gross Margin" current={ownerSummary.current.grossMarginPercent} previous={ownerSummary.comparison.grossMarginPercent} icon={BarChart3} accent="emerald" format={(value) => `${Number(value || 0).toFixed(1)}%`} />
+              <ComparisonMetric title="Cash Sales" current={ownerSummary.current.cashSales} previous={ownerSummary.comparison.cashSales} icon={DollarSign} accent="blue" />
+              <ComparisonMetric title="Credit Sales" current={ownerSummary.current.creditSales} previous={ownerSummary.comparison.creditSales} icon={FileText} accent="amber" />
+            </div>
+          </Card>
+        )}
+
+        {ownerSummary?.risks && (
+          <Card className="admin-panel-card border-slate-200/80 p-5 shadow-[0_12px_36px_rgb(15_23_42/0.06)]">
+            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-600">Action Center</p>
+                <h2 className="mt-1 text-lg font-black text-slate-900">What needs attention now</h2>
+              </div>
+              <p className="text-xs font-semibold text-slate-500">Inventory is current; credit is outstanding balance; returns use selected period.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className={`rounded-xl border p-4 ${ownerSummary.risks.outOfStockItems > 0 ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-black text-slate-900">Stock attention</p>
+                  <Package className={ownerSummary.risks.outOfStockItems > 0 ? "text-red-600" : "text-emerald-600"} size={20} />
+                </div>
+                <p className="mt-3 text-2xl font-black tabular-nums text-slate-900">{ownerSummary.risks.lowStockItems}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-600">{ownerSummary.risks.outOfStockItems} out of stock</p>
+              </div>
+
+              <div className={`rounded-xl border p-4 ${ownerSummary.risks.overdue91Plus > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-slate-50"}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-black text-slate-900">Overdue 90+ days</p>
+                  <Users className="text-amber-600" size={20} />
+                </div>
+                <p className="mt-3 text-2xl font-black tabular-nums text-slate-900">{formatCurrency(ownerSummary.risks.overdue91Plus)}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-600">{ownerSummary.risks.overdueCustomerCount} customers require collection</p>
+              </div>
+
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-black text-slate-900">Total receivables</p>
+                  <FileText className="text-blue-600" size={20} />
+                </div>
+                <p className="mt-3 text-2xl font-black tabular-nums text-slate-900">{formatCurrency(ownerSummary.risks.totalReceivables)}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-600">Outstanding across selected branch scope</p>
+              </div>
+
+              <div className={`rounded-xl border p-4 ${ownerSummary.risks.saleReturnRatePercent > 3 ? "border-red-200 bg-red-50" : "border-slate-200 bg-slate-50"}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-black text-slate-900">Sales returns</p>
+                  <RotateCcw className={ownerSummary.risks.saleReturnRatePercent > 3 ? "text-red-600" : "text-slate-600"} size={20} />
+                </div>
+                <p className="mt-3 text-2xl font-black tabular-nums text-slate-900">{formatCurrency(ownerSummary.risks.saleReturnAmount)}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-600">{Number(ownerSummary.risks.saleReturnRatePercent || 0).toFixed(1)}% of orders returned</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <Card className="admin-panel-card dashboard-premium-card overflow-hidden border-slate-200/80 bg-gradient-to-br from-white via-white to-slate-50 p-5 shadow-[0_18px_50px_rgb(15_23_42/0.07)]">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -938,9 +1285,9 @@ const Reports = ({ mode = "basic" }) => {
             <SummaryMetric title="Credit Sales" value={salesSummary.creditSales || 0} helper="Credit invoices" icon={FileText} accent="amber" />
             <SummaryMetric title="Expenses" value={profitSummary?.totalExpenses || 0} helper="For selected range" icon={AlertCircle} accent="red" />
             <SummaryMetric title="Low Stock" value={basicOverview.lowStock.length} helper="Items below reorder" icon={AlertCircle} accent="amber" format={(value) => value} />
-            <SummaryMetric title="Top Product Revenue" value={totalTopProductRevenue} helper={productData[0]?.name || "No product data"} icon={BarChart3} accent="cyan" />
-            <SummaryMetric title="Top Customer Spend" value={totalTopCustomerSpend} helper={customerData[0]?.name || "No customer data"} icon={Users} accent="blue" />
-            <SummaryMetric title="Supplier Purchases" value={totalTopSupplierPurchased} helper={supplierData[0]?.name || "No supplier data"} icon={Truck} accent="slate" />
+            <SummaryMetric title="Top Product Revenue" value={topProductRevenue} helper={productData[0]?.name || "No product data"} icon={BarChart3} accent="cyan" />
+            <SummaryMetric title="Top Customer Spend" value={topCustomerSpend} helper={customerData[0]?.name || "No customer data"} icon={Users} accent="blue" />
+            <SummaryMetric title="Top Supplier Purchases" value={topSupplierPurchased} helper={supplierData[0]?.name || "No supplier data"} icon={Truck} accent="slate" />
             <SummaryMetric title="Categories Selling" value={categoryData.length} helper="Categories with sales" icon={PieIcon} accent="indigo" format={(value) => value} />
           </div>
         </Card>
@@ -963,7 +1310,7 @@ const Reports = ({ mode = "basic" }) => {
               ) : (
                 <>
                   <div className="min-h-[280px] rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-3 shadow-inner">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                       <AreaChart data={salesTrend.data} margin={{ top: 12, right: 12, left: -8, bottom: 0 }}>
                         <defs>
                           <linearGradient id="basicSalesGradient" x1="0" y1="0" x2="0" y2="1">
@@ -1050,7 +1397,7 @@ const Reports = ({ mode = "basic" }) => {
 
       <Card className="admin-panel-card" title="Profit Trend by Item">
         <div className="h-[320px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
             <LineChart data={reportData.slice(0, 20)}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="itemName" hide />
@@ -1077,23 +1424,6 @@ const Reports = ({ mode = "basic" }) => {
         />
       </Card>
     </div>
-  );
-
-  const ProductPerformance = () => (
-    <Card className="admin-panel-card overflow-hidden p-0" title="Product Performance Details">
-      <Table
-        columns={[
-          { header: "#", render: (_, i) => pageData.page * pageData.size + i + 1 },
-          { header: "Item", render: (i) => <div><p className="font-semibold">{i.itemName}</p>{i.altName && <p className="text-xs text-slate-400">{i.altName}</p>}<p className="text-xs text-slate-500">{i.itemType || "UNKNOWN"}</p></div> },
-          { header: "Qty Sold", render: (i) => formatQty(i.qtySold, i.qtyUnit) },
-          { header: "Revenue", render: (i) => formatCurrency(i.revenue) },
-          { header: "Cost", render: (i) => formatCurrency(i.cost) },
-          { header: "Profit", render: (i) => <span className="font-bold text-emerald-600">{formatCurrency(i.profit)}</span> },
-          { header: "Margin", render: (i) => `${Number(i.marginPercent || 0).toFixed(1)}%` },
-        ]}
-        data={reportData}
-      />
-    </Card>
   );
 
   // ─── Returns Report Component ─────────────────────────────────────────
@@ -1251,7 +1581,254 @@ const Reports = ({ mode = "basic" }) => {
     );
   };
 
+  const InventoryValuationReport = () => {
+    const items = Array.isArray(inventorySummary?.items) ? inventorySummary.items : [];
+    const stockedItems = items.filter((item) => Number(item.qtyOnHand || 0) > 0);
+    const zeroStockItems = items.filter((item) => Number(item.qtyOnHand || 0) === 0).length;
+    const negativeStockItems = items.filter((item) => Number(item.qtyOnHand || 0) < 0).length;
+    const visibleItems = items.slice(0, 50);
+    const categoryMap = items.reduce((totals, item) => {
+      const category = item.categoryName || "Uncategorized";
+      totals[category] = (totals[category] || 0) + Number(item.stockValue || 0);
+      return totals;
+    }, {});
+    const categoryData = Object.entries(categoryMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryMetric title="Stock Cost Value" value={inventorySummary?.totalStockValue || 0} helper="Capital currently in stock" icon={DollarSign} accent="blue" />
+          <SummaryMetric title="Potential Revenue" value={inventorySummary?.totalPotentialRevenue || 0} helper="At current selling prices" icon={TrendingUp} accent="emerald" />
+          <SummaryMetric title="Potential Gross Profit" value={inventorySummary?.totalPotentialProfit || 0} helper="Before expenses and losses" icon={BarChart3} accent="cyan" />
+          <SummaryMetric title="Stocked Items" value={stockedItems.length} helper={`${zeroStockItems} items have zero stock`} icon={Package} accent={zeroStockItems > 0 ? "amber" : "emerald"} format={(value) => Number(value).toLocaleString()} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <PremiumChartCard title="Capital by Category" subtitle="Categories holding the most stock value">
+            <div className="h-[320px] min-h-[320px] min-w-0">
+              {categoryData.length ? (
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
+                  <BarChart data={categoryData} layout="vertical" margin={{ top: 8, right: 24, left: 24, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                    <XAxis type="number" {...axisProps} tickFormatter={shortCurrency} />
+                    <YAxis type="category" dataKey="name" width={105} {...axisProps} />
+                    <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={premiumTooltip} />
+                    <Bar dataKey="value" radius={[0, 8, 8, 0]} fill="#2563eb" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : <ChartEmptyState />}
+            </div>
+          </PremiumChartCard>
+
+          <Card className="admin-panel-card border-slate-200/80 p-5">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-600">Stock Health</p>
+            <h2 className="mt-1 text-lg font-black text-slate-900">Immediate valuation risks</h2>
+            <div className="mt-5 space-y-3">
+              <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4">
+                <span className="font-bold text-slate-800">Zero-stock items</span>
+                <span className="text-xl font-black text-red-700">{zeroStockItems}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-red-300 bg-red-100 p-4">
+                <span className="font-bold text-slate-800">Negative-stock items</span>
+                <span className="text-xl font-black text-red-800">{negativeStockItems}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <span className="font-bold text-slate-800">Items without cost</span>
+                <span className="text-xl font-black text-amber-700">{items.filter((item) => Number(item.qtyOnHand || 0) > 0 && Number(item.costPrice || 0) <= 0).length}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <span className="font-bold text-slate-800">Items below cost price</span>
+                <span className="text-xl font-black text-slate-800">{items.filter((item) => Number(item.sellingPrice || 0) < Number(item.costPrice || 0)).length}</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <Card className="admin-panel-card overflow-hidden p-0" title="Inventory Valuation Details">
+          <div className="space-y-3 p-4 md:hidden">
+            {visibleItems.map((item) => (
+              <div key={item.itemId} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-slate-900">{item.itemName}</p>
+                    <p className="mt-1 text-xs text-slate-500">{item.barcode || "No barcode"} · {item.categoryName || "Uncategorized"}</p>
+                  </div>
+                  <span className={Number(item.qtyOnHand || 0) <= 0 ? "font-black text-red-600" : "font-black text-slate-900"}>{formatQty(item.qtyOnHand, item.unit)}</span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div><p className="text-xs font-semibold text-slate-500">Stock value</p><p className="mt-1 font-bold text-blue-700">{formatCurrency(item.stockValue)}</p></div>
+                  <div><p className="text-xs font-semibold text-slate-500">Potential profit</p><p className={`mt-1 font-bold ${Number(item.potentialProfit || 0) < 0 ? "text-red-600" : "text-emerald-700"}`}>{formatCurrency(item.potentialProfit)}</p></div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block">
+            <Table
+            columns={[
+              { header: "Item", render: (item) => <div><p className="font-semibold text-slate-900">{item.itemName}</p><p className="text-xs text-slate-500">{item.barcode || "No barcode"} · {item.categoryName || "Uncategorized"}</p></div> },
+              { header: "Qty", render: (item) => <span className={Number(item.qtyOnHand || 0) <= 0 ? "font-bold text-red-600" : "font-semibold"}>{formatQty(item.qtyOnHand, item.unit)}</span> },
+              { header: "Avg Cost", render: (item) => formatCurrency(item.costPrice) },
+              { header: "Stock Value", render: (item) => <span className="font-bold text-blue-700">{formatCurrency(item.stockValue)}</span> },
+              { header: "Selling Price", render: (item) => formatCurrency(item.sellingPrice) },
+              { header: "Potential Revenue", render: (item) => formatCurrency(item.potentialRevenue) },
+              { header: "Potential Profit", render: (item) => <span className={Number(item.potentialProfit || 0) < 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>{formatCurrency(item.potentialProfit)}</span> },
+            ]}
+              data={visibleItems}
+            />
+          </div>
+          {items.length > visibleItems.length && (
+            <p className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
+              Showing the top 50 items by stock value. Category and stock-health totals include all {items.length} items.
+            </p>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
+  const CashFlowReport = () => {
+    const data = reportData || {};
+    const daily = Array.isArray(data.dailyMovements) ? data.dailyMovements : [];
+    const visibleDaily = daily.slice(-100);
+    const movementBreakdown = [
+      { name: "Cash sales", value: Number(data.cashSales || 0), type: "inflow" },
+      { name: "Credit collections", value: Number(data.creditCollections || 0), type: "inflow" },
+      { name: "Expenses", value: Number(data.expenses || 0), type: "outflow" },
+      { name: "Purchase payments", value: Number(data.purchasePayments || 0), type: "outflow" },
+      { name: "Supplier payments", value: Number(data.supplierPayments || 0), type: "outflow" },
+      { name: "Cash refunds", value: Number(data.cashRefunds || 0), type: "outflow" },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryMetric title="Cash Inflows" value={data.totalInflows || 0} helper="Sales and credit collections" icon={TrendingUp} accent="emerald" />
+          <SummaryMetric title="Cash Outflows" value={data.totalOutflows || 0} helper="Operating cash payments" icon={TrendingDown} accent="red" />
+          <SummaryMetric title="Net Cash Movement" value={data.netCashMovement || 0} helper="Inflows less outflows" icon={DollarSign} accent={Number(data.netCashMovement || 0) < 0 ? "red" : "blue"} />
+          <SummaryMetric title="Cash Drops" value={data.cashDrops || 0} helper="Drawer-to-safe transfers, not expenses" icon={FileText} accent="amber" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <PremiumChartCard title="Daily Cash Movement" subtitle="Business cash inflows versus outflows">
+            <div className="h-[320px] min-h-[320px] min-w-0">
+              {daily.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={daily} margin={{ top: 12, right: 16, left: 4, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis dataKey="date" {...axisProps} /><YAxis {...axisProps} tickFormatter={shortCurrency} /><Tooltip formatter={(value) => formatCurrency(value)} contentStyle={premiumTooltip} /><Area type="monotone" dataKey="inflows" stroke="#059669" fill="#d1fae5" strokeWidth={2} /><Area type="monotone" dataKey="outflows" stroke="#dc2626" fill="#fee2e2" strokeWidth={2} /></AreaChart></ResponsiveContainer> : <ChartEmptyState />}
+            </div>
+          </PremiumChartCard>
+          <Card className="admin-panel-card border-slate-200/80 p-5" title="Cash Movement Breakdown">
+            <div className="space-y-3">
+              {movementBreakdown.map((movement) => <div key={movement.name} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4"><div><p className="font-bold text-slate-900">{movement.name}</p><p className={`text-xs font-semibold ${movement.type === "inflow" ? "text-emerald-600" : "text-red-600"}`}>{movement.type === "inflow" ? "Cash in" : "Cash out"}</p></div><p className="font-black tabular-nums text-slate-900">{formatCurrency(movement.value)}</p></div>)}
+            </div>
+          </Card>
+        </div>
+        <Card className="admin-panel-card overflow-hidden p-0" title="Daily Cash Reconciliation">
+          <div className="space-y-3 p-4 md:hidden">{visibleDaily.map((row) => <div key={row.date} className="rounded-xl border border-slate-200 bg-white p-4"><p className="font-bold text-slate-900">{row.date}</p><div className="mt-3 grid grid-cols-3 gap-2 text-xs"><div><p className="text-slate-500">In</p><p className="mt-1 font-bold text-emerald-700">{formatCurrency(row.inflows)}</p></div><div><p className="text-slate-500">Out</p><p className="mt-1 font-bold text-red-700">{formatCurrency(row.outflows)}</p></div><div><p className="text-slate-500">Net</p><p className={`mt-1 font-black ${Number(row.netMovement || 0) < 0 ? "text-red-700" : "text-blue-700"}`}>{formatCurrency(row.netMovement)}</p></div></div></div>)}</div>
+          <div className="hidden md:block"><Table columns={[{ header: "Date", accessor: "date" }, { header: "Inflows", render: (row) => <span className="font-bold text-emerald-700">{formatCurrency(row.inflows)}</span> }, { header: "Outflows", render: (row) => <span className="font-bold text-red-700">{formatCurrency(row.outflows)}</span> }, { header: "Net Movement", render: (row) => <span className={`font-black ${Number(row.netMovement || 0) < 0 ? "text-red-700" : "text-blue-700"}`}>{formatCurrency(row.netMovement)}</span> }]} data={visibleDaily} /></div>
+          {daily.length > visibleDaily.length && <p className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">Showing the latest 100 active cash-movement days. KPIs and graph include all {daily.length} active days.</p>}
+        </Card>
+      </div>
+    );
+  };
+
+  const ProfitAndLossReport = () => {
+    const current = reportData?.current || {};
+    const comparison = reportData?.comparison || {};
+    const statementRows = [
+      ["Item revenue", current.itemRevenue, false],
+      ["Less: bill discounts", -Number(current.billDiscounts || 0), true],
+      ["Less: sales returns", -Number(current.salesReturns || 0), true],
+      ["Net revenue", current.netRevenue, false],
+      ["Less: cost of goods sold", -Number(current.costOfGoodsSold || 0), true],
+      ["Gross profit", current.grossProfit, false],
+      ["Less: operating expenses", -Number(current.operatingExpenses || 0), true],
+      ["Net profit", current.netProfit, false],
+    ];
+
+    return (
+      <div className="space-y-6">
+        {Number(current.costCoveragePercent || 0) < 95 && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-black">Profit confidence warning</p><p className="mt-1">Only {Number(current.costCoveragePercent || 0).toFixed(1)}% of revenue lines have recorded cost. {Number(current.missingCostLineCount || 0).toLocaleString()} lines may inflate profit.</p></div>}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <ComparisonMetric title="Net Revenue" current={current.netRevenue} previous={comparison.netRevenue} icon={TrendingUp} accent="blue" />
+          <ComparisonMetric title="Gross Profit" current={current.grossProfit} previous={comparison.grossProfit} icon={BarChart3} accent="emerald" />
+          <ComparisonMetric title="Net Profit" current={current.netProfit} previous={comparison.netProfit} icon={DollarSign} accent={Number(current.netProfit || 0) < 0 ? "red" : "emerald"} />
+          <ComparisonMetric title="Net Margin" current={current.netMarginPercent} previous={comparison.netMarginPercent} icon={PieIcon} accent="indigo" format={(value) => `${Number(value || 0).toFixed(1)}%`} />
+        </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <Card className="admin-panel-card overflow-hidden p-0" title="Profit & Loss Statement">
+            <div className="divide-y divide-slate-200">{statementRows.map(([label, value, deduction]) => <div key={label} className={`flex items-center justify-between px-5 py-4 ${label === "Net profit" || label === "Gross profit" || label === "Net revenue" ? "bg-slate-50" : ""}`}><span className={`text-sm ${label === "Net profit" ? "font-black text-slate-900" : "font-semibold text-slate-700"}`}>{label}</span><span className={`font-black tabular-nums ${deduction ? "text-red-600" : Number(value || 0) < 0 ? "text-red-700" : "text-slate-900"}`}>{formatCurrency(value)}</span></div>)}</div>
+          </Card>
+          <Card className="admin-panel-card border-slate-200/80 p-5" title="Margin & Data Quality">
+            <div className="space-y-4">
+              {[{ label: "Gross margin", value: current.grossMarginPercent, color: "bg-emerald-500" }, { label: "Net margin", value: current.netMarginPercent, color: "bg-blue-500" }, { label: "Cost coverage", value: current.costCoveragePercent, color: Number(current.costCoveragePercent || 0) < 95 ? "bg-amber-500" : "bg-emerald-500" }].map((metric) => <div key={metric.label}><div className="mb-2 flex justify-between text-sm font-bold text-slate-700"><span>{metric.label}</span><span>{Number(metric.value || 0).toFixed(1)}%</span></div><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${metric.color}`} style={{ width: `${Math.max(0, Math.min(100, Number(metric.value || 0)))}%` }} /></div></div>)}
+              <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600"><p>Returned COGS restored: <strong>{formatCurrency(current.returnedCost)}</strong></p><p className="mt-2">Operating expenses include only records configured for profit reporting.</p></div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  };
+
   const renderPagedTable = () => {
+    if (activeTab === "grnPurchases") return <GrnPurchaseReportView summary={{ ...inventorySummary, page: pageData }} />;
+    if (activeTab === "stockMovement") return <StockMovementReportView data={reportData} totalElements={pageData.totalElements} />;
+    if (activeTab === "stockTransfers") return <StockTransferReportView data={reportData} pageData={pageData} />;
+    if (activeTab === "shiftSummary") {
+      const totalCashSales = reportData.reduce((sum, shift) => sum + Number(shift.cashSales || 0), 0);
+      const totalExpected = reportData.reduce((sum, shift) => sum + Number(shift.expectedClosingCash || 0), 0);
+      const totalCounted = reportData.reduce((sum, shift) => sum + Number(shift.countedCash || 0), 0);
+      const totalVariance = reportData.reduce((sum, shift) => sum + Number(shift.cashDifference || 0), 0);
+      const shortageCount = reportData.filter((shift) => Number(shift.cashDifference || 0) < 0).length;
+
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <SummaryMetric title="Cash Sales" value={totalCashSales} helper="Shifts on this page" icon={DollarSign} accent="emerald" />
+            <SummaryMetric title="Expected Cash" value={totalExpected} helper="After expenses and drops" icon={TrendingUp} accent="blue" />
+            <SummaryMetric title="Counted Cash" value={totalCounted} helper="Physical closing counts" icon={DollarSign} accent="indigo" />
+            <SummaryMetric title="Net Variance" value={totalVariance} helper={`${shortageCount} shifts short`} icon={AlertCircle} accent={totalVariance < 0 ? "red" : "emerald"} />
+            <SummaryMetric title="Shifts" value={pageData.totalElements} helper={`${reportData.length} shown`} icon={Calendar} accent="amber" format={(value) => Number(value || 0).toLocaleString()} />
+          </div>
+
+          <div className="space-y-3 md:hidden">
+            {reportData.map((shift) => (
+              <button key={shift.shiftId} type="button" onClick={() => window.location.assign(`/shifts/history/${shift.shiftId}`)} className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div><p className="font-black text-slate-900">Shift #{shift.shiftId}</p><p className="mt-1 text-xs text-slate-500">{shift.cashierUsername} · {formatDateTime(shift.openedAt)}</p></div>
+                  <span className={`rounded-full px-2 py-1 text-xs font-bold ${shift.shiftStatus === "CLOSED" ? "bg-slate-100 text-slate-700" : "bg-emerald-100 text-emerald-700"}`}>{shift.shiftStatus}</span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div><p className="text-xs font-semibold text-slate-500">Cash sales</p><p className="mt-1 font-bold">{formatCurrency(shift.cashSales)}</p></div>
+                  <div><p className="text-xs font-semibold text-slate-500">Variance</p><p className={`mt-1 font-black ${Number(shift.cashDifference || 0) < 0 ? "text-red-600" : Number(shift.cashDifference || 0) > 0 ? "text-blue-600" : "text-emerald-700"}`}>{formatCurrency(shift.cashDifference)}</p></div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <Card className="admin-panel-card hidden overflow-hidden p-0 md:block" title="Shift Reconciliation Details">
+            <Table
+              columns={[
+                { header: "Shift", render: (shift) => <div><p className="font-bold">#{shift.shiftId}</p><p className="text-xs text-slate-500">{shift.cashierUsername}</p></div> },
+                { header: "Opened", render: (shift) => formatDateTime(shift.openedAt) },
+                { header: "Orders", accessor: "orderCount" },
+                { header: "Cash Sales", render: (shift) => formatCurrency(shift.cashSales) },
+                { header: "Credit Sales", render: (shift) => formatCurrency(shift.creditSales) },
+                { header: "Expenses", render: (shift) => formatCurrency(shift.totalExpenses) },
+                { header: "Cash Drops", render: (shift) => formatCurrency(shift.totalCashDrops) },
+                { header: "Expected", render: (shift) => formatCurrency(shift.expectedClosingCash) },
+                { header: "Counted", render: (shift) => formatCurrency(shift.countedCash) },
+                { header: "Variance", render: (shift) => <span className={`font-black ${Number(shift.cashDifference || 0) < 0 ? "text-red-600" : Number(shift.cashDifference || 0) > 0 ? "text-blue-600" : "text-emerald-700"}`}>{formatCurrency(shift.cashDifference)}</span> },
+              ]}
+              data={reportData}
+              onRowClick={(shift) => window.location.assign(`/shifts/history/${shift.shiftId}`)}
+              getRowKey={(shift) => shift.shiftId}
+            />
+          </Card>
+        </div>
+      );
+    }
+
     if (activeTab === "salesReport") {
       return (
         <Card className="admin-panel-card overflow-hidden p-0" title="Sales Details">
@@ -1272,7 +1849,7 @@ const Reports = ({ mode = "basic" }) => {
       );
     }
 
-    if (activeTab === "productPerformance") return <ProductPerformance />;
+    if (activeTab === "productPerformance") return <ProductCategoryIntelligenceView data={reportData} intelligenceData={productIntelligenceData} totalElements={pageData.totalElements} />;
 
     if (activeTab === "customerPerformance") {
       return (
@@ -1353,6 +1930,16 @@ const Reports = ({ mode = "basic" }) => {
     if (activeTab === "returnsReports") {
       return <ReturnsReport data={returnsData} />;
     }
+    if (activeTab === "inventoryValuation") return <InventoryValuationReport />;
+    if (activeTab === "cashFlow") return <CashFlowReport />;
+    if (activeTab === "profitLoss") return <ProfitAndLossReport />;
+    if (activeTab === "creditAging") return <AgingReportView data={reportData} kind="customer" />;
+    if (activeTab === "supplierPayables") return <AgingReportView data={reportData} kind="supplier" />;
+    if (activeTab === "customerBehavior") return <CustomerBehaviorReportView data={reportData} />;
+    if (activeTab === "performanceComparison") return <CashierBranchComparisonView cashierData={comparisonData.cashiers} branchData={comparisonData.branches} />;
+    if (activeTab === "commercialIntelligence") return <CommercialIntelligenceView promotions={commercialData.promotions} warranty={commercialData.warranty} returnsData={returnsData} />;
+    if (activeTab === "exceptions") return <ExceptionCenterView data={reportData} />;
+    if (activeTab === "stockHealth") return <StockHealthReportView summary={stockHealthSummary} data={reportData} />;
     return null;
   };
 
@@ -1364,22 +1951,34 @@ const Reports = ({ mode = "basic" }) => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-800">{pageTitleByMode[mode] || "Reports"}</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {mode === "basic" ? "Quick chart overview for business direction." : "Detailed paginated report data with Excel export."}
+            {mode === "basic" ? "Quick chart overview for business direction." : mode === "cashFlow" ? "Cash-only business inflows, outflows, and daily movement." : mode === "profitLoss" ? "Canonical revenue, cost, margin, and operating profit statement." : mode === "creditAging" ? "Current outstanding customer credit grouped by invoice age and collection priority." : mode === "supplierPayables" ? "Current supplier obligations grouped by purchase age and payment priority." : mode === "stockMovement" ? "Opening, inflow, outflow, processing, and closing stock reconciliation." : mode === "stockTransfers" ? "Branch transfer counts, movement quantities, and transfer drill-downs." : mode === "stockHealth" ? "Current stock coverage, reorder suggestions, and expiry risk." : mode === "grnPurchases" ? "Received goods value, supplier returns, and linked purchase payment status." : mode === "customerBehavior" ? "New, returning, repeat, value, and inactivity behavior for registered customers." : mode === "performanceComparison" ? "Sales, orders, discounts, returns, refunds, and expenses by cashier and branch." : mode === "commercialIntelligence" ? "Bill-promotion usage, return impact, and warranty status intelligence." : mode === "exceptions" ? "Current and period-based business risks requiring owner or manager attention." : "Detailed paginated report data with Excel export."}
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+        {!(["creditAging", "supplierPayables", "stockHealth"].includes(mode)) && <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
           <Calendar size={16} className="text-slate-400" />
           {activeDateLabel}
           <span className="text-slate-300">|</span>
           <span className="font-medium text-slate-500">{datePreset === "allTime" ? "All records" : `${dateRange.from} to ${dateRange.to}`}</span>
-        </div>
+        </div>}
       </div>
 
-      <Card className="admin-panel-card overflow-visible p-0">
+      <Card className="admin-panel-card p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button variant="secondary" onClick={saveCurrentView}>Save Current View</Button>
+          <select className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm" defaultValue="" onChange={(event) => { const view = savedViews.find((item) => item.name === event.target.value); if (view) loadSavedView(view); event.target.value = ""; }}>
+            <option value="">Load saved view...</option>
+            {savedViews.map((view) => <option key={view.name} value={view.name}>{view.name}</option>)}
+          </select>
+          {savedViews.length > 0 && <Button variant="secondary" onClick={() => { const name = window.prompt("Saved view name to delete"); if (name) deleteSavedView(name); }}>Delete View</Button>}
+          <p className="text-xs font-semibold text-slate-500">Filters are stored in the URL for sharing and reload.</p>
+        </div>
+      </Card>
+
+      {!(["creditAging", "supplierPayables", "stockHealth"].includes(mode)) && <Card className="admin-panel-card overflow-visible p-0">
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="flex flex-wrap gap-2">
-              {datePresetOptions.map((option) => (
+              {datePresetOptions.filter((option) => !(["cashFlow", "profitLoss"].includes(mode) && option.id === "allTime")).map((option) => (
                 <button
                   key={option.id}
                   type="button"
@@ -1410,7 +2009,7 @@ const Reports = ({ mode = "basic" }) => {
             </div>
           </div>
 
-          {isPagedTab && (
+          {isPagedTab && !["shiftSummary", "stockMovement", "stockTransfers", "grnPurchases"].includes(activeTab) && (
             <div className="mt-4 grid grid-cols-1 gap-3 border-t border-slate-200 pt-4 sm:grid-cols-2 lg:grid-cols-4">
               <CustomSelect
                 value={filters[activeSortKey]}
@@ -1443,7 +2042,7 @@ const Reports = ({ mode = "basic" }) => {
             </div>
           )}
         </div>
-      </Card>
+      </Card>}
 
       {visibleTabs.length > 1 && (
         <div className="page-section-enter flex flex-wrap gap-2 border-b border-slate-200 pb-2">
@@ -1491,18 +2090,68 @@ const Reports = ({ mode = "basic" }) => {
               )}
             </div>
 
+            {isPagedTab && (
+              <Card className="p-4">
+                <h3 className="text-sm font-black text-slate-800">Schedule This Report</h3>
+                <p className="mt-1 text-xs text-slate-500">Generate the current filtered report automatically and optionally email it.</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-4">
+                  <select className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm" value={scheduleForm.frequency} onChange={(event) => setScheduleForm((value) => ({ ...value, frequency: event.target.value }))}>
+                    <option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option>
+                  </select>
+                  <input type="datetime-local" className="h-10 rounded-xl border border-slate-200 px-3 text-sm" value={scheduleForm.nextRunAt} onChange={(event) => setScheduleForm((value) => ({ ...value, nextRunAt: event.target.value }))} />
+                  <input type="email" placeholder="Email recipient (optional)" className="h-10 rounded-xl border border-slate-200 px-3 text-sm" value={scheduleForm.emailTo} onChange={(event) => setScheduleForm((value) => ({ ...value, emailTo: event.target.value }))} />
+                  <Button variant="outline" onClick={createSchedule}>Create Schedule</Button>
+                </div>
+                {reportSchedules.length > 0 && <div className="mt-4 divide-y divide-slate-100">
+                  {reportSchedules.map((schedule) => <div key={schedule.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div><p className="text-sm font-bold text-slate-800">{schedule.reportType} · {schedule.frequency}</p><p className="text-xs text-slate-500">Next: {new Date(schedule.nextRunAt).toLocaleString()}{schedule.emailTo ? ` · ${schedule.emailTo}` : ""}</p></div>
+                    <div className="flex gap-2"><Button variant="outline" size="sm" onClick={async () => { await reportsAPI.setReportScheduleEnabled(schedule.id, !schedule.enabled); await loadReportSchedules(); }}>{schedule.enabled ? "Pause" : "Resume"}</Button><Button variant="outline" size="sm" onClick={async () => { await reportsAPI.deleteReportSchedule(schedule.id); await loadReportSchedules(); }}>Delete</Button></div>
+                  </div>)}
+                </div>}
+              </Card>
+            )}
+
+            {isPagedTab && exportJobs.length > 0 && (
+              <Card className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800">Recent Excel Exports</h3>
+                    <p className="text-xs text-slate-500">Queued exports continue in the background.</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={loadExportJobs}>Refresh</Button>
+                </div>
+                <div className="mt-3 divide-y divide-slate-100">
+                  {exportJobs.map((job) => (
+                    <div key={job.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">{job.reportType} report</p>
+                        <p className="text-xs text-slate-500">{new Date(job.createdAt).toLocaleString()} · {job.status}</p>
+                        {job.errorMessage && <p className="mt-1 text-xs font-semibold text-red-600">{job.errorMessage}</p>}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {job.downloadable && <Button variant="outline" size="sm" onClick={() => downloadExportJob(job)}><Download size={14} className="mr-2" />Download</Button>}
+                        {job.status === "QUEUED" && <Button variant="outline" size="sm" onClick={() => mutateExportJob("cancelExportJob", job)}>Cancel</Button>}
+                        {job.status === "FAILED" && <Button variant="outline" size="sm" onClick={() => mutateExportJob("retryExportJob", job)}>Retry</Button>}
+                        {job.status !== "PROCESSING" && <Button variant="outline" size="sm" onClick={() => mutateExportJob("deleteExportJob", job)}>Delete</Button>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
             <div ref={reportRef} className="admin-panel-card rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="mb-8 flex items-end justify-between border-b border-slate-100 pb-4">
                 <div>
                   <h2 className="text-2xl font-bold text-slate-800">
                     {allTabs.find((tab) => tab.id === activeTab)?.label || "Report"}
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">Period: {datePreset === "allTime" ? "All Time" : `${dateRange.from} to ${dateRange.to}`}</p>
+                  <p className="mt-1 text-sm text-slate-500">{["creditAging", "supplierPayables", "stockHealth"].includes(mode) ? "Current position as of generation time" : `Period: ${datePreset === "allTime" ? "All Time" : `${dateRange.from} to ${dateRange.to}`}`}</p>
                 </div>
                 <p className="text-right text-xs text-slate-400">Generated: {new Date().toLocaleString()}</p>
               </div>
 
-              {renderReportContent()}
+              {chartsReady ? renderReportContent() : <div className="h-40" aria-hidden="true" />}
             </div>
 
             {isPagedTab && (

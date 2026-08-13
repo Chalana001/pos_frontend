@@ -504,6 +504,69 @@ return (
                         Product Reports
                       </NavLink>
                       <NavLink
+                        to="/reports/inventory"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Inventory Valuation
+                      </NavLink>
+                      <NavLink
+                        to="/reports/stock-health"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Stock Health
+                      </NavLink>
+                      <NavLink
+                        to="/reports/shifts"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Shift / Z Reports
+                      </NavLink>
+                      <NavLink to="/reports/cash-flow" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Cash Flow
+                      </NavLink>
+                      <NavLink to="/reports/profit-loss" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Profit &amp; Loss
+                      </NavLink>
+                      <NavLink to="/reports/credit-aging" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Credit Aging
+                      </NavLink>
+                      <NavLink to="/reports/supplier-payables" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Supplier Payables
+                      </NavLink>
+                      <NavLink to="/reports/stock-movement" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Stock Movement
+                      </NavLink>
+                      <NavLink to="/reports/stock-transfers" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Stock Transfers
+                      </NavLink>
+                      <NavLink to="/reports/customer-behavior" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Customer Behavior
+                      </NavLink>
+                      <NavLink to="/reports/performance-comparison" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Cashier / Branch
+                      </NavLink>
+                      <NavLink to="/reports/commercial-intelligence" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Promotions / Warranty
+                      </NavLink>
+                      <NavLink to="/reports/exceptions" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        Exception Center
+                      </NavLink>
+                      <NavLink to="/reports/purchases" className={({ isActive }) => `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}>
+                        GRN / Purchases
+                      </NavLink>
+                      <NavLink
                         to="/reports/customers"
                         className={({ isActive }) =>
                           `block px-3 py-2 rounded-lg text-sm transition-colors ${

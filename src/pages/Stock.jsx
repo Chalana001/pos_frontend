@@ -112,8 +112,10 @@ const Stock = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const requestedStatus = params.get("status");
+    const requestedSearch = params.get("search");
     const validStatus = stockStatusOptions.some((option) => option.value === requestedStatus);
     setStockStatus(validStatus ? requestedStatus : "ALL");
+    setSearchQuery(requestedSearch || "");
     setPage(0);
   }, [location.search]);
 
@@ -858,7 +860,6 @@ const Stock = () => {
 };
 
 export default Stock;
-
 
 
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Clock, User } from "lucide-react";
+import { ArrowLeft, ChevronRight, Clock, Printer, User } from "lucide-react";
 import { shiftsAPI } from "../api/shifts.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
@@ -149,12 +149,34 @@ const ShiftDetailsPage = () => {
           <h1 className="text-3xl font-bold text-slate-800">Shift #{shift.id}</h1>
           <p className="text-sm text-slate-500 mt-1">{shift.branchName || `Branch #${shift.branchId}`}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase w-fit ${
-          shift.status === "OPEN" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
-        }`}>
-          {shift.status}
-        </span>
+        <div className="flex items-center gap-2 print:hidden">
+          {shift.status === "CLOSED" && <Button variant="secondary" onClick={() => window.print()}><Printer size={17} className="mr-2" /> Print Z Report</Button>}
+          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase w-fit ${shift.status === "OPEN" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
+        </div>
       </div>
+
+      <Card className="border border-slate-200 p-5 print:border-0 print:shadow-none">
+        <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">Z Report</p><h2 className="mt-1 text-xl font-black text-slate-900">Cash Reconciliation</h2></div>
+          <p className="text-xs font-semibold text-slate-500">{formatDateTime(shift.openedAt)} to {formatDateTime(shift.closedAt)}</p>
+        </div>
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Opening cash", shift.openingCash],
+            ["Cash sales", shift.cashSales],
+            ["Expenses", -Number(shift.totalExpenses || 0)],
+            ["Cash drops", -Number(shift.totalCashDrops || 0)],
+            ["Expected cash", shift.expectedCash],
+            ["Counted cash", shift.countedCash],
+          ].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-2 text-lg font-black text-slate-900">{formatCurrency(value || 0)}</p></div>)}
+          <div className={`rounded-xl p-4 sm:col-span-2 ${Number(shift.cashDifference || 0) < 0 ? "bg-red-50" : Number(shift.cashDifference || 0) > 0 ? "bg-blue-50" : "bg-emerald-50"}`}>
+            <p className="text-xs font-bold uppercase text-slate-500">Closing variance</p>
+            <p className={`mt-2 text-2xl font-black ${Number(shift.cashDifference || 0) < 0 ? "text-red-700" : Number(shift.cashDifference || 0) > 0 ? "text-blue-700" : "text-emerald-700"}`}>{formatCurrency(shift.cashDifference || 0)}</p>
+            <p className="mt-1 text-xs font-semibold text-slate-600">{Number(shift.cashDifference || 0) < 0 ? "Cash shortage" : Number(shift.cashDifference || 0) > 0 ? "Cash excess" : "Cash reconciled"}</p>
+          </div>
+        </div>
+        {(shift.openNote || shift.closeNote) && <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">{shift.openNote && <div><p className="text-xs font-bold uppercase text-slate-500">Opening note</p><p className="mt-1 text-sm text-slate-700">{shift.openNote}</p></div>}{shift.closeNote && <div><p className="text-xs font-bold uppercase text-slate-500">Closing note</p><p className="mt-1 text-sm text-slate-700">{shift.closeNote}</p></div>}</div>}
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "90ms" }}>

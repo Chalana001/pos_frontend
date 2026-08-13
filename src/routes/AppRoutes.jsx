@@ -40,6 +40,7 @@ const Stock = lazy(() => import('../pages/Stock'));
 const StockItemDetailsPage = lazy(() => import('../pages/StockItemDetailsPage'));
 const StockAdjustments = lazy(() => import('../pages/StockAdjustments'));
 const StockTransfers = lazy(() => import('../pages/StockTransfers'));
+const StockTransferDetailsPage = lazy(() => import('../pages/StockTransferDetailsPage'));
 const StockProcessingPage = lazy(() => import('../pages/StockProcessingPage'));
 const Purchases = lazy(() => import('../pages/PurchaseListPage'));
 const PurchaseReturnPage = lazy(() => import('../pages/PurchaseReturnPage'));
@@ -142,6 +143,7 @@ const AppRoutes = () => {
         <Route path="stock/item/:id" element={<ProtectedRoute permission="VIEW_STOCK" feature="STOCK_LEVELS" requiresOnline>{withSuspense(<StockItemDetailsPage />)}</ProtectedRoute>} />
         <Route path="stock/adjustments" element={<ProtectedRoute permission="ADJUST_STOCK" feature="STOCK_LEVELS" requiresOnline>{withSuspense(<StockAdjustments />)}</ProtectedRoute>} />
         <Route path="stock/transfers" element={<ProtectedRoute permission="TRANSFER_STOCK" feature="STOCK_TRANSFERS" requiresOnline>{withSuspense(<StockTransfers />)}</ProtectedRoute>} />
+        <Route path="stock-transfers/details/:transferNo" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<StockTransferDetailsPage />)}</ProtectedRoute>} />
         <Route path="stock/processing" element={<ProtectedRoute permission="ADJUST_STOCK" feature="STOCK_LEVELS" requiresOnline>{withSuspense(<StockProcessingPage />)}</ProtectedRoute>} />
 
         <Route path="purchases" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline>{withSuspense(<Purchases />)}</ProtectedRoute>} />
@@ -156,6 +158,20 @@ const AppRoutes = () => {
         <Route path="reports" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="basic" />)}</ProtectedRoute>} />
         <Route path="reports/sales" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="sales" />)}</ProtectedRoute>} />
         <Route path="reports/products" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="product" />)}</ProtectedRoute>} />
+        <Route path="reports/inventory" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="inventory" />)}</ProtectedRoute>} />
+        <Route path="reports/stock-health" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="stockHealth" />)}</ProtectedRoute>} />
+        <Route path="reports/shifts" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="shifts" />)}</ProtectedRoute>} />
+        <Route path="reports/cash-flow" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="cashFlow" />)}</ProtectedRoute>} />
+        <Route path="reports/profit-loss" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="profitLoss" />)}</ProtectedRoute>} />
+        <Route path="reports/credit-aging" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="creditAging" />)}</ProtectedRoute>} />
+        <Route path="reports/supplier-payables" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="supplierPayables" />)}</ProtectedRoute>} />
+        <Route path="reports/stock-movement" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="stockMovement" />)}</ProtectedRoute>} />
+        <Route path="reports/stock-transfers" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="stockTransfers" />)}</ProtectedRoute>} />
+        <Route path="reports/customer-behavior" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="customerBehavior" />)}</ProtectedRoute>} />
+        <Route path="reports/performance-comparison" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="performanceComparison" />)}</ProtectedRoute>} />
+        <Route path="reports/commercial-intelligence" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="commercialIntelligence" />)}</ProtectedRoute>} />
+        <Route path="reports/exceptions" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="exceptions" />)}</ProtectedRoute>} />
+        <Route path="reports/purchases" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="grnPurchases" />)}</ProtectedRoute>} />
         <Route path="reports/customers" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="customer" />)}</ProtectedRoute>} />
         <Route path="reports/suppliers" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="supplier" />)}</ProtectedRoute>} />
         <Route path="reports/returns" element={<ProtectedRoute permission="VIEW_REPORTS" feature="RETURNS_REPORTS" requiresOnline>{withSuspense(<Reports mode="returns" />)}</ProtectedRoute>} />

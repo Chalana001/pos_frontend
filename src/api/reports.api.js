@@ -1,13 +1,30 @@
 import api from './axios';
 
 export const reportsAPI = {
+  ownerCommandCenter: (params) => api.get('/reports/owner-command-center', { params }),
+  inventoryValuation: (params) => api.get('/api/reports/v2/inventory-valuation', { params }),
+  shiftSummary: (params) => api.get('/api/reports/v2/shift-summary', { params }),
+  cashFlow: (params) => api.get('/api/reports/v2/cash-flow', { params }),
+  profitAndLoss: (params) => api.get('/api/reports/v2/profit-loss', { params }),
+  creditAging: (params) => api.get('/api/reports/v2/credit-aging', { params }),
+  supplierPayablesAging: (params) => api.get('/api/reports/v2/supplier-payables-aging', { params }),
+  stockMovement: (params) => api.get('/api/reports/v2/stock-movement', { params }),
+  stockHealth: (params) => api.get('/api/reports/v2/stock-health', { params }),
+  stockTransferReport: (params) => api.get('/api/reports/v2/stock-transfers', { params }),
+  customerBehavior: (params) => api.get('/api/reports/v2/customer-behavior', { params }),
+  cashierPerformance: (params) => api.get('/api/reports/v2/cashier-performance', { params }),
+  branchComparison: (params) => api.get('/api/reports/v2/branch-comparison', { params }),
+  promotionEffectiveness: (params) => api.get('/api/reports/v2/promotions', { params }),
+  warrantyReport: (params) => api.get('/api/reports/v2/warranties', { params }),
+  exceptionCenter: (params) => api.get('/api/reports/v2/exceptions', { params }),
+  grnReport: (params) => api.get('/api/reports/v2/grn', { params }),
   salesSummary: (params) => api.get('/reports/sales-summary', { params }),
   topSelling: (params) => api.get('/reports/top-selling', { params }),
   
   // 🚀 මෙතන branchId වෙනුවට අනිත් ඒවා වගේම params කියලා වෙනස් කළා
   lowStock: (params) => api.get('/reports/low-stock', { params }),
   
-  creditDue: () => api.get('/reports/credit-due'),
+  creditDue: (params) => api.get('/reports/credit-due', { params }),
   profit: (params) => api.get('/reports/profit', { params }),
   profitSummary: (params) => api.get('/reports/profit-summary', { params }),
   salesTrend: (params) => api.get("/reports/sales-trend", { params }),
@@ -19,6 +36,16 @@ export const reportsAPI = {
   supplierPerformance: (params) => api.get("/reports/supplier-performance", { params }),
   salesReport: (params) => api.get("/reports/sales", { params }),
   exportReport: (params) => api.get("/reports/export", { params, responseType: "blob" }),
+  createExportJob: (data) => api.post("/reports/export-jobs", data),
+  exportJobs: (params) => api.get("/reports/export-jobs", { params }),
+  downloadExportJob: (id) => api.get(`/reports/export-jobs/${id}/download`, { responseType: "blob" }),
+  cancelExportJob: (id) => api.post(`/reports/export-jobs/${id}/cancel`),
+  retryExportJob: (id) => api.post(`/reports/export-jobs/${id}/retry`),
+  deleteExportJob: (id) => api.delete(`/reports/export-jobs/${id}`),
+  createReportSchedule: (data) => api.post("/reports/schedules", data),
+  reportSchedules: () => api.get("/reports/schedules"),
+  setReportScheduleEnabled: (id, enabled) => api.patch(`/reports/schedules/${id}`, null, { params: { enabled } }),
+  deleteReportSchedule: (id) => api.delete(`/reports/schedules/${id}`),
 
   // Returns Reports
   returnsSummary: (params) => api.get("/reports/returns-summary", { params }),

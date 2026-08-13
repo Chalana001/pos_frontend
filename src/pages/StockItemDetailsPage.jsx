@@ -33,10 +33,11 @@ const formatQtyWithUnit = (value, unit) => (unit ? `${formatQty(value)} ${unit}`
 const StockItemDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, branches } = useBranch();
   const { configuration } = useAppConfiguration();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
   const branchId = selectedBranchId || 0;
+  const [effectiveBranchId, setEffectiveBranchId] = useState(branchId);
 
   const [itemDetails, setItemDetails] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
@@ -60,8 +61,26 @@ const StockItemDetailsPage = () => {
     const loadItemDetails = async () => {
       setLoading(true);
       try {
-        const response = await stockAPI.getItem(branchId, id);
-        setItemDetails(response.data);
+        if (branchId !== 0) {
+          const response = await stockAPI.getItem(branchId, id);
+          setEffectiveBranchId(branchId);
+          setItemDetails(response.data);
+        } else {
+          const candidates = branches.filter((branch) => Number(branch.id) !== 0);
+          let found = null;
+          for (const branch of candidates) {
+            try {
+              const response = await stockAPI.getItem(branch.id, id);
+              found = { data: response.data, branchId: Number(branch.id) };
+              break;
+            } catch (error) {
+              if (error?.response?.status !== 404) throw error;
+            }
+          }
+          if (!found) throw new Error("Item is not stocked in any accessible branch");
+          setEffectiveBranchId(found.branchId);
+          setItemDetails(found.data);
+        }
       } catch (error) {
         console.error("Failed to load stock item details", error);
         setItemDetails(null);
@@ -72,7 +91,7 @@ const StockItemDetailsPage = () => {
     };
 
     loadItemDetails();
-  }, [branchId, id, navigate]);
+  }, [branchId, branches, id, navigate]);
 
   useEffect(() => {
     const loadSuppliers = async () => {
@@ -96,7 +115,7 @@ const StockItemDetailsPage = () => {
         }
         setHistoryLoading(true);
         try {
-          const response = await stockAPI.getItemPurchases(branchId, id, {
+          const response = await stockAPI.getItemPurchases(effectiveBranchId, id, {
             page,
             size: pageSize,
             search: search.trim() || undefined,
@@ -123,7 +142,7 @@ const StockItemDetailsPage = () => {
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [branchId, fromDate, id, itemDetails, page, pageSize, search, selectedSupplierId, status, toDate]);
+  }, [effectiveBranchId, fromDate, id, itemDetails, page, pageSize, search, selectedSupplierId, status, toDate]);
 
   useEffect(() => {
     setPageInput(String(page + 1));
