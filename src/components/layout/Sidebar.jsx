@@ -524,6 +524,16 @@ return (
                         Stock Health
                       </NavLink>
                       <NavLink
+                        to="/reports/forecast"
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        Forecast & Reorder
+                      </NavLink>
+                      <NavLink
                         to="/reports/shifts"
                         className={({ isActive }) =>
                           `block px-3 py-2 rounded-lg text-sm transition-colors ${

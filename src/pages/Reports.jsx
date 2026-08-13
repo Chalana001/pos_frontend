@@ -52,6 +52,7 @@ import { useAuth } from "../context/AuthContext";
 import AgingReportView from "../components/reports/AgingReportView";
 import StockMovementReportView from "../components/reports/StockMovementReportView";
 import StockHealthReportView from "../components/reports/StockHealthReportView";
+import DemandForecastReportView from "../components/reports/DemandForecastReportView";
 import GrnPurchaseReportView from "../components/reports/GrnPurchaseReportView";
 import StockTransferReportView from "../components/reports/StockTransferReportView";
 import ProductCategoryIntelligenceView from "../components/reports/ProductCategoryIntelligenceView";
@@ -141,6 +142,7 @@ const allTabs = [
   { id: "returnsReports", label: "Returns", icon: RotateCcw },
   { id: "lowStock", label: "Low Stock", icon: AlertCircle },
   { id: "stockHealth", label: "Stock Health", icon: Package },
+  { id: "demandForecast", label: "Forecast & Reorder", icon: TrendingUp },
   { id: "inventoryValuation", label: "Inventory Valuation", icon: Package },
   { id: "shiftSummary", label: "Shift / Z Report", icon: Calendar },
   { id: "cashFlow", label: "Cash Flow", icon: TrendingUp },
@@ -166,6 +168,7 @@ const tabsByMode = {
   returns: ["returnsReports"],
   inventory: ["inventoryValuation"],
   stockHealth: ["stockHealth"],
+  forecast: ["demandForecast"],
   shifts: ["shiftSummary"],
   cashFlow: ["cashFlow"],
   profitLoss: ["profitLoss"],
@@ -189,6 +192,7 @@ const pageTitleByMode = {
   returns: "Returns Reports",
   inventory: "Inventory Valuation",
   stockHealth: "Stock Health / Reorder",
+  forecast: "Demand Forecast & Reorder Planning",
   shifts: "Shift / Z Reports",
   cashFlow: "Cash Flow",
   profitLoss: "Profit & Loss",
@@ -249,6 +253,7 @@ const Reports = ({ mode = "basic" }) => {
   const [ownerSummary, setOwnerSummary] = useState(null);
   const [inventorySummary, setInventorySummary] = useState(null);
   const [stockHealthSummary, setStockHealthSummary] = useState(null);
+  const [forecastSummary, setForecastSummary] = useState(null);
   const [salesSummary, setSalesSummary] = useState(null);
   const [salesTrend, setSalesTrend] = useState({ data: [], type: "DAILY" });
   const [returnsData, setReturnsData] = useState({
@@ -330,6 +335,7 @@ const Reports = ({ mode = "basic" }) => {
     setReportData([]);
     setPageData(emptyPage);
     setStockHealthSummary(null);
+    setForecastSummary(null);
     resetPage();
   }, [defaultTab]);
 
@@ -393,6 +399,7 @@ const Reports = ({ mode = "basic" }) => {
     setReportData([]);
     setPageData(emptyPage);
     setStockHealthSummary(null);
+    setForecastSummary(null);
     resetPage();
   };
 
@@ -499,6 +506,7 @@ const Reports = ({ mode = "basic" }) => {
     setOwnerSummary(null);
     setInventorySummary(null);
     setStockHealthSummary(null);
+    setForecastSummary(null);
     setSalesSummary(null);
     setSalesTrend({ data: [], type: "DAILY" });
     setReturnsData({ summary: null, topSaleItems: [], topPurchaseItems: [], reasons: [], trend: [] });
@@ -570,6 +578,10 @@ const Reports = ({ mode = "basic" }) => {
       } else if (type === "stockHealth") {
         response = await reportsAPI.stockHealth(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
         setStockHealthSummary(response.data);
+        setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
+      } else if (type === "demandForecast") {
+        response = await reportsAPI.demandForecast({ ...(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}), forecastDays: 30, targetCoverDays: 30 });
+        setForecastSummary(response.data);
         setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
       } else if (type === "shiftSummary") {
         response = await reportsAPI.shiftSummary({
@@ -1940,6 +1952,7 @@ const Reports = ({ mode = "basic" }) => {
     if (activeTab === "commercialIntelligence") return <CommercialIntelligenceView promotions={commercialData.promotions} warranty={commercialData.warranty} returnsData={returnsData} />;
     if (activeTab === "exceptions") return <ExceptionCenterView data={reportData} />;
     if (activeTab === "stockHealth") return <StockHealthReportView summary={stockHealthSummary} data={reportData} />;
+    if (activeTab === "demandForecast") return <DemandForecastReportView summary={forecastSummary} data={reportData} />;
     return null;
   };
 
@@ -1951,7 +1964,7 @@ const Reports = ({ mode = "basic" }) => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-800">{pageTitleByMode[mode] || "Reports"}</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {mode === "basic" ? "Quick chart overview for business direction." : mode === "cashFlow" ? "Cash-only business inflows, outflows, and daily movement." : mode === "profitLoss" ? "Canonical revenue, cost, margin, and operating profit statement." : mode === "creditAging" ? "Current outstanding customer credit grouped by invoice age and collection priority." : mode === "supplierPayables" ? "Current supplier obligations grouped by purchase age and payment priority." : mode === "stockMovement" ? "Opening, inflow, outflow, processing, and closing stock reconciliation." : mode === "stockTransfers" ? "Branch transfer counts, movement quantities, and transfer drill-downs." : mode === "stockHealth" ? "Current stock coverage, reorder suggestions, and expiry risk." : mode === "grnPurchases" ? "Received goods value, supplier returns, and linked purchase payment status." : mode === "customerBehavior" ? "New, returning, repeat, value, and inactivity behavior for registered customers." : mode === "performanceComparison" ? "Sales, orders, discounts, returns, refunds, and expenses by cashier and branch." : mode === "commercialIntelligence" ? "Bill-promotion usage, return impact, and warranty status intelligence." : mode === "exceptions" ? "Current and period-based business risks requiring owner or manager attention." : "Detailed paginated report data with Excel export."}
+            {mode === "basic" ? "Quick chart overview for business direction." : mode === "cashFlow" ? "Cash-only business inflows, outflows, and daily movement." : mode === "profitLoss" ? "Canonical revenue, cost, margin, and operating profit statement." : mode === "creditAging" ? "Current outstanding customer credit grouped by invoice age and collection priority." : mode === "supplierPayables" ? "Current supplier obligations grouped by purchase age and payment priority." : mode === "stockMovement" ? "Opening, inflow, outflow, processing, and closing stock reconciliation." : mode === "stockTransfers" ? "Branch transfer counts, movement quantities, and transfer drill-downs." : mode === "stockHealth" ? "Current stock coverage, reorder suggestions, and expiry risk." : mode === "forecast" ? "Confidence-labelled demand projections and practical reorder planning." : mode === "grnPurchases" ? "Received goods value, supplier returns, and linked purchase payment status." : mode === "customerBehavior" ? "New, returning, repeat, value, and inactivity behavior for registered customers." : mode === "performanceComparison" ? "Sales, orders, discounts, returns, refunds, and expenses by cashier and branch." : mode === "commercialIntelligence" ? "Bill-promotion usage, return impact, and warranty status intelligence." : mode === "exceptions" ? "Current and period-based business risks requiring owner or manager attention." : "Detailed paginated report data with Excel export."}
           </p>
         </div>
         {!(["creditAging", "supplierPayables", "stockHealth"].includes(mode)) && <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">

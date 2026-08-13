@@ -160,6 +160,7 @@ const AppRoutes = () => {
         <Route path="reports/products" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="product" />)}</ProtectedRoute>} />
         <Route path="reports/inventory" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="inventory" />)}</ProtectedRoute>} />
         <Route path="reports/stock-health" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="stockHealth" />)}</ProtectedRoute>} />
+        <Route path="reports/forecast" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="forecast" />)}</ProtectedRoute>} />
         <Route path="reports/shifts" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="shifts" />)}</ProtectedRoute>} />
         <Route path="reports/cash-flow" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="cashFlow" />)}</ProtectedRoute>} />
         <Route path="reports/profit-loss" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="profitLoss" />)}</ProtectedRoute>} />
