@@ -51,6 +51,7 @@ const SuppliersPage = lazy(() => import('../pages/SuppliersPage'));
 const SupplierViewPage = lazy(() => import('../pages/SupplierViewPage'));
 const SupplierFormPage = lazy(() => import('../pages/SupplierFormPage'));
 const Reports = lazy(() => import('../pages/Reports'));
+const ProcurementPlanningPage = lazy(() => import('../pages/ProcurementPlanningPage'));
 const Branches = lazy(() => import('../pages/Branches'));
 const ReceiptSettingsPage = lazy(() => import('../pages/ReceiptSettingsPage'));
 const AppConfigurationPage = lazy(() => import('../pages/AppConfigurationPage'));
@@ -161,6 +162,7 @@ const AppRoutes = () => {
         <Route path="reports/inventory" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="inventory" />)}</ProtectedRoute>} />
         <Route path="reports/stock-health" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="stockHealth" />)}</ProtectedRoute>} />
         <Route path="reports/forecast" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="forecast" />)}</ProtectedRoute>} />
+        <Route path="reports/procurement-planning" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<ProcurementPlanningPage />)}</ProtectedRoute>} />
         <Route path="reports/shifts" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="shifts" />)}</ProtectedRoute>} />
         <Route path="reports/cash-flow" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="cashFlow" />)}</ProtectedRoute>} />
         <Route path="reports/profit-loss" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="profitLoss" />)}</ProtectedRoute>} />
