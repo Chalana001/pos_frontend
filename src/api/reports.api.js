@@ -11,6 +11,7 @@ export const reportsAPI = {
   stockMovement: (params) => api.get('/api/reports/v2/stock-movement', { params }),
   stockHealth: (params) => api.get('/api/reports/v2/stock-health', { params }),
   demandForecast: (params) => api.get('/api/reports/v2/demand-forecast', { params }),
+  forecastAccuracy: () => api.get('/api/reports/v2/forecast-accuracy'),
   stockTransferReport: (params) => api.get('/api/reports/v2/stock-transfers', { params }),
   customerBehavior: (params) => api.get('/api/reports/v2/customer-behavior', { params }),
   cashierPerformance: (params) => api.get('/api/reports/v2/cashier-performance', { params }),

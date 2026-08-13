@@ -256,6 +256,7 @@ const Reports = ({ mode = "basic" }) => {
   const [inventorySummary, setInventorySummary] = useState(null);
   const [stockHealthSummary, setStockHealthSummary] = useState(null);
   const [forecastSummary, setForecastSummary] = useState(null);
+  const [forecastAccuracy, setForecastAccuracy] = useState(null);
   const [forecastOptions, setForecastOptions] = useState({ forecastDays: 30, targetCoverDays: 30, categoryId: "", supplierId: "", confidence: "", actionableOnly: false });
   const [forecastLookups, setForecastLookups] = useState({ categories: [], suppliers: [] });
   const [salesSummary, setSalesSummary] = useState(null);
@@ -594,7 +595,12 @@ const Reports = ({ mode = "basic" }) => {
         setStockHealthSummary(response.data);
         setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
       } else if (type === "demandForecast") {
-        response = await reportsAPI.demandForecast({ ...(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}), ...forecastOptions, categoryId: forecastOptions.categoryId || undefined, supplierId: forecastOptions.supplierId || undefined, confidence: forecastOptions.confidence || undefined });
+        const [forecastResponse, accuracyResponse] = await Promise.all([
+          reportsAPI.demandForecast({ ...(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}), ...forecastOptions, categoryId: forecastOptions.categoryId || undefined, supplierId: forecastOptions.supplierId || undefined, confidence: forecastOptions.confidence || undefined }),
+          reportsAPI.forecastAccuracy(),
+        ]);
+        response = forecastResponse;
+        setForecastAccuracy(accuracyResponse.data);
         setForecastSummary(response.data);
         setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
       } else if (type === "shiftSummary") {
@@ -1966,7 +1972,7 @@ const Reports = ({ mode = "basic" }) => {
     if (activeTab === "commercialIntelligence") return <CommercialIntelligenceView promotions={commercialData.promotions} warranty={commercialData.warranty} returnsData={returnsData} />;
     if (activeTab === "exceptions") return <ExceptionCenterView data={reportData} />;
     if (activeTab === "stockHealth") return <StockHealthReportView summary={stockHealthSummary} data={reportData} />;
-    if (activeTab === "demandForecast") return <DemandForecastReportView summary={forecastSummary} data={reportData} options={forecastOptions} lookups={forecastLookups} onOptionsChange={(next) => { setForecastOptions(next); setLoadedTab(null); }} onRefresh={() => fetchReport("demandForecast")} onExport={async () => { await reportsAPI.createExportJob({ reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, categoryId: forecastOptions.categoryId || null, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }); await loadExportJobs(); toast.success("Forecast export queued"); }} onSchedule={async (schedule) => { await reportsAPI.createReportSchedule({ report: { reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, categoryId: forecastOptions.categoryId || null, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }, ...schedule }); await loadReportSchedules(); toast.success("Recurring forecast scheduled"); }} />;
+    if (activeTab === "demandForecast") return <DemandForecastReportView summary={forecastSummary} accuracy={forecastAccuracy} data={reportData} options={forecastOptions} lookups={forecastLookups} onOptionsChange={(next) => { setForecastOptions(next); setLoadedTab(null); }} onRefresh={() => fetchReport("demandForecast")} onExport={async () => { await reportsAPI.createExportJob({ reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, categoryId: forecastOptions.categoryId || null, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }); await loadExportJobs(); toast.success("Forecast export queued"); }} onSchedule={async (schedule) => { await reportsAPI.createReportSchedule({ report: { reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, categoryId: forecastOptions.categoryId || null, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }, ...schedule }); await loadReportSchedules(); toast.success("Recurring forecast scheduled"); }} />;
     return null;
   };
 
