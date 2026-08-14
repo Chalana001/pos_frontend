@@ -48,6 +48,8 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Table from "../components/common/Table";
 import TablePagination from "../components/common/TablePagination";
+import ClientPagination from "../components/common/ClientPagination";
+import useClientPagination from "../hooks/useClientPagination";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
 import DatePicker from "../components/common/DatePicker";
@@ -1631,7 +1633,7 @@ const Reports = ({ mode = "basic" }) => {
     const stockedItems = items.filter((item) => Number(item.qtyOnHand || 0) > 0);
     const zeroStockItems = items.filter((item) => Number(item.qtyOnHand || 0) === 0).length;
     const negativeStockItems = items.filter((item) => Number(item.qtyOnHand || 0) < 0).length;
-    const visibleItems = items.slice(0, 50);
+    const inventoryPagination = useClientPagination(items, items.length);
     const categoryMap = items.reduce((totals, item) => {
       const category = getDisplayCategoryName(item, singleCategoryMode);
       totals[category] = (totals[category] || 0) + Number(item.stockValue || 0);
@@ -1655,7 +1657,16 @@ const Reports = ({ mode = "basic" }) => {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <PremiumChartCard title={singleCategoryMode ? "Capital by Category" : "Capital by Main Category"} subtitle={singleCategoryMode ? "Visible categories holding the most stock value" : "Main categories holding the most stock value"}>
-            <div className="h-[320px] min-h-[320px] min-w-0">
+            <div className="space-y-3 md:hidden">
+              {categoryData.length ? categoryData.map((category) => {
+                const maxValue = Math.max(...categoryData.map((entry) => Number(entry.value || 0)), 1);
+                return <div key={category.name}>
+                  <div className="mb-1 flex items-center justify-between gap-3 text-xs"><span className="min-w-0 truncate font-semibold text-slate-700">{category.name}</span><span className="shrink-0 font-bold text-slate-900">{formatCurrency(category.value)}</span></div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.max((Number(category.value || 0) / maxValue) * 100, Number(category.value || 0) > 0 ? 2 : 0)}%` }} /></div>
+                </div>;
+              }) : <ChartEmptyState />}
+            </div>
+            <div className="hidden h-[320px] min-h-[320px] min-w-0 md:block">
               {categoryData.length ? (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                   <BarChart data={categoryData} layout="vertical" margin={{ top: 8, right: 24, left: 24, bottom: 8 }}>
@@ -1696,7 +1707,7 @@ const Reports = ({ mode = "basic" }) => {
 
         <Card className="admin-panel-card overflow-hidden p-0" title="Inventory Valuation Details">
           <div className="space-y-3 p-4 md:hidden">
-            {visibleItems.map((item) => (
+            {inventoryPagination.pageItems.map((item) => (
               <div key={item.itemId} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -1724,14 +1735,10 @@ const Reports = ({ mode = "basic" }) => {
               { header: "Potential Revenue", render: (item) => item.potentialRevenue == null ? <span className="text-slate-400">N/A</span> : formatCurrency(item.potentialRevenue) },
               { header: "Potential Profit", render: (item) => item.potentialProfit == null ? <span className="font-semibold text-slate-400">N/A</span> : <span className={Number(item.potentialProfit) < 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>{formatCurrency(item.potentialProfit)}</span> },
             ]}
-              data={visibleItems}
+              data={inventoryPagination.pageItems}
             />
           </div>
-          {items.length > visibleItems.length && (
-            <p className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
-              Showing the top 50 items by stock value. Category and stock-health totals include all {items.length} items.
-            </p>
-          )}
+          <ClientPagination page={inventoryPagination.page} pageSize={inventoryPagination.pageSize} totalItems={items.length} totalPages={inventoryPagination.totalPages} onPageChange={inventoryPagination.setPage} onPageSizeChange={inventoryPagination.setPageSize} />
         </Card>
       </div>
     );

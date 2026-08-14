@@ -4,7 +4,9 @@ import { AlertCircle, Clock, Package, TrendingDown, TrendingUp } from "lucide-re
 
 import Card from "../common/Card";
 import Table from "../common/Table";
+import ClientPagination from "../common/ClientPagination";
 import { formatCurrency } from "../../utils/formatters";
+import useClientPagination from "../../hooks/useClientPagination";
 
 const formatQty = (value) => {
   const numeric = Number(value ?? 0);
@@ -70,8 +72,9 @@ export default function StockHealthReportView({ summary, data }) {
 
   const filteredRows = useMemo(() => {
     const matches = status === "ALL" ? rows : rows.filter((row) => (row.status || "HEALTHY") === status);
-    return [...matches].sort((a, b) => Number(b.estimatedReorderCost || 0) - Number(a.estimatedReorderCost || 0)).slice(0, 100);
+    return [...matches].sort((a, b) => Number(b.estimatedReorderCost || 0) - Number(a.estimatedReorderCost || 0));
   }, [rows, status]);
+  const pagination = useClientPagination(filteredRows, status);
 
   const statusCounts = useMemo(
     () =>
@@ -126,7 +129,7 @@ export default function StockHealthReportView({ summary, data }) {
               <p className="text-sm font-bold text-slate-900">Status filter</p>
               <p className="mt-1 text-xs font-semibold text-slate-500">{targetCoverLabel}</p>
             </div>
-            <p className="text-xs font-semibold text-slate-500">Showing top {filteredRows.length} of {status === "ALL" ? rows.length : statusCounts[status] || 0} matching items by reorder cost</p>
+            <p className="text-xs font-semibold text-slate-500">{filteredRows.length} matching items ordered by reorder cost</p>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             {statusOptions.map((option) => {
@@ -156,7 +159,7 @@ export default function StockHealthReportView({ summary, data }) {
               No items match the selected status.
             </div>
           ) : (
-            filteredRows.slice(0, 30).map((row) => (
+            pagination.pageItems.map((row) => (
               <button key={row.itemId} type="button" onClick={() => openItem(row)} className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -184,7 +187,6 @@ export default function StockHealthReportView({ summary, data }) {
               </button>
             ))
           )}
-          {filteredRows.length > 30 && <p className="rounded-xl bg-slate-50 p-4 text-center text-xs font-semibold text-slate-500">Showing top 30 on mobile. Use a status filter to narrow results.</p>}
         </div>
 
         <div className="hidden md:block">
@@ -200,11 +202,12 @@ export default function StockHealthReportView({ summary, data }) {
               { header: "Supplier / Expiry", render: (row) => <div><p className="font-semibold text-slate-900">{row.preferredSupplier || "-"}</p><p className="text-xs text-slate-500">{formatDate(row.nearestExpiryDate)}</p></div> },
               { header: "Last Sold", render: (row) => <span className="text-slate-700">{formatDateTime(row.lastSoldAt)}</span> },
             ]}
-            data={filteredRows}
+            data={pagination.pageItems}
             onRowClick={openItem}
             getRowKey={(row) => row.itemId}
           />
         </div>
+        <ClientPagination page={pagination.page} pageSize={pagination.pageSize} totalItems={filteredRows.length} totalPages={pagination.totalPages} onPageChange={pagination.setPage} onPageSizeChange={pagination.setPageSize} />
       </Card>
     </div>
   );
