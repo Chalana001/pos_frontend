@@ -1005,6 +1005,17 @@ const Reports = ({ mode = "basic" }) => {
     );
   };
 
+  const ValuationStatusBadge = ({ status }) => {
+    const styles = {
+      SELLABLE: ["Retail", "bg-emerald-50 text-emerald-700"],
+      PRICED_INTERNAL_USE: ["Internal + Priced", "bg-blue-50 text-blue-700"],
+      INTERNAL_USE: ["Internal Use", "bg-slate-100 text-slate-600"],
+      MISSING_PRICE: ["Missing Price", "bg-amber-50 text-amber-700"],
+    };
+    const [label, className] = styles[status] || ["Unclassified", "bg-slate-100 text-slate-600"];
+    return <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}>{label}</span>;
+  };
+
   const changePercent = (current, previous) => {
     const currentValue = Number(current || 0);
     const previousValue = Number(previous || 0);
@@ -1633,10 +1644,12 @@ const Reports = ({ mode = "basic" }) => {
 
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <SummaryMetric title="Stock Cost Value" value={inventorySummary?.totalStockValue || 0} helper="Capital currently in stock" icon={DollarSign} accent="blue" />
-          <SummaryMetric title="Potential Revenue" value={inventorySummary?.totalPotentialRevenue || 0} helper="At current selling prices" icon={TrendingUp} accent="emerald" />
-          <SummaryMetric title="Potential Gross Profit" value={inventorySummary?.totalPotentialProfit || 0} helper="Before expenses and losses" icon={BarChart3} accent="cyan" />
+          <SummaryMetric title="Priced Stock Value" value={inventorySummary?.pricedStockValue || 0} helper="Stock with a selling price" icon={ShoppingCart} accent="emerald" />
+          <SummaryMetric title="Internal-use Stock" value={inventorySummary?.internalUseStockValue || 0} helper="Cost-valued stock without retail price" icon={Package} accent="cyan" />
+          <SummaryMetric title="Potential Revenue" value={inventorySummary?.totalPotentialRevenue || 0} helper="Priced items only" icon={TrendingUp} accent="emerald" />
+          <SummaryMetric title="Potential Gross Profit" value={inventorySummary?.totalPotentialProfit || 0} helper="Priced items only; before expenses" icon={BarChart3} accent="cyan" />
           <SummaryMetric title="Stocked Items" value={stockedItems.length} helper={`${zeroStockItems} items have zero stock`} icon={Package} accent={zeroStockItems > 0 ? "amber" : "emerald"} format={(value) => Number(value).toLocaleString()} />
         </div>
 
@@ -1674,8 +1687,8 @@ const Reports = ({ mode = "basic" }) => {
                 <span className="text-xl font-black text-amber-700">{items.filter((item) => Number(item.qtyOnHand || 0) > 0 && Number(item.costPrice || 0) <= 0).length}</span>
               </div>
               <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <span className="font-bold text-slate-800">Items below cost price</span>
-                <span className="text-xl font-black text-slate-800">{items.filter((item) => Number(item.sellingPrice || 0) < Number(item.costPrice || 0)).length}</span>
+                <span className="font-bold text-slate-800">Sellable items missing price</span>
+                <span className="text-xl font-black text-slate-800">{inventorySummary?.missingPriceItems || 0}</span>
               </div>
             </div>
           </Card>
@@ -1689,12 +1702,13 @@ const Reports = ({ mode = "basic" }) => {
                   <div className="min-w-0">
                     <p className="truncate font-bold text-slate-900">{item.itemName}</p>
                     <p className="mt-1 text-xs text-slate-500">{item.barcode || "No barcode"} · {getDisplayCategoryName(item, singleCategoryMode)}</p>
+                    <ValuationStatusBadge status={item.valuationStatus} />
                   </div>
                   <span className={Number(item.qtyOnHand || 0) <= 0 ? "font-black text-red-600" : "font-black text-slate-900"}>{formatQty(item.qtyOnHand, item.unit)}</span>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-xs font-semibold text-slate-500">Stock value</p><p className="mt-1 font-bold text-blue-700">{formatCurrency(item.stockValue)}</p></div>
-                  <div><p className="text-xs font-semibold text-slate-500">Potential profit</p><p className={`mt-1 font-bold ${Number(item.potentialProfit || 0) < 0 ? "text-red-600" : "text-emerald-700"}`}>{formatCurrency(item.potentialProfit)}</p></div>
+                  <div><p className="text-xs font-semibold text-slate-500">Potential profit</p><p className={`mt-1 font-bold ${item.potentialProfit == null ? "text-slate-400" : Number(item.potentialProfit) < 0 ? "text-red-600" : "text-emerald-700"}`}>{item.potentialProfit == null ? "N/A" : formatCurrency(item.potentialProfit)}</p></div>
                 </div>
               </div>
             ))}
@@ -1702,13 +1716,13 @@ const Reports = ({ mode = "basic" }) => {
           <div className="hidden md:block">
             <Table
             columns={[
-              { header: "Item", render: (item) => <div><p className="font-semibold text-slate-900">{item.itemName}</p><p className="text-xs text-slate-500">{item.barcode || "No barcode"} · {getDisplayCategoryName(item, singleCategoryMode)}</p></div> },
+              { header: "Item", render: (item) => <div><p className="font-semibold text-slate-900">{item.itemName}</p><p className="text-xs text-slate-500">{item.barcode || "No barcode"} · {getDisplayCategoryName(item, singleCategoryMode)}</p><ValuationStatusBadge status={item.valuationStatus} /></div> },
               { header: "Qty", render: (item) => <span className={Number(item.qtyOnHand || 0) <= 0 ? "font-bold text-red-600" : "font-semibold"}>{formatQty(item.qtyOnHand, item.unit)}</span> },
               { header: "Avg Cost", render: (item) => formatCurrency(item.costPrice) },
               { header: "Stock Value", render: (item) => <span className="font-bold text-blue-700">{formatCurrency(item.stockValue)}</span> },
-              { header: "Selling Price", render: (item) => formatCurrency(item.sellingPrice) },
-              { header: "Potential Revenue", render: (item) => formatCurrency(item.potentialRevenue) },
-              { header: "Potential Profit", render: (item) => <span className={Number(item.potentialProfit || 0) < 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>{formatCurrency(item.potentialProfit)}</span> },
+              { header: "Selling Price", render: (item) => Number(item.sellingPrice || 0) > 0 ? formatCurrency(item.sellingPrice) : <span className="text-slate-400">N/A</span> },
+              { header: "Potential Revenue", render: (item) => item.potentialRevenue == null ? <span className="text-slate-400">N/A</span> : formatCurrency(item.potentialRevenue) },
+              { header: "Potential Profit", render: (item) => item.potentialProfit == null ? <span className="font-semibold text-slate-400">N/A</span> : <span className={Number(item.potentialProfit) < 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>{formatCurrency(item.potentialProfit)}</span> },
             ]}
               data={visibleItems}
             />
