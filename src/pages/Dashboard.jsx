@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { dashboardAPI } from "../api/dashboard.api";
 import { formatCurrency } from "../utils/formatters";
+import { tileTone } from "../utils/chartTheme";
 import { canAccessAllBranches } from "../utils/permissions";
 import Card from "../components/common/Card";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -30,6 +31,15 @@ const getChartDateRange = () => {
   const from = new Date(firstDay.getTime() - (firstDay.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
   return { from, to };
 };
+
+// "Add User" was the previous label on the third action, but the route it opens
+// is the customer list with the add form — it creates a customer, not a user.
+const quickActions = [
+  { label: "New Sale", path: "/pos", icon: ShoppingCart },
+  { label: "Stock Adjust", path: "/stock", icon: Package },
+  { label: "Add Customer", path: "/customers?add=1", icon: Users },
+  { label: "Reports", path: "/reports", icon: DollarSign },
+];
 
 const useCountUp = (value, enabled, duration = 950) => {
   const [displayValue, setDisplayValue] = useState(0);
@@ -178,9 +188,11 @@ const Dashboard = () => {
           </div>
         </div>
         <Card className="page-section-enter shell-panel-hover" style={{ animationDelay: "120ms" }}>
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-            <p className="text-sm text-yellow-800">
-              ⚠️ Please select a branch to view dashboard KPIs.
+          {/* Amber is this app's warning colour everywhere else; yellow was a
+              one-off here. */}
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-medium text-amber-900">
+              Please select a branch to view dashboard KPIs.
             </p>
           </div>
         </Card>
@@ -188,15 +200,25 @@ const Dashboard = () => {
     );
   }
 
+  // Eight tiles, eight saturated fills, is the "rainbow" problem the report
+  // screens had — see utils/chartTheme.js. A tile's value is ink; colour is
+  // reserved for the two figures that mean "needs attention", and one accent
+  // leads the row.
+  //
+  // The Today's Sales tile used to carry a hardcoded change: "+12.5%", rendered
+  // in green on every load regardless of the number beside it. DashboardKpiResponse
+  // has no comparison field, so no real figure was ever available — it was a
+  // placeholder that shipped. Removed rather than faked; see the note in
+  // dashboardAPI about what adding a real one would take.
   const stats = [
-    { title: "Today's Sales", value: kpis?.todaySales || 0, type: "currency", icon: DollarSign, color: "bg-blue-500", change: "+12.5%" },
-    { title: "Cash Sales", value: kpis?.cashSales || 0, type: "currency", icon: TrendingUp, color: "bg-green-500" },
-    { title: "Credit Sales", value: kpis?.creditSales || 0, type: "currency", icon: CreditCard, color: "bg-orange-500" },
-    { title: "Total Orders", value: kpis?.todayOrders || 0, type: "number", icon: ShoppingCart, color: "bg-purple-500" },
-    { title: "Expenses", value: kpis?.todayExpenses || 0, type: "currency", icon: TrendingDown, color: "bg-red-500" },
-    { title: "Cash Drops", value: kpis?.todayCashDrops || 0, type: "currency", icon: Package, color: "bg-indigo-500" },
-    { title: "Low Stock Items", value: kpis?.lowStockCount || 0, type: "number", icon: AlertTriangle, color: "bg-yellow-500", path: "/stock?status=REORDER" },
-    { title: "Credit Due", value: kpis?.totalDue || 0, type: "currency", icon: Users, color: "bg-pink-500" },
+    { title: "Today's Sales", value: kpis?.todaySales || 0, type: "currency", icon: DollarSign, tone: "accent" },
+    { title: "Cash Sales", value: kpis?.cashSales || 0, type: "currency", icon: TrendingUp, tone: "neutral" },
+    { title: "Credit Sales", value: kpis?.creditSales || 0, type: "currency", icon: CreditCard, tone: "neutral" },
+    { title: "Total Orders", value: kpis?.todayOrders || 0, type: "number", icon: ShoppingCart, tone: "neutral" },
+    { title: "Expenses", value: kpis?.todayExpenses || 0, type: "currency", icon: TrendingDown, tone: "neutral" },
+    { title: "Cash Drops", value: kpis?.todayCashDrops || 0, type: "currency", icon: Package, tone: "neutral" },
+    { title: "Low Stock Items", value: kpis?.lowStockCount || 0, type: "number", icon: AlertTriangle, tone: Number(kpis?.lowStockCount || 0) > 0 ? "warning" : "neutral", path: "/stock?status=REORDER" },
+    { title: "Credit Due", value: kpis?.totalDue || 0, type: "currency", icon: Users, tone: Number(kpis?.totalDue || 0) > 0 ? "warning" : "neutral" },
   ];
 
   return (
@@ -228,16 +250,15 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-600 mb-1">{stat.title}</p>
-                    <p className="text-2xl font-bold text-slate-800 tabular-nums">
+                    <p className={`text-2xl font-bold tabular-nums ${tileTone(stat.tone).value}`}>
                       <AnimatedValue value={stat.value} type={stat.type} enabled={highMotion} />
                     </p>
-                    {stat.change && <p className="text-sm text-green-600 mt-1">{stat.change}</p>}
                   </div>
                   <div
-                    className={`${stat.color} dashboard-icon-pop w-12 h-12 rounded-xl flex items-center justify-center shadow-sm`}
+                    className={`${tileTone(stat.tone).chip} dashboard-icon-pop w-12 h-12 rounded-xl flex items-center justify-center`}
                     style={{ animationDelay: `${260 + index * 70}ms` }}
                   >
-                    <Icon className="text-white" size={24} />
+                    <Icon size={22} />
                   </div>
                 </div>
                 </button>
@@ -258,7 +279,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => selectChartMode("daily")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    chartMode === "daily" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    chartMode === "daily" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   Daily
@@ -266,7 +287,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => selectChartMode("monthly")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    chartMode === "monthly" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                    chartMode === "monthly" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   Monthly
@@ -287,7 +308,7 @@ const Dashboard = () => {
                 </Suspense>
               ) : (
                 !chartLoading && chartReady && (
-                  <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                  <div className="flex h-full items-center justify-center text-sm text-slate-500">
                     No data available for this period.
                   </div>
                 )
@@ -298,50 +319,26 @@ const Dashboard = () => {
 
         <div className="dashboard-card-in lg:col-span-1" style={{ animationDelay: "860ms" }}>
           <Card title="Quick Actions" className="h-full dashboard-premium-card shell-panel-hover">
+            {/* Four destinations with no ordering between them, so they share one
+                surface. The blue icon marks "this is an action" — that is the only
+                distinction colour is carrying here. */}
             <div className="grid grid-cols-2 gap-4 mt-2">
-              <button
-                onClick={() => navigate("/pos")}
-                className="dashboard-rise-in p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all text-left group hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-100"
-                style={{ animationDelay: "960ms" }}
-              >
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                  <ShoppingCart className="text-blue-600" size={20} />
-                </div>
-                <p className="font-semibold text-slate-800 text-sm">New Sale</p>
-              </button>
-              
-              <button
-                onClick={() => navigate("/stock")}
-                className="dashboard-rise-in p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-all text-left group hover:-translate-y-1 hover:shadow-lg hover:shadow-green-100"
-                style={{ animationDelay: "1040ms" }}
-              >
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                  <Package className="text-green-600" size={20} />
-                </div>
-                <p className="font-semibold text-slate-800 text-sm">Stock Adjust</p>
-              </button>
-              
-              <button
-                onClick={() => navigate("/customers?add=1")}
-                className="dashboard-rise-in p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all text-left group hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-100"
-                style={{ animationDelay: "1120ms" }}
-              >
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                  <Users className="text-purple-600" size={20} />
-                </div>
-                <p className="font-semibold text-slate-800 text-sm">Add User</p>
-              </button>
-              
-              <button
-                onClick={() => navigate("/reports")}
-                className="dashboard-rise-in p-4 bg-orange-50 hover:bg-orange-100 rounded-xl transition-all text-left group hover:-translate-y-1 hover:shadow-lg hover:shadow-orange-100"
-                style={{ animationDelay: "1200ms" }}
-              >
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                  <DollarSign className="text-orange-600" size={20} />
-                </div>
-                <p className="font-semibold text-slate-800 text-sm">Reports</p>
-              </button>
+              {quickActions.map((action, index) => {
+                const ActionIcon = action.icon;
+                return (
+                  <button
+                    key={action.label}
+                    onClick={() => navigate(action.path)}
+                    className="dashboard-rise-in group rounded-xl bg-slate-50 p-4 text-left transition-all hover:-translate-y-1 hover:bg-blue-50 hover:shadow-lg hover:shadow-slate-100"
+                    style={{ animationDelay: `${960 + index * 80}ms` }}
+                  >
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-sm transition-transform group-hover:scale-110">
+                      <ActionIcon className="text-blue-600" size={20} />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800">{action.label}</p>
+                  </button>
+                );
+              })}
             </div>
           </Card>
         </div>
