@@ -886,11 +886,18 @@ const Reports = ({ mode = "basic" }) => {
     }
   };
 
+  // Axis ticks: one currency prefix, no cents. This previously said "Rs." above
+  // 1,000 and fell through to formatCurrency ("LKR 0.00") below it, so a single
+  // y-axis rendered both "LKR 0.00" and "Rs. 9.5K".
   const shortCurrency = (value) => {
     const amount = Number(value || 0);
-    if (Math.abs(amount) >= 1000000) return `Rs. ${(amount / 1000000).toFixed(1)}M`;
-    if (Math.abs(amount) >= 1000) return `Rs. ${(amount / 1000).toFixed(1)}K`;
-    return formatCurrency(amount);
+    const abs = Math.abs(amount);
+    // Non-breaking space: SVG <text> collapses a normal space at some widths, so
+    // ticks rendered inconsistently as "LKR 9.5K" next to "LKR19.0K".
+    const nbsp = " ";
+    if (abs >= 1_000_000) return `LKR${nbsp}${(amount / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `LKR${nbsp}${(amount / 1_000).toFixed(1)}K`;
+    return `LKR${nbsp}${Math.round(amount).toLocaleString()}`;
   };
 
   // Kept as an alias so the remaining call sites stay unchanged; the values now
@@ -1522,7 +1529,11 @@ const Reports = ({ mode = "basic" }) => {
             <StatCard label="Purchase Returns" value={summary.purchaseReturnCount} sub={`${formatCurrency(summary.purchaseReturnTotal)} total`} />
             <StatCard label="Items Returned (Purchase)" value={summary.purchaseReturnItemCount} />
             <StatCard label="Net Revenue" value={formatCurrency(summary.netRevenue)} sub={`Gross: ${formatCurrency(summary.grossSales)}`} />
-            <StatCard label="Return Rate" value={`${summary.returnRate}%`} sub="Sale returns / total orders" color={summary.returnRate > 10 ? TILE.critical.value : TILE.neutral.value} />
+            {/* Returns raised in this period are divided by orders placed in this
+                period. A return can belong to an order from an earlier period, so
+                this is an activity indicator, not a like-for-like rate — it can
+                exceed 100% in a quiet month. */}
+            <StatCard label="Return Rate" value={`${summary.returnRate}%`} sub="Returns raised ÷ orders placed, this period" color={summary.returnRate > 10 ? TILE.critical.value : TILE.neutral.value} />
           </div>
         ) : (
           <div className="flex h-20 items-center justify-center text-slate-500">No data for this period</div>
@@ -1554,8 +1565,11 @@ const Reports = ({ mode = "basic" }) => {
               <Table
                 columns={[
                   { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-500">{i.barcode}</p>}</div> },
-                  { header: "Returns", render: (i) => <span className="font-semibold text-slate-900">{i.returnCount}×</span> },
-                  { header: "Qty", accessor: "totalReturnedQty" },
+                  // returnCount is COUNT(DISTINCT return id) per item — the number of
+                  // return transactions that included this item, NOT units returned.
+                  // Units are the "Qty returned" column.
+                  { header: "Return txns", render: (i) => <span className="font-semibold text-slate-900">{i.returnCount}×</span> },
+                  { header: "Qty returned", accessor: "totalReturnedQty" },
                   { header: "Amount", render: (i) => <span className="font-bold">{formatCurrency(i.totalReturnAmount)}</span> },
                 ]}
                 data={topSaleItems}
@@ -1570,8 +1584,8 @@ const Reports = ({ mode = "basic" }) => {
               <Table
                 columns={[
                   { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-500">{i.barcode}</p>}</div> },
-                  { header: "Returns", render: (i) => <span className="font-semibold text-blue-600">{i.returnCount}×</span> },
-                  { header: "Qty", accessor: "totalReturnedQty" },
+                  { header: "Return txns", render: (i) => <span className="font-semibold text-slate-900">{i.returnCount}×</span> },
+                  { header: "Qty returned", accessor: "totalReturnedQty" },
                   { header: "Amount", render: (i) => <span className="font-bold">{formatCurrency(i.totalReturnAmount)}</span> },
                 ]}
                 data={topPurchaseItems}
