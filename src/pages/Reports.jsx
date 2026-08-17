@@ -88,6 +88,7 @@ import {
   StatCard,
 } from "../components/reports/ReportPrimitives";
 import { PremiumDonutChart, OverviewBarChart } from "../components/reports/ReportCharts";
+import ReturnsReportView from "../components/reports/ReturnsReportView";
 
 const PAGE_SIZE = 10;
 const defaultFilters = { sortDirection: "DESC", salesSortBy: "DATE", productSortBy: "REVENUE", customerSortBy: "TOTAL_SPENT", supplierSortBy: "TOTAL_PURCHASED", itemType: "ALL", orderType: "ALL" };
@@ -1235,160 +1236,6 @@ const Reports = ({ mode = "basic" }) => {
     </div>
   );
 
-  // ─── Returns Report Component ─────────────────────────────────────────
-  const ReturnsReport = ({ data }) => {
-    const { summary, topSaleItems, topPurchaseItems, reasons, trend } = data;
-
-    const saleReasons = reasons.filter((r) => r.type === "SALE");
-    const purchaseReasons = reasons.filter((r) => r.type === "PURCHASE");
-
-    // Pie chart data for reasons
-    const saleReasonPieData = saleReasons.slice(0, 6).map((r, i) => ({
-      name: r.reason.length > 30 ? r.reason.substring(0, 30) + "…" : r.reason,
-      value: Number(r.count),
-      fill: seriesColor(i),
-    }));
-
-    const trendChartData = trend.map((t) => ({
-      label: t.label,
-      "Sale Returns": Number(t.saleReturns || 0),
-      "Purchase Returns": Number(t.purchaseReturns || 0),
-    }));
-
-    return (
-      <div className="space-y-6">
-        {/* ── KPI Summary Cards ── */}
-        {summary ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Sale Returns" value={summary.saleReturnCount} sub={`${formatCurrency(summary.saleReturnTotal)} total`} />
-            <StatCard label="Items Returned (Sale)" value={summary.saleReturnItemCount} />
-            <StatCard label="Purchase Returns" value={summary.purchaseReturnCount} sub={`${formatCurrency(summary.purchaseReturnTotal)} total`} />
-            <StatCard label="Items Returned (Purchase)" value={summary.purchaseReturnItemCount} />
-            <StatCard label="Net Revenue" value={formatCurrency(summary.netRevenue)} sub={`Gross: ${formatCurrency(summary.grossSales)}`} />
-            {/* Returns raised in this period are divided by orders placed in this
-                period. A return can belong to an order from an earlier period, so
-                this is an activity indicator, not a like-for-like rate — it can
-                exceed 100% in a quiet month. */}
-            <StatCard label="Return Rate" value={`${summary.returnRate}%`} sub="Returns raised ÷ orders placed, this period" color={summary.returnRate > 10 ? TILE.critical.value : TILE.neutral.value} />
-          </div>
-        ) : (
-          <div className="flex h-20 items-center justify-center text-slate-500">No data for this period</div>
-        )}
-
-        {/* ── Return Trend Chart ── */}
-        {trend.length > 0 && (
-          <Card className="admin-panel-card" title="Return Trend">
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={trendChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                <CartesianGrid {...gridProps} />
-                <XAxis dataKey="label" {...axisProps} />
-                <YAxis {...axisProps} tickFormatter={(v) => formatCurrency(v)} width={70} />
-                <Tooltip formatter={(v) => formatCurrency(v)} {...tooltipProps} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Sale Returns" fill={seriesColor(0)} radius={BAR_RADIUS} />
-                <Bar dataKey="Purchase Returns" fill={seriesColor(1)} radius={BAR_RADIUS} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        )}
-
-        {/* ── Top Returned Items ── */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card className="admin-panel-card" title="Top Returned Items (Sales)">
-            {topSaleItems.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-500">No sale returns in this period</p>
-            ) : (
-              <Table
-                columns={[
-                  { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-500">{i.barcode}</p>}</div> },
-                  // returnCount is COUNT(DISTINCT return id) per item — the number of
-                  // return transactions that included this item, NOT units returned.
-                  // Units are the "Qty returned" column.
-                  { header: "Return txns", render: (i) => <span className="font-semibold text-slate-900">{i.returnCount}×</span> },
-                  { header: "Qty returned", accessor: "totalReturnedQty" },
-                  { header: "Amount", render: (i) => <span className="font-bold">{formatCurrency(i.totalReturnAmount)}</span> },
-                ]}
-                data={topSaleItems}
-              />
-            )}
-          </Card>
-
-          <Card className="admin-panel-card" title="Top Returned Items (Purchases)">
-            {topPurchaseItems.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-500">No purchase returns in this period</p>
-            ) : (
-              <Table
-                columns={[
-                  { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-500">{i.barcode}</p>}</div> },
-                  { header: "Return txns", render: (i) => <span className="font-semibold text-slate-900">{i.returnCount}×</span> },
-                  { header: "Qty returned", accessor: "totalReturnedQty" },
-                  { header: "Amount", render: (i) => <span className="font-bold">{formatCurrency(i.totalReturnAmount)}</span> },
-                ]}
-                data={topPurchaseItems}
-              />
-            )}
-          </Card>
-        </div>
-
-        {/* ── Return Reasons ── */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {/* Sale return reasons pie */}
-          {saleReasonPieData.length > 0 && (
-            <Card className="admin-panel-card" title="Sale Return Reasons">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={saleReasonPieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={false}>
-                      {saleReasonPieData.map((entry, index) => (
-                        <Cell key={index} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v, name) => [v, name]} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                  {saleReasons.map((r, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 text-sm">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: seriesColor(i) }} />
-                        <span className="truncate text-slate-700">{r.reason}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="font-semibold text-slate-900">{r.count}</span>
-                        <span className="text-xs text-slate-500">{formatCurrency(r.totalAmount)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Purchase return reasons table */}
-          {purchaseReasons.length > 0 && (
-            <Card className="admin-panel-card" title="Purchase Return Reasons">
-              <Table
-                columns={[
-                  { header: "Reason", render: (r) => <span className="text-sm">{r.reason}</span> },
-                  { header: "Count", render: (r) => <span className="font-semibold text-blue-600">{r.count}</span> },
-                  { header: "Total Amount", render: (r) => formatCurrency(r.totalAmount) },
-                ]}
-                data={purchaseReasons}
-              />
-            </Card>
-          )}
-        </div>
-
-        {/* Empty reasons state */}
-        {saleReasons.length === 0 && purchaseReasons.length === 0 && (
-          <Card className="admin-panel-card" title="Return Reasons">
-            <p className="py-8 text-center text-sm text-slate-500">No return reason data available for this period.</p>
-          </Card>
-        )}
-      </div>
-    );
-  };
-
   const InventoryValuationReport = () => {
     const items = Array.isArray(inventorySummary?.items) ? inventorySummary.items : [];
     const stockedItems = items.filter((item) => Number(item.qtyOnHand || 0) > 0);
@@ -1746,7 +1593,7 @@ const Reports = ({ mode = "basic" }) => {
       );
     }
     if (activeTab === "returnsReports") {
-      return <ReturnsReport data={returnsData} />;
+      return <ReturnsReportView data={returnsData} />;
     }
     if (activeTab === "inventoryValuation") return <InventoryValuationReport />;
     if (activeTab === "cashFlow") return <CashFlowReport />;
