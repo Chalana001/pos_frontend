@@ -89,6 +89,9 @@ import {
 } from "../components/reports/ReportPrimitives";
 import { PremiumDonutChart, OverviewBarChart } from "../components/reports/ReportCharts";
 import ReturnsReportView from "../components/reports/ReturnsReportView";
+import ProfitReportView from "../components/reports/ProfitReportView";
+import CashFlowReportView from "../components/reports/CashFlowReportView";
+import ProfitAndLossReportView from "../components/reports/ProfitAndLossReportView";
 
 const PAGE_SIZE = 10;
 const defaultFilters = { sortDirection: "DESC", salesSortBy: "DATE", productSortBy: "REVENUE", customerSortBy: "TOTAL_SPENT", supplierSortBy: "TOTAL_PURCHASED", itemType: "ALL", orderType: "ALL" };
@@ -1188,54 +1191,6 @@ const Reports = ({ mode = "basic" }) => {
     );
   };
 
-  const ProfitReport = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="admin-kpi-card bg-blue-50 border-blue-100">
-          <h3 className="text-xs font-bold uppercase text-slate-500">Gross Profit</h3>
-          <p className="text-2xl font-bold text-blue-700">{formatCurrency(profitSummary?.grossProfit || 0)}</p>
-        </Card>
-        <Card className="admin-kpi-card bg-red-50 border-red-100">
-          <h3 className="text-xs font-bold uppercase text-slate-500">Expenses</h3>
-          <p className="text-2xl font-bold text-red-600">- {formatCurrency(profitSummary?.totalExpenses || 0)}</p>
-        </Card>
-        <Card className="admin-kpi-card bg-emerald-50 border-emerald-100">
-          <h3 className="text-xs font-bold uppercase text-slate-500">Net Profit</h3>
-          <p className="text-2xl font-bold text-emerald-700">{formatCurrency(profitSummary?.netProfit || 0)}</p>
-        </Card>
-      </div>
-
-      <Card className="admin-panel-card" title="Profit Trend by Item">
-        <div className="h-[320px]">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
-            <LineChart data={reportData.slice(0, 20)}>
-              <CartesianGrid {...gridProps} />
-              <XAxis dataKey="itemName" hide />
-              <YAxis />
-              <Tooltip formatter={(value) => formatCurrency(value)} {...tooltipProps} />
-              <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="revenue" stroke={seriesColor(0)} strokeWidth={LINE_WIDTH} dot={false} name="Revenue" />
-              <Line type="monotone" dataKey="profit" stroke={seriesColor(1)} strokeWidth={LINE_WIDTH} dot={false} name="Profit" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      <Card className="admin-panel-card" title="Profit Details">
-        <Table
-          columns={[
-            { header: "Product", render: (i) => <div className="flex flex-col"><span className="font-medium">{i.itemName}</span>{i.altName && <span className="text-xs text-slate-500">{i.altName}</span>}</div> },
-            { header: "Qty Sold", accessor: "qtySold" },
-            { header: "Cost", render: (i) => formatCurrency(i.cost) },
-            { header: "Revenue", render: (i) => formatCurrency(i.revenue) },
-            { header: "Profit", render: (i) => <span className="font-bold text-emerald-700">{formatCurrency(i.profit)}</span> },
-          ]}
-          data={reportData}
-        />
-      </Card>
-    </div>
-  );
-
   const InventoryValuationReport = () => {
     const items = Array.isArray(inventorySummary?.items) ? inventorySummary.items : [];
     const stockedItems = items.filter((item) => Number(item.qtyOnHand || 0) > 0);
@@ -1350,87 +1305,6 @@ const Reports = ({ mode = "basic" }) => {
           </div>
           <ClientPagination page={inventoryPagination.page} pageSize={inventoryPagination.pageSize} totalItems={items.length} totalPages={inventoryPagination.totalPages} onPageChange={inventoryPagination.setPage} onPageSizeChange={inventoryPagination.setPageSize} />
         </Card>
-      </div>
-    );
-  };
-
-  const CashFlowReport = () => {
-    const data = reportData || {};
-    const daily = Array.isArray(data.dailyMovements) ? data.dailyMovements : [];
-    const visibleDaily = daily.slice(-100);
-    const movementBreakdown = [
-      { name: "Cash sales", value: Number(data.cashSales || 0), type: "inflow" },
-      { name: "Credit collections", value: Number(data.creditCollections || 0), type: "inflow" },
-      { name: "Expenses", value: Number(data.expenses || 0), type: "outflow" },
-      { name: "Purchase payments", value: Number(data.purchasePayments || 0), type: "outflow" },
-      { name: "Supplier payments", value: Number(data.supplierPayments || 0), type: "outflow" },
-      { name: "Cash refunds", value: Number(data.cashRefunds || 0), type: "outflow" },
-    ];
-
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryMetric title="Cash Inflows" value={data.totalInflows || 0} helper="Sales and credit collections" icon={TrendingUp} accent="emerald" />
-          <SummaryMetric title="Cash Outflows" value={data.totalOutflows || 0} helper="Operating cash payments" icon={TrendingDown} accent="red" />
-          <SummaryMetric title="Net Cash Movement" value={data.netCashMovement || 0} helper="Inflows less outflows" icon={DollarSign} accent={Number(data.netCashMovement || 0) < 0 ? "red" : "blue"} />
-          <SummaryMetric title="Cash Drops" value={data.cashDrops || 0} helper="Drawer-to-safe transfers, not expenses" icon={FileText} accent="amber" />
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <PremiumChartCard title="Daily Cash Movement" subtitle="Business cash inflows versus outflows">
-            <div className="h-[320px] min-h-[320px] min-w-0">
-              {daily.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={daily} margin={{ top: 12, right: 16, left: 4, bottom: 0 }}><CartesianGrid {...gridProps} /><XAxis dataKey="date" {...axisProps} /><YAxis {...axisProps} tickFormatter={shortCurrency} /><Tooltip formatter={(value) => formatCurrency(value)} {...tooltipProps} /><Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />{/* Inflow vs outflow is a polarity, so these wear the semantic money colours rather than categorical slots. */}<Area type="monotone" name="Inflows" dataKey="inflows" stroke={MONEY.positive} fill={MONEY.positive} fillOpacity={0.12} strokeWidth={LINE_WIDTH} /><Area type="monotone" name="Outflows" dataKey="outflows" stroke={MONEY.negative} fill={MONEY.negative} fillOpacity={0.12} strokeWidth={LINE_WIDTH} /></AreaChart></ResponsiveContainer> : <ChartEmptyState />}
-            </div>
-          </PremiumChartCard>
-          <Card className="admin-panel-card border-slate-200/80 p-5" title="Cash Movement Breakdown">
-            <div className="space-y-3">
-              {movementBreakdown.map((movement) => <div key={movement.name} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4"><div><p className="font-bold text-slate-900">{movement.name}</p><p className={`text-xs font-semibold ${movement.type === "inflow" ? "text-emerald-600" : "text-red-600"}`}>{movement.type === "inflow" ? "Cash in" : "Cash out"}</p></div><p className="font-black tabular-nums text-slate-900">{formatCurrency(movement.value)}</p></div>)}
-            </div>
-          </Card>
-        </div>
-        <Card className="admin-panel-card overflow-hidden p-0" title="Daily Cash Reconciliation">
-          <div className="space-y-3 p-4 md:hidden">{visibleDaily.map((row) => <div key={row.date} className="rounded-xl border border-slate-200 bg-white p-4"><p className="font-bold text-slate-900">{row.date}</p><div className="mt-3 grid grid-cols-3 gap-2 text-xs"><div><p className="text-slate-500">In</p><p className="mt-1 font-bold text-emerald-700">{formatCurrency(row.inflows)}</p></div><div><p className="text-slate-500">Out</p><p className="mt-1 font-bold text-red-700">{formatCurrency(row.outflows)}</p></div><div><p className="text-slate-500">Net</p><p className={`mt-1 font-black ${Number(row.netMovement || 0) < 0 ? "text-red-700" : "text-blue-700"}`}>{formatCurrency(row.netMovement)}</p></div></div></div>)}</div>
-          <div className="hidden md:block"><Table columns={[{ header: "Date", accessor: "date" }, { header: "Inflows", render: (row) => <span className="font-bold text-emerald-700">{formatCurrency(row.inflows)}</span> }, { header: "Outflows", render: (row) => <span className="font-bold text-red-700">{formatCurrency(row.outflows)}</span> }, { header: "Net Movement", render: (row) => <span className={`font-black ${Number(row.netMovement || 0) < 0 ? "text-red-700" : "text-blue-700"}`}>{formatCurrency(row.netMovement)}</span> }]} data={visibleDaily} /></div>
-          {daily.length > visibleDaily.length && <p className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">Showing the latest 100 active cash-movement days. KPIs and graph include all {daily.length} active days.</p>}
-        </Card>
-      </div>
-    );
-  };
-
-  const ProfitAndLossReport = () => {
-    const current = reportData?.current || {};
-    const comparison = reportData?.comparison || {};
-    const statementRows = [
-      ["Item revenue", current.itemRevenue, false],
-      ["Less: bill discounts", -Number(current.billDiscounts || 0), true],
-      ["Less: sales returns", -Number(current.salesReturns || 0), true],
-      ["Net revenue", current.netRevenue, false],
-      ["Less: cost of goods sold", -Number(current.costOfGoodsSold || 0), true],
-      ["Gross profit", current.grossProfit, false],
-      ["Less: operating expenses", -Number(current.operatingExpenses || 0), true],
-      ["Net profit", current.netProfit, false],
-    ];
-
-    return (
-      <div className="space-y-6">
-        {Number(current.costCoveragePercent || 0) < 95 && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-black">Profit confidence warning</p><p className="mt-1">Only {Number(current.costCoveragePercent || 0).toFixed(1)}% of revenue lines have recorded cost. {Number(current.missingCostLineCount || 0).toLocaleString()} lines may inflate profit.</p></div>}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <ComparisonMetric title="Net Revenue" current={current.netRevenue} previous={comparison.netRevenue} icon={TrendingUp} accent="blue" />
-          <ComparisonMetric title="Gross Profit" current={current.grossProfit} previous={comparison.grossProfit} icon={BarChart3} accent="emerald" />
-          <ComparisonMetric title="Net Profit" current={current.netProfit} previous={comparison.netProfit} icon={DollarSign} accent={Number(current.netProfit || 0) < 0 ? "red" : "emerald"} />
-          <ComparisonMetric title="Net Margin" current={current.netMarginPercent} previous={comparison.netMarginPercent} icon={PieIcon} accent="indigo" format={(value) => `${Number(value || 0).toFixed(1)}%`} />
-        </div>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <Card className="admin-panel-card overflow-hidden p-0" title="Profit & Loss Statement">
-            <div className="divide-y divide-slate-200">{statementRows.map(([label, value, deduction]) => <div key={label} className={`flex items-center justify-between px-5 py-4 ${label === "Net profit" || label === "Gross profit" || label === "Net revenue" ? "bg-slate-50" : ""}`}><span className={`text-sm ${label === "Net profit" ? "font-black text-slate-900" : "font-semibold text-slate-700"}`}>{label}</span><span className={`font-black tabular-nums ${deduction ? "text-red-600" : Number(value || 0) < 0 ? "text-red-700" : "text-slate-900"}`}>{formatCurrency(value)}</span></div>)}</div>
-          </Card>
-          <Card className="admin-panel-card border-slate-200/80 p-5" title="Margin & Data Quality">
-            <div className="space-y-4">
-              {[{ label: "Gross margin", value: current.grossMarginPercent, color: "bg-emerald-500" }, { label: "Net margin", value: current.netMarginPercent, color: "bg-blue-500" }, { label: "Cost coverage", value: current.costCoveragePercent, color: Number(current.costCoveragePercent || 0) < 95 ? "bg-amber-500" : "bg-emerald-500" }].map((metric) => <div key={metric.label}><div className="mb-2 flex justify-between text-sm font-bold text-slate-700"><span>{metric.label}</span><span>{Number(metric.value || 0).toFixed(1)}%</span></div><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${metric.color}`} style={{ width: `${Math.max(0, Math.min(100, Number(metric.value || 0)))}%` }} /></div></div>)}
-              <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600"><p>Returned COGS restored: <strong>{formatCurrency(current.returnedCost)}</strong></p><p className="mt-2">Operating expenses include only records configured for profit reporting.</p></div>
-            </div>
-          </Card>
-        </div>
       </div>
     );
   };
@@ -1563,7 +1437,7 @@ const Reports = ({ mode = "basic" }) => {
     if (isPagedTab) return renderPagedTable();
     if (activeTab === "overview") return <BasicOverview />;
     if (activeTab === "salesSummary") return <SalesKpis />;
-    if (activeTab === "profit") return <ProfitReport />;
+    if (activeTab === "profit") return <ProfitReportView profitSummary={profitSummary} reportData={reportData} />;
     if (activeTab === "creditDue") {
       return (
         <Card className="admin-panel-card" title="Credit Due List">
@@ -1596,8 +1470,8 @@ const Reports = ({ mode = "basic" }) => {
       return <ReturnsReportView data={returnsData} />;
     }
     if (activeTab === "inventoryValuation") return <InventoryValuationReport />;
-    if (activeTab === "cashFlow") return <CashFlowReport />;
-    if (activeTab === "profitLoss") return <ProfitAndLossReport />;
+    if (activeTab === "cashFlow") return <CashFlowReportView data={reportData} />;
+    if (activeTab === "profitLoss") return <ProfitAndLossReportView data={reportData} />;
     if (activeTab === "creditAging") return <AgingReportView data={reportData} kind="customer" />;
     if (activeTab === "supplierPayables") return <AgingReportView data={reportData} kind="supplier" />;
     if (activeTab === "customerBehavior") return <CustomerBehaviorReportView data={reportData} />;
