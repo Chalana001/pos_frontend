@@ -45,13 +45,12 @@ import { suppliersAPI } from "../api/suppliers.api";
 import { formatCurrency } from "../utils/formatters";
 import { formatDisplayStockBaseQuantity } from "../utils/stockQuantity";
 import {
-  SERIES,
   CHROME,
   MONEY,
   SEQUENTIAL_BLUE,
   TILE,
-  tileTone,
   seriesColor,
+  axisProps,
   gridProps,
   tooltipProps,
   BAR_RADIUS,
@@ -80,6 +79,14 @@ import CustomerBehaviorReportView from "../components/reports/CustomerBehaviorRe
 import CashierBranchComparisonView from "../components/reports/CashierBranchComparisonView";
 import CommercialIntelligenceView from "../components/reports/CommercialIntelligenceView";
 import ExceptionCenterView from "../components/reports/ExceptionCenterView";
+import {
+  ChartEmptyState,
+  PremiumChartCard,
+  SummaryMetric,
+  ComparisonMetric,
+  ValuationStatusBadge,
+  StatCard,
+} from "../components/reports/ReportPrimitives";
 
 const PAGE_SIZE = 10;
 const defaultFilters = { sortDirection: "DESC", salesSortBy: "DATE", productSortBy: "REVENUE", customerSortBy: "TOTAL_SPENT", supplierSortBy: "TOTAL_PURCHASED", itemType: "ALL", orderType: "ALL" };
@@ -87,9 +94,6 @@ const BASIC_CHART_SIZE = 8;
 // Colours come from src/utils/chartTheme.js — do not add raw hex values here.
 // seriesColor() clamps instead of cycling: a 9th category must be folded into
 // "Other" rather than handed a repeated hue.
-const CHART_COLORS = SERIES;
-const CHART_GRID = CHROME.grid;
-const CHART_TEXT = CHROME.inkMuted;
 
 // Axis ticks have a fixed budget of horizontal space; long product names must be
 // clipped here rather than allowed to overlap their neighbours.
@@ -904,31 +908,6 @@ const Reports = ({ mode = "basic" }) => {
   // come from the shared theme so every tooltip in the app matches.
   const premiumTooltip = tooltipProps.contentStyle;
 
-  const axisProps = {
-    axisLine: false,
-    tickLine: false,
-    tick: { fontSize: 11, fill: CHART_TEXT },
-  };
-
-  const ChartEmptyState = () => (
-    <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-sm font-medium text-slate-500">
-      No data for this period
-    </div>
-  );
-
-  const PremiumChartCard = ({ title, subtitle, children }) => (
-    <Card className="admin-panel-card dashboard-premium-card overflow-hidden border-slate-200/80 bg-white/95 shadow-[0_16px_44px_rgb(15_23_42/0.06)]">
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-bold text-slate-900">{title}</h2>
-          {subtitle && <p className="mt-1 text-xs font-medium text-slate-500">{subtitle}</p>}
-        </div>
-        <div className="h-2 w-16 rounded-full bg-blue-600" />
-      </div>
-      {children}
-    </Card>
-  );
-
   const PremiumDonutChart = ({ data, total, valueLabel, gradientPrefix, formatter = formatCurrency }) => {
     const safeTotal = Number(total || 0);
 
@@ -993,70 +972,6 @@ const Reports = ({ mode = "basic" }) => {
               </div>
             );
           })}
-        </div>
-      </div>
-    );
-  };
-
-  const SummaryMetric = ({ title, value, helper, icon: Icon, accent = "blue", format = formatCurrency }) => {
-    // Six arbitrary hues collapsed onto the semantic tile roles. Anything that
-    // never meant good/bad (indigo, cyan) is now neutral.
-    const accentClasses = tileTone(accent).chip;
-
-    return (
-      <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{title}</p>
-            <p className="mt-2 text-xl font-black tabular-nums text-slate-900">{format(value)}</p>
-            {helper && <p className="mt-1 max-w-[210px] truncate text-xs font-medium text-slate-500">{helper}</p>}
-          </div>
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accentClasses}`}>
-            <Icon size={19} />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const ValuationStatusBadge = ({ status }) => {
-    const styles = {
-      SELLABLE: ["Retail", "bg-emerald-50 text-emerald-700"],
-      PRICED_INTERNAL_USE: ["Internal + Priced", "bg-blue-50 text-blue-700"],
-      INTERNAL_USE: ["Internal Use", "bg-slate-100 text-slate-600"],
-      MISSING_PRICE: ["Missing Price", "bg-amber-50 text-amber-700"],
-    };
-    const [label, className] = styles[status] || ["Unclassified", "bg-slate-100 text-slate-600"];
-    return <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}>{label}</span>;
-  };
-
-  const changePercent = (current, previous) => {
-    const currentValue = Number(current || 0);
-    const previousValue = Number(previous || 0);
-    if (previousValue === 0) return currentValue === 0 ? 0 : null;
-    return ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
-  };
-
-  const ComparisonMetric = ({ title, current, previous, icon: Icon, accent = "blue", format = formatCurrency }) => {
-    const change = changePercent(current, previous);
-    const improved = change !== null && change >= 0;
-
-    return (
-      <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{title}</p>
-            <p className="mt-2 truncate text-xl font-black tabular-nums text-slate-900">{format(current)}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
-              <span className={change === null ? "text-slate-500" : improved ? "text-emerald-700" : "text-red-700"}>
-                {change === null ? "New activity" : `${improved ? "+" : ""}${change.toFixed(1)}%`}
-              </span>
-              <span className="text-slate-500">vs {format(previous)}</span>
-            </div>
-          </div>
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tileTone(accent).chip}`}>
-            <Icon size={19} />
-          </div>
         </div>
       </div>
     );
@@ -1510,14 +1425,6 @@ const Reports = ({ mode = "basic" }) => {
       "Sale Returns": Number(t.saleReturns || 0),
       "Purchase Returns": Number(t.purchaseReturns || 0),
     }));
-
-    const StatCard = ({ label, value, sub, color = "text-slate-900" }) => (
-      <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-        <p className={`mt-1 text-2xl font-black tabular-nums ${color}`}>{value}</p>
-        {sub && <p className="mt-0.5 text-xs text-slate-500">{sub}</p>}
-      </div>
-    );
 
     return (
       <div className="space-y-6">
