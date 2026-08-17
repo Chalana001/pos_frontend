@@ -489,17 +489,30 @@ const Reports = ({ mode = "basic" }) => {
   };
 
   const generateReport = async (type) => {
+    // Refreshing the tab you are already on — a date change, a branch change, a
+    // filter — keeps the previous payload on screen while the new one loads.
+    // Clearing it here is what made the content area flash to a spinner, which
+    // unmounted the report and took its pagination and scroll position with it.
+    //
+    // Switching to a DIFFERENT tab still clears: the shapes are unrelated, and
+    // showing one report's numbers under another report's headings is worse than
+    // a spinner.
+    const isSameTabRefresh = loadedTab === type;
+
     setLoading(true);
-    setLoadedTab(null);
-    setReportData([]);
-    setProfitSummary(null);
-    setOwnerSummary(null);
-    setInventorySummary(null);
-    setStockHealthSummary(null);
-    setForecastSummary(null);
-    setSalesSummary(null);
-    setSalesTrend({ data: [], type: "DAILY" });
-    setReturnsData({ summary: null, topSaleItems: [], topPurchaseItems: [], reasons: [], trend: [] });
+
+    if (!isSameTabRefresh) {
+      setLoadedTab(null);
+      setReportData([]);
+      setProfitSummary(null);
+      setOwnerSummary(null);
+      setInventorySummary(null);
+      setStockHealthSummary(null);
+      setForecastSummary(null);
+      setSalesSummary(null);
+      setSalesTrend({ data: [], type: "DAILY" });
+      setReturnsData({ summary: null, topSaleItems: [], topPurchaseItems: [], reasons: [], trend: [] });
+    }
 
     try {
       const params = commonParams();
@@ -1091,7 +1104,11 @@ const Reports = ({ mode = "basic" }) => {
       )}
 
       <div className="min-h-[500px]">
-        {loading ? (
+        {/* A spinner only when there is genuinely nothing to show — first load of
+            a tab. On a refresh of the tab you are already viewing, the previous
+            render is held at reduced opacity instead, so the layout does not jump
+            and the report is not unmounted mid-fetch. */}
+        {loading && !hasActiveReportData ? (
           <div className="flex h-64 items-center justify-center">
             <LoadingSpinner size="lg" text="Analyzing data..." />
           </div>
@@ -1102,8 +1119,19 @@ const Reports = ({ mode = "basic" }) => {
             <p className="text-slate-500">Choose a report type or date range to refresh the data.</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="mb-4 flex justify-end gap-2">
+          <div
+            className={`space-y-6 transition-opacity duration-200 ${loading ? "pointer-events-none opacity-50" : "opacity-100"}`}
+            aria-busy={loading}
+          >
+            <div className="mb-4 flex items-center justify-end gap-2">
+              {/* The dimmed content says "busy" but not why. This says it in words,
+                  and it sits in an existing row so nothing shifts when it appears. */}
+              {loading && (
+                <span className="mr-auto flex items-center gap-2 text-xs font-semibold text-slate-500">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+                  Updating…
+                </span>
+              )}
               {isPagedTab ? (
                 <Button variant="outline" size="sm" onClick={handleExcelExport}>
                   <Download size={16} className="mr-2" /> Export Excel
