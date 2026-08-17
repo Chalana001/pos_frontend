@@ -39,7 +39,7 @@ import {
 
 import { reportsAPI } from "../api/reports.api";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
-import { getCategoryFilterParams, getDisplayCategoryName, isSingleCategoryMode } from "../utils/categoryMode";
+import { getCategoryFilterParams, isSingleCategoryMode } from "../utils/categoryMode";
 import { categoriesAPI } from "../api/categories.api";
 import { suppliersAPI } from "../api/suppliers.api";
 import { formatCurrency, shortCurrency } from "../utils/formatters";
@@ -61,7 +61,6 @@ import Button from "../components/common/Button";
 import Table from "../components/common/Table";
 import TablePagination from "../components/common/TablePagination";
 import ClientPagination from "../components/common/ClientPagination";
-import useClientPagination from "../hooks/useClientPagination";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import CustomSelect from "../components/common/CustomSelect";
 import DatePicker from "../components/common/DatePicker";
@@ -90,6 +89,7 @@ import { PremiumDonutChart, OverviewBarChart } from "../components/reports/Repor
 import ReturnsReportView from "../components/reports/ReturnsReportView";
 import CashFlowReportView from "../components/reports/CashFlowReportView";
 import ProfitAndLossReportView from "../components/reports/ProfitAndLossReportView";
+import InventoryValuationReportView from "../components/reports/InventoryValuationReportView";
 
 const PAGE_SIZE = 10;
 const defaultFilters = { sortDirection: "DESC", salesSortBy: "DATE", productSortBy: "REVENUE", customerSortBy: "TOTAL_SPENT", supplierSortBy: "TOTAL_PURCHASED", itemType: "ALL", orderType: "ALL" };
@@ -394,12 +394,6 @@ const Reports = ({ mode = "basic" }) => {
     customerPerformance: "customerSortBy",
     supplierPerformance: "supplierSortBy",
   }[activeTab];
-
-  const formatQty = (value, unit) => {
-    const numeric = Number(value || 0);
-    const formatted = Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(3).replace(/\.?0+$/, "");
-    return unit ? `${formatted} ${unit}` : formatted;
-  };
 
   const formatDateTime = (value) => {
     if (!value) return "-";
@@ -1085,124 +1079,6 @@ const Reports = ({ mode = "basic" }) => {
     );
   };
 
-  const InventoryValuationReport = () => {
-    const items = Array.isArray(inventorySummary?.items) ? inventorySummary.items : [];
-    const stockedItems = items.filter((item) => Number(item.qtyOnHand || 0) > 0);
-    const zeroStockItems = items.filter((item) => Number(item.qtyOnHand || 0) === 0).length;
-    const negativeStockItems = items.filter((item) => Number(item.qtyOnHand || 0) < 0).length;
-    const inventoryPagination = useClientPagination(items, items.length);
-    const categoryMap = items.reduce((totals, item) => {
-      const category = getDisplayCategoryName(item, singleCategoryMode);
-      totals[category] = (totals[category] || 0) + Number(item.stockValue || 0);
-      return totals;
-    }, {});
-    const categoryData = Object.entries(categoryMap)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
-
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <SummaryMetric title="Stock Cost Value" value={inventorySummary?.totalStockValue || 0} helper="Capital currently in stock" icon={DollarSign} accent="blue" />
-          <SummaryMetric title="Priced Stock Value" value={inventorySummary?.pricedStockValue || 0} helper="Stock with a selling price" icon={ShoppingCart} accent="emerald" />
-          <SummaryMetric title="Internal-use Stock" value={inventorySummary?.internalUseStockValue || 0} helper="Cost-valued stock without retail price" icon={Package} accent="cyan" />
-          <SummaryMetric title="Potential Revenue" value={inventorySummary?.totalPotentialRevenue || 0} helper="Priced items only" icon={TrendingUp} accent="emerald" />
-          <SummaryMetric title="Potential Gross Profit" value={inventorySummary?.totalPotentialProfit || 0} helper="Priced items only; before expenses" icon={BarChart3} accent="cyan" />
-          <SummaryMetric title="Stocked Items" value={stockedItems.length} helper={`${zeroStockItems} items have zero stock`} icon={Package} accent={zeroStockItems > 0 ? "amber" : "emerald"} format={(value) => Number(value).toLocaleString()} />
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <PremiumChartCard title={singleCategoryMode ? "Capital by Category" : "Capital by Main Category"} subtitle={singleCategoryMode ? "Visible categories holding the most stock value" : "Main categories holding the most stock value"}>
-            <div className="space-y-3 md:hidden">
-              {categoryData.length ? categoryData.map((category) => {
-                const maxValue = Math.max(...categoryData.map((entry) => Number(entry.value || 0)), 1);
-                return <div key={category.name}>
-                  <div className="mb-1 flex items-center justify-between gap-3 text-xs"><span className="min-w-0 truncate font-semibold text-slate-700">{category.name}</span><span className="shrink-0 font-bold text-slate-900">{formatCurrency(category.value)}</span></div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.max((Number(category.value || 0) / maxValue) * 100, Number(category.value || 0) > 0 ? 2 : 0)}%` }} /></div>
-                </div>;
-              }) : <ChartEmptyState />}
-            </div>
-            <div className="hidden h-[320px] min-h-[320px] min-w-0 md:block">
-              {categoryData.length ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
-                  <BarChart data={categoryData} layout="vertical" margin={{ top: 8, right: 24, left: 24, bottom: 8 }}>
-                    {/* Horizontal bars read against vertical rules, so this chart
-                        flips the shared grid orientation. */}
-                    <CartesianGrid {...gridProps} vertical horizontal={false} />
-                    <XAxis type="number" {...axisProps} tickFormatter={shortCurrency} />
-                    <YAxis type="category" dataKey="name" width={105} {...axisProps} />
-                    <Tooltip formatter={(value) => formatCurrency(value)} {...tooltipProps} />
-                    <Bar dataKey="value" radius={BAR_RADIUS_HORIZONTAL} fill={seriesColor(0)} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : <ChartEmptyState />}
-            </div>
-          </PremiumChartCard>
-
-          <Card className="admin-panel-card border-slate-200/80 p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Stock Health</p>
-            <h2 className="mt-1 text-lg font-black text-slate-900">Immediate valuation risks</h2>
-            <div className="mt-5 space-y-3">
-              <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4">
-                <span className="font-bold text-slate-800">Zero-stock items</span>
-                <span className="text-xl font-black text-red-700">{zeroStockItems}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-red-300 bg-red-100 p-4">
-                <span className="font-bold text-slate-800">Negative-stock items</span>
-                <span className="text-xl font-black text-red-800">{negativeStockItems}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <span className="font-bold text-slate-800">Items without cost</span>
-                <span className="text-xl font-black text-amber-700">{items.filter((item) => Number(item.qtyOnHand || 0) > 0 && Number(item.costPrice || 0) <= 0).length}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <span className="font-bold text-slate-800">Sellable items missing price</span>
-                <span className="text-xl font-black text-slate-800">{inventorySummary?.missingPriceItems || 0}</span>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <Card className="admin-panel-card overflow-hidden p-0" title="Inventory Valuation Details">
-          <div className="space-y-3 p-4 md:hidden">
-            {inventoryPagination.pageItems.map((item) => (
-              <div key={item.itemId} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-bold text-slate-900">{item.itemName}</p>
-                    <p className="mt-1 text-xs text-slate-500">{item.barcode || "No barcode"} · {getDisplayCategoryName(item, singleCategoryMode)}</p>
-                    <ValuationStatusBadge status={item.valuationStatus} />
-                  </div>
-                  <span className={Number(item.qtyOnHand || 0) <= 0 ? "font-black text-red-600" : "font-black text-slate-900"}>{formatQty(item.qtyOnHand, item.unit)}</span>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-xs font-semibold text-slate-500">Stock value</p><p className="mt-1 font-bold text-blue-700">{formatCurrency(item.stockValue)}</p></div>
-                  <div><p className="text-xs font-semibold text-slate-500">Potential profit</p><p className={`mt-1 font-bold ${item.potentialProfit == null ? "text-slate-500" : Number(item.potentialProfit) < 0 ? "text-red-600" : "text-emerald-700"}`}>{item.potentialProfit == null ? "N/A" : formatCurrency(item.potentialProfit)}</p></div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="hidden md:block">
-            <Table
-            columns={[
-              { header: "Item", render: (item) => <div><p className="font-semibold text-slate-900">{item.itemName}</p><p className="text-xs text-slate-500">{item.barcode || "No barcode"} · {getDisplayCategoryName(item, singleCategoryMode)}</p><ValuationStatusBadge status={item.valuationStatus} /></div> },
-              { header: "Qty", render: (item) => <span className={Number(item.qtyOnHand || 0) <= 0 ? "font-bold text-red-600" : "font-semibold"}>{formatQty(item.qtyOnHand, item.unit)}</span> },
-              { header: "Avg Cost", render: (item) => formatCurrency(item.costPrice) },
-              { header: "Stock Value", render: (item) => <span className="font-bold text-blue-700">{formatCurrency(item.stockValue)}</span> },
-              { header: "Selling Price", render: (item) => Number(item.sellingPrice || 0) > 0 ? formatCurrency(item.sellingPrice) : <span className="text-slate-500">N/A</span> },
-              { header: "Potential Revenue", render: (item) => item.potentialRevenue == null ? <span className="text-slate-500">N/A</span> : formatCurrency(item.potentialRevenue) },
-              { header: "Potential Profit", render: (item) => item.potentialProfit == null ? <span className="font-semibold text-slate-500">N/A</span> : <span className={Number(item.potentialProfit) < 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>{formatCurrency(item.potentialProfit)}</span> },
-            ]}
-              data={inventoryPagination.pageItems}
-            />
-          </div>
-          <ClientPagination page={inventoryPagination.page} pageSize={inventoryPagination.pageSize} totalItems={items.length} totalPages={inventoryPagination.totalPages} onPageChange={inventoryPagination.setPage} onPageSizeChange={inventoryPagination.setPageSize} />
-        </Card>
-      </div>
-    );
-  };
-
   const renderPagedTable = () => {
     if (activeTab === "grnPurchases") return <GrnPurchaseReportView summary={{ ...inventorySummary, page: pageData }} />;
     if (activeTab === "stockMovement") return <StockMovementReportView data={reportData} totalElements={pageData.totalElements} />;
@@ -1333,7 +1209,7 @@ const Reports = ({ mode = "basic" }) => {
     if (activeTab === "returnsReports") {
       return <ReturnsReportView data={returnsData} />;
     }
-    if (activeTab === "inventoryValuation") return <InventoryValuationReport />;
+    if (activeTab === "inventoryValuation") return <InventoryValuationReportView inventorySummary={inventorySummary} singleCategoryMode={singleCategoryMode} />;
     if (activeTab === "cashFlow") return <CashFlowReportView data={reportData} />;
     if (activeTab === "profitLoss") return <ProfitAndLossReportView data={reportData} />;
     if (activeTab === "creditAging") return <AgingReportView data={reportData} kind="customer" />;
