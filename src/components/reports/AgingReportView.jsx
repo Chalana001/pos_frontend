@@ -2,7 +2,7 @@ import { AlertCircle, Calendar, Clock, DollarSign } from "lucide-react";
 import { Bar, BarChart, Cell, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Card from "../common/Card";
 import Table from "../common/Table";
-import { formatCurrency } from "../../utils/formatters";
+import { formatCurrency, shortCurrency } from "../../utils/formatters";
 import { axisProps, gridProps, tooltipProps, BAR_RADIUS, ordinalRamp, tileTone } from "../../utils/chartTheme";
 
 // Aging buckets are ordered age bands, so they take a one-hue ramp — the reader
@@ -10,7 +10,6 @@ import { axisProps, gridProps, tooltipProps, BAR_RADIUS, ordinalRamp, tileTone }
 const BUCKET_COLORS = ordinalRamp(4);
 
 const formatDateTime = (value) => value ? new Date(value).toLocaleString() : "-";
-const shortCurrency = (value) => Number(value || 0) >= 1_000_000 ? `${(Number(value) / 1_000_000).toFixed(1)}M` : Number(value || 0) >= 1_000 ? `${(Number(value) / 1_000).toFixed(0)}K` : Number(value || 0).toFixed(0);
 
 const priorityClass = (priority) => priority === "CRITICAL" ? "bg-red-100 text-red-700" : priority === "HIGH" ? "bg-orange-100 text-orange-700" : priority === "MEDIUM" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700";
 

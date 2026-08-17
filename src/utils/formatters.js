@@ -6,6 +6,25 @@ export const formatCurrency = (amount) => {
   }).format(amount || 0);
 };
 
+/**
+ * Compact currency for chart axis ticks: one prefix, no cents, K/M suffixes.
+ *
+ * Axis ticks have a fixed width budget, so they cannot use formatCurrency —
+ * but they must agree with it on the currency, or a single chart ends up
+ * showing both "LKR 0.00" and "Rs. 9.5K" (which it did).
+ *
+ * The separator is a non-breaking space: SVG <text> collapses a regular space
+ * at some widths, which rendered "LKR 9.5K" next to "LKR19.0K".
+ */
+export const shortCurrency = (value) => {
+  const amount = Number(value || 0);
+  const abs = Math.abs(amount);
+  const nbsp = ' ';
+  if (abs >= 1_000_000) return `LKR${nbsp}${(amount / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `LKR${nbsp}${(amount / 1_000).toFixed(1)}K`;
+  return `LKR${nbsp}${Math.round(amount).toLocaleString()}`;
+};
+
 export const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-LK', {
     year: 'numeric',

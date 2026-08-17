@@ -42,7 +42,7 @@ import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { getCategoryFilterParams, getDisplayCategoryName, isSingleCategoryMode } from "../utils/categoryMode";
 import { categoriesAPI } from "../api/categories.api";
 import { suppliersAPI } from "../api/suppliers.api";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, shortCurrency } from "../utils/formatters";
 import { formatDisplayStockBaseQuantity } from "../utils/stockQuantity";
 import {
   CHROME,
@@ -87,6 +87,7 @@ import {
   ValuationStatusBadge,
   StatCard,
 } from "../components/reports/ReportPrimitives";
+import { PremiumDonutChart, OverviewBarChart } from "../components/reports/ReportCharts";
 
 const PAGE_SIZE = 10;
 const defaultFilters = { sortDirection: "DESC", salesSortBy: "DATE", productSortBy: "REVENUE", customerSortBy: "TOTAL_SPENT", supplierSortBy: "TOTAL_PURCHASED", itemType: "ALL", orderType: "ALL" };
@@ -94,13 +95,6 @@ const BASIC_CHART_SIZE = 8;
 // Colours come from src/utils/chartTheme.js — do not add raw hex values here.
 // seriesColor() clamps instead of cycling: a 9th category must be folded into
 // "Other" rather than handed a repeated hue.
-
-// Axis ticks have a fixed budget of horizontal space; long product names must be
-// clipped here rather than allowed to overlap their neighbours.
-const truncateTick = (value) => {
-  const text = String(value ?? "");
-  return text.length > 14 ? `${text.slice(0, 13)}…` : text;
-};
 
 const formatDateInput = (date) =>
   new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split("T")[0];
@@ -890,93 +884,6 @@ const Reports = ({ mode = "basic" }) => {
     }
   };
 
-  // Axis ticks: one currency prefix, no cents. This previously said "Rs." above
-  // 1,000 and fell through to formatCurrency ("LKR 0.00") below it, so a single
-  // y-axis rendered both "LKR 0.00" and "Rs. 9.5K".
-  const shortCurrency = (value) => {
-    const amount = Number(value || 0);
-    const abs = Math.abs(amount);
-    // Non-breaking space: SVG <text> collapses a normal space at some widths, so
-    // ticks rendered inconsistently as "LKR 9.5K" next to "LKR19.0K".
-    const nbsp = " ";
-    if (abs >= 1_000_000) return `LKR${nbsp}${(amount / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `LKR${nbsp}${(amount / 1_000).toFixed(1)}K`;
-    return `LKR${nbsp}${Math.round(amount).toLocaleString()}`;
-  };
-
-  // Kept as an alias so the remaining call sites stay unchanged; the values now
-  // come from the shared theme so every tooltip in the app matches.
-  const premiumTooltip = tooltipProps.contentStyle;
-
-  const PremiumDonutChart = ({ data, total, valueLabel, gradientPrefix, formatter = formatCurrency }) => {
-    const safeTotal = Number(total || 0);
-
-    return (
-      <div className="grid min-h-[300px] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="relative min-h-[260px] rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-2 shadow-inner">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
-            <PieChart>
-              <Pie
-                data={data}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius="64%"
-                outerRadius="86%"
-                paddingAngle={2}
-                cornerRadius={4}
-                startAngle={90}
-                endAngle={-270}
-                stroke={CHROME.surface}
-                strokeWidth={2}
-              >
-                {/* One flat slot colour per slice. Previously each slice was a
-                    gradient running from its own colour into the NEXT slice's,
-                    which blended the whole ring into a rainbow. */}
-                {data.map((entry, index) => (
-                  <Cell key={`${gradientPrefix}-cell-${entry.name}`} fill={seriesColor(index)} />
-                ))}
-              </Pie>
-              <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-900 text-[18px] font-black">
-                {formatter(safeTotal)}
-              </text>
-              <text x="50%" y="56%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-500 text-[11px] font-semibold uppercase tracking-wide">
-                {valueLabel}
-              </text>
-              <Tooltip formatter={(value) => formatter(value)} contentStyle={premiumTooltip} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-8 rounded-full border border-white/70 shadow-[inset_0_0_32px_rgb(15_23_42/0.06)]" />
-        </div>
-
-        <div className="flex flex-col justify-center gap-3">
-          {data.map((entry, index) => {
-            const percent = safeTotal > 0 ? Math.round((Number(entry.value || 0) / safeTotal) * 100) : 0;
-            return (
-              <div key={`${gradientPrefix}-legend-${entry.name}`} className="rounded-xl border border-slate-200/80 bg-white/80 p-3 shadow-sm">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: seriesColor(index) }} />
-                    <span className="truncate text-sm font-bold text-slate-700">{entry.name}</span>
-                  </div>
-                  <span className="text-sm font-black tabular-nums text-slate-900">{percent}%</span>
-                </div>
-                <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${percent}%`, background: seriesColor(index) }}
-                  />
-                </div>
-                <p className="text-xs font-semibold text-slate-500">{formatter(entry.value)}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
   const SalesKpis = () => {
     if (!salesSummary) return null;
     const pieData = [
@@ -1045,84 +952,6 @@ const Reports = ({ mode = "basic" }) => {
           </Card>
         </div>
       </div>
-    );
-  };
-
-  const OverviewBarChart = ({ title, subtitle, data, nameKey, valueKey, formatter = formatCurrency }) => {
-    const topRows = data.slice(0, 4);
-    const maxValue = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 0);
-
-    return (
-    <PremiumChartCard title={title} subtitle={subtitle}>
-      <div className="grid min-h-[300px] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
-        {data.length === 0 ? (
-          <ChartEmptyState />
-        ) : (
-          <>
-            <div className="min-h-[280px] rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-3 shadow-inner">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
-                <BarChart data={data} margin={{ top: 12, right: 8, left: -8, bottom: 34 }}>
-                  <CartesianGrid {...gridProps} />
-                  {/* Long item names collide at -18°. Steeper angle plus truncation
-                      keeps every tick readable; the full name is in the tooltip and
-                      in the legend list beside the chart. */}
-                  <XAxis
-                    dataKey={nameKey}
-                    {...axisProps}
-                    tick={{ ...axisProps.tick, fontSize: 10 }}
-                    tickFormatter={truncateTick}
-                    angle={-35}
-                    textAnchor="end"
-                    interval={0}
-                    height={86}
-                  />
-                  <YAxis {...axisProps} tickFormatter={shortCurrency} />
-                  <Tooltip formatter={(value) => formatter(value)} {...tooltipProps} />
-                  {/* These are nominal categories (products, customers, suppliers) — one
-                      measure, so one hue. Bar length already encodes the value; giving each
-                      bar its own colour spends the identity channel on nothing. The leader
-                      is emphasised with a darker step of the same hue, not a different one. */}
-                  <Bar dataKey={valueKey} radius={BAR_RADIUS} maxBarSize={42}>
-                    {data.map((entry, index) => (
-                      <Cell key={`${title}-${index}`} fill={index === 0 ? seriesColor(0) : SEQUENTIAL_BLUE[4]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="flex flex-col justify-center gap-3">
-              {topRows.map((entry, index) => {
-                const value = Number(entry[valueKey] || 0);
-                const percent = maxValue > 0 ? Math.max(4, Math.round((value / maxValue) * 100)) : 0;
-                return (
-                  <div key={`${title}-rank-${entry[nameKey]}-${index}`} className="rounded-xl border border-slate-200/80 bg-white/80 p-3 shadow-sm">
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[11px] font-black text-white">
-                          {index + 1}
-                        </span>
-                        <span className="truncate text-sm font-bold text-slate-700">{entry[nameKey] || "Unknown"}</span>
-                      </div>
-                    </div>
-                    <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${percent}%`,
-                          background: index === 0 ? seriesColor(0) : SEQUENTIAL_BLUE[4],
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs font-semibold text-slate-500">{formatter(value)}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
-    </PremiumChartCard>
     );
   };
 
