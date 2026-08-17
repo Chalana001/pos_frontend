@@ -4,6 +4,7 @@ import { ArrowLeftRight, CheckCircle2, Clock3, Package } from "lucide-react";
 
 import Card from "../common/Card";
 import Table from "../common/Table";
+import { tileTone } from "../../utils/chartTheme";
 
 const statusMeta = {
   ALL: { label: "All transfers", className: "bg-slate-100 text-slate-700" },
@@ -32,15 +33,18 @@ const getItemQuantity = (items) =>
   (Array.isArray(items) ? items : []).reduce((sum, item) => sum + Number(item?.quantity || 0), 0);
 
 function Metric({ title, value, helper, icon: Icon, tone }) {
+  const role = tileTone(tone);
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase text-slate-500">{title}</p>
-          <p className={`mt-2 text-xl font-black ${tone}`}>{Number(value || 0).toLocaleString()}</p>
+          <p className={`mt-2 text-xl font-black ${role.value}`}>{Number(value || 0).toLocaleString()}</p>
           <p className="mt-1 text-xs font-semibold text-slate-500">{helper}</p>
         </div>
-        <Icon size={20} className={tone} />
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${role.chip}`}>
+          <Icon size={18} />
+        </span>
       </div>
     </div>
   );
@@ -131,11 +135,13 @@ export default function StockTransferReportView({ data, pageData }) {
           value={metrics.totalTransfers}
           helper={`${quantityLabel} | ${pageData?.totalElements || 0} total matching records`}
           icon={ArrowLeftRight}
-          tone="text-blue-700"
+          tone="accent"
         />
-        <Metric title="Pending" value={metrics.pendingTransfers} helper={`${formatQty(metrics.pendingQty)} units still open`} icon={Clock3} tone="text-amber-700" />
-        <Metric title="In Transit" value={metrics.inTransitTransfers} helper={`${formatQty(metrics.inTransitQty)} units moving now`} icon={Package} tone="text-violet-700" />
-        <Metric title="Completed" value={metrics.completedTransfers} helper={`${formatQty(metrics.completedQty)} units received`} icon={CheckCircle2} tone="text-emerald-700" />
+        {/* Transfer state is a real status, so warning/good are earned here.
+            "In Transit" is a neutral waypoint, not a problem. */}
+        <Metric title="Pending" value={metrics.pendingTransfers} helper={`${formatQty(metrics.pendingQty)} units still open`} icon={Clock3} tone="warning" />
+        <Metric title="In Transit" value={metrics.inTransitTransfers} helper={`${formatQty(metrics.inTransitQty)} units moving now`} icon={Package} tone="neutral" />
+        <Metric title="Completed" value={metrics.completedTransfers} helper={`${formatQty(metrics.completedQty)} units received`} icon={CheckCircle2} tone="good" />
       </div>
 
       <Card className="admin-panel-card overflow-hidden p-0" title="Stock Transfer Activity">
@@ -155,7 +161,7 @@ export default function StockTransferReportView({ data, pageData }) {
                   }`}
                 >
                   <span>{option.label}</span>
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
                     {count}
                   </span>
                 </button>

@@ -6,6 +6,7 @@ import Card from "../common/Card";
 import Table from "../common/Table";
 import ClientPagination from "../common/ClientPagination";
 import { formatCurrency } from "../../utils/formatters";
+import { tileTone } from "../../utils/chartTheme";
 import useClientPagination from "../../hooks/useClientPagination";
 
 const formatQty = (value) => {
@@ -27,7 +28,7 @@ const statusMeta = {
   EXPIRING_SOON: { label: "Expiring soon", className: "bg-orange-100 text-orange-700" },
   EXPIRED: { label: "Expired", className: "bg-red-100 text-red-700" },
   DEAD_STOCK: { label: "Dead stock", className: "bg-slate-100 text-slate-700" },
-  BELOW_COST: { label: "Below cost", className: "bg-violet-100 text-violet-700" },
+  BELOW_COST: { label: "Below cost", className: "bg-amber-100 text-amber-700" },
   MISSING_COST: { label: "Missing cost", className: "bg-slate-100 text-slate-700" },
 };
 
@@ -45,15 +46,18 @@ const statusOptions = [
 ];
 
 function Metric({ title, value, helper, icon: Icon, tone, format = (input) => input }) {
+  const role = tileTone(tone);
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase text-slate-500">{title}</p>
-          <p className={`mt-2 text-xl font-black ${tone}`}>{format(value)}</p>
+          <p className={`mt-2 text-xl font-black ${role.value}`}>{format(value)}</p>
           <p className="mt-1 text-xs font-semibold text-slate-500">{helper}</p>
         </div>
-        <Icon size={20} className={tone} />
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${role.chip}`}>
+          <Icon size={18} />
+        </span>
       </div>
     </div>
   );
@@ -103,15 +107,18 @@ export default function StockHealthReportView({ summary, data }) {
     ? `Target cover assumes ${Number(summary.targetCoverDays || 14)} days of demand from ${Number(summary.salesWindowDays || 90)} days of sales history.`
     : "Target cover assumptions will appear after the report loads.";
 
+  // Stock health is one of the few report surfaces where most tiles genuinely
+  // carry a state, so warning/critical are used deliberately here. The two that
+  // are just figures (dead stock value, reorder cost) stay neutral.
   const metrics = [
-    { title: "Total Items", value: summary?.totalItems || 0, helper: `Sales window ${summary?.salesWindowDays || 90} days`, icon: Package, tone: "text-blue-700", format: (value) => Number(value || 0).toLocaleString() },
-    { title: "Below Reorder", value: summary?.belowReorderItems || 0, helper: "Qty on hand <= reorder level", icon: TrendingDown, tone: "text-amber-700", format: (value) => Number(value || 0).toLocaleString() },
-    { title: "Out of Stock", value: summary?.outOfStockItems || 0, helper: "Zero stock items", icon: AlertCircle, tone: "text-red-700", format: (value) => Number(value || 0).toLocaleString() },
-    { title: "Negative Stock", value: summary?.negativeStockItems || 0, helper: "Stock below zero", icon: AlertCircle, tone: "text-red-700", format: (value) => Number(value || 0).toLocaleString() },
-    { title: "Dead Stock Value", value: summary?.deadStockValue || 0, helper: "No sales in the last 90 days", icon: Package, tone: "text-slate-700", format: (value) => formatCurrency(value) },
-    { title: "Estimated Reorder Cost", value: summary?.estimatedReorderCost || 0, helper: "To reach target cover", icon: TrendingUp, tone: "text-emerald-700", format: (value) => formatCurrency(value) },
-    { title: "Items Expiring Soon", value: summary?.itemsExpiringSoon || 0, helper: "Nearest stock expires within 30 days", icon: Clock, tone: "text-orange-700", format: (value) => Number(value || 0).toLocaleString() },
-    { title: "Items With Expired Stock", value: summary?.itemsWithExpiredStock || 0, helper: "Nearest positive stock is expired", icon: AlertCircle, tone: "text-red-700", format: (value) => Number(value || 0).toLocaleString() },
+    { title: "Total Items", value: summary?.totalItems || 0, helper: `Sales window ${summary?.salesWindowDays || 90} days`, icon: Package, tone: "accent", format: (value) => Number(value || 0).toLocaleString() },
+    { title: "Below Reorder", value: summary?.belowReorderItems || 0, helper: "Qty on hand <= reorder level", icon: TrendingDown, tone: "warning", format: (value) => Number(value || 0).toLocaleString() },
+    { title: "Out of Stock", value: summary?.outOfStockItems || 0, helper: "Zero stock items", icon: AlertCircle, tone: "critical", format: (value) => Number(value || 0).toLocaleString() },
+    { title: "Negative Stock", value: summary?.negativeStockItems || 0, helper: "Stock below zero", icon: AlertCircle, tone: "critical", format: (value) => Number(value || 0).toLocaleString() },
+    { title: "Dead Stock Value", value: summary?.deadStockValue || 0, helper: "No sales in the last 90 days", icon: Package, tone: "neutral", format: (value) => formatCurrency(value) },
+    { title: "Estimated Reorder Cost", value: summary?.estimatedReorderCost || 0, helper: "To reach target cover", icon: TrendingUp, tone: "neutral", format: (value) => formatCurrency(value) },
+    { title: "Items Expiring Soon", value: summary?.itemsExpiringSoon || 0, helper: "Nearest stock expires within 30 days", icon: Clock, tone: "warning", format: (value) => Number(value || 0).toLocaleString() },
+    { title: "Items With Expired Stock", value: summary?.itemsWithExpiredStock || 0, helper: "Nearest positive stock is expired", icon: AlertCircle, tone: "critical", format: (value) => Number(value || 0).toLocaleString() },
   ];
 
   return (
@@ -146,7 +153,7 @@ export default function StockHealthReportView({ summary, data }) {
                   }`}
                 >
                   <span>{option.label}</span>
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>{count}</span>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>{count}</span>
                 </button>
               );
             })}

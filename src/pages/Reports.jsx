@@ -44,6 +44,20 @@ import { categoriesAPI } from "../api/categories.api";
 import { suppliersAPI } from "../api/suppliers.api";
 import { formatCurrency } from "../utils/formatters";
 import { formatDisplayStockBaseQuantity } from "../utils/stockQuantity";
+import {
+  SERIES,
+  CHROME,
+  MONEY,
+  SEQUENTIAL_BLUE,
+  TILE,
+  tileTone,
+  seriesColor,
+  gridProps,
+  tooltipProps,
+  BAR_RADIUS,
+  BAR_RADIUS_HORIZONTAL,
+  LINE_WIDTH,
+} from "../utils/chartTheme";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Table from "../components/common/Table";
@@ -70,9 +84,19 @@ import ExceptionCenterView from "../components/reports/ExceptionCenterView";
 const PAGE_SIZE = 10;
 const defaultFilters = { sortDirection: "DESC", salesSortBy: "DATE", productSortBy: "REVENUE", customerSortBy: "TOTAL_SPENT", supplierSortBy: "TOTAL_PURCHASED", itemType: "ALL", orderType: "ALL" };
 const BASIC_CHART_SIZE = 8;
-const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#4f46e5", "#f43f5e"];
-const CHART_GRID = "#e2e8f0";
-const CHART_TEXT = "#64748b";
+// Colours come from src/utils/chartTheme.js — do not add raw hex values here.
+// seriesColor() clamps instead of cycling: a 9th category must be folded into
+// "Other" rather than handed a repeated hue.
+const CHART_COLORS = SERIES;
+const CHART_GRID = CHROME.grid;
+const CHART_TEXT = CHROME.inkMuted;
+
+// Axis ticks have a fixed budget of horizontal space; long product names must be
+// clipped here rather than allowed to overlap their neighbours.
+const truncateTick = (value) => {
+  const text = String(value ?? "");
+  return text.length > 14 ? `${text.slice(0, 13)}…` : text;
+};
 
 const formatDateInput = (date) =>
   new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().split("T")[0];
@@ -869,12 +893,9 @@ const Reports = ({ mode = "basic" }) => {
     return formatCurrency(amount);
   };
 
-  const premiumTooltip = {
-    border: "1px solid #e2e8f0",
-    borderRadius: "12px",
-    boxShadow: "0 18px 38px rgb(15 23 42 / 0.12)",
-    color: "#0f172a",
-  };
+  // Kept as an alias so the remaining call sites stay unchanged; the values now
+  // come from the shared theme so every tooltip in the app matches.
+  const premiumTooltip = tooltipProps.contentStyle;
 
   const axisProps = {
     axisLine: false,
@@ -883,7 +904,7 @@ const Reports = ({ mode = "basic" }) => {
   };
 
   const ChartEmptyState = () => (
-    <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-sm font-medium text-slate-400">
+    <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-sm font-medium text-slate-500">
       No data for this period
     </div>
   );
@@ -895,7 +916,7 @@ const Reports = ({ mode = "basic" }) => {
           <h2 className="text-base font-bold text-slate-900">{title}</h2>
           {subtitle && <p className="mt-1 text-xs font-medium text-slate-500">{subtitle}</p>}
         </div>
-        <div className="h-2 w-16 rounded-full bg-gradient-to-r from-blue-600 via-emerald-500 to-amber-400" />
+        <div className="h-2 w-16 rounded-full bg-blue-600" />
       </div>
       {children}
     </Card>
@@ -909,14 +930,6 @@ const Reports = ({ mode = "basic" }) => {
         <div className="relative min-h-[260px] rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-2 shadow-inner">
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
             <PieChart>
-              <defs>
-                {data.map((entry, index) => (
-                  <linearGradient key={`${gradientPrefix}-gradient-${entry.name}`} id={`${gradientPrefix}-${index}`} x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLORS[index % CHART_COLORS.length]} stopOpacity={0.95} />
-                    <stop offset="100%" stopColor={CHART_COLORS[(index + 1) % CHART_COLORS.length]} stopOpacity={0.72} />
-                  </linearGradient>
-                ))}
-              </defs>
               <Pie
                 data={data}
                 dataKey="value"
@@ -925,15 +938,18 @@ const Reports = ({ mode = "basic" }) => {
                 cy="50%"
                 innerRadius="64%"
                 outerRadius="86%"
-                paddingAngle={4}
-                cornerRadius={10}
+                paddingAngle={2}
+                cornerRadius={4}
                 startAngle={90}
                 endAngle={-270}
-                stroke="#ffffff"
-                strokeWidth={5}
+                stroke={CHROME.surface}
+                strokeWidth={2}
               >
+                {/* One flat slot colour per slice. Previously each slice was a
+                    gradient running from its own colour into the NEXT slice's,
+                    which blended the whole ring into a rainbow. */}
                 {data.map((entry, index) => (
-                  <Cell key={`${gradientPrefix}-cell-${entry.name}`} fill={`url(#${gradientPrefix}-${index})`} />
+                  <Cell key={`${gradientPrefix}-cell-${entry.name}`} fill={seriesColor(index)} />
                 ))}
               </Pie>
               <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-900 text-[18px] font-black">
@@ -955,7 +971,7 @@ const Reports = ({ mode = "basic" }) => {
               <div key={`${gradientPrefix}-legend-${entry.name}`} className="rounded-xl border border-slate-200/80 bg-white/80 p-3 shadow-sm">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: CHART_COLORS[index % CHART_COLORS.length] }} />
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: seriesColor(index) }} />
                     <span className="truncate text-sm font-bold text-slate-700">{entry.name}</span>
                   </div>
                   <span className="text-sm font-black tabular-nums text-slate-900">{percent}%</span>
@@ -963,12 +979,7 @@ const Reports = ({ mode = "basic" }) => {
                 <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
                   <div
                     className="h-full rounded-full"
-                    style={{
-                      width: `${percent}%`,
-                      background: `linear-gradient(90deg, ${CHART_COLORS[index % CHART_COLORS.length]}, ${
-                        CHART_COLORS[(index + 1) % CHART_COLORS.length]
-                      })`,
-                    }}
+                    style={{ width: `${percent}%`, background: seriesColor(index) }}
                   />
                 </div>
                 <p className="text-xs font-semibold text-slate-500">{formatter(entry.value)}</p>
@@ -981,15 +992,9 @@ const Reports = ({ mode = "basic" }) => {
   };
 
   const SummaryMetric = ({ title, value, helper, icon: Icon, accent = "blue", format = formatCurrency }) => {
-    const accentClasses = {
-      blue: "bg-blue-50 text-blue-700 ring-blue-100",
-      emerald: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-      amber: "bg-amber-50 text-amber-700 ring-amber-100",
-      red: "bg-red-50 text-red-700 ring-red-100",
-      indigo: "bg-indigo-50 text-indigo-700 ring-indigo-100",
-      cyan: "bg-cyan-50 text-cyan-700 ring-cyan-100",
-      slate: "bg-slate-100 text-slate-700 ring-slate-200",
-    };
+    // Six arbitrary hues collapsed onto the semantic tile roles. Anything that
+    // never meant good/bad (indigo, cyan) is now neutral.
+    const accentClasses = tileTone(accent).chip;
 
     return (
       <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
@@ -999,7 +1004,7 @@ const Reports = ({ mode = "basic" }) => {
             <p className="mt-2 text-xl font-black tabular-nums text-slate-900">{format(value)}</p>
             {helper && <p className="mt-1 max-w-[210px] truncate text-xs font-medium text-slate-500">{helper}</p>}
           </div>
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ${accentClasses[accent] || accentClasses.blue}`}>
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accentClasses}`}>
             <Icon size={19} />
           </div>
         </div>
@@ -1036,19 +1041,13 @@ const Reports = ({ mode = "basic" }) => {
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{title}</p>
             <p className="mt-2 truncate text-xl font-black tabular-nums text-slate-900">{format(current)}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
-              <span className={change === null ? "text-slate-500" : improved ? "text-emerald-600" : "text-red-600"}>
+              <span className={change === null ? "text-slate-500" : improved ? "text-emerald-700" : "text-red-700"}>
                 {change === null ? "New activity" : `${improved ? "+" : ""}${change.toFixed(1)}%`}
               </span>
-              <span className="text-slate-400">vs {format(previous)}</span>
+              <span className="text-slate-500">vs {format(previous)}</span>
             </div>
           </div>
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ${{
-            blue: "bg-blue-50 text-blue-700 ring-blue-100",
-            emerald: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-            amber: "bg-amber-50 text-amber-700 ring-amber-100",
-            red: "bg-red-50 text-red-700 ring-red-100",
-            indigo: "bg-indigo-50 text-indigo-700 ring-indigo-100",
-          }[accent]}`}>
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tileTone(accent).chip}`}>
             <Icon size={19} />
           </div>
         </div>
@@ -1066,21 +1065,23 @@ const Reports = ({ mode = "basic" }) => {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <Card className="admin-kpi-card bg-blue-50 border-blue-100">
+          {/* Four cards, four measures of the same thing — they do not need four
+              different tints. One surface, figures in ink; the labels distinguish them. */}
+          <Card className="admin-kpi-card border-slate-200 bg-white">
             <h3 className="text-xs font-bold uppercase text-slate-500">Total Sales</h3>
-            <p className="text-2xl font-bold text-blue-700">{formatCurrency(salesSummary.totalSales)}</p>
+            <p className={`text-2xl font-bold ${TILE.neutral.value}`}>{formatCurrency(salesSummary.totalSales)}</p>
           </Card>
-          <Card className="admin-kpi-card bg-emerald-50 border-emerald-100">
+          <Card className="admin-kpi-card border-slate-200 bg-white">
             <h3 className="text-xs font-bold uppercase text-slate-500">Cash Sales</h3>
-            <p className="text-2xl font-bold text-emerald-700">{formatCurrency(salesSummary.cashSales)}</p>
+            <p className={`text-2xl font-bold ${TILE.neutral.value}`}>{formatCurrency(salesSummary.cashSales)}</p>
           </Card>
-          <Card className="admin-kpi-card bg-amber-50 border-amber-100">
+          <Card className="admin-kpi-card border-slate-200 bg-white">
             <h3 className="text-xs font-bold uppercase text-slate-500">Credit Sales</h3>
-            <p className="text-2xl font-bold text-amber-700">{formatCurrency(salesSummary.creditSales)}</p>
+            <p className={`text-2xl font-bold ${TILE.neutral.value}`}>{formatCurrency(salesSummary.creditSales)}</p>
           </Card>
-          <Card className="admin-kpi-card bg-indigo-50 border-indigo-100">
+          <Card className="admin-kpi-card border-slate-200 bg-white">
             <h3 className="text-xs font-bold uppercase text-slate-500">Orders</h3>
-            <p className="text-2xl font-bold text-indigo-700">{salesSummary.totalOrders}</p>
+            <p className={`text-2xl font-bold ${TILE.neutral.value}`}>{salesSummary.totalOrders}</p>
           </Card>
         </div>
 
@@ -1089,12 +1090,12 @@ const Reports = ({ mode = "basic" }) => {
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                 <PieChart>
-                  <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={58} outerRadius={95} paddingAngle={5}>
+                  <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={58} outerRadius={95} paddingAngle={2} stroke={CHROME.surface} strokeWidth={2}>
                     {pieData.map((entry, index) => (
-                      <Cell key={entry.name} fill={index === 0 ? "#059669" : "#d97706"} />
+                      <Cell key={entry.name} fill={seriesColor(index)} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
+                  <Tooltip formatter={(value) => formatCurrency(value)} {...tooltipProps} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -1107,15 +1108,15 @@ const Reports = ({ mode = "basic" }) => {
                 <AreaChart data={salesTrend.data}>
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                      <stop offset="5%" stopColor={seriesColor(0)} stopOpacity={0.28} />
+                      <stop offset="95%" stopColor={seriesColor(0)} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID} />
+                  <CartesianGrid {...gridProps} />
                   <XAxis dataKey="date" {...axisProps} />
                   <YAxis {...axisProps} tickFormatter={shortCurrency} />
-                  <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={premiumTooltip} />
-                  <Area type="monotone" dataKey="sales" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" activeDot={{ r: 6, strokeWidth: 0 }} />
+                  <Tooltip formatter={(value) => [formatCurrency(value), "Sales"]} {...tooltipProps} />
+                  <Area type="monotone" dataKey="sales" stroke={seriesColor(0)} strokeWidth={LINE_WIDTH} fillOpacity={1} fill="url(#colorSales)" activeDot={{ r: 4, strokeWidth: 2, stroke: CHROME.surface, fill: seriesColor(0) }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -1139,20 +1140,29 @@ const Reports = ({ mode = "basic" }) => {
             <div className="min-h-[280px] rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-3 shadow-inner">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                 <BarChart data={data} margin={{ top: 12, right: 8, left: -8, bottom: 34 }}>
-                  <defs>
-                    <linearGradient id={`${valueKey}-bar-gradient`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2563eb" stopOpacity={0.96} />
-                      <stop offset="55%" stopColor="#06b6d4" stopOpacity={0.88} />
-                      <stop offset="100%" stopColor="#10b981" stopOpacity={0.82} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID} />
-                  <XAxis dataKey={nameKey} {...axisProps} angle={-18} textAnchor="end" interval={0} height={58} />
+                  <CartesianGrid {...gridProps} />
+                  {/* Long item names collide at -18°. Steeper angle plus truncation
+                      keeps every tick readable; the full name is in the tooltip and
+                      in the legend list beside the chart. */}
+                  <XAxis
+                    dataKey={nameKey}
+                    {...axisProps}
+                    tick={{ ...axisProps.tick, fontSize: 10 }}
+                    tickFormatter={truncateTick}
+                    angle={-35}
+                    textAnchor="end"
+                    interval={0}
+                    height={86}
+                  />
                   <YAxis {...axisProps} tickFormatter={shortCurrency} />
-                  <Tooltip formatter={(value) => formatter(value)} contentStyle={premiumTooltip} cursor={{ fill: "rgb(219 234 254 / 0.35)" }} />
-                  <Bar dataKey={valueKey} radius={[10, 10, 0, 0]} maxBarSize={42}>
+                  <Tooltip formatter={(value) => formatter(value)} {...tooltipProps} />
+                  {/* These are nominal categories (products, customers, suppliers) — one
+                      measure, so one hue. Bar length already encodes the value; giving each
+                      bar its own colour spends the identity channel on nothing. The leader
+                      is emphasised with a darker step of the same hue, not a different one. */}
+                  <Bar dataKey={valueKey} radius={BAR_RADIUS} maxBarSize={42}>
                     {data.map((entry, index) => (
-                      <Cell key={`${title}-${index}`} fill={index === 0 ? "url(#" + valueKey + "-bar-gradient)" : CHART_COLORS[index % CHART_COLORS.length]} />
+                      <Cell key={`${title}-${index}`} fill={index === 0 ? seriesColor(0) : SEQUENTIAL_BLUE[4]} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -1178,9 +1188,7 @@ const Reports = ({ mode = "basic" }) => {
                         className="h-full rounded-full"
                         style={{
                           width: `${percent}%`,
-                          background: `linear-gradient(90deg, ${CHART_COLORS[index % CHART_COLORS.length]}, ${
-                            CHART_COLORS[(index + 1) % CHART_COLORS.length]
-                          })`,
+                          background: index === 0 ? seriesColor(0) : SEQUENTIAL_BLUE[4],
                         }}
                       />
                     </div>
@@ -1242,25 +1250,28 @@ const Reports = ({ mode = "basic" }) => {
     return (
       <div className="space-y-6">
         {ownerSummary && (
-          <Card className="admin-panel-card dashboard-premium-card overflow-hidden border-slate-200/80 bg-slate-900 p-5 text-white shadow-[0_20px_60px_rgb(15_23_42/0.18)]">
+          <Card className="admin-panel-card dashboard-premium-card surface-inverted overflow-hidden p-5 text-white shadow-[0_20px_60px_rgb(15_23_42/0.18)]">
             <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">Owner Command Center</p>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">Owner Command Center</p>
                 <h2 className="mt-1 text-xl font-black">Current period versus previous period</h2>
               </div>
               <p className="text-xs font-semibold text-slate-300">
-                {ownerSummary.comparisonPeriod.from} to {ownerSummary.comparisonPeriod.to}
+                Compared to {ownerSummary.comparisonPeriod.from} — {ownerSummary.comparisonPeriod.to}
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <ComparisonMetric title="Sales Growth" current={ownerSummary.current.totalSales} previous={ownerSummary.comparison.totalSales} icon={TrendingUp} accent="blue" />
-              <ComparisonMetric title="Net Profit" current={ownerSummary.current.netProfit} previous={ownerSummary.comparison.netProfit} icon={DollarSign} accent="emerald" />
-              <ComparisonMetric title="Average Order" current={ownerSummary.current.averageOrderValue} previous={ownerSummary.comparison.averageOrderValue} icon={ShoppingCart} accent="indigo" />
-              <ComparisonMetric title="Expenses" current={ownerSummary.current.totalExpenses} previous={ownerSummary.comparison.totalExpenses} icon={AlertCircle} accent="red" />
-              <ComparisonMetric title="Orders" current={ownerSummary.current.totalOrders} previous={ownerSummary.comparison.totalOrders} icon={ShoppingCart} accent="amber" format={(value) => Number(value || 0).toLocaleString()} />
-              <ComparisonMetric title="Gross Margin" current={ownerSummary.current.grossMarginPercent} previous={ownerSummary.comparison.grossMarginPercent} icon={BarChart3} accent="emerald" format={(value) => `${Number(value || 0).toFixed(1)}%`} />
-              <ComparisonMetric title="Cash Sales" current={ownerSummary.current.cashSales} previous={ownerSummary.comparison.cashSales} icon={DollarSign} accent="blue" />
-              <ComparisonMetric title="Credit Sales" current={ownerSummary.current.creditSales} previous={ownerSummary.comparison.creditSales} icon={FileText} accent="amber" />
+              {/* Every tile here already shows a ±% delta that is green when up and
+                  red when down. Colouring the icon chip as well would encode the same
+                  thing twice, in a second vocabulary — so the chips stay neutral. */}
+              <ComparisonMetric title="Sales Growth" current={ownerSummary.current.totalSales} previous={ownerSummary.comparison.totalSales} icon={TrendingUp} accent="accent" />
+              <ComparisonMetric title="Net Profit" current={ownerSummary.current.netProfit} previous={ownerSummary.comparison.netProfit} icon={DollarSign} accent="neutral" />
+              <ComparisonMetric title="Average Order" current={ownerSummary.current.averageOrderValue} previous={ownerSummary.comparison.averageOrderValue} icon={ShoppingCart} accent="neutral" />
+              <ComparisonMetric title="Expenses" current={ownerSummary.current.totalExpenses} previous={ownerSummary.comparison.totalExpenses} icon={AlertCircle} accent="neutral" />
+              <ComparisonMetric title="Orders" current={ownerSummary.current.totalOrders} previous={ownerSummary.comparison.totalOrders} icon={ShoppingCart} accent="neutral" format={(value) => Number(value || 0).toLocaleString()} />
+              <ComparisonMetric title="Gross Margin" current={ownerSummary.current.grossMarginPercent} previous={ownerSummary.comparison.grossMarginPercent} icon={BarChart3} accent="neutral" format={(value) => `${Number(value || 0).toFixed(1)}%`} />
+              <ComparisonMetric title="Cash Sales" current={ownerSummary.current.cashSales} previous={ownerSummary.comparison.cashSales} icon={DollarSign} accent="neutral" />
+              <ComparisonMetric title="Credit Sales" current={ownerSummary.current.creditSales} previous={ownerSummary.comparison.creditSales} icon={FileText} accent="neutral" />
             </div>
           </Card>
         )}
@@ -1269,7 +1280,7 @@ const Reports = ({ mode = "basic" }) => {
           <Card className="admin-panel-card border-slate-200/80 p-5 shadow-[0_12px_36px_rgb(15_23_42/0.06)]">
             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-600">Action Center</p>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Action Center</p>
                 <h2 className="mt-1 text-lg font-black text-slate-900">What needs attention now</h2>
               </div>
               <p className="text-xs font-semibold text-slate-500">Inventory is current; credit is outstanding balance; returns use selected period.</p>
@@ -1324,18 +1335,21 @@ const Reports = ({ mode = "basic" }) => {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <SummaryMetric title="Total Sales" value={salesSummary.totalSales || 0} helper={`${salesSummary.totalOrders || 0} orders`} icon={TrendingUp} accent="blue" />
-            <SummaryMetric title="Net Profit" value={profitSummary?.netProfit || 0} helper={`Gross ${formatCurrency(profitSummary?.grossProfit || 0)}`} icon={DollarSign} accent="emerald" />
-            <SummaryMetric title="Average Order" value={averageOrder} helper="Sales per invoice" icon={ShoppingCart} accent="indigo" />
-            <SummaryMetric title="Credit Due" value={totalCreditDue} helper={`${basicOverview.creditDue.length} customers`} icon={FileText} accent="red" />
-            <SummaryMetric title="Cash Sales" value={salesSummary.cashSales || 0} helper="Paid at sale" icon={DollarSign} accent="emerald" />
-            <SummaryMetric title="Credit Sales" value={salesSummary.creditSales || 0} helper="Credit invoices" icon={FileText} accent="amber" />
-            <SummaryMetric title="Expenses" value={profitSummary?.totalExpenses || 0} helper="For selected range" icon={AlertCircle} accent="red" />
-            <SummaryMetric title="Low Stock" value={basicOverview.lowStock.length} helper="Items below reorder" icon={AlertCircle} accent="amber" format={(value) => value} />
-            <SummaryMetric title="Top Product Revenue" value={topProductRevenue} helper={productData[0]?.name || "No product data"} icon={BarChart3} accent="cyan" />
-            <SummaryMetric title="Top Customer Spend" value={topCustomerSpend} helper={customerData[0]?.name || "No customer data"} icon={Users} accent="blue" />
-            <SummaryMetric title="Top Supplier Purchases" value={topSupplierPurchased} helper={supplierData[0]?.name || "No supplier data"} icon={Truck} accent="slate" />
-            <SummaryMetric title="Categories Selling" value={categoryData.length} helper="Categories with sales" icon={PieIcon} accent="indigo" format={(value) => value} />
+            {/* One accent tile leads the row; the rest are neutral. Amber/red are
+                reserved for the two tiles that actually mean "needs attention" —
+                money owed and stock below reorder. */}
+            <SummaryMetric title="Total Sales" value={salesSummary.totalSales || 0} helper={`${salesSummary.totalOrders || 0} orders`} icon={TrendingUp} accent="accent" />
+            <SummaryMetric title="Net Profit" value={profitSummary?.netProfit || 0} helper={`Gross ${formatCurrency(profitSummary?.grossProfit || 0)}`} icon={DollarSign} accent="neutral" />
+            <SummaryMetric title="Average Order" value={averageOrder} helper="Sales per invoice" icon={ShoppingCart} accent="neutral" />
+            <SummaryMetric title="Credit Due" value={totalCreditDue} helper={`${basicOverview.creditDue.length} customers`} icon={FileText} accent="warning" />
+            <SummaryMetric title="Cash Sales" value={salesSummary.cashSales || 0} helper="Paid at sale" icon={DollarSign} accent="neutral" />
+            <SummaryMetric title="Credit Sales" value={salesSummary.creditSales || 0} helper="Credit invoices" icon={FileText} accent="neutral" />
+            <SummaryMetric title="Expenses" value={profitSummary?.totalExpenses || 0} helper="For selected range" icon={AlertCircle} accent="neutral" />
+            <SummaryMetric title="Low Stock" value={basicOverview.lowStock.length} helper="Items below reorder" icon={AlertCircle} accent="warning" format={(value) => value} />
+            <SummaryMetric title="Top Product Revenue" value={topProductRevenue} helper={productData[0]?.name || "No product data"} icon={BarChart3} accent="neutral" />
+            <SummaryMetric title="Top Customer Spend" value={topCustomerSpend} helper={customerData[0]?.name || "No customer data"} icon={Users} accent="neutral" />
+            <SummaryMetric title="Top Supplier Purchases" value={topSupplierPurchased} helper={supplierData[0]?.name || "No supplier data"} icon={Truck} accent="neutral" />
+            <SummaryMetric title="Categories Selling" value={categoryData.length} helper="Categories with sales" icon={PieIcon} accent="neutral" format={(value) => value} />
           </div>
         </Card>
 
@@ -1360,27 +1374,24 @@ const Reports = ({ mode = "basic" }) => {
                     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                       <AreaChart data={salesTrend.data} margin={{ top: 12, right: 12, left: -8, bottom: 0 }}>
                         <defs>
+                          {/* Single hue, fading to transparent. This was previously
+                              blue → cyan → green, a rainbow ramp for a magnitude fill. */}
                           <linearGradient id="basicSalesGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#2563eb" stopOpacity={0.42} />
-                            <stop offset="58%" stopColor="#06b6d4" stopOpacity={0.16} />
-                            <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
+                            <stop offset="0%" stopColor={seriesColor(0)} stopOpacity={0.28} />
+                            <stop offset="100%" stopColor={seriesColor(0)} stopOpacity={0} />
                           </linearGradient>
-                          <filter id="salesLineGlow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#2563eb" floodOpacity="0.22" />
-                          </filter>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID} />
+                        <CartesianGrid {...gridProps} />
                         <XAxis dataKey="date" {...axisProps} />
                         <YAxis {...axisProps} tickFormatter={shortCurrency} />
-                        <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={premiumTooltip} />
+                        <Tooltip formatter={(value) => [formatCurrency(value), "Sales"]} {...tooltipProps} />
                         <Area
                           type="monotone"
                           dataKey="sales"
-                          stroke="#2563eb"
-                          strokeWidth={3}
+                          stroke={seriesColor(0)}
+                          strokeWidth={LINE_WIDTH}
                           fill="url(#basicSalesGradient)"
-                          filter="url(#salesLineGlow)"
-                          activeDot={{ r: 6, strokeWidth: 3, stroke: "#ffffff", fill: "#2563eb" }}
+                          activeDot={{ r: 4, strokeWidth: 2, stroke: CHROME.surface, fill: seriesColor(0) }}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -1446,13 +1457,13 @@ const Reports = ({ mode = "basic" }) => {
         <div className="h-[320px]">
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
             <LineChart data={reportData.slice(0, 20)}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid {...gridProps} />
               <XAxis dataKey="itemName" hide />
               <YAxis />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Legend />
-              <Line type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} dot={false} name="Revenue" />
-              <Line type="monotone" dataKey="profit" stroke="#059669" strokeWidth={2} dot={false} name="Profit" />
+              <Tooltip formatter={(value) => formatCurrency(value)} {...tooltipProps} />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+              <Line type="monotone" dataKey="revenue" stroke={seriesColor(0)} strokeWidth={LINE_WIDTH} dot={false} name="Revenue" />
+              <Line type="monotone" dataKey="profit" stroke={seriesColor(1)} strokeWidth={LINE_WIDTH} dot={false} name="Profit" />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1461,11 +1472,11 @@ const Reports = ({ mode = "basic" }) => {
       <Card className="admin-panel-card" title="Profit Details">
         <Table
           columns={[
-            { header: "Product", render: (i) => <div className="flex flex-col"><span className="font-medium">{i.itemName}</span>{i.altName && <span className="text-xs text-slate-400">{i.altName}</span>}</div> },
+            { header: "Product", render: (i) => <div className="flex flex-col"><span className="font-medium">{i.itemName}</span>{i.altName && <span className="text-xs text-slate-500">{i.altName}</span>}</div> },
             { header: "Qty Sold", accessor: "qtySold" },
             { header: "Cost", render: (i) => formatCurrency(i.cost) },
             { header: "Revenue", render: (i) => formatCurrency(i.revenue) },
-            { header: "Profit", render: (i) => <span className="font-bold text-emerald-600">{formatCurrency(i.profit)}</span> },
+            { header: "Profit", render: (i) => <span className="font-bold text-emerald-700">{formatCurrency(i.profit)}</span> },
           ]}
           data={reportData}
         />
@@ -1484,7 +1495,7 @@ const Reports = ({ mode = "basic" }) => {
     const saleReasonPieData = saleReasons.slice(0, 6).map((r, i) => ({
       name: r.reason.length > 30 ? r.reason.substring(0, 30) + "…" : r.reason,
       value: Number(r.count),
-      fill: CHART_COLORS[i % CHART_COLORS.length],
+      fill: seriesColor(i),
     }));
 
     const trendChartData = trend.map((t) => ({
@@ -1497,7 +1508,7 @@ const Reports = ({ mode = "basic" }) => {
       <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
         <p className={`mt-1 text-2xl font-black tabular-nums ${color}`}>{value}</p>
-        {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
+        {sub && <p className="mt-0.5 text-xs text-slate-500">{sub}</p>}
       </div>
     );
 
@@ -1506,15 +1517,15 @@ const Reports = ({ mode = "basic" }) => {
         {/* ── KPI Summary Cards ── */}
         {summary ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Sale Returns" value={summary.saleReturnCount} sub={`${formatCurrency(summary.saleReturnTotal)} total`} color="text-orange-600" />
+            <StatCard label="Sale Returns" value={summary.saleReturnCount} sub={`${formatCurrency(summary.saleReturnTotal)} total`} />
             <StatCard label="Items Returned (Sale)" value={summary.saleReturnItemCount} />
-            <StatCard label="Purchase Returns" value={summary.purchaseReturnCount} sub={`${formatCurrency(summary.purchaseReturnTotal)} total`} color="text-blue-600" />
+            <StatCard label="Purchase Returns" value={summary.purchaseReturnCount} sub={`${formatCurrency(summary.purchaseReturnTotal)} total`} />
             <StatCard label="Items Returned (Purchase)" value={summary.purchaseReturnItemCount} />
-            <StatCard label="Net Revenue" value={formatCurrency(summary.netRevenue)} sub={`Gross: ${formatCurrency(summary.grossSales)}`} color="text-emerald-600" />
-            <StatCard label="Return Rate" value={`${summary.returnRate}%`} sub="Sale returns / total orders" color={summary.returnRate > 10 ? "text-red-600" : "text-slate-900"} />
+            <StatCard label="Net Revenue" value={formatCurrency(summary.netRevenue)} sub={`Gross: ${formatCurrency(summary.grossSales)}`} />
+            <StatCard label="Return Rate" value={`${summary.returnRate}%`} sub="Sale returns / total orders" color={summary.returnRate > 10 ? TILE.critical.value : TILE.neutral.value} />
           </div>
         ) : (
-          <div className="flex h-20 items-center justify-center text-slate-400">No data for this period</div>
+          <div className="flex h-20 items-center justify-center text-slate-500">No data for this period</div>
         )}
 
         {/* ── Return Trend Chart ── */}
@@ -1522,13 +1533,13 @@ const Reports = ({ mode = "basic" }) => {
           <Card className="admin-panel-card" title="Return Trend">
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={trendChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: CHART_TEXT }} />
-                <YAxis tick={{ fontSize: 11, fill: CHART_TEXT }} tickFormatter={(v) => formatCurrency(v)} width={70} />
-                <Tooltip formatter={(v) => formatCurrency(v)} />
-                <Legend />
-                <Bar dataKey="Sale Returns" fill="#f97316" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Purchase Returns" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <CartesianGrid {...gridProps} />
+                <XAxis dataKey="label" {...axisProps} />
+                <YAxis {...axisProps} tickFormatter={(v) => formatCurrency(v)} width={70} />
+                <Tooltip formatter={(v) => formatCurrency(v)} {...tooltipProps} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="Sale Returns" fill={seriesColor(0)} radius={BAR_RADIUS} />
+                <Bar dataKey="Purchase Returns" fill={seriesColor(1)} radius={BAR_RADIUS} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -1538,12 +1549,12 @@ const Reports = ({ mode = "basic" }) => {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card className="admin-panel-card" title="Top Returned Items (Sales)">
             {topSaleItems.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-400">No sale returns in this period</p>
+              <p className="py-6 text-center text-sm text-slate-500">No sale returns in this period</p>
             ) : (
               <Table
                 columns={[
-                  { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-400">{i.barcode}</p>}</div> },
-                  { header: "Returns", render: (i) => <span className="font-semibold text-orange-600">{i.returnCount}×</span> },
+                  { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-500">{i.barcode}</p>}</div> },
+                  { header: "Returns", render: (i) => <span className="font-semibold text-slate-900">{i.returnCount}×</span> },
                   { header: "Qty", accessor: "totalReturnedQty" },
                   { header: "Amount", render: (i) => <span className="font-bold">{formatCurrency(i.totalReturnAmount)}</span> },
                 ]}
@@ -1554,11 +1565,11 @@ const Reports = ({ mode = "basic" }) => {
 
           <Card className="admin-panel-card" title="Top Returned Items (Purchases)">
             {topPurchaseItems.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-400">No purchase returns in this period</p>
+              <p className="py-6 text-center text-sm text-slate-500">No purchase returns in this period</p>
             ) : (
               <Table
                 columns={[
-                  { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-400">{i.barcode}</p>}</div> },
+                  { header: "Item", render: (i) => <div><p className="font-medium">{i.itemName}</p>{i.barcode && <p className="text-xs text-slate-500">{i.barcode}</p>}</div> },
                   { header: "Returns", render: (i) => <span className="font-semibold text-blue-600">{i.returnCount}×</span> },
                   { header: "Qty", accessor: "totalReturnedQty" },
                   { header: "Amount", render: (i) => <span className="font-bold">{formatCurrency(i.totalReturnAmount)}</span> },
@@ -1589,12 +1600,12 @@ const Reports = ({ mode = "basic" }) => {
                   {saleReasons.map((r, i) => (
                     <div key={i} className="flex items-center justify-between gap-2 text-sm">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                        <span className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: seriesColor(i) }} />
                         <span className="truncate text-slate-700">{r.reason}</span>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <span className="font-semibold text-slate-900">{r.count}</span>
-                        <span className="text-xs text-slate-400">{formatCurrency(r.totalAmount)}</span>
+                        <span className="text-xs text-slate-500">{formatCurrency(r.totalAmount)}</span>
                       </div>
                     </div>
                   ))}
@@ -1621,7 +1632,7 @@ const Reports = ({ mode = "basic" }) => {
         {/* Empty reasons state */}
         {saleReasons.length === 0 && purchaseReasons.length === 0 && (
           <Card className="admin-panel-card" title="Return Reasons">
-            <p className="py-8 text-center text-sm text-slate-400">No return reason data available for this period.</p>
+            <p className="py-8 text-center text-sm text-slate-500">No return reason data available for this period.</p>
           </Card>
         )}
       </div>
@@ -1670,11 +1681,13 @@ const Reports = ({ mode = "basic" }) => {
               {categoryData.length ? (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                   <BarChart data={categoryData} layout="vertical" margin={{ top: 8, right: 24, left: 24, bottom: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                    {/* Horizontal bars read against vertical rules, so this chart
+                        flips the shared grid orientation. */}
+                    <CartesianGrid {...gridProps} vertical horizontal={false} />
                     <XAxis type="number" {...axisProps} tickFormatter={shortCurrency} />
                     <YAxis type="category" dataKey="name" width={105} {...axisProps} />
-                    <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={premiumTooltip} />
-                    <Bar dataKey="value" radius={[0, 8, 8, 0]} fill="#2563eb" />
+                    <Tooltip formatter={(value) => formatCurrency(value)} {...tooltipProps} />
+                    <Bar dataKey="value" radius={BAR_RADIUS_HORIZONTAL} fill={seriesColor(0)} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : <ChartEmptyState />}
@@ -1682,7 +1695,7 @@ const Reports = ({ mode = "basic" }) => {
           </PremiumChartCard>
 
           <Card className="admin-panel-card border-slate-200/80 p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-600">Stock Health</p>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Stock Health</p>
             <h2 className="mt-1 text-lg font-black text-slate-900">Immediate valuation risks</h2>
             <div className="mt-5 space-y-3">
               <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4">
@@ -1719,7 +1732,7 @@ const Reports = ({ mode = "basic" }) => {
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-xs font-semibold text-slate-500">Stock value</p><p className="mt-1 font-bold text-blue-700">{formatCurrency(item.stockValue)}</p></div>
-                  <div><p className="text-xs font-semibold text-slate-500">Potential profit</p><p className={`mt-1 font-bold ${item.potentialProfit == null ? "text-slate-400" : Number(item.potentialProfit) < 0 ? "text-red-600" : "text-emerald-700"}`}>{item.potentialProfit == null ? "N/A" : formatCurrency(item.potentialProfit)}</p></div>
+                  <div><p className="text-xs font-semibold text-slate-500">Potential profit</p><p className={`mt-1 font-bold ${item.potentialProfit == null ? "text-slate-500" : Number(item.potentialProfit) < 0 ? "text-red-600" : "text-emerald-700"}`}>{item.potentialProfit == null ? "N/A" : formatCurrency(item.potentialProfit)}</p></div>
                 </div>
               </div>
             ))}
@@ -1731,9 +1744,9 @@ const Reports = ({ mode = "basic" }) => {
               { header: "Qty", render: (item) => <span className={Number(item.qtyOnHand || 0) <= 0 ? "font-bold text-red-600" : "font-semibold"}>{formatQty(item.qtyOnHand, item.unit)}</span> },
               { header: "Avg Cost", render: (item) => formatCurrency(item.costPrice) },
               { header: "Stock Value", render: (item) => <span className="font-bold text-blue-700">{formatCurrency(item.stockValue)}</span> },
-              { header: "Selling Price", render: (item) => Number(item.sellingPrice || 0) > 0 ? formatCurrency(item.sellingPrice) : <span className="text-slate-400">N/A</span> },
-              { header: "Potential Revenue", render: (item) => item.potentialRevenue == null ? <span className="text-slate-400">N/A</span> : formatCurrency(item.potentialRevenue) },
-              { header: "Potential Profit", render: (item) => item.potentialProfit == null ? <span className="font-semibold text-slate-400">N/A</span> : <span className={Number(item.potentialProfit) < 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>{formatCurrency(item.potentialProfit)}</span> },
+              { header: "Selling Price", render: (item) => Number(item.sellingPrice || 0) > 0 ? formatCurrency(item.sellingPrice) : <span className="text-slate-500">N/A</span> },
+              { header: "Potential Revenue", render: (item) => item.potentialRevenue == null ? <span className="text-slate-500">N/A</span> : formatCurrency(item.potentialRevenue) },
+              { header: "Potential Profit", render: (item) => item.potentialProfit == null ? <span className="font-semibold text-slate-500">N/A</span> : <span className={Number(item.potentialProfit) < 0 ? "font-bold text-red-600" : "font-bold text-emerald-700"}>{formatCurrency(item.potentialProfit)}</span> },
             ]}
               data={inventoryPagination.pageItems}
             />
@@ -1769,7 +1782,7 @@ const Reports = ({ mode = "basic" }) => {
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <PremiumChartCard title="Daily Cash Movement" subtitle="Business cash inflows versus outflows">
             <div className="h-[320px] min-h-[320px] min-w-0">
-              {daily.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={daily} margin={{ top: 12, right: 16, left: 4, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" /><XAxis dataKey="date" {...axisProps} /><YAxis {...axisProps} tickFormatter={shortCurrency} /><Tooltip formatter={(value) => formatCurrency(value)} contentStyle={premiumTooltip} /><Area type="monotone" dataKey="inflows" stroke="#059669" fill="#d1fae5" strokeWidth={2} /><Area type="monotone" dataKey="outflows" stroke="#dc2626" fill="#fee2e2" strokeWidth={2} /></AreaChart></ResponsiveContainer> : <ChartEmptyState />}
+              {daily.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={daily} margin={{ top: 12, right: 16, left: 4, bottom: 0 }}><CartesianGrid {...gridProps} /><XAxis dataKey="date" {...axisProps} /><YAxis {...axisProps} tickFormatter={shortCurrency} /><Tooltip formatter={(value) => formatCurrency(value)} {...tooltipProps} /><Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />{/* Inflow vs outflow is a polarity, so these wear the semantic money colours rather than categorical slots. */}<Area type="monotone" name="Inflows" dataKey="inflows" stroke={MONEY.positive} fill={MONEY.positive} fillOpacity={0.12} strokeWidth={LINE_WIDTH} /><Area type="monotone" name="Outflows" dataKey="outflows" stroke={MONEY.negative} fill={MONEY.negative} fillOpacity={0.12} strokeWidth={LINE_WIDTH} /></AreaChart></ResponsiveContainer> : <ChartEmptyState />}
             </div>
           </PremiumChartCard>
           <Card className="admin-panel-card border-slate-200/80 p-5" title="Cash Movement Breakdown">
@@ -1972,7 +1985,7 @@ const Reports = ({ mode = "basic" }) => {
         <Card className="admin-panel-card" title="Low Stock Alerts">
           <Table
             columns={[
-              { header: "Item", render: (i) => <div className="flex flex-col"><span className="font-medium">{i.itemName}</span>{i.altName && <span className="text-xs text-slate-400">{i.altName}</span>}</div> },
+              { header: "Item", render: (i) => <div className="flex flex-col"><span className="font-medium">{i.itemName}</span>{i.altName && <span className="text-xs text-slate-500">{i.altName}</span>}</div> },
               { header: "Stock", render: (i) => <span className="font-bold text-red-600">{formatDisplayStockBaseQuantity(i.totalQty, i, i.defaultUnit)}</span> },
               { header: "Reorder Level", render: (i) => formatDisplayStockBaseQuantity(i.reorderLevel, i, i.defaultUnit) },
               { header: "Status", render: () => <span className="rounded bg-red-100 px-2 py-1 text-xs font-bold text-red-700">LOW</span> },
@@ -2011,7 +2024,7 @@ const Reports = ({ mode = "basic" }) => {
           </p>
         </div>
         {!(["creditAging", "supplierPayables", "stockHealth"].includes(mode)) && <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
-          <Calendar size={16} className="text-slate-400" />
+          <Calendar size={16} className="text-slate-500" />
           {activeDateLabel}
           <span className="text-slate-300">|</span>
           <span className="font-medium text-slate-500">{datePreset === "allTime" ? "All records" : `${dateRange.from} to ${dateRange.to}`}</span>
@@ -2056,7 +2069,7 @@ const Reports = ({ mode = "basic" }) => {
                 onChange={(value) => handleCustomDateChange("from", value)}
                 buttonClassName="h-[38px] rounded-xl"
               />
-              <span className="hidden text-sm text-slate-400 sm:inline">to</span>
+              <span className="hidden text-sm text-slate-500 sm:inline">to</span>
               <DatePicker
                 value={dateRange.to}
                 onChange={(value) => handleCustomDateChange("to", value)}
@@ -2125,7 +2138,7 @@ const Reports = ({ mode = "basic" }) => {
           <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 py-20 text-center">
             <PieIcon size={48} className="mx-auto mb-4 text-slate-300" />
             <h3 className="text-lg font-medium text-slate-600">Loading Report</h3>
-            <p className="text-slate-400">Choose a report type or date range to refresh the data.</p>
+            <p className="text-slate-500">Choose a report type or date range to refresh the data.</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -2204,7 +2217,7 @@ const Reports = ({ mode = "basic" }) => {
                   </h2>
                   <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">{["creditAging", "supplierPayables", "stockHealth"].includes(mode) ? "Current position as of generation time" : `Period: ${datePreset === "allTime" ? "All Time" : `${dateRange.from} to ${dateRange.to}`}`}</p>
                 </div>
-                <p className="text-xs font-medium text-slate-400 sm:text-right">Generated: {new Date().toLocaleString()}</p>
+                <p className="text-xs font-medium text-slate-500 sm:text-right">Generated: {new Date().toLocaleString()}</p>
               </div>
 
               <div className="p-4 sm:p-5">{chartsReady ? renderReportContent() : <div className="h-40" aria-hidden="true" />}</div>

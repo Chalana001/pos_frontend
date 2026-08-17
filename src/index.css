@@ -517,6 +517,17 @@ html[data-animation-level="balanced"] .custom-select-option {
   box-shadow: var(--motion-soft-shadow);
 }
 
+/* Opt-in dark surface for a Card.
+   .shell-panel sets `background` (the shorthand), which resets background-color
+   to transparent and paints a near-white gradient. That silently defeats a
+   Tailwind `bg-slate-900` on the same element — the card renders white and any
+   white text on it becomes invisible. A card that wants a dark surface must
+   override the gradient here rather than relying on a bg-* utility. */
+.shell-panel.surface-inverted {
+  background: linear-gradient(180deg, rgb(15 23 42), rgb(30 41 59));
+  border-color: rgb(51 65 85 / 0.9);
+}
+
 .shell-panel-hover {
   transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
