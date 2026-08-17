@@ -43,7 +43,6 @@ import { getCategoryFilterParams, getDisplayCategoryName, isSingleCategoryMode }
 import { categoriesAPI } from "../api/categories.api";
 import { suppliersAPI } from "../api/suppliers.api";
 import { formatCurrency, shortCurrency } from "../utils/formatters";
-import { formatDisplayStockBaseQuantity } from "../utils/stockQuantity";
 import {
   CHROME,
   MONEY,
@@ -89,7 +88,6 @@ import {
 } from "../components/reports/ReportPrimitives";
 import { PremiumDonutChart, OverviewBarChart } from "../components/reports/ReportCharts";
 import ReturnsReportView from "../components/reports/ReturnsReportView";
-import ProfitReportView from "../components/reports/ProfitReportView";
 import CashFlowReportView from "../components/reports/CashFlowReportView";
 import ProfitAndLossReportView from "../components/reports/ProfitAndLossReportView";
 
@@ -165,14 +163,11 @@ const pagedTabs = ["salesReport", "productPerformance", "customerPerformance", "
 
 const allTabs = [
   { id: "overview", label: "Overview", icon: PieIcon },
-  { id: "salesSummary", label: "Sales Summary", icon: TrendingUp },
   { id: "salesReport", label: "Sales Report", icon: ShoppingCart },
   { id: "productPerformance", label: "Product Performance", icon: BarChart3 },
   { id: "customerPerformance", label: "Customer Performance", icon: Users },
   { id: "supplierPerformance", label: "Supplier Performance", icon: Truck },
-  { id: "profit", label: "Profit Analysis", icon: DollarSign },
   { id: "returnsReports", label: "Returns", icon: RotateCcw },
-  { id: "lowStock", label: "Low Stock", icon: AlertCircle },
   { id: "stockHealth", label: "Stock Health", icon: Package },
   { id: "demandForecast", label: "Forecast & Reorder", icon: TrendingUp },
   { id: "inventoryValuation", label: "Inventory Valuation", icon: Package },
@@ -188,7 +183,6 @@ const allTabs = [
   { id: "commercialIntelligence", label: "Promotions / Returns / Warranty", icon: RotateCcw },
   { id: "exceptions", label: "Exception Center", icon: AlertCircle },
   { id: "grnPurchases", label: "GRN / Purchases", icon: Truck },
-  { id: "creditDue", label: "Credit Due", icon: FileText },
 ];
 
 const tabsByMode = {
@@ -275,7 +269,9 @@ const Reports = ({ mode = "basic" }) => {
     const visibleIds = tabsByMode[mode] || tabsByMode.basic;
     return allTabs.filter((tab) => visibleIds.includes(tab.id));
   }, [mode]);
-  const defaultTab = visibleTabs[0]?.id || "salesSummary";
+  // visibleTabs is never empty — tabsByMode falls back to `basic` for an unknown
+  // mode — so this default is belt-and-braces only.
+  const defaultTab = visibleTabs[0]?.id || "overview";
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [loading, setLoading] = useState(false);
   const [loadedTab, setLoadedTab] = useState(null);
@@ -472,23 +468,6 @@ const Reports = ({ mode = "basic" }) => {
     ...(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}),
   });
 
-  const loadSalesContext = async (params) => {
-    const hasDateRange = Boolean(dateRange.from && dateRange.to);
-    const trendType = !hasDateRange || Math.abs(new Date(dateRange.to) - new Date(dateRange.from)) / 86400000 > 35 ? "MONTHLY" : "DAILY";
-    const [summaryRes, trendRes] = await Promise.all([
-      reportsAPI.salesSummary(params),
-      reportsAPI.salesTrend({
-        ...params,
-        type: trendType,
-      }),
-    ]);
-    setSalesSummary(summaryRes.data);
-    setSalesTrend({
-      data: Array.isArray(trendRes.data) ? trendRes.data : [],
-      type: trendType,
-    });
-  };
-
   const setPagedResponse = (payload) => {
     const normalized = {
       ...emptyPage,
@@ -565,9 +544,6 @@ const Reports = ({ mode = "basic" }) => {
       if (type === "overview") {
         await loadBasicOverview(params);
         setReportData([]);
-      } else if (type === "salesSummary") {
-        await loadSalesContext(params);
-        setReportData([]);
       } else if (type === "salesReport") {
         response = await reportsAPI.salesReport({
           ...params,
@@ -608,14 +584,6 @@ const Reports = ({ mode = "basic" }) => {
           sortDirection: filters.sortDirection,
         });
         setPagedResponse(response.data);
-      } else if (type === "profit") {
-        response = await reportsAPI.profit({ ...params, limit: 50 });
-        const summaryRes = await reportsAPI.profitSummary(params);
-        setProfitSummary(summaryRes.data);
-        setReportData(Array.isArray(response.data) ? response.data : []);
-      } else if (type === "lowStock") {
-        response = await reportsAPI.lowStock(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
-        setReportData(Array.isArray(response.data) ? response.data : []);
       } else if (type === "inventoryValuation") {
         response = await reportsAPI.inventoryValuation(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
         setInventorySummary(response.data);
@@ -691,9 +659,6 @@ const Reports = ({ mode = "basic" }) => {
         response = await reportsAPI.grnReport({ ...params, page, size: PAGE_SIZE });
         setPagedResponse(response.data?.page || {});
         setInventorySummary(response.data);
-      } else if (type === "creditDue") {
-        response = await reportsAPI.creditDue(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
-        setReportData(Array.isArray(response.data) ? response.data : []);
       } else if (type === "returnsReports") {
         const [summaryRes, topSaleRes, topPurRes, reasonsRes, trendRes] = await Promise.all([
           reportsAPI.returnsSummary(params),
@@ -886,77 +851,6 @@ const Reports = ({ mode = "basic" }) => {
       console.error("Failed to download report export", error);
       toast.error("Export download failed");
     }
-  };
-
-  const SalesKpis = () => {
-    if (!salesSummary) return null;
-    const pieData = [
-      { name: "Cash", value: salesSummary.cashSales || 0 },
-      { name: "Credit", value: salesSummary.creditSales || 0 },
-    ];
-
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          {/* Four cards, four measures of the same thing — they do not need four
-              different tints. One surface, figures in ink; the labels distinguish them. */}
-          <Card className="admin-kpi-card border-slate-200 bg-white">
-            <h3 className="text-xs font-bold uppercase text-slate-500">Total Sales</h3>
-            <p className={`text-2xl font-bold ${TILE.neutral.value}`}>{formatCurrency(salesSummary.totalSales)}</p>
-          </Card>
-          <Card className="admin-kpi-card border-slate-200 bg-white">
-            <h3 className="text-xs font-bold uppercase text-slate-500">Cash Sales</h3>
-            <p className={`text-2xl font-bold ${TILE.neutral.value}`}>{formatCurrency(salesSummary.cashSales)}</p>
-          </Card>
-          <Card className="admin-kpi-card border-slate-200 bg-white">
-            <h3 className="text-xs font-bold uppercase text-slate-500">Credit Sales</h3>
-            <p className={`text-2xl font-bold ${TILE.neutral.value}`}>{formatCurrency(salesSummary.creditSales)}</p>
-          </Card>
-          <Card className="admin-kpi-card border-slate-200 bg-white">
-            <h3 className="text-xs font-bold uppercase text-slate-500">Orders</h3>
-            <p className={`text-2xl font-bold ${TILE.neutral.value}`}>{salesSummary.totalOrders}</p>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card className="admin-panel-card" title="Payment Split">
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
-                <PieChart>
-                  <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={58} outerRadius={95} paddingAngle={2} stroke={CHROME.surface} strokeWidth={2}>
-                    {pieData.map((entry, index) => (
-                      <Cell key={entry.name} fill={seriesColor(index)} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value)} {...tooltipProps} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card className="admin-panel-card" title={`Sales Trend (${salesTrend.type === "MONTHLY" ? "Monthly" : "Daily"})`}>
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
-                <AreaChart data={salesTrend.data}>
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={seriesColor(0)} stopOpacity={0.28} />
-                      <stop offset="95%" stopColor={seriesColor(0)} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid {...gridProps} />
-                  <XAxis dataKey="date" {...axisProps} />
-                  <YAxis {...axisProps} tickFormatter={shortCurrency} />
-                  <Tooltip formatter={(value) => [formatCurrency(value), "Sales"]} {...tooltipProps} />
-                  <Area type="monotone" dataKey="sales" stroke={seriesColor(0)} strokeWidth={LINE_WIDTH} fillOpacity={1} fill="url(#colorSales)" activeDot={{ r: 4, strokeWidth: 2, stroke: CHROME.surface, fill: seriesColor(0) }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
   };
 
   const BasicOverview = () => {
@@ -1436,36 +1330,6 @@ const Reports = ({ mode = "basic" }) => {
   const renderReportContent = () => {
     if (isPagedTab) return renderPagedTable();
     if (activeTab === "overview") return <BasicOverview />;
-    if (activeTab === "salesSummary") return <SalesKpis />;
-    if (activeTab === "profit") return <ProfitReportView profitSummary={profitSummary} reportData={reportData} />;
-    if (activeTab === "creditDue") {
-      return (
-        <Card className="admin-panel-card" title="Credit Due List">
-          <Table
-            columns={[
-              { header: "Customer", accessor: "customerName" },
-              { header: "Due Amount", render: (i) => <span className="font-bold text-red-600">{formatCurrency(i.dueAmount)}</span> },
-            ]}
-            data={reportData}
-          />
-        </Card>
-      );
-    }
-    if (activeTab === "lowStock") {
-      return (
-        <Card className="admin-panel-card" title="Low Stock Alerts">
-          <Table
-            columns={[
-              { header: "Item", render: (i) => <div className="flex flex-col"><span className="font-medium">{i.itemName}</span>{i.altName && <span className="text-xs text-slate-500">{i.altName}</span>}</div> },
-              { header: "Stock", render: (i) => <span className="font-bold text-red-600">{formatDisplayStockBaseQuantity(i.totalQty, i, i.defaultUnit)}</span> },
-              { header: "Reorder Level", render: (i) => formatDisplayStockBaseQuantity(i.reorderLevel, i, i.defaultUnit) },
-              { header: "Status", render: () => <span className="rounded bg-red-100 px-2 py-1 text-xs font-bold text-red-700">LOW</span> },
-            ]}
-            data={reportData}
-          />
-        </Card>
-      );
-    }
     if (activeTab === "returnsReports") {
       return <ReturnsReportView data={returnsData} />;
     }
