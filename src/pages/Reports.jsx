@@ -344,6 +344,10 @@ const Reports = ({ mode = "basic" }) => {
 
   useEffect(() => {
     setActiveTab(defaultTab);
+    // Busy from the instant the data is discarded. This commit lands one paint
+    // before the fetch-scheduling effect sees the new activeTab, and without the
+    // flag that paint shows the "no report loaded" empty state.
+    setLoading(true);
     setLoadedTab(null);
     setReportData([]);
     setPageData(emptyPage);
@@ -402,6 +406,7 @@ const Reports = ({ mode = "basic" }) => {
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
+    setLoading(true);
     setLoadedTab(null);
     setReportData([]);
     setPageData(emptyPage);
@@ -665,6 +670,13 @@ const Reports = ({ mode = "basic" }) => {
   };
 
   useEffect(() => {
+    // Mark busy the moment a fetch is scheduled, not 250ms later when it starts.
+    // The reset effects clear loadedTab immediately, so without this the debounce
+    // window painted "no data, not loading" — a quarter-second flash of the
+    // "Choose a report type" empty state on every tab change. generateReport's
+    // finally clears the flag, and this effect always schedules a run, so the
+    // spinner cannot be left stranded.
+    setLoading(true);
     const timer = setTimeout(() => {
       generateReport(activeTab);
     }, 250);
@@ -986,7 +998,18 @@ const Reports = ({ mode = "basic" }) => {
     return null;
   };
 
-  const hasActiveReportData = loadedTab === activeTab;
+  // On the frame the `mode` prop changes, visibleTabs and the page title recompute
+  // during render, but activeTab only catches up in an effect. loadedTab ===
+  // activeTab was therefore still true against the OUTGOING tab, so the previous
+  // report's content rendered for one frame underneath the incoming report's
+  // title. Requiring the loaded tab to belong to the current mode closes that gap
+  // in the same render, with no extra state.
+  const loadedTabInCurrentMode = visibleTabs.some((tab) => tab.id === loadedTab);
+  const hasActiveReportData = loadedTab === activeTab && loadedTabInCurrentMode;
+  // Data is loaded, but for a report that is no longer on screen — we are between
+  // routes. Show the spinner rather than the "choose a report type" empty state,
+  // which would otherwise flash instead.
+  const isSwitchingReport = loadedTab !== null && !loadedTabInCurrentMode;
 
   return (
     <div className="page-enter space-y-6 pb-10">
@@ -1108,7 +1131,7 @@ const Reports = ({ mode = "basic" }) => {
             a tab. On a refresh of the tab you are already viewing, the previous
             render is held at reduced opacity instead, so the layout does not jump
             and the report is not unmounted mid-fetch. */}
-        {loading && !hasActiveReportData ? (
+        {(loading || isSwitchingReport) && !hasActiveReportData ? (
           <div className="flex h-64 items-center justify-center">
             <LoadingSpinner size="lg" text="Analyzing data..." />
           </div>
@@ -1209,7 +1232,19 @@ const Reports = ({ mode = "basic" }) => {
                 <p className="text-xs font-medium text-slate-500 sm:text-right">Generated: {new Date().toLocaleString()}</p>
               </div>
 
-              <div className="p-4 sm:p-5">{chartsReady ? renderReportContent() : <div className="h-40" aria-hidden="true" />}</div>
+              {/* Charts mount on an idle callback so they do not block the first
+                  paint. That leaves up to 400ms with nothing in the body — an
+                  empty box read as a third loading state after the spinner had
+                  already gone. Hold the spinner until the content is real. */}
+              <div className="p-4 sm:p-5">
+                {chartsReady ? (
+                  renderReportContent()
+                ) : (
+                  <div className="flex h-40 items-center justify-center">
+                    <LoadingSpinner size="md" />
+                  </div>
+                )}
+              </div>
             </div>
 
             {isPagedTab && (
