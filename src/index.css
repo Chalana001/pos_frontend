@@ -517,6 +517,16 @@ html[data-animation-level="balanced"] .custom-select-option {
   box-shadow: var(--motion-soft-shadow);
 }
 
+/* Chart legend text.
+   Recharts writes the series colour inline onto .recharts-legend-item-text, so a
+   legend label inherits whatever hue its series uses. Several of those sit below
+   4.5:1 on white — slot-2 orange measures 3.2 — and a label is text, not a mark.
+   Text wears text tokens; the coloured dot beside it carries the identity. The
+   inline style means this needs !important to win. */
+.recharts-legend-item-text {
+  color: rgb(51 65 85) !important; /* slate-700 */
+}
+
 /* Opt-in dark surface for a Card.
    .shell-panel sets `background` (the shorthand), which resets background-color
    to transparent and paints a near-white gradient. That silently defeats a
