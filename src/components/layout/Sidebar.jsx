@@ -20,7 +20,6 @@ import {
   PieChart,
   ChevronDown,
   ChevronRight,
-  Menu,
   X,
   Truck,
   ShieldCheck,
@@ -30,17 +29,13 @@ import {
   // Printer,
 } from "lucide-react";
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed }) => {
   const { user } = useAuth();
   const { configuration } = useAppConfiguration();
   const { t } = useLanguage();
   const location = useLocation();
   const role = user?.role;
   const canUseFeature = (feature) => hasPlanFeature(user?.planName, feature);
-
-  // 🔴 Mobile Menu State
-  const [isOpen, setIsOpen] = useState(false);
-  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
 
   // ✅ detect sub routes
   const isItemsRoute = location.pathname.startsWith("/items");
@@ -52,6 +47,7 @@ const Sidebar = () => {
 
   const isShiftsRoute = location.pathname.startsWith("/shifts");
   const isExpensesRoute = location.pathname.startsWith("/expenses");
+  const isCashDropsRoute = location.pathname.startsWith("/cash-drops");
 
   const isStockRoute =
     location.pathname.startsWith("/stock") ||
@@ -83,6 +79,7 @@ const Sidebar = () => {
   const [openStock, setOpenStock] = useState(false);
   const [openPurchase, setOpenPurchase] = useState(false);
   const [openExpenses, setOpenExpenses] = useState(false);
+  const [openCashDrops, setOpenCashDrops] = useState(false);
   const [openSales, setOpenSales] = useState(false); // 🟢 Sales dropdown state
   const [openWarranties, setOpenWarranties] = useState(false);
   const [openReports, setOpenReports] = useState(false);
@@ -96,6 +93,7 @@ const Sidebar = () => {
     setOpenStock(false);
     setOpenPurchase(false);
     setOpenExpenses(false);
+    setOpenCashDrops(false);
     setOpenSales(false);
     setOpenWarranties(false);
     setOpenReports(false);
@@ -111,6 +109,7 @@ const Sidebar = () => {
     if (key === "stock") setOpenStock(true);
     if (key === "purchase") setOpenPurchase(true);
     if (key === "expenses") setOpenExpenses(true);
+    if (key === "cashdrops") setOpenCashDrops(true);
     if (key === "sales") setOpenSales(true);
     if (key === "warranties") setOpenWarranties(true);
     if (key === "reports") setOpenReports(true);
@@ -169,6 +168,10 @@ const Sidebar = () => {
   useEffect(() => {
     if (isExpensesRoute) openOnlyDropdown("expenses");
   }, [isExpensesRoute]);
+
+  useEffect(() => {
+    if (isCashDropsRoute) openOnlyDropdown("cashdrops");
+  }, [isCashDropsRoute]);
 
   useEffect(() => {
     if (isWarrantyRoute) openOnlyDropdown("warranties");
@@ -267,6 +270,7 @@ const Sidebar = () => {
       icon: TrendingDown,
       path: "/cash-drops",
       permission: "RECORD_EXPENSES",
+      type: "dropdown-cashdrops",
     },
     {
       name: "Stock",
@@ -300,17 +304,6 @@ const Sidebar = () => {
 
 return (
     <>
-      {!isOpen && !isDesktopCollapsed && (
-        <button
-          type="button"
-          aria-label="Open sidebar menu"
-          onClick={handleSidebarOpen}
-          className="shell-panel-hover fixed left-4 top-4 z-[60] rounded-lg bg-slate-900 p-2 text-white shadow-lg transition-colors hover:bg-slate-800 xl:hidden"
-        >
-          <Menu size={24} />
-        </button>
-      )}
-
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 xl:hidden transition-opacity"
@@ -381,6 +374,7 @@ return (
               item.type !== "dropdown-shifts" &&
               item.type !== "dropdown-purchase" &&
               item.type !== "dropdown-expenses" &&
+              item.type !== "dropdown-cashdrops" &&
               item.type !== "dropdown-sales" &&
               item.type !== "dropdown-reports" &&
               item.type !== "dropdown-warranties" &&
@@ -1120,6 +1114,55 @@ return (
                       >
                         {t("Manage")}
                       </NavLink>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            if (item.type === "dropdown-cashdrops") {
+              if (!hasPermission(role, "RECORD_EXPENSES") || !canUseFeature("FINANCIALS")) return null;
+
+              return (
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
+                  <button
+                    onClick={() => toggleDropdown("cashdrops", openCashDrops)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                      isCashDropsRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon size={20} />
+                      <span className="font-medium">{t("Cash Drops")}</span>
+                    </div>
+                    {openCashDrops ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  </button>
+
+                  {openCashDrops && (
+                    <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                      <NavLink
+                        to="/cash-drops"
+                        end
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        {t("Drop List")}
+                      </NavLink>
+                      {hasPermission(role, "MANAGE_BANK_ACCOUNTS") && (
+                        <NavLink
+                          to="/cash-drops/bank-accounts"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Bank Accounts")}
+                        </NavLink>
+                      )}
                     </div>
                   )}
                 </div>

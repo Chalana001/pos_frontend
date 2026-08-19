@@ -18,7 +18,7 @@ const BranchSelector = () => {
   };
 
   return (
-    <div className="relative z-20 flex h-11 min-w-[150px] max-w-[190px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm sm:min-w-[190px]">
+    <div className="relative z-20 flex h-11 w-full min-w-[96px] max-w-[190px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm sm:min-w-[150px]">
       <Building2 size={18} className="shrink-0 text-slate-500" />
       <div className="min-w-0 flex-1">
         <CustomSelect

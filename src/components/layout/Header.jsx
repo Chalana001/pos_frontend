@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +11,7 @@ import {
   History,
   KeyRound,
   LogOut,
+  Menu,
   PackageX,
   RotateCcw,
   ShieldAlert,
@@ -22,6 +24,7 @@ import BranchSelector from './BranchSelector';
 import { canAccessAllBranches } from '../../utils/permissions';
 import LanguageSelector from './LanguageSelector';
 import { useLanguage } from '../../context/LanguageContext';
+import { LANGUAGES } from '../../utils/translations';
 import { useBranch } from '../../context/BranchContext';
 import { useShift } from '../../context/ShiftContext';
 import Modal from '../common/Modal';
@@ -52,9 +55,9 @@ const hasOpenShift = (value) => (Array.isArray(value) ? value.length > 0 : Boole
 const getDismissedNotificationStorageKey = (user) =>
   `pos-dismissed-notifications:${user?.tenantId || 'tenant'}:${user?.username || 'user'}`;
 
-const Header = () => {
+const Header = ({ onOpenSidebar, sidebarCollapsed }) => {
   const { user, logout, isOnline, saveOfflinePin, hasOnlineSession } = useAuth();
-  const { t } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const { selectedBranchId } = useBranch();
   const { activeShift, loadingShift } = useShift();
   const navigate = useNavigate();
@@ -73,6 +76,8 @@ const Header = () => {
   const [savingPin, setSavingPin] = useState(false);
   const wasOnlineRef = useRef(isOnline);
   const notificationRef = useRef(null);
+  const notificationPanelRef = useRef(null);
+  const [notificationPanelPos, setNotificationPanelPos] = useState({ top: 72, right: 12 });
   const dismissedNotificationStorageKey = getDismissedNotificationStorageKey(user);
 
   const validUntilLabel = user?.subscriptionValidUntil
@@ -174,7 +179,9 @@ const Header = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+      const insideTrigger = notificationRef.current?.contains(event.target);
+      const insidePanel = notificationPanelRef.current?.contains(event.target);
+      if (!insideTrigger && !insidePanel) {
         setShowNotifications(false);
       }
     };
@@ -317,17 +324,26 @@ const Header = () => {
 
   return (
     <>
-      <header className="shell-header-enter relative z-40 flex min-h-16 flex-wrap items-center justify-between gap-3 overflow-visible border-b border-slate-200 bg-white/75 px-4 py-2 backdrop-blur-xl sm:px-6 sm:py-0">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+      <header className="shell-header-enter relative z-40 flex min-h-16 items-center justify-between gap-2 overflow-visible border-b border-slate-200 bg-white/75 px-3 py-2 backdrop-blur-xl sm:gap-3 sm:px-6 sm:py-0">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            aria-label="Open sidebar menu"
+            onClick={onOpenSidebar}
+            className={`shell-panel-hover inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 ${sidebarCollapsed ? '' : 'xl:hidden'}`}
+          >
+            <Menu size={20} />
+          </button>
+
           {canAccessAllBranches(user.role) && !hideBranchSelector && !shouldHideBranchSelectorForPlan && <BranchSelector />}
         </div>
 
-        <div className="page-section-enter flex min-w-0 flex-wrap items-center justify-end gap-2" style={{ animationDelay: '120ms' }}>
-          <LanguageSelector compact />
+        <div className="page-section-enter flex shrink-0 items-center justify-end gap-2" style={{ animationDelay: '120ms' }}>
+          <LanguageSelector compact className="hidden sm:flex" />
 
           <Link
             to="/offline-sales"
-            className={`${toolbarItemClass} shell-panel-hover hidden gap-2 md:inline-flex`}
+            className={`${toolbarItemClass} shell-panel-hover hidden gap-2 lg:inline-flex`}
           >
             <UploadCloud size={16} />
             <span className="whitespace-nowrap">Offline Queue</span>
@@ -342,7 +358,7 @@ const Header = () => {
           </div>
 
           {validUntilLabel && (
-            <div className="shell-panel-hover hidden h-11 min-w-[142px] flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-right shadow-sm lg:flex">
+            <div className="shell-panel-hover hidden h-11 min-w-[142px] flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-right shadow-sm 2xl:flex">
               <div className="text-[11px] font-bold uppercase leading-4 text-emerald-700">
                 {t(formatPlanName(user?.planName))}
               </div>
@@ -356,6 +372,15 @@ const Header = () => {
             <button
               type="button"
               onClick={() => {
+                if (!showNotifications && notificationRef.current) {
+                  const rect = notificationRef.current.getBoundingClientRect();
+                  const panelWidth = Math.min(360, window.innerWidth - 24);
+                  const maxRight = window.innerWidth - panelWidth - 12;
+                  setNotificationPanelPos({
+                    top: rect.bottom + 8,
+                    right: Math.min(Math.max(12, window.innerWidth - rect.right), maxRight),
+                  });
+                }
                 setShowNotifications((open) => !open);
                 if (!showNotifications) setConnectionRestored(false);
               }}
@@ -369,8 +394,12 @@ const Header = () => {
               ) : null}
             </button>
 
-            {showNotifications && (
-              <div className="modal-panel-enter absolute right-0 z-30 mt-2 w-[360px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            {showNotifications && createPortal(
+              <div
+                ref={notificationPanelRef}
+                className="modal-panel-enter fixed z-[70] w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+                style={{ top: notificationPanelPos.top, right: notificationPanelPos.right }}
+              >
                 <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                   <div>
                     <div className="text-sm font-bold text-slate-900">Notifications</div>
@@ -419,20 +448,21 @@ const Header = () => {
                     })}
                   </div>
                 )}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-            className="shell-panel-hover flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 shadow-sm transition hover:bg-slate-50 sm:min-w-[150px]"
+            className="shell-panel-hover flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 shadow-sm transition hover:bg-slate-50"
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600">
                 <User size={18} className="text-white" />
               </div>
 
-              <div className="hidden min-w-0 text-left sm:block">
+              <div className="hidden min-w-0 max-w-[120px] text-left lg:block">
                 <div className="truncate text-sm font-semibold leading-4 text-slate-800">{user.username}</div>
                 <div className="truncate text-[11px] leading-4 text-slate-500">{t(user.role)}</div>
               </div>
@@ -451,6 +481,29 @@ const Header = () => {
                       <div className="text-xs text-slate-500">{t(`Valid until ${validUntilLabel}`)}</div>
                     </div>
                   )}
+
+                  <div className="border-b border-slate-100 px-4 py-2 sm:hidden">
+                    <div className="mb-1.5 text-xs font-semibold text-slate-500">{t('Language')}</div>
+                    <div className="flex gap-1.5">
+                      {[
+                        { value: LANGUAGES.EN, label: 'English' },
+                        { value: LANGUAGES.SI, label: 'සිංහල' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setLanguage(option.value)}
+                          className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${
+                            language === option.value
+                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
                   <button
                     onClick={() => {
