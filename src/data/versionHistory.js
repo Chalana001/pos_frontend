@@ -1,6 +1,89 @@
-export const APP_VERSION = "2.2.0";
+export const APP_VERSION = "2.3.0";
 
 export const VERSION_HISTORY = [
+  {
+    version: "2.3.0",
+    title: "Demand Forecasting, Procurement Planning & Scheduled Report Exports",
+    releaseDate: "2026-08-19",
+    summary:
+      "Reports now cover the full planning cycle, not just history: a Demand Forecast report predicts what each item will need with a tracked accuracy score, and a new Procurement Planning workspace turns that forecast into a reorder plan you can submit, approve, and convert straight into purchase drafts. Reports can also run as background jobs — stored locally or in S3, and optionally emailed on a schedule — instead of blocking the screen while they generate. Underneath, the Reports page and Dashboard were rebuilt into separate, reusable pieces, which fixed the flicker and lost-page bugs that came from the old single-file version, and a database-level fix now stops double-clicking from ever creating two open shifts at once.",
+    highlights: [
+      "New Demand Forecast report — confidence-labelled predictions per item, with accuracy tracked against what actually sold.",
+      "New Procurement Planning workspace — build a reorder plan from stock and demand data, submit it, get admin approval, and generate purchase drafts from the approved lines.",
+      "Reports can now export as background jobs — stored to local disk or S3, downloadable when ready, with optional recurring email delivery on a schedule.",
+      "13 new report views added: Inventory Valuation, Stock Health, Cash Flow, Profit & Loss, Credit Aging, Supplier Payables, Stock Movement, Stock Transfers, Customer Behavior, Performance Comparison, Commercial Intelligence, Exception Center, and GRN/Purchases.",
+      "Switching a report's filter or date range no longer flashes a spinner and drops you back to page 1 — your place is held while it refreshes.",
+      "Fixed a bug where double-clicking Open Shift (a common habit on Windows) could create two open shifts for the same cashier and branch; now blocked at the database level, not just in the app.",
+      "Dashboard and Reports now share one color and chart system across every tile and chart, and a fabricated \"+12.5%\" growth figure that was shown on every Dashboard load regardless of the real numbers has been removed.",
+      "New Animation Level setting so each user can turn interface motion up or down.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Demand Forecast report with confidence-labelled forecasts per item, backed by forecast snapshots that are compared against realized sales to keep an accuracy score visible over time.",
+          "Procurement Planning workspace: create a reorder plan, submit it for approval, have an Admin or Super Admin approve or reject it, generate purchase drafts from the approved lines, and mark the plan converted once handed off to a real purchase.",
+          "Report export jobs — generate a report in the background and download it when ready, instead of waiting on the request. Configurable storage backend (local disk or S3), automatic retry on failure, and scheduled cleanup of old exports.",
+          "Recurring report schedules with optional email delivery once SMTP is configured.",
+          "13 new report pages: Inventory Valuation, Stock Health, Cash Flow, Profit & Loss, Credit Aging, Supplier Payables, Stock Movement, Stock Transfers (with a transfer details drill-down), Customer Behavior, Performance Comparison, Commercial Intelligence, Exception Center, and GRN/Purchases.",
+          "Owner Command Center summary card on the reports dashboard.",
+          "Per-user Animation Level setting controlling how much motion the interface uses.",
+          "A shared chart color and theme system used consistently across every report chart and the Dashboard.",
+          "9 new database migrations (V19–V27) supporting report export jobs, forecast accuracy snapshots, reorder plans, and the duplicate-shift-prevention constraint below.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "The Reports page was broken apart from a single 2,264-line file into one component per report — the underlying cause of switching a filter or tab silently unmounting the whole report and losing table pagination and scroll position.",
+          "Changing a filter or date on the report you're already viewing now keeps your data on screen (dimmed, with an \"Updating…\" indicator) instead of flashing a full spinner and resetting the table to page 1.",
+          "Switching between report tabs no longer flashes the previous report's data under the new title, then an empty state, then a blank chart area before the real numbers land.",
+          "Currency formatting is now consistent everywhere — no more charts mixing \"LKR\" and \"Rs.\" on the same axis.",
+          "Report tables now paginate instead of rendering unbounded datasets in one page.",
+          "Report metric labels clarified after an internal audit: \"Returns\" is now \"Return txns\" (it counts return transactions, not units), and the Return Rate and Inventory Valuation potential labels now state what they actually measure.",
+          "Procurement demand sources and units are now shown on the Procurement Planning and Forecast reports instead of being hidden.",
+          "Category-mode filtering is now respected consistently across all report views.",
+          "Build target raised to modern browsers only (Chrome/Edge/Firefox 100+, Safari 15+), with a bundle-size budget check added to the build pipeline.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Double-clicking Open Shift could create two open shifts for the same branch and cashier before the first request finished. Now closed with a request-deduplication filter plus a real database unique constraint, so it can no longer happen even under a race — and any duplicates the old bug had already created are cleaned up automatically.",
+          "Removed a fabricated \"+12.5%\" growth figure shown on every Dashboard load next to Today's Sales, regardless of the actual numbers — including next to LKR 0.00.",
+          "Fixed low-contrast text across all report pages and chart legend labels that were inheriting their series color instead of using readable text color.",
+          "The Dashboard's third Quick Action was labelled \"Add User\" but actually opened Add Customer; relabeled to match what it does.",
+        ],
+      },
+    ],
+    flowMap: [
+      {
+        title: "Procurement Planning Flow",
+        steps: [
+          "Open Procurement Planning from Reports and review the suggested reorder lines built from stock and demand data.",
+          "Adjust quantities as needed and submit the plan for approval.",
+          "An Admin or Super Admin approves or rejects the plan.",
+          "Generate purchase drafts from the approved plan, then mark it converted once the purchase is created.",
+        ],
+      },
+      {
+        title: "Demand Forecast Flow",
+        steps: [
+          "Open the Demand Forecast report to see confidence-labelled predictions per item.",
+          "Forecast snapshots are recorded automatically and compared against what actually sold.",
+          "Forecast accuracy history shows how reliable recent predictions have been.",
+        ],
+      },
+      {
+        title: "Report Export & Scheduling Flow",
+        steps: [
+          "Request a report export instead of waiting for it to generate inline.",
+          "The export runs as a background job and can be downloaded once ready, or retried if it fails.",
+          "Optionally schedule a report to run and email itself on a recurring basis.",
+        ],
+      },
+    ],
+  },
   {
     version: "2.2.0",
     title: "Barcode Label Designer, Direct Printing & Print Fixes",
