@@ -245,6 +245,9 @@ const Reports = ({ mode = "basic" }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [loading, setLoading] = useState(false);
   const [loadedTab, setLoadedTab] = useState(null);
+  // Which branch the payload currently on screen belongs to. Paired with loadedTab
+  // so a branch change is treated like a tab change rather than a quiet refresh.
+  const [loadedBranchId, setLoadedBranchId] = useState(null);
   const [reportData, setReportData] = useState([]);
   const [pageData, setPageData] = useState(emptyPage);
   const [page, setPage] = useState(0);
@@ -494,15 +497,19 @@ const Reports = ({ mode = "basic" }) => {
   };
 
   const generateReport = async (type) => {
-    // Refreshing the tab you are already on — a date change, a branch change, a
-    // filter — keeps the previous payload on screen while the new one loads.
-    // Clearing it here is what made the content area flash to a spinner, which
-    // unmounted the report and took its pagination and scroll position with it.
+    // Refreshing the tab you are already on — a date change, a filter — keeps the
+    // previous payload on screen while the new one loads. Clearing it here is what
+    // made the content area flash to a spinner, which unmounted the report and took
+    // its pagination and scroll position with it.
     //
     // Switching to a DIFFERENT tab still clears: the shapes are unrelated, and
     // showing one report's numbers under another report's headings is worse than
     // a spinner.
-    const isSameTabRefresh = loadedTab === type;
+    //
+    // A BRANCH change clears too, and that is not the same call as a date change.
+    // The heading and the branch selector update immediately, so holding the old
+    // payload puts branch 1's figures under a branch 2 label — readable, and wrong.
+    const isSameTabRefresh = loadedTab === type && loadedBranchId === selectedBranchId;
 
     setLoading(true);
 
@@ -660,6 +667,7 @@ const Reports = ({ mode = "basic" }) => {
       }
 
       setLoadedTab(type);
+      setLoadedBranchId(selectedBranchId);
     } catch (error) {
       console.error(error);
       toast.error("Failed to generate report");
@@ -844,7 +852,7 @@ const Reports = ({ mode = "basic" }) => {
 
   const renderPagedTable = () => {
     if (activeTab === "grnPurchases") return <GrnPurchaseReportView summary={{ ...inventorySummary, page: pageData }} />;
-    if (activeTab === "stockMovement") return <StockMovementReportView data={reportData} totalElements={pageData.totalElements} />;
+    if (activeTab === "stockMovement") return <StockMovementReportView data={reportData} totalElements={pageData.totalElements} allBranches={!selectedBranchId || selectedBranchId === 0} />;
     if (activeTab === "stockTransfers") return <StockTransferReportView data={reportData} pageData={pageData} />;
     if (activeTab === "shiftSummary") {
       const totalCashSales = reportData.reduce((sum, shift) => sum + Number(shift.cashSales || 0), 0);
