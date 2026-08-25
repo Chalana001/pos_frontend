@@ -65,6 +65,81 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+/**
+ * In-flight de-duplication for write requests.
+ *
+ * Cashiers double-click buttons out of Windows habit, and a `setLoading(true)`
+ * guard does not stop them: React state updates are asynchronous, so both
+ * clicks run the handler before the button ever re-renders as disabled. Two
+ * identical POSTs go out and two rows are created.
+ *
+ * While a write request is in flight, an identical one (same method, URL,
+ * query params and body) is not sent again — the caller is handed the *same*
+ * promise, so the second click resolves with the first click's response and the
+ * UI behaves exactly as if the user clicked once.
+ *
+ * This is in-flight only, with no time window, so it has no false positives: a
+ * genuinely repeated action later still goes to the server. Clicks that land
+ * after the first response has already arrived are caught by the backend's
+ * DuplicateRequestFilter instead.
+ */
+const inFlightWrites = new Map();
+
+const canFingerprint = (data) =>
+  data === undefined ||
+  data === null ||
+  typeof data === 'string' ||
+  typeof data === 'number' ||
+  typeof data === 'boolean' ||
+  (typeof data === 'object' &&
+    !(data instanceof FormData) &&
+    !(data instanceof Blob) &&
+    !(data instanceof ArrayBuffer) &&
+    !(data instanceof URLSearchParams));
+
+const fingerprint = (method, url, data, config) => {
+  try {
+    return [
+      method,
+      url,
+      JSON.stringify(config?.params ?? null),
+      typeof data === 'string' ? data : JSON.stringify(data ?? null),
+    ].join('|');
+  } catch {
+    // Circular or otherwise non-serialisable payload — do not de-duplicate.
+    return null;
+  }
+};
+
+const shareInFlight = (key, send) => {
+  if (!key) return send();
+
+  const existing = inFlightWrites.get(key);
+  if (existing) return existing;
+
+  const pending = send().finally(() => {
+    inFlightWrites.delete(key);
+  });
+
+  inFlightWrites.set(key, pending);
+  return pending;
+};
+
+// (url, data, config)
+['post', 'put', 'patch'].forEach((method) => {
+  const send = api[method].bind(api);
+  api[method] = (url, data, config) =>
+    shareInFlight(
+      canFingerprint(data) ? fingerprint(method, url, data, config) : null,
+      () => send(url, data, config)
+    );
+});
+
+// (url, config)
+const sendDelete = api.delete.bind(api);
+api.delete = (url, config) =>
+  shareInFlight(fingerprint('delete', url, null, config), () => sendDelete(url, config));
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
