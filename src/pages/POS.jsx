@@ -214,6 +214,7 @@ const POS = () => {
   const cartPanelRef = useRef(null);
   const resizeFrameRef = useRef(null);
   const stockOverrideResolverRef = useRef(null);
+  const checkoutIdempotencyKeyRef = useRef(null);
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
   const canUseServer = isOnline && hasOnlineSession && !isOfflineSession;
@@ -1568,6 +1569,17 @@ const POS = () => {
 
     setLoading(true);
     try {
+      // One key per checkout attempt, held until the sale is actually banked.
+      // Every retry of this checkout — a second click, a stock override, a
+      // resend after a lost reply — carries the same key, so the sale is
+      // recorded once and replayed for the rest. setLoading() cannot do this
+      // job: React state is asynchronous, so a fast double-click runs this
+      // handler twice before the button re-renders as disabled.
+      if (!checkoutIdempotencyKeyRef.current) {
+        checkoutIdempotencyKeyRef.current = window.crypto.randomUUID();
+      }
+      const checkoutIdempotencyKey = checkoutIdempotencyKeyRef.current;
+
       const orderItems = cartItems.map((item) => createOrderItemPayload(item, true));
       const orderData = {
         branchId: effectiveBranchId,
@@ -1583,7 +1595,10 @@ const POS = () => {
       };
 
       if (!shouldUseServerForCheckout) {
-        const clientSaleId = window.crypto.randomUUID();
+        // Reused, not regenerated: offlineSales is keyed by clientSaleId and
+        // written with put(), so a double-click overwrites the same queued row
+        // instead of queueing a second sale that would sync as a second order.
+        const clientSaleId = checkoutIdempotencyKey;
         const soldAt = new Date().toISOString();
         const storeName = user?.shopName || BRAND_NAME_UPPER;
         const branchName = effectiveBranch?.name || myShift?.branchName || `Branch ${effectiveBranchId}`;
@@ -1687,13 +1702,15 @@ const POS = () => {
         }
 
         toast.success(isFreeLocalSalesPlan ? "Sale saved locally" : "Sale saved to offline queue");
+        // The sale is banked — the next checkout is a genuinely new one.
+        checkoutIdempotencyKeyRef.current = null;
         clearCartState();
         return;
       }
 
       let response;
       try {
-        response = await ordersAPI.create(orderData);
+        response = await ordersAPI.create(orderData, checkoutIdempotencyKey);
       } catch (error) {
         if (isStockOverrideRequiredError(error) && error?.response?.data?.overrideAvailable) {
           const confirmed = await requestStockOverrideConfirmation(error);
@@ -1704,7 +1721,7 @@ const POS = () => {
             ...orderData,
             allowStockOverride: true,
             stockOverrideReason: "POS stock shortage override",
-          });
+          }, checkoutIdempotencyKey);
           toast.success("Stock override applied");
         } else {
           throw error;
@@ -1787,6 +1804,9 @@ const POS = () => {
       }
 
       await fetchProducts(effectiveBranchId);
+
+      // The order is banked — the next checkout is a genuinely new one.
+      checkoutIdempotencyKeyRef.current = null;
 
       clearCartState();
 

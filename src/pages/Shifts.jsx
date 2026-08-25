@@ -10,6 +10,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import ShiftCloseSummary from "../components/shifts/ShiftCloseSummary";
 
 const Shifts = () => {
   const { user } = useAuth();
@@ -269,6 +270,12 @@ const Shifts = () => {
               </span>
             </div>
           </div>
+
+          {showCloseModal && (
+            <div className="page-section-enter" style={{ animationDelay: "80ms" }}>
+              <ShiftCloseSummary shiftId={(isAdmin ? selectedShiftToClose : activeShift)?.id} />
+            </div>
+          )}
 
           <div className="page-section-enter" style={{ animationDelay: "100ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>

@@ -36,6 +36,8 @@ const ShiftDetailsPage = lazy(() => import('../pages/ShiftDetailsPage'));
 const Expenses = lazy(() => import('../pages/Expenses'));
 const ExpenseTypesPage = lazy(() => import('../pages/ExpenseTypesPage'));
 const CashDrops = lazy(() => import('../pages/CashDrops'));
+const BankAccountsPage = lazy(() => import('../pages/BankAccountsPage'));
+const BankAccountDetailsPage = lazy(() => import('../pages/BankAccountDetailsPage'));
 const Stock = lazy(() => import('../pages/Stock'));
 const StockItemDetailsPage = lazy(() => import('../pages/StockItemDetailsPage'));
 const StockAdjustments = lazy(() => import('../pages/StockAdjustments'));
@@ -139,6 +141,8 @@ const AppRoutes = () => {
         <Route path="expenses" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline>{withSuspense(<Expenses />)}</ProtectedRoute>} />
         <Route path="expenses/settings" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline>{withSuspense(<ExpenseTypesPage />)}</ProtectedRoute>} />
         <Route path="cash-drops" element={<ProtectedRoute permission="RECORD_EXPENSES" feature="FINANCIALS" requiresOnline>{withSuspense(<CashDrops />)}</ProtectedRoute>} />
+        <Route path="cash-drops/bank-accounts" element={<ProtectedRoute permission="MANAGE_BANK_ACCOUNTS" feature="FINANCIALS" requiresOnline>{withSuspense(<BankAccountsPage />)}</ProtectedRoute>} />
+        <Route path="cash-drops/bank-accounts/:id" element={<ProtectedRoute permission="MANAGE_BANK_ACCOUNTS" feature="FINANCIALS" requiresOnline>{withSuspense(<BankAccountDetailsPage />)}</ProtectedRoute>} />
 
         <Route path="stock" element={<ProtectedRoute permission="VIEW_STOCK" feature="STOCK_LEVELS" requiresOnline>{withSuspense(<Stock />)}</ProtectedRoute>} />
         <Route path="stock/item/:id" element={<ProtectedRoute permission="VIEW_STOCK" feature="STOCK_LEVELS" requiresOnline>{withSuspense(<StockItemDetailsPage />)}</ProtectedRoute>} />

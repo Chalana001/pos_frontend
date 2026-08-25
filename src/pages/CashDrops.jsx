@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Plus, Search, TrendingDown } from "lucide-react";
+import { Landmark, Plus, Search, TrendingDown } from "lucide-react";
 import { cashDropsAPI } from "../api/cashDrops.api";
 import { shiftsAPI } from "../api/shifts.api";
 import { usersAPI } from "../api/users.api";
+import { bankAccountsAPI } from "../api/bankAccounts.api";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { useShift } from "../context/ShiftContext";
-import { formatCurrency, formatDateTime } from "../utils/formatters";
+import { formatCurrency, formatDateTime, getLocalDateString } from "../utils/formatters";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
@@ -25,7 +26,7 @@ const toLocalDateTimeParam = (date, endOfDay = false) => {
 
 const CashDrops = () => {
   const { user } = useAuth();
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, branches } = useBranch();
   const { activeShift, refreshShift } = useShift();
 
   const isAdmin = useMemo(
@@ -35,17 +36,25 @@ const CashDrops = () => {
 
   const currentShift = Array.isArray(activeShift) ? activeShift[0] : activeShift;
   const hasOpenShift = currentShift?.status === "OPEN" || !!currentShift;
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   const [cashDrops, setCashDrops] = useState([]);
   const [summary, setSummary] = useState({ totalAmount: 0, dropCount: 0, averageAmount: 0 });
+  const [todayTotal, setTodayTotal] = useState(0);
+  const [todayTotalLoading, setTodayTotalLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
   const searchRef = useSearchOnType(setSearch);
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState(today);
+  // This is a live operational log, not a report — it defaults to showing
+  // EVERYTHING, not just today. A "today only" default filter reads as "this
+  // is all the data there is" and makes real totals look wrong when they're
+  // just hidden behind an invisible date filter (that's exactly what
+  // happened here). The dedicated "Today's Drop" card below covers the
+  // at-a-glance "how much went out today" need instead.
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [cashierId, setCashierId] = useState("ALL");
   const [cashierOptions, setCashierOptions] = useState([{ value: "ALL", label: "All Users" }]);
   const [page, setPage] = useState(0);
@@ -56,7 +65,19 @@ const CashDrops = () => {
   const [formData, setFormData] = useState({
     amount: "",
     reason: "",
+    bankAccountId: "",
   });
+  const [bankAccountOptions, setBankAccountOptions] = useState([{ value: "", label: "Cash / Safe (not banked yet)" }]);
+
+  const [showOutsideModal, setShowOutsideModal] = useState(false);
+  const [outsideSaving, setOutsideSaving] = useState(false);
+  const [outsideForm, setOutsideForm] = useState({
+    branchId: "",
+    amount: "",
+    reason: "",
+    bankAccountId: "",
+  });
+  const branchOptions = (branches || []).filter((branch) => branch.id > 0);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -68,9 +89,39 @@ const CashDrops = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranchId, user?.role, search, startDate, endDate, cashierId, page]);
 
+  // Deliberately its own effect, with its own params — "Today's Drop" stays
+  // pinned to today regardless of whatever date range the table above is
+  // filtered to, so it's a stable reference point rather than something that
+  // silently changes meaning when someone adjusts the date filter.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchTodayTotal();
+    }, 300);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId, user?.role, cashierId]);
+
   useEffect(() => {
     setPageInput(String(page + 1));
   }, [page]);
+
+  useEffect(() => {
+    const loadBankAccounts = async () => {
+      try {
+        const response = await bankAccountsAPI.listActive();
+        const options = (Array.isArray(response.data) ? response.data : []).map((account) => ({
+          value: String(account.id),
+          label: account.bankName ? `${account.name} (${account.bankName})` : account.name,
+        }));
+        setBankAccountOptions([{ value: "", label: "Cash / Safe (not banked yet)" }, ...options]);
+      } catch (error) {
+        console.error("Failed to load bank accounts", error);
+      }
+    };
+
+    loadBankAccounts();
+  }, []);
 
   useEffect(() => {
     const loadCashiers = async () => {
@@ -155,12 +206,33 @@ const CashDrops = () => {
     }
   };
 
+  // Fixed to today's calendar date, on purpose — not built from
+  // buildQueryParams(), which reads the table's adjustable startDate/endDate.
+  const fetchTodayTotal = async () => {
+    setTodayTotalLoading(true);
+    try {
+      const branchId = user?.role === "CASHIER" ? user?.branchId : selectedBranchId;
+      const response = await cashDropsAPI.getSummary({
+        branchId: branchId || 0,
+        from: toLocalDateTimeParam(today),
+        to: toLocalDateTimeParam(today, true),
+        cashierUserId: cashierId !== "ALL" ? cashierId : undefined,
+      });
+      setTodayTotal(response.data?.totalAmount || 0);
+    } catch (error) {
+      console.error("Failed to fetch today's cash drop total", error);
+      setTodayTotal(0);
+    } finally {
+      setTodayTotalLoading(false);
+    }
+  };
+
   const resetPage = () => setPage(0);
 
   const clearFilters = () => {
     setSearch("");
-    setStartDate(today);
-    setEndDate(today);
+    setStartDate("");
+    setEndDate("");
     setCashierId("ALL");
     setPage(0);
   };
@@ -197,7 +269,11 @@ const CashDrops = () => {
     }
 
     try {
-      const payload = { amount, reason };
+      const payload = {
+        amount,
+        reason,
+        bankAccountId: formData.bankAccountId ? Number(formData.bankAccountId) : undefined,
+      };
 
       if (isAdmin) {
         await shiftsAPI.cashdropById(currentShift.id, payload);
@@ -217,7 +293,53 @@ const CashDrops = () => {
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setFormData({ amount: "", reason: "" });
+    setFormData({ amount: "", reason: "", bankAccountId: "" });
+  };
+
+  const handleOutsideSubmit = async (e) => {
+    e.preventDefault();
+
+    const branchId = outsideForm.branchId;
+    if (!branchId) {
+      toast.error("Select a branch");
+      return;
+    }
+
+    const amount = Number(outsideForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Invalid amount");
+      return;
+    }
+
+    const reason = outsideForm.reason.trim();
+    if (!reason) {
+      toast.error("Reason is required");
+      return;
+    }
+
+    try {
+      setOutsideSaving(true);
+      await cashDropsAPI.createOutsideShift({
+        branchId: Number(branchId),
+        amount,
+        reason,
+        bankAccountId: outsideForm.bankAccountId ? Number(outsideForm.bankAccountId) : undefined,
+      });
+
+      toast.success("Bank deposit recorded");
+      handleCloseOutsideModal();
+      fetchCashDrops();
+      fetchSummary();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to record bank deposit");
+    } finally {
+      setOutsideSaving(false);
+    }
+  };
+
+  const handleCloseOutsideModal = () => {
+    setShowOutsideModal(false);
+    setOutsideForm({ branchId: "", amount: "", reason: "", bankAccountId: "" });
   };
 
   const columns = [
@@ -243,8 +365,21 @@ const CashDrops = () => {
     },
     { header: "Recorded By", accessor: "cashierName" },
     {
+      header: "Bank Account",
+      render: (drop) => (
+        <span className="text-slate-600">{drop.bankAccountName || "—"}</span>
+      ),
+    },
+    {
       header: "Shift",
-      render: (drop) => <span className="text-slate-500">#{drop.shiftId}</span>,
+      render: (drop) =>
+        drop.outsideShift || !drop.shiftId ? (
+          <span className="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-700">
+            Outside Shift
+          </span>
+        ) : (
+          <span className="text-slate-500">#{drop.shiftId}</span>
+        ),
     },
   ];
 
@@ -256,14 +391,22 @@ const CashDrops = () => {
           <p className="text-sm text-slate-500 mt-1">Review recorded cash removals by date, user, and reason.</p>
         </div>
 
-        <Button
-          onClick={() => setShowModal(true)}
-          disabled={!hasOpenShift}
-          className={!hasOpenShift ? "opacity-50 cursor-not-allowed" : ""}
-        >
-          <Plus size={20} className="mr-2" />
-          Record Drop
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {isAdmin && (
+            <Button variant="secondary" onClick={() => setShowOutsideModal(true)}>
+              <Landmark size={20} className="mr-2" />
+              Bank Deposit (Outside Shift)
+            </Button>
+          )}
+          <Button
+            onClick={() => setShowModal(true)}
+            disabled={!hasOpenShift}
+            className={!hasOpenShift ? "opacity-50 cursor-not-allowed" : ""}
+          >
+            <Plus size={20} className="mr-2" />
+            Record Drop
+          </Button>
+        </div>
       </div>
 
       {!hasOpenShift && (
@@ -276,11 +419,16 @@ const CashDrops = () => {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "120ms" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-slate-600 mb-2">Total Drop Amount</h3>
+              <h3 className="text-sm font-medium text-slate-600 mb-2">
+                Total Drop Amount
+                {(startDate || endDate || search || cashierId !== "ALL") && (
+                  <span className="ml-1 font-normal text-slate-400">(filtered)</span>
+                )}
+              </h3>
               <p className="text-2xl font-bold text-blue-600">
                 {summaryLoading ? formatCurrency(0) : formatCurrency(summary.totalAmount)}
               </p>
@@ -291,14 +439,21 @@ const CashDrops = () => {
           </div>
         </Card>
 
-        <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "160ms" }}>
+        <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "150ms" }}>
+          <h3 className="text-sm font-medium text-slate-600 mb-2">Today's Drop</h3>
+          <p className="text-2xl font-bold text-emerald-600">
+            {todayTotalLoading ? formatCurrency(0) : formatCurrency(todayTotal)}
+          </p>
+        </Card>
+
+        <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "180ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Number of Drops</h3>
           <p className="text-2xl font-bold text-slate-800">
             {summaryLoading ? "0" : summary.dropCount}
           </p>
         </Card>
 
-        <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "200ms" }}>
+        <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "210ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Average Drop</h3>
           <p className="text-2xl font-bold text-slate-800">
             {summaryLoading ? formatCurrency(0) : formatCurrency(summary.averageAmount)}
@@ -431,11 +586,99 @@ const CashDrops = () => {
             />
           </div>
 
+          <div className="page-section-enter" style={{ animationDelay: "120ms" }}>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Bank Account
+            </label>
+            <CustomSelect
+              value={formData.bankAccountId}
+              onChange={(value) => setFormData({ ...formData, bankAccountId: value })}
+              options={bankAccountOptions}
+              valueKey="value"
+              labelKey="label"
+              placeholder="Cash / Safe (not banked yet)"
+            />
+          </div>
+
           <div className="page-section-enter flex gap-2 pt-4" style={{ animationDelay: "140ms" }}>
             <Button type="submit" className="flex-1" disabled={!hasOpenShift}>
               Record Cash Drop
             </Button>
             <Button type="button" variant="secondary" onClick={handleCloseModal}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={showOutsideModal}
+        onClose={handleCloseOutsideModal}
+        title="Record Bank Deposit (Outside Shift)"
+      >
+        <form onSubmit={handleOutsideSubmit} className="space-y-4">
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+            <p className="text-xs text-blue-800">
+              For cash that's already out of a till — e.g. banking the day's collected cash after every
+              shift is closed. This is just a record; it does not change any shift's expected cash.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Branch *</label>
+            <CustomSelect
+              value={outsideForm.branchId}
+              onChange={(value) => setOutsideForm({ ...outsideForm, branchId: value })}
+              options={branchOptions.map((branch) => ({ value: String(branch.id), label: branch.name }))}
+              valueKey="value"
+              labelKey="label"
+              placeholder="Select a branch"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={outsideForm.amount}
+              onChange={(e) => setOutsideForm({ ...outsideForm, amount: e.target.value })}
+              className="input w-full"
+              placeholder="0.00"
+              required
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Bank Account</label>
+            <CustomSelect
+              value={outsideForm.bankAccountId}
+              onChange={(value) => setOutsideForm({ ...outsideForm, bankAccountId: value })}
+              options={bankAccountOptions}
+              valueKey="value"
+              labelKey="label"
+              placeholder="Cash / Safe (not banked yet)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
+            <textarea
+              value={outsideForm.reason}
+              onChange={(e) => setOutsideForm({ ...outsideForm, reason: e.target.value })}
+              className="input w-full"
+              rows="3"
+              placeholder="e.g., End of day bank deposit"
+              required
+            />
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button type="submit" className="flex-1" disabled={outsideSaving}>
+              {outsideSaving ? "Recording..." : "Record Bank Deposit"}
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleCloseOutsideModal}>
               Cancel
             </Button>
           </div>

@@ -56,6 +56,38 @@ export default function CashFlowReportView({ data: reportData }) {
         <SummaryMetric title="Cash Drops" value={data.cashDrops || 0} helper="Drawer-to-safe transfers, not expenses" icon={FileText} accent="neutral" />
       </div>
 
+      {Array.isArray(data.cashDropsByAccount) && data.cashDropsByAccount.length > 0 && (
+        <Card className="admin-panel-card overflow-hidden p-0" title="Cash Drops by Bank Account">
+          <Table
+            columns={[
+              {
+                header: "Account",
+                render: (row) => (
+                  <span className={row.accountName === "Unbanked" ? "italic text-slate-500" : "font-semibold text-slate-800"}>
+                    {row.accountName}
+                  </span>
+                ),
+              },
+              { header: "Drops", render: (row) => row.dropCount },
+              { header: "Amount", render: (row) => <span className="font-bold text-blue-600">{formatCurrency(row.amount)}</span> },
+              {
+                header: "% of Total",
+                render: (row) => (
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(row.percentageOfTotal, 100)}%` }} />
+                    </div>
+                    <span className="text-xs font-semibold text-slate-600">{row.percentageOfTotal.toFixed(1)}%</span>
+                  </div>
+                ),
+              },
+            ]}
+            data={data.cashDropsByAccount}
+            getRowKey={(row) => row.accountName}
+          />
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <PremiumChartCard title="Daily Cash Movement" subtitle="Business cash inflows versus outflows">
           <div className="h-[320px] min-h-[320px] min-w-0">

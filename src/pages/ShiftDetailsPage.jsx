@@ -1,12 +1,25 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Clock, Printer, User } from "lucide-react";
+import { toast } from "react-hot-toast";
 import { shiftsAPI } from "../api/shifts.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
+import Modal from "../components/common/Modal";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import ShiftCloseSummary from "../components/shifts/ShiftCloseSummary";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
+
+const calculateExpectedCash = (shift) => {
+  if (!shift) return 0;
+  return (
+    (shift.openingCash || 0) +
+    (shift.cashSales || 0) -
+    (shift.totalExpenses || 0) -
+    (shift.totalCashDrops || 0)
+  );
+};
 
 const formatCategoryLabel = (value) => value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 
@@ -39,6 +52,9 @@ const ShiftDetailsPage = () => {
   const [expensesPageInput, setExpensesPageInput] = useState("1");
   const [expensesTotalPages, setExpensesTotalPages] = useState(0);
   const [expensesTotalElements, setExpensesTotalElements] = useState(0);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [countedCash, setCountedCash] = useState("");
+  const [closing, setClosing] = useState(false);
 
   useEffect(() => {
     const loadShift = async () => {
@@ -131,6 +147,26 @@ const ShiftDetailsPage = () => {
     setExpensesPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
   };
 
+  const handleCloseShift = async (e) => {
+    e.preventDefault();
+    setClosing(true);
+    try {
+      const response = await shiftsAPI.closeById(shift.id, {
+        countedCash: parseFloat(countedCash),
+        note: "",
+      });
+      setShift(response.data);
+      toast.success("Shift closed successfully");
+      setShowCloseModal(false);
+      setCountedCash("");
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to close shift";
+      toast.error(errorMessage);
+    } finally {
+      setClosing(false);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner text="Loading shift..." />;
   }
@@ -151,6 +187,7 @@ const ShiftDetailsPage = () => {
         </div>
         <div className="flex items-center gap-2 print:hidden">
           {shift.status === "CLOSED" && <Button variant="secondary" onClick={() => window.print()}><Printer size={17} className="mr-2" /> Print Z Report</Button>}
+          {shift.status === "OPEN" && <Button variant="danger" onClick={() => setShowCloseModal(true)}>Close Shift</Button>}
           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase w-fit ${shift.status === "OPEN" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
         </div>
       </div>
@@ -334,6 +371,57 @@ const ShiftDetailsPage = () => {
           onGoToPage={goToExpensesPage}
         />
       </Card>
+
+      <Modal
+        isOpen={showCloseModal}
+        onClose={() => {
+          setShowCloseModal(false);
+          setCountedCash("");
+        }}
+        title={`Close Shift #${shift.id} (Cashier: ${shift.cashierName || shift.cashierUserId})`}
+      >
+        <form onSubmit={handleCloseShift} className="space-y-4">
+          <div className="space-y-2 rounded-lg bg-slate-50 p-4">
+            <div className="flex justify-between text-sm">
+              <span>Expected Cash:</span>
+              <span className="font-bold text-blue-600">{formatCurrency(calculateExpectedCash(shift))}</span>
+            </div>
+          </div>
+
+          {showCloseModal && <ShiftCloseSummary shiftId={shift.id} />}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
+            <input
+              type="number"
+              step="0.01"
+              value={countedCash}
+              onChange={(e) => setCountedCash(e.target.value)}
+              className="input"
+              placeholder="0.00"
+              required
+              autoFocus
+            />
+          </div>
+
+          {countedCash && (
+            <div className={`rounded-lg p-4 ${parseFloat(countedCash) === calculateExpectedCash(shift) ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}`}>
+              <p className="text-sm font-medium">
+                Difference: {formatCurrency(Math.abs(parseFloat(countedCash) - calculateExpectedCash(shift)))}
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button type="submit" variant="danger" className="flex-1" disabled={closing}>
+              {closing ? "Closing..." : "Confirm Close"}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => { setShowCloseModal(false); setCountedCash(""); }}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -27,6 +27,11 @@ export const shiftsAPI = {
 
   getExpenses: (shiftId, params = {}) => api.get(`/shifts/${shiftId}/expenses`, { params }),
 
+  // Purchases paid from this shift's cash drawer — already folded into the
+  // shift's totalExpenses for the cash-reconciliation math; this is purely
+  // so the close-shift screen can show which purchases explain that number.
+  getPurchases: (shiftId, params = {}) => api.get(`/shifts/${shiftId}/purchases`, { params }),
+
   forceCloseByBranch: (branchId, data) =>
     api.post("/shifts/force-close", data, { params: { branchId } }),
 
