@@ -7,7 +7,7 @@ import { usersAPI } from "../api/users.api";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { useShift } from "../context/ShiftContext";
-import { formatCurrency, formatDateTime } from "../utils/formatters";
+import { formatCurrency, formatDateTime, getLocalDateString } from "../utils/formatters";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
@@ -34,7 +34,7 @@ const Expenses = () => {
   const isAdminOrManager = user?.role === "ADMIN" || user?.role === "MANAGER";
   const hasActiveShift = Array.isArray(activeShift) ? activeShift.length > 0 : !!activeShift;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateString();
 
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(false);

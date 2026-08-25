@@ -15,7 +15,7 @@ import { Plus, Trash2, Save, Copy, Search } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import { ItemType } from "../utils/constants";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, getLocalDateString } from "../utils/formatters";
 import { useSearchOnType } from "../hooks/useSearchOnType";
 import {
   formatDisplayStockQuantity,
@@ -97,7 +97,7 @@ const PurchaseFormPage = () => {
 
   const [supplierId, setSupplierId] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(getLocalDateString());
   const [discountAmount, setDiscountAmount] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");

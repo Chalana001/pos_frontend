@@ -25,7 +25,7 @@ import { branchesAPI } from "../api/branches.api";
 import { purchasesAPI } from "../api/purchases.api";
 import { suppliersAPI } from "../api/suppliers.api";
 import { useAuth } from "../context/AuthContext";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, getLocalDateString } from "../utils/formatters";
 
 const paymentMethodOptions = [
   { value: "CASH", label: "Cash" },
@@ -86,7 +86,7 @@ const PurchaseExcelImportPage = () => {
   const [targetBranchId, setTargetBranchId] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(getLocalDateString());
   const [discountAmount, setDiscountAmount] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
