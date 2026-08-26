@@ -18,289 +18,29 @@ import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter";
-import { itemsAPI } from "../api/items.api";
-import { ordersAPI } from "../api/orders.api";
-import { shiftsAPI } from "../api/shifts.api";
 import {
-  cacheItemsForBranch,
   deleteOfflineSale,
-  getCachedItemsForBranch,
   getCachedReceiptSettings,
-  getOfflineSales,
   OFFLINE_EVENTS,
   updateOfflineSale,
 } from "../offline/db";
+import {
+  evaluateQueue,
+  isBatchTracked,
+  normalizeImportErrorMessage,
+  pushRows,
+  rowHasOpenShift,
+  sortBatchesForFifo,
+} from "../offline/sync";
 import { useAuth } from "../context/AuthContext";
 import { useShift } from "../context/ShiftContext";
 import { formatCurrency } from "../utils/formatters";
 import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
 import { BRAND_NAME_UPPER } from "../utils/branding";
 import {
-  displayToBaseQuantity,
-  formatDisplayStockBaseQuantity,
   formatDisplayStockQuantity,
   formatStockQuantity,
 } from "../utils/stockQuantity";
-
-const isBatchTracked = (cachedItem) =>
-  cachedItem && cachedItem.itemType !== "SERVICE" && cachedItem.itemType !== "RECIPE";
-
-const hasShiftData = (value) => (Array.isArray(value) ? value.length > 0 : Boolean(value));
-
-const sortBatchesForFifo = (batches = []) =>
-  [...batches].sort((left, right) => Number(left?.batchId || 0) - Number(right?.batchId || 0));
-
-const normalizeImportErrorMessage = (message) => {
-  const source = String(message || "").trim();
-  const lower = source.toLowerCase();
-
-  if (!source) {
-    return "Import failed. Retry this queued sale after refreshing the queue.";
-  }
-  if (lower.includes("already imported")) {
-    return "This queued sale is already on the server.";
-  }
-  if (lower.includes("cash sales only")) {
-    return "Offline import supports cash sales only.";
-  }
-  if (lower.includes("takeaway sales only")) {
-    return "Offline import supports takeaway sales only.";
-  }
-  if (lower.includes("paid amount cannot be less")) {
-    return "Paid amount is lower than the queued total.";
-  }
-  if (lower.includes("batch id is missing")) {
-    return "Batch selection is required for at least one queued item.";
-  }
-  if (lower.includes("batch not found")) {
-    return "A selected batch is no longer available.";
-  }
-  if (lower.includes("does not match item")) {
-    return "A selected batch no longer belongs to the queued item.";
-  }
-  if (lower.includes("does not belong to this branch")) {
-    return "A selected batch belongs to another branch.";
-  }
-  if (lower.includes("insufficient stock")) {
-    return "Live stock is no longer enough for this queued sale.";
-  }
-  if (lower.includes("cannot create orders for another branch")) {
-    return "You are signed in under the wrong branch for this queued sale.";
-  }
-  if (lower.includes("item not found")) {
-    return "One of the queued items no longer exists on the server.";
-  }
-  if (lower.includes("item is inactive")) {
-    return "One of the queued items is inactive now.";
-  }
-  if (lower.includes("customer not found")) {
-    return "The queued customer record is no longer available.";
-  }
-  if (lower.includes("no open shift") || lower.includes("shift")) {
-    return "The cashier who made this sale needs an open shift at this branch before it can be imported.";
-  }
-  if (lower.includes("offline cashier not found")) {
-    return "The cashier who made this sale no longer exists on the server.";
-  }
-  if (lower.includes("offline cashier belongs to another branch")) {
-    return "The cashier who made this sale is now assigned to another branch.";
-  }
-
-  return source;
-};
-
-const normalizeRequestedQty = (cachedItem, qty, qtyUnit) => {
-  const numericQty = Number(qty || 0);
-  if (!Number.isFinite(numericQty) || numericQty <= 0) {
-    return 0;
-  }
-  return Math.round(displayToBaseQuantity(numericQty, cachedItem, qtyUnit || cachedItem?.defaultUnit));
-};
-
-const buildInventoryState = (items = []) =>
-  new Map(
-    items.map((item) => {
-      const rawAggregateQty = item.availableBaseQty !== undefined && item.availableBaseQty !== null
-        ? Number(item.availableBaseQty)
-        : displayToBaseQuantity(item.availableQty ?? 0, item, item.defaultUnit);
-      const aggregateQty = Number(rawAggregateQty) > 0 ? Number(rawAggregateQty) : 0;
-
-      return [
-        Number(item.id),
-        {
-          itemId: Number(item.id),
-          name: item.name,
-          itemType: item.itemType,
-          defaultUnit: item.defaultUnit,
-          aggregateQty,
-          batches: sortBatchesForFifo(Array.isArray(item.batches) ? item.batches : [])
-            .map((batch) => ({
-              batchId: Number(batch.batchId),
-              qty: batch.qty !== undefined && batch.qty !== null
-                ? Number(batch.qty || 0)
-                : Math.round(displayToBaseQuantity(batch.displayQty ?? 0, item, batch.qtyUnit || item.defaultUnit)),
-              qtyUnit: batch.qtyUnit || item.defaultUnit,
-            })),
-        },
-      ];
-    })
-  );
-
-const simulateRowStockValidation = (queueRows, itemLookupByBranch) => {
-  const branchStates = {};
-  const result = {};
-
-  const orderedRows = [...queueRows].sort(
-    (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
-  );
-
-  for (const row of orderedRows) {
-    const branchId = Number(row.branchId);
-    const branchLookup = itemLookupByBranch[String(branchId)] || new Map();
-    if (!branchStates[branchId]) {
-      branchStates[branchId] = buildInventoryState([...branchLookup.values()]);
-    }
-
-    const branchState = branchStates[branchId];
-    const issues = [];
-    const payloadItems = Array.isArray(row.payload?.items) ? row.payload.items : [];
-    const previewItems = Array.isArray(row.itemsPreview) ? row.itemsPreview : [];
-
-    payloadItems.forEach((payloadItem, index) => {
-      const previewItem = previewItems[index];
-      const itemId = Number(payloadItem.itemId);
-      const requestedItem =
-        branchLookup.get(itemId) ||
-        branchState.get(itemId) ||
-        null;
-      const itemName =
-        previewItem?.itemName ||
-        requestedItem?.name ||
-        `Item ${payloadItem.itemId}`;
-
-      if (!requestedItem) {
-        issues.push({
-          index,
-          itemId,
-          message: `${itemName}: item is no longer available in this branch.`,
-        });
-        return;
-      }
-
-      if (!isBatchTracked(requestedItem)) {
-        return;
-      }
-
-      const requiredQty = normalizeRequestedQty(
-        requestedItem,
-        payloadItem.qty,
-        payloadItem.qtyUnit || previewItem?.qtyUnit
-      );
-
-      if (requiredQty <= 0) {
-        issues.push({
-          index,
-          itemId,
-          message: `${itemName}: invalid quantity in queued sale.`,
-        });
-        return;
-      }
-
-      const inventoryItem = branchState.get(itemId);
-      if (!inventoryItem) {
-        issues.push({
-          index,
-          itemId,
-          message: `${itemName}: stock snapshot is missing.`,
-        });
-        return;
-      }
-
-      if (payloadItem.batchId) {
-        const targetBatch = inventoryItem.batches.find(
-          (batch) => Number(batch.batchId) === Number(payloadItem.batchId)
-        );
-
-        if (!targetBatch) {
-          issues.push({
-            index,
-            itemId,
-            message: `${itemName}: selected batch ${payloadItem.batchId} is no longer available.`,
-          });
-          return;
-        }
-
-        if (Number(targetBatch.qty || 0) < requiredQty) {
-          issues.push({
-            index,
-            itemId,
-            message: `${itemName}: selected batch ${payloadItem.batchId} has only ${formatDisplayStockQuantity(targetBatch, 0, requestedItem)} left.`,
-          });
-          return;
-        }
-
-        targetBatch.qty -= requiredQty;
-        inventoryItem.aggregateQty = Math.max(0, Number(inventoryItem.aggregateQty || 0) - requiredQty);
-        return;
-      }
-
-      if (inventoryItem.batches.length > 0) {
-        let remainingQty = requiredQty;
-
-        for (const batch of inventoryItem.batches) {
-          if (remainingQty <= 0) {
-            break;
-          }
-
-          const batchQty = Number(batch.qty || 0);
-          if (batchQty <= 0) {
-            continue;
-          }
-
-          const usedQty = Math.min(batchQty, remainingQty);
-          batch.qty -= usedQty;
-          remainingQty -= usedQty;
-        }
-
-        if (remainingQty > 0) {
-          issues.push({
-            index,
-            itemId,
-            message: `${itemName}: stock is no longer enough for auto batch selection.`,
-          });
-          return;
-        }
-
-        inventoryItem.aggregateQty = Math.max(0, Number(inventoryItem.aggregateQty || 0) - requiredQty);
-        return;
-      }
-
-      if (Number(inventoryItem.aggregateQty || 0) < requiredQty) {
-        const availableLabel = formatDisplayStockBaseQuantity(inventoryItem.aggregateQty, requestedItem, requestedItem.defaultUnit || "");
-        issues.push({
-          index,
-          itemId,
-          message: `${itemName}: available stock is lower than queued quantity. Available: ${availableLabel}.`,
-        });
-        return;
-      }
-
-      inventoryItem.aggregateQty -= requiredQty;
-    });
-
-    // Warnings, not a gate. These rows are completed, paid, receipted sales — refusing
-    // to import one does not un-sell the goods, it just keeps real revenue off the books
-    // and strands the transaction here forever. The server absorbs the shortfall, lets
-    // stock go negative and audits it, so the operator is told what will go short and
-    // can re-pick a batch, but is never blocked from banking the sale.
-    result[row.clientSaleId] = {
-      issues,
-      hasShortfall: issues.length > 0,
-    };
-  }
-
-  return result;
-};
 
 const OfflineSalesPage = () => {
   const { isOnline, hasOnlineSession, user } = useAuth();
@@ -309,179 +49,69 @@ const OfflineSalesPage = () => {
 
   const isAdminOrManager = user?.role === "ADMIN" || user?.role === "MANAGER";
 
-  const [rows, setRows] = useState([]);
-  const [cachedItemsByBranch, setCachedItemsByBranch] = useState({});
-  const [branchShiftMap, setBranchShiftMap] = useState({});
+  const [queue, setQueue] = useState({
+    rows: [],
+    readyRows: [],
+    itemLookupByBranch: {},
+    shiftMap: {},
+    validationMap: {},
+  });
   const [loading, setLoading] = useState(true);
-  const [checkingShifts, setCheckingShifts] = useState(false);
-  const [checkingStock, setCheckingStock] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncingId, setSyncingId] = useState(null);
   const [lastImportSummary, setLastImportSummary] = useState(null);
 
-  const loadRows = useCallback(async () => {
-    setLoading(true);
-    try {
-      const nextRows = await getOfflineSales();
-      setRows(nextRows);
+  const { rows, readyRows, itemLookupByBranch, shiftMap, validationMap } = queue;
+  const online = isOnline && hasOnlineSession;
 
-      const branchIds = [...new Set(nextRows.map((row) => Number(row.branchId)).filter(Boolean))];
-      const cachedPairs = await Promise.all(
-        branchIds.map(async (branchId) => [branchId, await getCachedItemsForBranch(branchId)])
-      );
-      setCachedItemsByBranch(Object.fromEntries(cachedPairs));
+  // One call does what four effects used to: read the queue, refresh the live stock
+  // snapshot, resolve per-cashier shift readiness, and replay the shortfall simulation.
+  // The sync agent calls exactly the same function, so the two can never disagree about
+  // which rows are ready.
+  const reloadQueue = useCallback(async ({ silent = false } = {}) => {
+    if (silent) setRefreshing(true); else setLoading(true);
+    try {
+      const next = await evaluateQueue({
+        online,
+        isAdminOrManager,
+        activeShift,
+        currentUserId: user?.userId,
+      });
+      setQueue(next);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to refresh the offline queue");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, []);
+  }, [activeShift, isAdminOrManager, online, user?.userId]);
 
-  const refreshStockSnapshots = useCallback(
-    async (queueRows = rows) => {
-      if (!isOnline || !hasOnlineSession) {
-        return;
-      }
-
-      const branchIds = [...new Set((queueRows || []).map((row) => Number(row.branchId)).filter(Boolean))];
-      if (branchIds.length === 0) {
-        return;
-      }
-
-      setCheckingStock(true);
-      try {
-        const livePairs = await Promise.all(
-          branchIds.map(async (branchId) => {
-            const response = await itemsAPI.searchForPos("", branchId);
-            const items = Array.isArray(response.data) ? response.data : [];
-            await cacheItemsForBranch(branchId, items);
-            return [branchId, items];
-          })
-        );
-        setCachedItemsByBranch((current) => ({
-          ...current,
-          ...Object.fromEntries(livePairs),
-        }));
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to refresh live stock snapshot");
-      } finally {
-        setCheckingStock(false);
-      }
-    },
-    [hasOnlineSession, isOnline, rows]
-  );
-
-  const loadShiftReadiness = useCallback(
-    async (queueRows) => {
-      if (!isOnline || !hasOnlineSession) {
-        setBranchShiftMap({});
-        setCheckingShifts(false);
-        return;
-      }
-
-      const branchIds = [...new Set((queueRows || []).map((row) => Number(row.branchId)).filter(Boolean))];
-      if (branchIds.length === 0) {
-        setBranchShiftMap({});
-        setCheckingShifts(false);
-        return;
-      }
-
-      // The backend banks an imported sale into the shift of the cashier who MADE it,
-      // and rejects the import when that cashier has none open. So readiness has to be
-      // resolved per cashier, not per branch — checking only that "some shift is open
-      // here" would mark rows ready that the server then refuses.
-      if (!isAdminOrManager) {
-        const ownShiftCashierIds = hasShiftData(activeShift) ? [Number(user?.userId)] : [];
-        setBranchShiftMap(Object.fromEntries(branchIds.map((branchId) => [branchId, ownShiftCashierIds])));
-        setCheckingShifts(false);
-        return;
-      }
-
-      setCheckingShifts(true);
-      try {
-        const pairs = await Promise.all(
-          branchIds.map(async (branchId) => {
-            try {
-              const response = await shiftsAPI.getActiveByBranch(branchId);
-              const shifts = Array.isArray(response.data) ? response.data : [];
-              return [branchId, shifts.map((shift) => Number(shift.cashierUserId)).filter(Boolean)];
-            } catch {
-              return [branchId, []];
-            }
-          })
-        );
-        setBranchShiftMap(Object.fromEntries(pairs));
-      } finally {
-        setCheckingShifts(false);
-      }
-    },
-    [activeShift, hasOnlineSession, isAdminOrManager, isOnline, user?.userId]
-  );
 
   useEffect(() => {
-    loadRows();
-  }, [loadRows]);
+    reloadQueue();
+  }, [reloadQueue]);
 
   useEffect(() => {
-    const handler = () => {
-      loadRows();
-    };
+    const handler = () => reloadQueue({ silent: true });
     window.addEventListener(OFFLINE_EVENTS.OFFLINE_SALES_CHANGED, handler);
     return () => window.removeEventListener(OFFLINE_EVENTS.OFFLINE_SALES_CHANGED, handler);
-  }, [loadRows]);
-
-  useEffect(() => {
-    loadShiftReadiness(rows);
-  }, [loadShiftReadiness, rows]);
-
-  useEffect(() => {
-    if (rows.length > 0 && isOnline && hasOnlineSession) {
-      refreshStockSnapshots(rows);
-    }
-  }, [hasOnlineSession, isOnline, refreshStockSnapshots, rows]);
-
-  const itemLookupByBranch = useMemo(() => {
-    const result = {};
-    Object.entries(cachedItemsByBranch).forEach(([branchId, items]) => {
-      result[branchId] = new Map((items || []).map((item) => [Number(item.id), item]));
-    });
-    return result;
-  }, [cachedItemsByBranch]);
-
-  const rowValidationMap = useMemo(
-    () => simulateRowStockValidation(rows, itemLookupByBranch),
-    [itemLookupByBranch, rows]
-  );
+  }, [reloadQueue]);
 
   const getRowHasOpenShift = useCallback(
-    (row) => {
-      if (!isOnline || !hasOnlineSession) return false;
-
-      const openCashierIds = branchShiftMap[Number(row.branchId)] || [];
-      // A row queued before the cashier was recorded sends no cashier id, and the server
-      // falls back to whoever is importing — so that is the shift to check for it.
-      const rowCashierId = Number(row.cashierUserId) || Number(user?.userId);
-      if (!rowCashierId) return false;
-      return openCashierIds.includes(rowCashierId);
-    },
-    [branchShiftMap, hasOnlineSession, isOnline, user?.userId]
+    (row) => (online ? rowHasOpenShift(row, shiftMap, user?.userId) : false),
+    [online, shiftMap, user?.userId]
   );
 
   const getRowStockValidation = useCallback(
-    (row) => rowValidationMap[row.clientSaleId] || { issues: [], hasShortfall: false },
-    [rowValidationMap]
-  );
-
-  // An open shift is the only hard requirement — the server rejects an import without
-  // one because the cash would have nowhere to land. A stock shortfall no longer holds a
-  // row back; it is reported and imported.
-  const readyRows = useMemo(
-    () => rows.filter((row) => getRowHasOpenShift(row)),
-    [getRowHasOpenShift, rows]
+    (row) => validationMap[row.clientSaleId] || { issues: [], hasShortfall: false },
+    [validationMap]
   );
 
   const rowsNeedingShift = useMemo(
-    () => rows.filter((row) => isOnline && hasOnlineSession && !getRowHasOpenShift(row)),
-    [getRowHasOpenShift, hasOnlineSession, isOnline, rows]
+    () => rows.filter((row) => online && !getRowHasOpenShift(row)),
+    [getRowHasOpenShift, online, rows]
   );
 
   const rowsWithStockIssues = useMemo(
@@ -495,13 +125,8 @@ const OfflineSalesPage = () => {
   );
 
   const refreshAll = async () => {
-    await Promise.all([
-      loadRows(),
-      isOnline && hasOnlineSession ? refreshShift() : Promise.resolve(),
-    ]);
-    if (isOnline && hasOnlineSession) {
-      await refreshStockSnapshots();
-    }
+    if (online) await refreshShift();
+    await reloadQueue({ silent: true });
   };
 
   const updateBatchSelection = async (row, itemIndex, batchId) => {
@@ -518,16 +143,47 @@ const OfflineSalesPage = () => {
       lastError: null,
     });
     setLastImportSummary(null);
-    await loadRows();
+    await reloadQueue({ silent: true });
+  };
+
+  // One push path for the row button, the "push ready" button and the retry button. They
+  // differ only in which rows they hand over and what they say afterwards; the import,
+  // the delete-on-success and the lastError bookkeeping are all in sync.pushRows.
+  const runPush = async (rowsToPush, { verb, skipped = 0 }) => {
+    if (rowsToPush.length === 0) {
+      toast.error("No queued sales are ready to import");
+      return;
+    }
+
+    try {
+      const { imported, failed } = await pushRows(rowsToPush);
+      const plural = (count) => (count === 1 ? "" : "s");
+
+      setLastImportSummary({
+        imported,
+        failed,
+        skipped,
+        message:
+          failed > 0
+            ? `${verb} ${imported} sale${plural(imported)}. ${failed} row${plural(failed)} still need attention.`
+            : `${verb} ${imported} sale${plural(imported)}.`,
+      });
+
+      if (failed > 0) {
+        toast.error(`${verb} ${imported}. ${failed} queued sale${plural(failed)} failed.`);
+      } else {
+        toast.success(`${verb} ${imported} queued sale${plural(imported)}.`);
+      }
+    } catch (error) {
+      toast.error(normalizeImportErrorMessage(error?.response?.data?.message || "Offline import failed"));
+    } finally {
+      await refreshAll();
+    }
   };
 
   const importOne = async (row) => {
-    if (!isOnline) {
-      toast.error("Go online before importing queued sales");
-      return;
-    }
-    if (!hasOnlineSession) {
-      toast.error("Sign in online before importing queued sales");
+    if (!online) {
+      toast.error("Go online and sign in before importing queued sales");
       return;
     }
     if (!getRowHasOpenShift(row)) {
@@ -537,128 +193,30 @@ const OfflineSalesPage = () => {
 
     setSyncingId(row.clientSaleId);
     try {
-      const response = await ordersAPI.importOfflineSale(row.payload);
-      if (response.data?.success) {
-        await deleteOfflineSale(row.clientSaleId);
-        setLastImportSummary({
-          imported: 1,
-          failed: 0,
-          skipped: 0,
-          message: response.data.message || "Offline sale imported",
-        });
-        toast.success(response.data.message || "Offline sale imported");
-      } else {
-        const message = normalizeImportErrorMessage(response.data?.message || "Offline import failed");
-        await updateOfflineSale(row.clientSaleId, { lastError: message });
-        toast.error(message);
-      }
-    } catch (error) {
-      const message = normalizeImportErrorMessage(
-        error?.response?.data?.message || "Offline import failed"
-      );
-      await updateOfflineSale(row.clientSaleId, { lastError: message });
-      toast.error(message);
+      await runPush([row], { verb: "Imported" });
     } finally {
       setSyncingId(null);
-      await refreshAll();
     }
   };
 
   const importAll = async () => {
-    if (readyRows.length === 0) {
-      toast.error("No queue rows are ready to import");
-      return;
-    }
-
     setSyncingAll(true);
     try {
-      const response = await ordersAPI.importOfflineSalesBulk(
-        readyRows.map((row) => row.payload)
-      );
-      const results = Array.isArray(response.data) ? response.data : [];
-      const resultsById = new Map(results.map((item) => [item.clientSaleId, item]));
-      const successRows = readyRows.filter((row) => resultsById.get(row.clientSaleId)?.success);
-      const failedRows = readyRows.filter((row) => !resultsById.get(row.clientSaleId)?.success);
-      const skippedCount = Math.max(0, rows.length - readyRows.length);
-
-      await Promise.all(
-        successRows.map((row) => deleteOfflineSale(row.clientSaleId))
-      );
-
-      await Promise.all(
-        failedRows.map((row) => {
-          const result = resultsById.get(row.clientSaleId);
-          const message = normalizeImportErrorMessage(result?.message || "Offline import failed");
-          return updateOfflineSale(row.clientSaleId, { lastError: message });
-        })
-      );
-
-      setLastImportSummary({
-        imported: successRows.length,
-        failed: failedRows.length,
-        skipped: skippedCount,
-        message:
-          failedRows.length > 0
-            ? `Imported ${successRows.length} sale${successRows.length === 1 ? "" : "s"}. ${failedRows.length} row${failedRows.length === 1 ? "" : "s"} still need attention.`
-            : `Imported ${successRows.length} sale${successRows.length === 1 ? "" : "s"}.`,
+      await runPush(readyRows, {
+        verb: "Imported",
+        skipped: Math.max(0, rows.length - readyRows.length),
       });
-
-      if (failedRows.length > 0) {
-        toast.error(
-          `Imported ${successRows.length}. ${failedRows.length} queued sale${failedRows.length === 1 ? "" : "s"} failed.`
-        );
-      } else {
-        toast.success(`Imported ${successRows.length} queued sale${successRows.length === 1 ? "" : "s"}.`);
-      }
     } finally {
       setSyncingAll(false);
-      await refreshAll();
     }
   };
 
   const retryFailedRows = async () => {
-    if (retryableRows.length === 0) {
-      toast.error("No failed rows are ready to retry");
-      return;
-    }
-
     setSyncingAll(true);
     try {
-      const response = await ordersAPI.importOfflineSalesBulk(
-        retryableRows.map((row) => row.payload)
-      );
-      const results = Array.isArray(response.data) ? response.data : [];
-      const resultsById = new Map(results.map((item) => [item.clientSaleId, item]));
-      const successRows = retryableRows.filter((row) => resultsById.get(row.clientSaleId)?.success);
-      const failedRows = retryableRows.filter((row) => !resultsById.get(row.clientSaleId)?.success);
-
-      await Promise.all(successRows.map((row) => deleteOfflineSale(row.clientSaleId)));
-      await Promise.all(
-        failedRows.map((row) => {
-          const result = resultsById.get(row.clientSaleId);
-          const message = normalizeImportErrorMessage(result?.message || "Offline import failed");
-          return updateOfflineSale(row.clientSaleId, { lastError: message });
-        })
-      );
-
-      setLastImportSummary({
-        imported: successRows.length,
-        failed: failedRows.length,
-        skipped: 0,
-        message:
-          failedRows.length > 0
-            ? `Retried ${retryableRows.length} failed row${retryableRows.length === 1 ? "" : "s"}. ${failedRows.length} still failed.`
-            : `Retried ${retryableRows.length} failed row${retryableRows.length === 1 ? "" : "s"} successfully.`,
-      });
-
-      if (failedRows.length > 0) {
-        toast.error(`${failedRows.length} retried row${failedRows.length === 1 ? "" : "s"} still failed.`);
-      } else {
-        toast.success(`Retried ${successRows.length} row${successRows.length === 1 ? "" : "s"} successfully.`);
-      }
+      await runPush(retryableRows, { verb: "Retried" });
     } finally {
       setSyncingAll(false);
-      await refreshAll();
     }
   };
 
@@ -753,8 +311,7 @@ const OfflineSalesPage = () => {
               !isOnline ||
               !hasOnlineSession ||
               syncingAll ||
-              checkingShifts ||
-              checkingStock ||
+              refreshing ||
               loadingShift
             }
           >
@@ -770,8 +327,7 @@ const OfflineSalesPage = () => {
               !isOnline ||
               !hasOnlineSession ||
               syncingAll ||
-              checkingShifts ||
-              checkingStock ||
+              refreshing ||
               loadingShift
             }
           >
@@ -819,13 +375,9 @@ const OfflineSalesPage = () => {
             Open login
           </Link>
         </div>
-      ) : checkingShifts || loadingShift ? (
+      ) : refreshing || loadingShift ? (
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-          Checking shift availability for queued branches...
-        </div>
-      ) : checkingStock ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-          Refreshing live stock snapshot for queued branches...
+          Refreshing live stock and shift availability for queued branches...
         </div>
       ) : rowsNeedingShift.length > 0 ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -882,8 +434,7 @@ const OfflineSalesPage = () => {
               !hasOnlineSession ||
               !rowHasOpenShift ||
               syncingId === row.clientSaleId ||
-              checkingShifts ||
-              checkingStock ||
+              refreshing ||
               loadingShift;
 
             return (
