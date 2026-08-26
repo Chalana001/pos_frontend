@@ -288,9 +288,14 @@ const simulateRowStockValidation = (queueRows, itemLookupByBranch) => {
       inventoryItem.aggregateQty -= requiredQty;
     });
 
+    // Warnings, not a gate. These rows are completed, paid, receipted sales — refusing
+    // to import one does not un-sell the goods, it just keeps real revenue off the books
+    // and strands the transaction here forever. The server absorbs the shortfall, lets
+    // stock go negative and audits it, so the operator is told what will go short and
+    // can re-pick a batch, but is never blocked from banking the sale.
     result[row.clientSaleId] = {
       issues,
-      blocking: issues.length > 0,
+      hasShortfall: issues.length > 0,
     };
   }
 
@@ -462,17 +467,16 @@ const OfflineSalesPage = () => {
   );
 
   const getRowStockValidation = useCallback(
-    (row) => rowValidationMap[row.clientSaleId] || { issues: [], blocking: false },
+    (row) => rowValidationMap[row.clientSaleId] || { issues: [], hasShortfall: false },
     [rowValidationMap]
   );
 
+  // An open shift is the only hard requirement — the server rejects an import without
+  // one because the cash would have nowhere to land. A stock shortfall no longer holds a
+  // row back; it is reported and imported.
   const readyRows = useMemo(
-    () =>
-      rows.filter((row) => {
-        const validation = getRowStockValidation(row);
-        return getRowHasOpenShift(row) && !validation.blocking;
-      }),
-    [getRowHasOpenShift, getRowStockValidation, rows]
+    () => rows.filter((row) => getRowHasOpenShift(row)),
+    [getRowHasOpenShift, rows]
   );
 
   const rowsNeedingShift = useMemo(
@@ -481,17 +485,13 @@ const OfflineSalesPage = () => {
   );
 
   const rowsWithStockIssues = useMemo(
-    () => rows.filter((row) => getRowStockValidation(row).blocking),
+    () => rows.filter((row) => getRowStockValidation(row).hasShortfall),
     [getRowStockValidation, rows]
   );
 
   const retryableRows = useMemo(
-    () =>
-      rows.filter((row) => {
-        const validation = getRowStockValidation(row);
-        return !!row.lastError && getRowHasOpenShift(row) && !validation.blocking;
-      }),
-    [getRowHasOpenShift, getRowStockValidation, rows]
+    () => rows.filter((row) => !!row.lastError && getRowHasOpenShift(row)),
+    [getRowHasOpenShift, rows]
   );
 
   const refreshAll = async () => {
@@ -522,8 +522,6 @@ const OfflineSalesPage = () => {
   };
 
   const importOne = async (row) => {
-    const validation = getRowStockValidation(row);
-
     if (!isOnline) {
       toast.error("Go online before importing queued sales");
       return;
@@ -533,11 +531,7 @@ const OfflineSalesPage = () => {
       return;
     }
     if (!getRowHasOpenShift(row)) {
-      toast.error("Open a shift for this branch before importing");
-      return;
-    }
-    if (validation.blocking) {
-      toast.error("Fix stock issues before importing this queued sale");
+      toast.error("The cashier who made this sale needs an open shift before importing");
       return;
     }
 
@@ -887,7 +881,6 @@ const OfflineSalesPage = () => {
               !isOnline ||
               !hasOnlineSession ||
               !rowHasOpenShift ||
-              validation.blocking ||
               syncingId === row.clientSaleId ||
               checkingShifts ||
               checkingStock ||
@@ -905,10 +898,10 @@ const OfflineSalesPage = () => {
                       <div className="text-sm font-semibold text-slate-900">
                         {row.branchName || `Branch ${row.branchId}`}
                       </div>
-                      {validation.blocking ? (
-                        <div className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+                      {rowHasOpenShift && validation.hasShortfall ? (
+                        <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
                           <ShieldAlert size={12} />
-                          Stock issue
+                          Ready · will go short
                         </div>
                       ) : rowHasOpenShift ? (
                         <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
@@ -968,14 +961,19 @@ const OfflineSalesPage = () => {
                   </div>
                 ) : null}
 
-                {validation.blocking ? (
-                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-                    <div className="font-semibold">Stock validation blocked this row:</div>
+                {validation.hasShortfall ? (
+                  <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    <div className="font-semibold">Live stock will go short on import:</div>
                     <ul className="mt-2 list-disc pl-5">
                       {validation.issues.map((issue) => (
                         <li key={`${row.clientSaleId}-${issue.index}-${issue.itemId}`}>{issue.message}</li>
                       ))}
                     </ul>
+                    <div className="mt-2 text-xs">
+                      This sale is already paid, so it still imports. Re-pick a batch above if the
+                      shortfall is wrong; otherwise stock goes negative and the difference is
+                      recorded for reconciliation.
+                    </div>
                   </div>
                 ) : null}
 

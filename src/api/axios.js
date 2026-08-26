@@ -143,6 +143,12 @@ api.delete = (url, config) =>
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Requests marked background — reachability probes, automatic queue pushes — must
+    // never hijack the UI. A probe that meets an expired token would otherwise throw a
+    // cashier onto the login screen in the middle of a checkout, and a probe that fails
+    // on purpose would toast a connection error every time it ran.
+    const isBackgroundRequest = error.config?.meta?.background === true;
+
     if (!error.response) {
       error.isBackendConnectionError = true;
       error.response = {
@@ -151,7 +157,13 @@ api.interceptors.response.use(
           message: BACKEND_CONNECTION_ERROR_MESSAGE,
         },
       };
-      toast.error(BACKEND_CONNECTION_ERROR_MESSAGE, { id: 'backend-connection-error' });
+      if (!isBackgroundRequest) {
+        toast.error(BACKEND_CONNECTION_ERROR_MESSAGE, { id: 'backend-connection-error' });
+      }
+      return Promise.reject(error);
+    }
+
+    if (isBackgroundRequest) {
       return Promise.reject(error);
     }
 

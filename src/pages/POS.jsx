@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronRight, Printer, WifiOff } from "lucide-react";
+import { forgetServerReachable, isServerReachable, markServerReachable } from "../utils/serverReachability";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { useSearchOnType } from "../hooks/useSearchOnType";
 import { itemsAPI } from "../api/items.api";
@@ -210,6 +211,7 @@ const POS = () => {
   const [printingKot, setPrintingKot] = useState(false);
   const [freeLocalSalesSummary, setFreeLocalSalesSummary] = useState({ count: 0, total: 0 });
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
+  const [serverUnreachable, setServerUnreachable] = useState(false);
   const [, setKotStateVersion] = useState(0);
   const [cartPanelWidth, setCartPanelWidth] = useState(470);
   const [isResizingPanels, setIsResizingPanels] = useState(false);
@@ -242,9 +244,12 @@ const POS = () => {
     ? (cartMode || (canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE))
     : null;
   const queueCartActive = activeCartMode === CART_MODES.QUEUE;
+  // serverUnreachable is set by a failed reachability probe at checkout. Folding it in
+  // here means the POS visibly switches to queue mode after the first failure instead of
+  // making every subsequent sale wait for the probe to time out again.
   const shouldUseServerForCheckout = activeCartMode
-    ? activeCartMode === CART_MODES.ONLINE && canUseServer && !isFreeLocalSalesPlan
-    : canUseServer && !isFreeLocalSalesPlan;
+    ? activeCartMode === CART_MODES.ONLINE && canUseServer && !isFreeLocalSalesPlan && !serverUnreachable
+    : canUseServer && !isFreeLocalSalesPlan && !serverUnreachable;
   const stockOverrideCanProceed =
     shouldUseServerForCheckout &&
     configuration?.stockOverrideMode !== "BLOCK" &&
@@ -404,6 +409,24 @@ const POS = () => {
 
     return () => window.removeEventListener(OFFLINE_EVENTS.OFFLINE_SALES_CHANGED, loadQueueCount);
   }, []);
+
+  // Once a probe has failed the POS stays in queue mode, so something has to notice the
+  // server coming back. Without this a five-minute ISP blip would keep the till queueing
+  // for the rest of the shift.
+  useEffect(() => {
+    if (!serverUnreachable) return undefined;
+
+    const recheck = async () => {
+      forgetServerReachable();
+      if (await isServerReachable()) {
+        setServerUnreachable(false);
+        toast.success("Server is back. New sales will go through normally.");
+      }
+    };
+
+    const intervalId = window.setInterval(recheck, 30000);
+    return () => window.clearInterval(intervalId);
+  }, [serverUnreachable]);
 
   useEffect(() => {
     if (!canAddWarranty) {
@@ -1602,6 +1625,24 @@ const POS = () => {
       }
       const checkoutIdempotencyKey = checkoutIdempotencyKeyRef.current;
 
+      // navigator.onLine only reports that a network interface is up. Confirm the SERVER
+      // answers before committing the sale to it — a shop with a live router and a dead
+      // ISP reads as fully online, so checkout went out, failed, and the sale died in a
+      // toast instead of going to the queue that exists for exactly this.
+      let useServerForThisCheckout = shouldUseServerForCheckout;
+      if (useServerForThisCheckout && !(await isServerReachable())) {
+        useServerForThisCheckout = false;
+        setServerUnreachable(true);
+
+        // Only a fully paid cash takeaway can be queued; the rest need server state the
+        // browser does not have, so those genuinely cannot proceed.
+        if (creditAmount > 0 || orderType !== ORDER_TYPES.CASH || saleMode !== SALE_MODES.TAKEAWAY) {
+          failCheckout("Cannot reach the server. Only fully paid cash takeaway sales can be saved offline.");
+          return;
+        }
+        toast("Server unreachable — saving this sale to the offline queue.");
+      }
+
       const orderItems = cartItems.map((item) => createOrderItemPayload(item, true));
       const orderData = {
         branchId: effectiveBranchId,
@@ -1616,7 +1657,7 @@ const POS = () => {
         note: "",
       };
 
-      if (!shouldUseServerForCheckout) {
+      if (!useServerForThisCheckout) {
         // Reused, not regenerated: offlineSales is keyed by clientSaleId and
         // written with put(), so a double-click overwrites the same queued row
         // instead of queueing a second sale that would sync as a second order.
@@ -1769,6 +1810,9 @@ const POS = () => {
           throw error;
         }
       }
+      // A completed order is the strongest possible proof the server is up, so the next
+      // checkout can skip its probe entirely.
+      markServerReachable();
       toast.success(`Order ${response.data.invoiceNo} success!`);
 
       const storeName = user?.shopName || BRAND_NAME_UPPER;
