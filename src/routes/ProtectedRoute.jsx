@@ -21,7 +21,15 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false 
     return <Navigate to="/login" replace />;
   }
 
+  // An online-only page reached while offline. Anyone who can sell is sent to the POS,
+  // which keeps working offline — the message below used to be a dead end with no link
+  // and no button, which is exactly the wrong thing to show a cashier mid-outage.
+  // /pos is not an online-only route, so this cannot loop.
   if (requiresOnline && (!isOnline || !hasOnlineSession)) {
+    if (hasPermission(user?.role, 'ACCESS_POS')) {
+      return <Navigate to="/pos" replace />;
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">

@@ -31,11 +31,24 @@ export const AuthProvider = ({ children }) => {
     setOfflineCandidate(cachedUser);
   }, []);
 
+  // Keep an existing offline-session snapshot in step with the live user record. The
+  // snapshot is frozen at the moment it was created, while pos_user is refreshed on every
+  // online bootstrap — so a changed role, branch or plan never reached the offline session.
+  // Only refresh a snapshot that is already there and belongs to this same user: login()
+  // clears it on purpose, so a new user must never inherit the previous one's.
+  const refreshOfflineSessionSnapshot = useCallback((freshUser) => {
+    const existing = getOfflineSessionUser();
+    if (existing && existing.userId === freshUser?.userId) {
+      setOfflineSessionUser(freshUser);
+    }
+  }, []);
+
   const syncCachedUser = useCallback(async (baseUser) => {
     if (!baseUser?.userId) return;
     await saveCachedUser(baseUser);
+    refreshOfflineSessionSnapshot(baseUser);
     await refreshOfflineCandidate();
-  }, [refreshOfflineCandidate]);
+  }, [refreshOfflineCandidate, refreshOfflineSessionSnapshot]);
 
   const fetchAndStoreSubscription = useCallback(async (baseUser) => {
     if (!baseUser) return baseUser;
@@ -101,6 +114,18 @@ export const AuthProvider = ({ children }) => {
           await clearFreeLocalSalesIfNewDay();
         }
         setUserState(offlineSessionUser);
+        setAuthMode("offline");
+      } else if (currentUser && token) {
+        // The connection dropped on a session that is still signed in — the stored user
+        // and token are untouched, the device has not changed, and this session was
+        // already unlocked. Nulling the user here threw the cashier onto the PIN screen
+        // with a live cart open. Downgrade the mode and keep them working; the PIN keeps
+        // its real job of unlocking a browser reloaded with no session at all.
+        setOfflineSessionUser(currentUser);
+        if (currentUser.planName === "FREE" || currentUser.planName === "MONTHLY_DEMO") {
+          await clearFreeLocalSalesIfNewDay();
+        }
+        setUserState(currentUser);
         setAuthMode("offline");
       } else {
         setUserState(null);

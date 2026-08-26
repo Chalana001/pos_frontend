@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronRight, Printer } from "lucide-react";
+import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronRight, Printer, WifiOff } from "lucide-react";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { useSearchOnType } from "../hooks/useSearchOnType";
 import { itemsAPI } from "../api/items.api";
@@ -45,6 +46,8 @@ import {
   getCachedItemsForBranch,
   getCachedReceiptSettings,
   getFreeLocalSalesSummary,
+  getOfflineSalesCount,
+  OFFLINE_EVENTS,
 } from "../offline/db";
 
 const isMeasuredItem = (item) =>
@@ -207,6 +210,7 @@ const POS = () => {
   const [savingDraft, setSavingDraft] = useState(false);
   const [printingKot, setPrintingKot] = useState(false);
   const [freeLocalSalesSummary, setFreeLocalSalesSummary] = useState({ count: 0, total: 0 });
+  const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [, setKotStateVersion] = useState(0);
   const [cartPanelWidth, setCartPanelWidth] = useState(470);
   const [isResizingPanels, setIsResizingPanels] = useState(false);
@@ -382,6 +386,21 @@ const POS = () => {
       .then(setFreeLocalSalesSummary)
       .catch(() => setFreeLocalSalesSummary({ count: 0, total: 0 }));
   }, [isFreeLocalSalesPlan]);
+
+  // Drives the "N waiting to sync" count on the offline banner. The same event the
+  // header listens to fires on every queue write, so the count moves as sales are made.
+  useEffect(() => {
+    const loadQueueCount = () => {
+      getOfflineSalesCount()
+        .then(setOfflineQueueCount)
+        .catch(() => setOfflineQueueCount(0));
+    };
+
+    loadQueueCount();
+    window.addEventListener(OFFLINE_EVENTS.OFFLINE_SALES_CHANGED, loadQueueCount);
+
+    return () => window.removeEventListener(OFFLINE_EVENTS.OFFLINE_SALES_CHANGED, loadQueueCount);
+  }, []);
 
   useEffect(() => {
     if (!canAddWarranty) {
@@ -1850,6 +1869,33 @@ const POS = () => {
 
   return (
     <div className="page-enter flex h-full flex-col gap-1 overflow-y-auto bg-slate-100 p-1 font-sans text-slate-800 custom-scrollbar lg:gap-2 lg:overflow-hidden lg:p-2">
+
+      {/* The offline state has to be unmissable. The two indicators that existed before
+          both hid themselves below a breakpoint — the queue-mode line inside `hidden
+          sm:block`, the header pill inside `hidden md:inline-flex` — so a tablet-width
+          terminal showed nothing at all while queueing sales. This banner is always on. */}
+      {!shouldUseServerForCheckout ? (
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 lg:rounded-2xl lg:px-4">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
+            <WifiOff size={14} />
+            {isFreeLocalSalesPlan ? "Local mode" : "Offline — queue mode"}
+          </span>
+          <span className="text-xs font-medium">
+            {isFreeLocalSalesPlan
+              ? `FREE package active. Today local: ${formatCurrency(freeLocalSalesSummary.total)} (${freeLocalSalesSummary.count})`
+              : "Cash takeaway only. This sale stays on this device until you import it."}
+          </span>
+          {!isFreeLocalSalesPlan && offlineQueueCount > 0 ? (
+            <Link
+              to="/offline-sales"
+              className="ml-auto rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-900 transition hover:bg-amber-300"
+            >
+              {offlineQueueCount} waiting to sync
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="flex flex-1 flex-col gap-1 lg:h-full lg:flex-row lg:gap-2 lg:overflow-hidden">
         <div className="sales-surface sales-panel-enter flex h-[58vh] min-w-0 flex-shrink-0 flex-col overflow-hidden rounded-xl lg:h-full lg:flex-1 lg:rounded-2xl relative" style={{ animationDelay: "90ms" }}>
 
@@ -1859,13 +1905,6 @@ const POS = () => {
                 <h1 className="text-sm lg:text-xl font-bold text-slate-800">
                   New Sale {branchLabel ? `(Branch: ${branchLabel})` : ""}
                 </h1>
-                {!shouldUseServerForCheckout ? (
-                  <p className="mt-1 text-xs font-medium text-amber-600">
-                    {isFreeLocalSalesPlan
-                      ? `FREE package active. Today local: ${formatCurrency(freeLocalSalesSummary.total)} (${freeLocalSalesSummary.count})`
-                      : "Queue mode active. This sale will stay local until you import it."}
-                  </p>
-                ) : null}
               </div>
               <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
                 <div className="relative flex-1">
@@ -2115,7 +2154,12 @@ const POS = () => {
             onAddCustomer={() => setShowCustomerSelect(true)}
             focusSearch={focusSearch}
             cartSummary={cartSummary}
-            checkoutLabel={saleMode === SALE_MODES.DINE_IN ? "Checkout Table (F9)" : "Checkout (F9)"}
+            checkoutLabel={
+              !shouldUseServerForCheckout
+                ? (isFreeLocalSalesPlan ? "Save Sale (F9)" : "Save to Queue (F9)")
+                : (saleMode === SALE_MODES.DINE_IN ? "Checkout Table (F9)" : "Checkout (F9)")
+            }
+            queueMode={!shouldUseServerForCheckout}
             sideAction={(
               <button
                 type="button"

@@ -27,6 +27,7 @@ const Cart = ({
   footerActions,
   sideAction,
   checkoutLabel = "Checkout (F9)",
+  queueMode = false,
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
   const cartItems = Array.isArray(items) ? items : [];
@@ -406,7 +407,7 @@ const Cart = ({
           <Button
             onClick={onCheckout}
             disabled={cartItems.length === 0 || loading}
-            className={`${sideAction ? "col-span-3" : "col-span-1"} h-[50px] bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-base shadow-md shadow-blue-200 flex items-center justify-center gap-2 transition-all active:scale-95`}
+            className={`${sideAction ? "col-span-3" : "col-span-1"} h-[50px] ${queueMode ? "bg-amber-500 hover:bg-amber-600 shadow-amber-200" : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"} text-white rounded-xl font-bold text-base shadow-md flex items-center justify-center gap-2 transition-all active:scale-95`}
           >
             {loading ? "Processing..." : checkoutLabel}
           </Button>

@@ -59,7 +59,7 @@ const Login = () => {
     try {
       const offlineUser = await unlockOffline(offlinePin);
       toast.success(t(`Offline access ready for ${offlineUser.username}`));
-      navigate('/pos');
+      navigate('/pos', { replace: true });
     } catch (error) {
       toast.error(t(error.message || 'Offline PIN is invalid'));
     } finally {

@@ -8,6 +8,7 @@ import { BranchProvider } from '../context/BranchContext';
 import { ShiftProvider } from '../context/ShiftContext';
 import { AppConfigurationProvider } from '../context/AppConfigurationContext';
 import ProtectedRoute from './ProtectedRoute';
+import { hasPermission } from '../utils/permissions';
 
 const Login = lazy(() => import('../pages/Login'));
 const Register = lazy(() => import('../pages/Register'));
@@ -71,6 +72,28 @@ const RouteFallback = () => (
 
 const withSuspense = (node) => <Suspense fallback={<RouteFallback />}>{node}</Suspense>;
 
+/**
+ * Where "/" lands.
+ *
+ * Sending everyone to the dashboard stranded them: the dashboard is an online-only
+ * route, so an offline user got "Online Connection Required", and a cashier — who has
+ * no dashboard permission — got "Access Denied". Both are dead ends, and "/" is where
+ * the login route and the offline PIN unlock both send you.
+ *
+ * Anyone who cannot reach the dashboard right now goes to the POS instead. Every role
+ * holds ACCESS_POS, and /pos is deliberately not an online-only route.
+ */
+const HomeRedirect = () => {
+  const { user, isOnline, hasOnlineSession, isOfflineSession } = useAuth();
+  const canUseServer = isOnline && hasOnlineSession && !isOfflineSession;
+
+  if (!canUseServer || !hasPermission(user?.role, 'VIEW_DASHBOARD')) {
+    return <Navigate to="/pos" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+};
+
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
 
@@ -78,7 +101,7 @@ const AppRoutes = () => {
     <Routes>
       <Route
         path="/login"
-        element={!isAuthenticated ? withSuspense(<Login />) : <Navigate to="/" />}
+        element={!isAuthenticated ? withSuspense(<Login />) : <Navigate to="/" replace />}
       />
       <Route path="/register" element={withSuspense(<Register />)} />
 
@@ -105,7 +128,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         )}
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<HomeRedirect />} />
 
         <Route path="dashboard" element={<ProtectedRoute permission="VIEW_DASHBOARD" requiresOnline>{withSuspense(<Dashboard />)}</ProtectedRoute>} />
 

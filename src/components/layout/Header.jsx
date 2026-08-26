@@ -352,7 +352,9 @@ const Header = ({ onOpenSidebar, sidebarCollapsed }) => {
             </span>
           </Link>
 
-          <div className={`shell-panel-hover hidden h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold shadow-sm md:inline-flex ${isOnline ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+          {/* Offline is the state worth screen space, so it shows at every width.
+              "Online" is the boring default and stays hidden on narrow screens. */}
+          <div className={`shell-panel-hover h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold shadow-sm ${isOnline ? 'hidden border-emerald-200 bg-emerald-50 text-emerald-700 md:inline-flex' : 'inline-flex border-amber-200 bg-amber-50 text-amber-700'}`}>
             {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
             {isOnline ? 'Online' : 'Offline'}
           </div>
