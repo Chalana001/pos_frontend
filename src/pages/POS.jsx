@@ -48,7 +48,7 @@ import {
   getCachedItemsForBranch,
   getCachedReceiptSettings,
   getFreeLocalSalesSummary,
-  getOfflineSalesCount,
+  getOfflineQueuePressure,
   nextOfflineInvoiceNo,
   OFFLINE_EVENTS,
 } from "../offline/db";
@@ -210,7 +210,7 @@ const POS = () => {
   const [savingDraft, setSavingDraft] = useState(false);
   const [printingKot, setPrintingKot] = useState(false);
   const [freeLocalSalesSummary, setFreeLocalSalesSummary] = useState({ count: 0, total: 0 });
-  const [offlineQueueCount, setOfflineQueueCount] = useState(0);
+  const [queuePressure, setQueuePressure] = useState({ count: 0, oldestAt: null, ageHours: 0 });
   const [serverUnreachable, setServerUnreachable] = useState(false);
   const [, setKotStateVersion] = useState(0);
   const [cartPanelWidth, setCartPanelWidth] = useState(470);
@@ -399,15 +399,20 @@ const POS = () => {
   // header listens to fires on every queue write, so the count moves as sales are made.
   useEffect(() => {
     const loadQueueCount = () => {
-      getOfflineSalesCount()
-        .then(setOfflineQueueCount)
-        .catch(() => setOfflineQueueCount(0));
+      getOfflineQueuePressure()
+        .then(setQueuePressure)
+        .catch(() => setQueuePressure({ count: 0, oldestAt: null, ageHours: 0 }));
     };
 
     loadQueueCount();
     window.addEventListener(OFFLINE_EVENTS.OFFLINE_SALES_CHANGED, loadQueueCount);
+    // The age matters as much as the count, and nothing fires an event as time passes.
+    const ageTimer = window.setInterval(loadQueueCount, 300000);
 
-    return () => window.removeEventListener(OFFLINE_EVENTS.OFFLINE_SALES_CHANGED, loadQueueCount);
+    return () => {
+      window.removeEventListener(OFFLINE_EVENTS.OFFLINE_SALES_CHANGED, loadQueueCount);
+      window.clearInterval(ageTimer);
+    };
   }, []);
 
   // Once a probe has failed the POS stays in queue mode, so something has to notice the
@@ -1955,14 +1960,40 @@ const POS = () => {
               ? `FREE package active. Today local: ${formatCurrency(freeLocalSalesSummary.total)} (${freeLocalSalesSummary.count})`
               : "Cash takeaway only. This sale stays on this device until you import it."}
           </span>
-          {!isFreeLocalSalesPlan && offlineQueueCount > 0 ? (
+          {!isFreeLocalSalesPlan && queuePressure.count > 0 ? (
             <Link
               to="/offline-sales"
               className="ml-auto rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-900 transition hover:bg-amber-300"
             >
-              {offlineQueueCount} waiting to sync
+              {queuePressure.count} waiting to sync
             </Link>
           ) : null}
+        </div>
+      ) : null}
+
+      {/* Offline mode is a bounded promise: cash takeaway sales through a SHORT outage,
+          on one terminal, in one browser profile that nothing backs up. Past these
+          numbers the honest thing is to say so rather than let it keep looking fine. */}
+      {!isFreeLocalSalesPlan && (queuePressure.count >= 50 || queuePressure.ageHours >= 6) ? (
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-rose-900 lg:rounded-2xl lg:px-4">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
+            <AlertTriangle size={14} />
+            Sync overdue
+          </span>
+          <span className="text-xs font-medium">
+            {queuePressure.count} sale{queuePressure.count === 1 ? "" : "s"} unsynced
+            {queuePressure.ageHours >= 1
+              ? `, oldest ${Math.floor(queuePressure.ageHours)}h ago`
+              : ""}
+            . These exist only on this PC until they reach the server — reconnect soon, or
+            export them from the queue page.
+          </span>
+          <Link
+            to="/offline-sales"
+            className="ml-auto rounded-full bg-rose-200 px-2.5 py-0.5 text-xs font-bold text-rose-900 transition hover:bg-rose-300"
+          >
+            Open queue
+          </Link>
         </div>
       ) : null}
 

@@ -12,8 +12,14 @@ import {
 } from "../utils/auth";
 import { authAPI } from "../api/auth.api";
 import api from "../api/axios";
-import { clearFreeLocalSalesIfNewDay, getLastCachedUser, saveCachedUser } from "../offline/db";
-import { createLocalPinRecord, verifyLocalPin } from "../offline/pin";
+import {
+  clearFreeLocalSalesIfNewDay,
+  getCachedUserById,
+  getCachedUsersWithPin,
+  getLastCachedUser,
+  saveCachedUser,
+} from "../offline/db";
+import { createLocalPinRecord, isLegacyPinRecord, verifyLocalPin } from "../offline/pin";
 import useNetworkStatus from "../hooks/useNetworkStatus";
 
 const AuthContext = createContext(null);
@@ -25,10 +31,15 @@ export const AuthProvider = ({ children }) => {
   const [planLoading, setPlanLoading] = useState(false);
   const [authMode, setAuthMode] = useState(null);
   const [offlineCandidate, setOfflineCandidate] = useState(null);
+  const [offlineCandidates, setOfflineCandidates] = useState([]);
 
   const refreshOfflineCandidate = useCallback(async () => {
-    const cachedUser = await getLastCachedUser();
+    const [cachedUser, enrolledUsers] = await Promise.all([
+      getLastCachedUser(),
+      getCachedUsersWithPin(),
+    ]);
     setOfflineCandidate(cachedUser);
+    setOfflineCandidates(enrolledUsers);
   }, []);
 
   // Keep an existing offline-session snapshot in step with the live user record. The
@@ -192,14 +203,28 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  const unlockOffline = async (pin) => {
-    const cachedUser = await getLastCachedUser();
+  const unlockOffline = async (pin, requestedUserId = null) => {
+    // Any user enrolled on this device may unlock it, not only the one who synced last.
+    const cachedUser = requestedUserId
+      ? await getCachedUserById(Number(requestedUserId))
+      : await getLastCachedUser();
+
     if (!cachedUser) {
       throw new Error("No offline user is available on this device");
     }
     const valid = await verifyLocalPin(pin, cachedUser);
     if (!valid) {
       throw new Error("Invalid offline PIN");
+    }
+
+    // A successful unlock is the only moment the plaintext PIN is in hand, so it is the
+    // only moment a pre-PBKDF2 record can be re-derived without making the user reset it.
+    if (isLegacyPinRecord(cachedUser)) {
+      try {
+        await saveCachedUser({ ...cachedUser, ...(await createLocalPinRecord(pin)) });
+      } catch (error) {
+        console.error("Could not upgrade the stored offline PIN hash", error);
+      }
     }
 
     const offlineUser = {
@@ -263,8 +288,9 @@ export const AuthProvider = ({ children }) => {
     loading,
     planLoading,
     offlineCandidate,
-    canUnlockOffline: !!offlineCandidate?.pinHash && !!offlineCandidate?.pinSalt,
-  }), [authMode, isOnline, loading, offlineCandidate, planLoading, user]);
+    offlineCandidates,
+    canUnlockOffline: offlineCandidates.length > 0,
+  }), [authMode, isOnline, loading, offlineCandidate, offlineCandidates, planLoading, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

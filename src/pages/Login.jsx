@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -18,8 +18,17 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { t } = useLanguage();
   
-  const { login, unlockOffline, isOnline, canUnlockOffline, offlineCandidate } = useAuth();
+  const { login, unlockOffline, isOnline, canUnlockOffline, offlineCandidate, offlineCandidates } = useAuth();
   const navigate = useNavigate();
+
+  // Defaults to whoever synced most recently, which is almost always the person standing
+  // at the till; the picker only appears when more than one user enrolled on this device.
+  const [offlineUserId, setOfflineUserId] = useState('');
+  useEffect(() => {
+    if (offlineUserId) return;
+    const fallback = offlineCandidate?.userId ?? offlineCandidates[0]?.userId;
+    if (fallback) setOfflineUserId(String(fallback));
+  }, [offlineCandidate?.userId, offlineCandidates, offlineUserId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,7 +66,7 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const offlineUser = await unlockOffline(offlinePin);
+      const offlineUser = await unlockOffline(offlinePin, offlineUserId || null);
       toast.success(t(`Offline access ready for ${offlineUser.username}`));
       navigate('/pos', { replace: true });
     } catch (error) {
@@ -143,13 +152,34 @@ const Login = () => {
                 </div>
                 <p className="mt-2">
                   {canUnlockOffline
-                    ? t(`Unlock POS for ${offlineCandidate?.username || 'cached user'} with your device PIN.`)
-                    : t('This device does not have an offline PIN setup yet. Go online and sign in first.')}
+                    ? t('Unlock POS with the PIN you set on this device.')
+                    : t('Nobody has set an offline PIN on this device yet. Go online, sign in, and set one from the user menu.')}
                 </p>
               </div>
 
               {canUnlockOffline && (
                 <form onSubmit={handleOfflineUnlock} className="space-y-4">
+                  {/* A PIN record only exists on the device where that PIN was set, so this
+                      lists who enrolled here — not everyone who has an account. */}
+                  {offlineCandidates.length > 1 ? (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-200" htmlFor="offline-user">
+                        {t('User')}
+                      </label>
+                      <select
+                        id="offline-user"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        value={offlineUserId}
+                        onChange={(e) => setOfflineUserId(e.target.value)}
+                      >
+                        {offlineCandidates.map((candidate) => (
+                          <option key={candidate.userId} value={candidate.userId}>
+                            {candidate.username}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
                   <Input
                     label={t('Offline PIN')}
                     type="password"

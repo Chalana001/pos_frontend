@@ -169,6 +169,21 @@ export const getCachedUserById = async (userId) => {
   return offlineDb.cachedUsers.get(userId);
 };
 
+/**
+ * Every user who can unlock THIS device.
+ *
+ * appMeta.lastOfflineUserId holds a single id, so a shared counter PC could only ever be
+ * unlocked by whoever synced most recently — the other cashiers' records were sitting in
+ * cachedUsers with nothing pointing at them. A PIN record only exists on the device where
+ * that PIN was set, which is why this is the list of who enrolled here, not who exists.
+ */
+export const getCachedUsersWithPin = async () => {
+  const users = await offlineDb.cachedUsers.toArray();
+  return users
+    .filter((user) => user?.pinHash && user?.pinSalt)
+    .sort((left, right) => String(left.username || "").localeCompare(String(right.username || "")));
+};
+
 export const getLastCachedUser = async () => {
   const meta = await offlineDb.appMeta.get("lastOfflineUserId");
   if (!meta?.value) return null;
@@ -302,6 +317,45 @@ export const clearFreeLocalSalesIfNewDay = async () => {
   return localRows.length > 0;
 };
 
+/**
+ * How long the queue has been carrying unsynced sales, and how many.
+ *
+ * Offline mode is a bounded promise — cash takeaway sales through a short outage, on one
+ * terminal, stored in one browser profile that nothing backs up. Once the numbers get
+ * large the honest thing is to say so out loud rather than let it look fine.
+ */
+export const getOfflineQueuePressure = async () => {
+  const rows = (await offlineDb.offlineSales.toArray()).filter((row) => !isLocalOnlySale(row));
+  if (rows.length === 0) {
+    return { count: 0, oldestAt: null, ageHours: 0 };
+  }
+
+  const timestamps = rows
+    .map((row) => new Date(row.offlineSoldAt || row.createdAt).getTime())
+    .filter((value) => Number.isFinite(value));
+  const oldest = timestamps.length > 0 ? Math.min(...timestamps) : Date.now();
+
+  return {
+    count: rows.length,
+    oldestAt: new Date(oldest).toISOString(),
+    ageHours: Math.max(0, (Date.now() - oldest) / 3600000),
+  };
+};
+
+/**
+ * The unsynced queue as a portable file. This is the only bailout if the PC dies or the
+ * browser profile is cleared, because these rows exist nowhere else.
+ */
+export const exportOfflineSales = async () => {
+  const rows = (await offlineDb.offlineSales.toArray()).filter((row) => !isLocalOnlySale(row));
+  return {
+    exportedAt: new Date().toISOString(),
+    schema: "pos-offline-sales/1",
+    count: rows.length,
+    rows,
+  };
+};
+
 export const updateOfflineSale = async (clientSaleId, patch) => {
   await offlineDb.offlineSales.update(clientSaleId, patch);
   emitOfflineSalesChanged();
@@ -312,10 +366,3 @@ export const deleteOfflineSale = async (clientSaleId) => {
   emitOfflineSalesChanged();
 };
 
-export const replaceOfflineSales = async (rows) => {
-  await offlineDb.offlineSales.clear();
-  if (Array.isArray(rows) && rows.length > 0) {
-    await offlineDb.offlineSales.bulkPut(rows);
-  }
-  emitOfflineSalesChanged();
-};

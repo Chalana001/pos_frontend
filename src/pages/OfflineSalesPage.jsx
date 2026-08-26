@@ -4,6 +4,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock3,
+  Download,
   Printer,
   RefreshCw,
   RotateCcw,
@@ -20,6 +21,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import ReceiptPrinter from "../components/pos/ReceiptPrinter";
 import {
   deleteOfflineSale,
+  exportOfflineSales,
   getCachedReceiptSettings,
   OFFLINE_EVENTS,
   updateOfflineSale,
@@ -220,6 +222,26 @@ const OfflineSalesPage = () => {
     }
   };
 
+  // These rows exist in one browser profile and nowhere else, so a file on disk is the
+  // only thing standing between a dead PC and losing them.
+  const exportQueue = async () => {
+    try {
+      const payload = await exportOfflineSales();
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `offline-sales-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${payload.count} queued sale${payload.count === 1 ? "" : "s"}.`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not export the queue");
+    }
+  };
+
   const removeRow = async (clientSaleId) => {
     await deleteOfflineSale(clientSaleId);
     setLastImportSummary(null);
@@ -302,6 +324,10 @@ const OfflineSalesPage = () => {
           <Button type="button" variant="outline" onClick={refreshAll}>
             <RefreshCw size={16} className="mr-2" />
             Refresh
+          </Button>
+          <Button type="button" variant="outline" onClick={exportQueue} disabled={rows.length === 0}>
+            <Download size={16} className="mr-2" />
+            Export
           </Button>
           <Button
             type="button"
