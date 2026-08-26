@@ -1,4 +1,5 @@
 import Dexie from "dexie";
+import { displayToBaseQuantity, getDisplayStockBaseQuantity } from "../utils/stockQuantity";
 
 const OFFLINE_SALES_EVENT = "pos:offline-sales-updated";
 
@@ -127,6 +128,91 @@ export const getLastCachedUser = async () => {
   const meta = await offlineDb.appMeta.get("lastOfflineUserId");
   if (!meta?.value) return null;
   return getCachedUserById(meta.value);
+};
+
+// Stock is mirrored across several fields depending on where an item came from, and
+// getDisplayStockQuantity reads whichever it finds first. Both lists have to move or
+// the cashier keeps seeing the pre-sale number on screen.
+const BASE_QTY_FIELDS = ["qty", "availableBaseQty", "totalBaseQty", "baseQty", "totalQuantity"];
+const DISPLAY_QTY_FIELDS = ["displayQty", "displayQuantity", "availableQty"];
+
+const subtractQuantityFields = (entity, consumedBaseQty, itemContext) => {
+  if (!entity || !(consumedBaseQty > 0)) return entity;
+
+  const next = { ...entity };
+  const consumedDisplayQty = getDisplayStockBaseQuantity(consumedBaseQty, itemContext);
+
+  BASE_QTY_FIELDS.forEach((field) => {
+    if (next[field] !== undefined && next[field] !== null) {
+      next[field] = Math.max(0, Number(next[field] || 0) - consumedBaseQty);
+    }
+  });
+
+  DISPLAY_QTY_FIELDS.forEach((field) => {
+    if (next[field] !== undefined && next[field] !== null) {
+      next[field] = Math.max(0, Number(next[field] || 0) - consumedDisplayQty);
+    }
+  });
+
+  return next;
+};
+
+/**
+ * Decrement cached stock for a sale that was just written to the offline queue.
+ *
+ * Without this the cache never moves while offline, so the second sale of an item sees
+ * exactly the stock the first one saw and a branch with three units on hand will happily
+ * sell thirty. The conflict only surfaced at import, with the receipts already printed.
+ *
+ * The consumption mirrors what simulateRowStockValidation replays at import time —
+ * explicit batch if one was chosen, FIFO by ascending batchId otherwise — so what the
+ * cashier sees offline and what the queue page reports later agree.
+ *
+ * This makes one terminal honest, not the whole shop: two browsers cannot see each
+ * other's IndexedDB, so a second till still sells against its own copy of the stock.
+ */
+export const applyOfflineStockUsage = async (branchId, lines) => {
+  if (!branchId || !Array.isArray(lines) || lines.length === 0) return;
+
+  await offlineDb.transaction("rw", offlineDb.cachedItems, async () => {
+    for (const line of lines) {
+      const itemId = Number(line?.itemId);
+      if (!itemId) continue;
+
+      const row = await offlineDb.cachedItems.get([Number(branchId), itemId]);
+      const item = row?.data;
+      // SERVICE and RECIPE items carry no stock of their own.
+      if (!item || item.itemType === "SERVICE" || item.itemType === "RECIPE") continue;
+
+      const requiredBaseQty = Math.round(
+        displayToBaseQuantity(Number(line.qty || 0), item, line.qtyUnit || item.defaultUnit)
+      );
+      if (!Number.isFinite(requiredBaseQty) || requiredBaseQty <= 0) continue;
+
+      const batches = sortBatchesForFifo(item.batches);
+      let remainingQty = requiredBaseQty;
+      let nextBatches = batches;
+
+      if (batches.length > 0) {
+        nextBatches = batches.map((batch) => {
+          if (remainingQty <= 0) return batch;
+          if (line.batchId && Number(batch.batchId) !== Number(line.batchId)) return batch;
+
+          const availableQty = Number(batch.qty || 0);
+          if (availableQty <= 0) return batch;
+
+          const usedQty = Math.min(availableQty, remainingQty);
+          remainingQty -= usedQty;
+          return subtractQuantityFields(batch, usedQty, item);
+        });
+      }
+
+      // Whatever a batch could not cover still leaves the shelf, so the aggregate drops
+      // by the full amount either way.
+      const nextItem = subtractQuantityFields({ ...item, batches: nextBatches }, requiredBaseQty, item);
+      await offlineDb.cachedItems.put({ ...row, data: nextItem });
+    }
+  });
 };
 
 export const addOfflineSale = async (saleRecord) => {

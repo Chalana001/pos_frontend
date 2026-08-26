@@ -41,6 +41,7 @@ import {
 } from "../utils/stockQuantity";
 import {
   addOfflineSale,
+  applyOfflineStockUsage,
   cacheItemsForBranch,
   cacheReceiptSettings,
   getCachedItemsForBranch,
@@ -1658,6 +1659,16 @@ const POS = () => {
           cashierName,
           note: isFreeLocalSalesPlan ? "Local FREE sale" : "Offline queued sale",
         };
+        // Shared by the queued row and by the cached-stock decrement below, so the
+        // quantities that get imported and the quantities that leave the local cache
+        // can never disagree.
+        const offlineItemsPreview = cartItems.map((item) => ({
+          itemId: item.itemId,
+          itemName: item.name,
+          batchId: item.batchId,
+          qty: item.qty,
+          qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : item.defaultUnit,
+        }));
         await addOfflineSale({
           clientSaleId,
           localOnly: isFreeLocalSalesPlan,
@@ -1671,13 +1682,7 @@ const POS = () => {
           createdAt: soldAt,
           offlineSoldAt: soldAt,
           lastError: null,
-          itemsPreview: cartItems.map((item) => ({
-            itemId: item.itemId,
-            itemName: item.name,
-            batchId: item.batchId,
-            qty: item.qty,
-            qtyUnit: item.weightItem ? (item.qtyUnit || item.defaultUnit) : item.defaultUnit,
-          })),
+          itemsPreview: offlineItemsPreview,
           printPayload: {
             orderData: receiptOrderData,
             cartItems: receiptCartItems,
@@ -1701,6 +1706,12 @@ const POS = () => {
         });
         if (isFreeLocalSalesPlan) {
           setFreeLocalSalesSummary(await getFreeLocalSalesSummary());
+        } else {
+          // The queue write alone left cached stock untouched, so the next sale of this
+          // item saw the same units again and a cashier could sell three units thirty
+          // times. FREE plans are skipped: their stock is unmanaged by design.
+          await applyOfflineStockUsage(effectiveBranchId, offlineItemsPreview);
+          await fetchProducts(effectiveBranchId);
         }
 
         if (configuration.printReceiptAfterCheckout !== false && printRef.current) {

@@ -20,6 +20,22 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   </React.StrictMode>
 );
 
+// Unsynced offline sales are the only copy of themselves — they exist in this browser
+// profile's IndexedDB and nowhere else. Without persistence the browser is free to evict
+// that storage under disk pressure and take the queue with it. An installed PWA is
+// usually granted this automatically; asking explicitly covers the plain-tab case too.
+if (navigator.storage?.persist) {
+  navigator.storage
+    .persisted()
+    .then((alreadyPersisted) => (alreadyPersisted ? true : navigator.storage.persist()))
+    .then((granted) => {
+      if (!granted) {
+        console.warn("Persistent storage was not granted; the offline sales queue may be evicted.");
+      }
+    })
+    .catch(() => {});
+}
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     if (import.meta.env.DEV) {
