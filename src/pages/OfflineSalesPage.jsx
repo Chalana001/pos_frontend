@@ -97,7 +97,13 @@ const normalizeImportErrorMessage = (message) => {
     return "The queued customer record is no longer available.";
   }
   if (lower.includes("no open shift") || lower.includes("shift")) {
-    return "Open a shift for this branch before importing.";
+    return "The cashier who made this sale needs an open shift at this branch before it can be imported.";
+  }
+  if (lower.includes("offline cashier not found")) {
+    return "The cashier who made this sale no longer exists on the server.";
+  }
+  if (lower.includes("offline cashier belongs to another branch")) {
+    return "The cashier who made this sale is now assigned to another branch.";
   }
 
   return source;
@@ -374,9 +380,13 @@ const OfflineSalesPage = () => {
         return;
       }
 
+      // The backend banks an imported sale into the shift of the cashier who MADE it,
+      // and rejects the import when that cashier has none open. So readiness has to be
+      // resolved per cashier, not per branch — checking only that "some shift is open
+      // here" would mark rows ready that the server then refuses.
       if (!isAdminOrManager) {
-        const hasOpenShift = hasShiftData(activeShift);
-        setBranchShiftMap(Object.fromEntries(branchIds.map((branchId) => [branchId, hasOpenShift])));
+        const ownShiftCashierIds = hasShiftData(activeShift) ? [Number(user?.userId)] : [];
+        setBranchShiftMap(Object.fromEntries(branchIds.map((branchId) => [branchId, ownShiftCashierIds])));
         setCheckingShifts(false);
         return;
       }
@@ -387,9 +397,10 @@ const OfflineSalesPage = () => {
           branchIds.map(async (branchId) => {
             try {
               const response = await shiftsAPI.getActiveByBranch(branchId);
-              return [branchId, hasShiftData(response.data)];
+              const shifts = Array.isArray(response.data) ? response.data : [];
+              return [branchId, shifts.map((shift) => Number(shift.cashierUserId)).filter(Boolean)];
             } catch {
-              return [branchId, false];
+              return [branchId, []];
             }
           })
         );
@@ -398,7 +409,7 @@ const OfflineSalesPage = () => {
         setCheckingShifts(false);
       }
     },
-    [activeShift, hasOnlineSession, isAdminOrManager, isOnline]
+    [activeShift, hasOnlineSession, isAdminOrManager, isOnline, user?.userId]
   );
 
   useEffect(() => {
@@ -439,9 +450,15 @@ const OfflineSalesPage = () => {
   const getRowHasOpenShift = useCallback(
     (row) => {
       if (!isOnline || !hasOnlineSession) return false;
-      return Boolean(branchShiftMap[Number(row.branchId)]);
+
+      const openCashierIds = branchShiftMap[Number(row.branchId)] || [];
+      // A row queued before the cashier was recorded sends no cashier id, and the server
+      // falls back to whoever is importing — so that is the shift to check for it.
+      const rowCashierId = Number(row.cashierUserId) || Number(user?.userId);
+      if (!rowCashierId) return false;
+      return openCashierIds.includes(rowCashierId);
     },
-    [branchShiftMap, hasOnlineSession, isOnline]
+    [branchShiftMap, hasOnlineSession, isOnline, user?.userId]
   );
 
   const getRowStockValidation = useCallback(
@@ -671,7 +688,11 @@ const OfflineSalesPage = () => {
     const fallbackCustomerName = row.customerName || "Walk-in Customer";
     const fallbackOrderData = {
       orderId: row.clientSaleId,
-      invoiceNo: `OFF-${String(row.clientSaleId || "").replace(/-/g, "").slice(0, 8).toUpperCase()}`,
+      // Rows queued before invoice numbers were allocated locally still fall back to the
+      // old id-derived form; anything queued since reprints the number the customer has.
+      invoiceNo:
+        row.invoiceNo
+        || `OFF-${String(row.clientSaleId || "").replace(/-/g, "").slice(0, 8).toUpperCase()}`,
       subTotal: Number(row.total || 0),
       billDiscount: Number(row.payload?.billDiscount || 0),
       netTotal: Number(row.total || 0),

@@ -48,6 +48,7 @@ import {
   getCachedReceiptSettings,
   getFreeLocalSalesSummary,
   getOfflineSalesCount,
+  nextOfflineInvoiceNo,
   OFFLINE_EVENTS,
 } from "../offline/db";
 
@@ -102,9 +103,6 @@ const getPerSmallUnitPrice = (configuredPrice, measuredItem = false) => {
 
 const formatStockDisplay = (item, batch = null) =>
   formatDisplayStockQuantity(batch || item, 0, item);
-
-const buildOfflineInvoiceNo = (clientSaleId) =>
-  `OFF-${String(clientSaleId || "").replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 
 const getApiErrorMessage = (error, fallback = "Failed") =>
   error?.response?.data?.message || error?.response?.data?.detail || fallback;
@@ -220,6 +218,10 @@ const POS = () => {
   const resizeFrameRef = useRef(null);
   const stockOverrideResolverRef = useRef(null);
   const checkoutIdempotencyKeyRef = useRef(null);
+  // Held for the life of one checkout attempt, exactly like the idempotency key above.
+  // A second click must reprint the number already on the customer's receipt rather
+  // than burn a new one and overwrite the queued row with it.
+  const offlineInvoiceNoRef = useRef(null);
 
   const isAdminUser = user?.role === "ADMIN" || user?.role === "MANAGER";
   const canUseServer = isOnline && hasOnlineSession && !isOfflineSession;
@@ -1627,7 +1629,10 @@ const POS = () => {
         const branchLogo = effectiveBranch?.logoUrl || myShift?.branchLogo || "";
         const cashierName = user?.name || user?.username || "Cashier";
         const customerName = customer?.name || "Walk-in Customer";
-        const offlineInvoiceNo = buildOfflineInvoiceNo(clientSaleId);
+        if (!offlineInvoiceNoRef.current) {
+          offlineInvoiceNoRef.current = await nextOfflineInvoiceNo(effectiveBranchId);
+        }
+        const offlineInvoiceNo = offlineInvoiceNoRef.current;
         const receiptCartItems = cartItems.map((item) => ({
           ...item,
           discountType: getEffectiveDiscountType(item),
@@ -1671,6 +1676,7 @@ const POS = () => {
         }));
         await addOfflineSale({
           clientSaleId,
+          invoiceNo: offlineInvoiceNo,
           localOnly: isFreeLocalSalesPlan,
           branchId: effectiveBranchId,
           branchName,
@@ -1700,6 +1706,11 @@ const POS = () => {
           payload: {
             ...orderData,
             clientSaleId,
+            // The number already printed on the customer's receipt, and the cashier who
+            // actually took the money. The server keeps both rather than substituting
+            // the importer and a freshly generated number.
+            invoiceNo: offlineInvoiceNo,
+            offlineCashierUserId: user?.userId,
             offlineSoldAt: soldAt,
             items: cartItems.map((item) => createOrderItemPayload(item, true)),
           },
@@ -1734,6 +1745,7 @@ const POS = () => {
         toast.success(isFreeLocalSalesPlan ? "Sale saved locally" : "Sale saved to offline queue");
         // The sale is banked — the next checkout is a genuinely new one.
         checkoutIdempotencyKeyRef.current = null;
+        offlineInvoiceNoRef.current = null;
         clearCartState();
         return;
       }
@@ -1835,8 +1847,11 @@ const POS = () => {
 
       await fetchProducts(effectiveBranchId);
 
-      // The order is banked — the next checkout is a genuinely new one.
+      // The order is banked — the next checkout is a genuinely new one. The offline
+      // number is cleared too: a checkout that queued a number and then completed
+      // online must not leave it behind for a later sale to reuse.
       checkoutIdempotencyKeyRef.current = null;
+      offlineInvoiceNoRef.current = null;
 
       clearCartState();
 

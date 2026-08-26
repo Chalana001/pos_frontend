@@ -108,6 +108,51 @@ export const getCachedReceiptSettings = async (branchId, templateType) => {
   return row?.data || null;
 };
 
+const OFFLINE_DEVICE_ID_KEY = "offlineDeviceId";
+const OFFLINE_INVOICE_SEQ_KEY = "offlineInvoiceSeq";
+
+// No I, O, 0 or 1 — an invoice number gets read off a receipt over the phone, and
+// those are the characters that get misheard.
+const DEVICE_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+const createDeviceId = () =>
+  Array.from(
+    window.crypto.getRandomValues(new Uint8Array(4)),
+    (byte) => DEVICE_ID_ALPHABET[byte % DEVICE_ID_ALPHABET.length]
+  ).join("");
+
+/**
+ * Allocate the invoice number an offline sale is printed with — and keeps.
+ *
+ * The old number was derived from the sale's UUID (OFF-A1B2C3D4) and thrown away at
+ * import, where the server generated an unrelated INV-… instead. A customer returning
+ * with an offline receipt held a number that existed nowhere in the system.
+ *
+ * OFF-B3-K7M2-0042: branch, a per-device id minted once, and a per-device counter.
+ * The device id makes it unique across terminals without any server coordination —
+ * which matters because the terminal is offline when it needs the number — and the
+ * counter makes the series sequential, so a missing sale is visible as a gap.
+ */
+export const nextOfflineInvoiceNo = async (branchId) => {
+  let invoiceNo = null;
+
+  await offlineDb.transaction("rw", offlineDb.appMeta, async () => {
+    const deviceRow = await offlineDb.appMeta.get(OFFLINE_DEVICE_ID_KEY);
+    const deviceId = deviceRow?.value || createDeviceId();
+    if (!deviceRow?.value) {
+      await offlineDb.appMeta.put({ key: OFFLINE_DEVICE_ID_KEY, value: deviceId });
+    }
+
+    const seqRow = await offlineDb.appMeta.get(OFFLINE_INVOICE_SEQ_KEY);
+    const nextSeq = Number(seqRow?.value || 0) + 1;
+    await offlineDb.appMeta.put({ key: OFFLINE_INVOICE_SEQ_KEY, value: nextSeq });
+
+    invoiceNo = `OFF-B${Number(branchId) || 0}-${deviceId}-${String(nextSeq).padStart(4, "0")}`;
+  });
+
+  return invoiceNo;
+};
+
 export const saveCachedUser = async (userRecord) => {
   if (!userRecord?.userId) return;
   const existing = await offlineDb.cachedUsers.get(userRecord.userId);
