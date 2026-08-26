@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import VersionUpdateDialog from '../version/VersionUpdateDialog';
+import OfflineSyncAgent from './OfflineSyncAgent';
 
 const Layout = () => {
   const location = useLocation();
@@ -35,6 +36,7 @@ const Layout = () => {
         </main>
       </div>
       <VersionUpdateDialog />
+      <OfflineSyncAgent />
     </div>
   );
 };
