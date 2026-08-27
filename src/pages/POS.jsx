@@ -1103,32 +1103,164 @@ const POS = () => {
     setSearchQuery("");
   };
 
-  const handleSearchKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
+  // Adds an item to the cart with an exact quantity/amount already resolved
+  // server-side (from a decoded scale barcode), instead of the usual
+  // qty=1-then-adjust flow. Mirrors processAddToCart's weight-item cart line
+  // shape so downstream cart total / order-submit code needs no changes —
+  // only the price-per-unit is derived from the server's resolvedAmount
+  // (rather than item.sellingPrice) so the cart total matches exactly what
+  // the scale label encoded even if sellingPrice has moved since printing.
+  const addScaleResolvedToCart = (item, resolvedQuantity, resolvedUnit, resolvedAmount) => {
+    if (!canSell) {
+      toast.error(canUseServer ? "Please open a shift first!" : "POS queue mode is not ready for this branch");
+      return;
+    }
 
-      if (!searchQuery.trim() || filteredItems.length === 0) {
-        toast.error("Item not found!");
+    const qty = Number(resolvedQuantity);
+    const amount = Number(resolvedAmount);
+    const unit = String(resolvedUnit || item.defaultUnit || "PCS").toUpperCase();
+
+    if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(amount) || amount < 0) {
+      // Malformed resolution — fall back to the normal add-to-cart flow.
+      addToCart(item);
+      return;
+    }
+
+    const unlimitedStockItem = isUnlimitedStockItem(item);
+    const baseScaledStockItem = isBaseScaledStockItem(item);
+    const stockBaseQty = getSellableStockBaseQty(item, null);
+    const requestedBaseQty = baseScaledStockItem ? toBaseQuantity(qty, unit, true) : qty;
+
+    if (!unlimitedStockItem && stockBaseQty < requestedBaseQty && !stockOverrideCanProceed) {
+      toast.error(`Insufficient stock! Available: ${formatStockDisplay(item)}`);
+      return;
+    } else if (!unlimitedStockItem && stockBaseQty < requestedBaseQty) {
+      toast.error(`Low stock. Override will be required at checkout. Available: ${formatStockDisplay(item)}`);
+    }
+
+    if (cartItems.length === 0 && !cartMode) {
+      setCartMode(canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE);
+    }
+
+    const isSmallUnit = unit === "G" || unit === "ML";
+    const perSmallUnitPrice = isSmallUnit ? amount / qty : amount / qty / STOCK_BASE_UNITS_PER_UNIT;
+    const unitPrice = isSmallUnit ? perSmallUnitPrice * STOCK_BASE_UNITS_PER_UNIT : amount / qty;
+
+    setCartItems((prev) => [
+      ...prev,
+      {
+        itemId: item.id,
+        batchId: null,
+        name: item.name,
+        altName: item.altName || null,
+        barcode: item.barcode,
+        unitPrice,
+        perSmallUnitPrice,
+        perGramPrice: perSmallUnitPrice,
+        qty,
+        qtyUnit: unit,
+        weightItem: true,
+        itemType: item.itemType,
+        defaultUnit: item.defaultUnit || unit,
+        discountType: DISCOUNT_TYPES.NONE,
+        discountValue: 0,
+        warrantyOptionValue: "",
+        warrantyLabel: "",
+        warrantyPeriodValue: null,
+        warrantyPeriodUnit: null,
+        stockBaseQty,
+        stockUnmanaged: !!item.stockUnmanaged,
+        image: item.imageUrl,
+        isKotEnabled: !!item.isKotEnabled,
+        // UI-only cue (never sent to the backend — createOrderItemPayload
+        // whitelists fields) so the cart can show why a decimal weight/price
+        // appeared without the cashier typing it.
+        scaleResolved: true,
+      },
+    ]);
+
+    setSearchQuery("");
+    toast.success(`Scale label scanned: ${formatStockQuantity(qty)} ${unit} — ${formatCurrency(amount)} added`);
+  };
+
+  // A barcode fetched via the server ID lookup (fallback path below) — either
+  // a plain exact match or one decoded from a scale barcode for this branch.
+  const addResolvedBarcodeItemToCart = (resolvedItem) => {
+    const annotatedItem = {
+      ...resolvedItem,
+      stockUnmanaged: isFreeStockUnmanagedPlan && resolvedItem.itemType !== ItemType.SERVICE && resolvedItem.itemType !== ItemType.RECIPE,
+    };
+
+    const hasScaleResolution =
+      annotatedItem.scaleResolvedQuantity !== null && annotatedItem.scaleResolvedQuantity !== undefined &&
+      annotatedItem.scaleResolvedAmount !== null && annotatedItem.scaleResolvedAmount !== undefined;
+
+    if (!hasScaleResolution) {
+      addToCart(annotatedItem);
+      return;
+    }
+
+    addScaleResolvedToCart(
+      annotatedItem,
+      annotatedItem.scaleResolvedQuantity,
+      annotatedItem.scaleResolvedUnit,
+      annotatedItem.scaleResolvedAmount
+    );
+  };
+
+  const handleSearchKeyDown = async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+
+    const query = searchQuery.trim();
+    if (!query) {
+      toast.error("Item not found!");
+      setSearchQuery("");
+      return;
+    }
+
+    if (filteredItems.length === 0) {
+      // No fast client-side match (exact or fuzzy) against allItems — fall
+      // back to the server barcode lookup, which also decodes scale barcodes
+      // (weight/price embedded in the digits) per this branch's settings.
+      // Strictly a fallback: any barcode that already resolves client-side
+      // never reaches here.
+      if (canUseServer && effectiveBranchId) {
+        try {
+          const response = await itemsAPI.getByBarcode(query, effectiveBranchId);
+          if (response.data) {
+            addResolvedBarcodeItemToCart(response.data);
+            return;
+          }
+        } catch (error) {
+          if (error?.response?.status !== 404) {
+            console.error(error);
+          }
+          // 404 or any other failure falls through to "not found" below,
+          // matching today's existing behavior.
+        }
+      }
+
+      toast.error("Item not found!");
+      setSearchQuery("");
+      return;
+    }
+
+    const exactMatch = filteredItems.find(
+      (item) => item.barcode?.toLowerCase() === query.toLowerCase()
+    );
+
+    const itemToAdd = exactMatch || filteredItems[0];
+
+    if (itemToAdd) {
+      const stockQty = getSellableStockBaseQty(itemToAdd);
+
+      if (!isUnlimitedStockItem(itemToAdd) && stockQty <= 0 && !stockOverrideCanProceed) {
+        toast.error("Item is Out of Stock!");
         setSearchQuery("");
         return;
       }
-
-      const exactMatch = filteredItems.find(
-        (item) => item.barcode?.toLowerCase() === searchQuery.toLowerCase()
-      );
-
-      const itemToAdd = exactMatch || filteredItems[0];
-
-      if (itemToAdd) {
-        const stockQty = getSellableStockBaseQty(itemToAdd);
-
-        if (!isUnlimitedStockItem(itemToAdd) && stockQty <= 0 && !stockOverrideCanProceed) {
-          toast.error("Item is Out of Stock!");
-          setSearchQuery("");
-          return;
-        }
-        addToCart(itemToAdd);
-      }
+      addToCart(itemToAdd);
     }
   };
 

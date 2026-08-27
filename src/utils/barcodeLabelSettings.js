@@ -38,6 +38,13 @@ export const EXPIRY_DATE_FORMAT_OPTIONS = [
   { value: 'yyyy-MM-dd', label: 'YYYY-MM-DD' },
 ];
 
+// What the numeric "value" segment embedded in a scale barcode represents —
+// mirrors backend entity.ScaleBarcodeValueType.
+export const SCALE_BARCODE_VALUE_TYPE_OPTIONS = [
+  { value: 'WEIGHT_GRAMS', label: 'Weight (grams)' },
+  { value: 'PRICE_CENTS', label: 'Price (cents)' },
+];
+
 export const DEFAULT_BARCODE_LABEL_SETTINGS = {
   labelWidthMm: 40,
   labelHeightMm: 25,
@@ -72,6 +79,18 @@ export const DEFAULT_BARCODE_LABEL_SETTINGS = {
   // Ordered element-array layout (JSON string). null → fall back to the flat
   // show*/fontSize fields above via buildLegacyLabelElements().
   layoutJson: null,
+
+  // Scale-barcode decoding (weight/price-embedded barcodes from the shop's own
+  // weighing-scale device). See ScaleBarcodeDecoder / ScaleBarcodeFormatPresets
+  // on the backend. Defaults mirror the entity's own column defaults.
+  scaleBarcodeEnabled: false,
+  scaleBarcodePresetKey: '',
+  scaleBarcodePrefix: '',
+  scaleBarcodePrefixLength: 2,
+  scaleBarcodeItemCodeLength: 5,
+  scaleBarcodeValueLength: 5,
+  scaleBarcodeValueType: 'WEIGHT_GRAMS',
+  scaleBarcodeHasCheckDigit: true,
 };
 
 const clampInt = (value, min, max, fallback) => {
@@ -137,6 +156,17 @@ export const normalizeBarcodeLabelSettings = (settings) => {
     // Opaque JSON string round-tripped to/from the backend. Parsed into an
     // editable array by the settings page / getActiveLabelElements().
     layoutJson: typeof merged.layoutJson === 'string' ? merged.layoutJson : null,
+
+    scaleBarcodeEnabled: !!merged.scaleBarcodeEnabled,
+    scaleBarcodePresetKey: normalizeText(merged.scaleBarcodePresetKey, 50),
+    scaleBarcodePrefix: normalizeText(merged.scaleBarcodePrefix, 4),
+    scaleBarcodePrefixLength: clampInt(merged.scaleBarcodePrefixLength, 0, 4, DEFAULT_BARCODE_LABEL_SETTINGS.scaleBarcodePrefixLength),
+    scaleBarcodeItemCodeLength: clampInt(merged.scaleBarcodeItemCodeLength, 1, 20, DEFAULT_BARCODE_LABEL_SETTINGS.scaleBarcodeItemCodeLength),
+    scaleBarcodeValueLength: clampInt(merged.scaleBarcodeValueLength, 1, 20, DEFAULT_BARCODE_LABEL_SETTINGS.scaleBarcodeValueLength),
+    scaleBarcodeValueType: SCALE_BARCODE_VALUE_TYPE_OPTIONS.some((o) => o.value === merged.scaleBarcodeValueType)
+      ? merged.scaleBarcodeValueType
+      : DEFAULT_BARCODE_LABEL_SETTINGS.scaleBarcodeValueType,
+    scaleBarcodeHasCheckDigit: merged.scaleBarcodeHasCheckDigit === undefined ? true : !!merged.scaleBarcodeHasCheckDigit,
   };
 };
 

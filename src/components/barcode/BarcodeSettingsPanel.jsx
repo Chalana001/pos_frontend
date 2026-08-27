@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   Barcode as BarcodeIcon,
@@ -9,6 +10,7 @@ import {
   Plus,
   Printer,
   RefreshCw,
+  Scale,
   Ticket,
   Trash2,
   Type,
@@ -27,6 +29,7 @@ import {
   ITEM_NAME_SOURCE_OPTIONS,
   LABEL_SIZE_PRESETS,
   EXPIRY_DATE_FORMAT_OPTIONS,
+  SCALE_BARCODE_VALUE_TYPE_OPTIONS,
   CUSTOM_SIZE_OPTION,
   mmToInch,
   inchToMm,
@@ -379,9 +382,29 @@ const BarcodeSettingsPanel = ({
   printerTesting,
   onRefreshPrinters,
   onTestPrint,
+  scalePresets = [],
+  scalePresetsLoading = false,
 }) => {
   const [sizeUnit, setSizeUnit] = useState('mm');
   const [addElementType, setAddElementType] = useState('CUSTOM_TEXT');
+
+  const scalePresetOptions = scalePresets.map((preset) => ({ value: preset.key, label: preset.label }));
+  const selectedScalePreset = scalePresets.find((preset) => preset.key === form.scaleBarcodePresetKey) || null;
+
+  // Applying a preset pre-fills every field below from the chosen starting
+  // template (including "Custom", which ships its own neutral defaults) — the
+  // admin still needs to confirm/adjust the values against their own device.
+  const applyScalePreset = (key) => {
+    const preset = scalePresets.find((p) => p.key === key);
+    if (!preset) return;
+    updateField('scaleBarcodePresetKey', preset.key);
+    updateField('scaleBarcodePrefix', preset.prefix || '');
+    updateField('scaleBarcodePrefixLength', preset.prefixLength);
+    updateField('scaleBarcodeItemCodeLength', preset.itemCodeLength);
+    updateField('scaleBarcodeValueLength', preset.valueLength);
+    updateField('scaleBarcodeValueType', preset.valueType);
+    updateField('scaleBarcodeHasCheckDigit', preset.hasCheckDigit);
+  };
 
   const selectedPresetValue = LABEL_SIZE_PRESETS.some(
     (preset) => preset.w === form.labelWidthMm && preset.h === form.labelHeightMm
@@ -512,6 +535,124 @@ const BarcodeSettingsPanel = ({
           <p className="text-xs text-slate-400">
             <BarcodeIcon size={12} className="mr-1 inline" />
             You can add multiple <strong>Custom Text</strong> lines (e.g. warranty, weight, made-in) anywhere in the order.
+          </p>
+        </div>
+      </Card>
+
+      <Card
+        className="admin-panel-card"
+        title={
+          <span className="flex items-center gap-2">
+            <Scale size={16} />
+            Scale Barcode
+          </span>
+        }
+        style={{ animationDelay: '210ms' }}
+      >
+        <div className="space-y-4">
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div>
+              <div className="text-sm font-medium text-slate-800">Decode Weighing-Scale Barcodes</div>
+              <div className="text-xs text-slate-500">
+                When on, a scanned barcode that isn't an exact item match is also checked against this digit
+                layout to pull out an embedded weight or price.
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={!!form.scaleBarcodeEnabled}
+              onChange={(event) => updateField('scaleBarcodeEnabled', event.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+          </label>
+
+          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            <span>
+              The templates below are starting points, not verified vendor specs — every scale/label-printer
+              brand differs. Confirm the digit layout against your own device's manual (or scan a real label
+              and check the numbers below match) before relying on this in the shop.
+            </span>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700">Starting Template</label>
+            <div className="mt-1">
+              <CustomSelect
+                value={form.scaleBarcodePresetKey}
+                onChange={applyScalePreset}
+                options={scalePresetOptions}
+                valueKey="value"
+                labelKey="label"
+                placeholder={scalePresetsLoading ? 'Loading templates...' : 'Select a template or Custom'}
+                disabled={scalePresetsLoading || scalePresetOptions.length === 0}
+                buttonClassName="h-[42px] rounded-xl px-4 py-2.5"
+              />
+            </div>
+            {selectedScalePreset ? (
+              <p className="mt-2 text-xs text-slate-500">{selectedScalePreset.description}</p>
+            ) : null}
+          </div>
+
+          <div className="grid gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-slate-500">Prefix Digits</label>
+              <input
+                type="text"
+                maxLength={4}
+                value={form.scaleBarcodePrefix || ''}
+                onChange={(e) => updateField('scaleBarcodePrefix', e.target.value.replace(/\D/g, ''))}
+                placeholder="e.g. 20"
+                className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-mono focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <NumberField
+              label="Prefix Length"
+              min={0}
+              max={4}
+              value={form.scaleBarcodePrefixLength}
+              onCommit={(v) => updateField('scaleBarcodePrefixLength', v)}
+            />
+            <NumberField
+              label="Item Code Length"
+              min={1}
+              max={20}
+              value={form.scaleBarcodeItemCodeLength}
+              onCommit={(v) => updateField('scaleBarcodeItemCodeLength', v)}
+            />
+            <NumberField
+              label="Value Length"
+              min={1}
+              max={20}
+              value={form.scaleBarcodeValueLength}
+              onCommit={(v) => updateField('scaleBarcodeValueLength', v)}
+            />
+            <div>
+              <label className="text-xs font-medium text-slate-500">Value Represents</label>
+              <div className="mt-1">
+                <CustomSelect
+                  value={form.scaleBarcodeValueType}
+                  onChange={(v) => updateField('scaleBarcodeValueType', v)}
+                  options={SCALE_BARCODE_VALUE_TYPE_OPTIONS}
+                  buttonClassName="h-9 rounded-lg px-3"
+                />
+              </div>
+            </div>
+            <label className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+              <span className="text-sm text-slate-700">Has Check Digit</span>
+              <input
+                type="checkbox"
+                checked={!!form.scaleBarcodeHasCheckDigit}
+                onChange={(e) => updateField('scaleBarcodeHasCheckDigit', e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+            </label>
+          </div>
+
+          <p className="text-xs text-slate-400">
+            <BarcodeIcon size={12} className="mr-1 inline" />
+            Only applies to items priced by weight. A scan that decodes but doesn't match a weighed item is
+            treated as a normal barcode lookup — no special handling needed.
           </p>
         </div>
       </Card>
