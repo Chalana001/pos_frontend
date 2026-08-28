@@ -21,6 +21,8 @@ import {
 } from "../offline/db";
 import { createLocalPinRecord, isLegacyPinRecord, verifyLocalPin } from "../offline/pin";
 import useNetworkStatus from "../hooks/useNetworkStatus";
+import { clearModules, hydrateModulesFromCache, setModules } from "../utils/moduleAccess";
+import { clearSupportSession, consumeSupportSessionFromUrl } from "../utils/supportSession";
 
 const AuthContext = createContext(null);
 
@@ -61,6 +63,24 @@ export const AuthProvider = ({ children }) => {
     await refreshOfflineCandidate();
   }, [refreshOfflineCandidate, refreshOfflineSessionSnapshot]);
 
+  // The shop's module set is resolved server-side (plan template + per-shop overrides) and
+  // cached locally, so an offline start still knows which menu items to draw.
+  const refreshModules = useCallback(async () => {
+    try {
+      // Marked background: this call has a working fallback (the cached set, then the
+      // plan tier), so a backend that is down or not yet migrated must not throw a
+      // "Server Error" toast at a cashier mid-sale over something the app recovers from.
+      const response = await api.get("/api/saas/my-modules", { meta: { background: true } });
+      setModules(response.data);
+      return response.data;
+    } catch {
+      // Fall back to whatever was cached from the last successful fetch. If there is
+      // nothing cached, subscriptionFeatures.js falls back to the plan tier.
+      hydrateModulesFromCache(null);
+      return null;
+    }
+  }, []);
+
   const fetchAndStoreSubscription = useCallback(async (baseUser) => {
     if (!baseUser) return baseUser;
     try {
@@ -76,6 +96,7 @@ export const AuthProvider = ({ children }) => {
         await clearFreeLocalSalesIfNewDay();
       }
       await syncCachedUser(updatedUser);
+      await refreshModules();
       return updatedUser;
     } catch {
       const updatedUser = {
@@ -87,19 +108,59 @@ export const AuthProvider = ({ children }) => {
       setUser(updatedUser);
       setUserState(updatedUser);
       await syncCachedUser(updatedUser);
+      // The subscription call failed, so do not touch the cached module set — a network
+      // blip must not silently strip the shop's package down to the fallback tier.
+      hydrateModulesFromCache(null);
       return updatedUser;
     } finally {
       setPlanLoading(false);
     }
-  }, [syncCachedUser]);
+  }, [refreshModules, syncCachedUser]);
 
   useEffect(() => {
     const bootstrapAuth = async () => {
+      // A support session arrives as a token in the URL fragment. Take it before anything
+      // else looks at storage, so the operator lands signed in as the shop rather than on
+      // whatever session this browser happened to have.
+      const support = consumeSupportSessionFromUrl();
+      if (support?.token) {
+        setToken(support.token);
+        clearOfflineSession();
+        try {
+          const me = await authAPI.getCurrentUser();
+          const supportUser = {
+            id: me.data.userId,
+            userId: me.data.userId,
+            username: me.data.username,
+            role: me.data.role,
+            branchId: me.data.branchId,
+            shopName: me.data.shopName,
+            hasOfflinePin: me.data.hasOfflinePin,
+            planName: null,
+            subscriptionValidUntil: null,
+            planBillingCycle: null,
+          };
+          setUser(supportUser);
+          setUserState(supportUser);
+          setAuthMode("online");
+          await fetchAndStoreSubscription(supportUser);
+        } catch {
+          // Expired or already-revoked token — fall through to the normal paths below
+          // so the operator sees the login screen rather than a blank app.
+          clearSupportSession();
+          clearAuth();
+        }
+        setLoading(false);
+        return;
+      }
+
       const currentUser = getUser();
       const token = getToken();
       const offlineSessionUser = getOfflineSessionUser();
 
       await refreshOfflineCandidate();
+      // Draw the correct menu on first paint, before the network call returns.
+      hydrateModulesFromCache(null);
 
       if (isOnline) {
         if (currentUser && token) {
@@ -270,6 +331,9 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     clearAuth();
     clearOfflineSession();
+    // Never leave one shop's package behind on a shared device.
+    clearModules();
+    clearSupportSession();
     setUserState(null);
     setPlanLoading(false);
     setAuthMode(null);

@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { Lock } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useAppConfiguration } from "../../context/AppConfigurationContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { hasPermission } from "../../utils/permissions";
 import { hasPlanFeature } from "../../utils/subscriptionFeatures";
+import { canOpenPath, moduleForPath } from "../../utils/moduleAccess";
+import LockedFeatureDialog from "../common/LockedFeatureDialog";
 import { BRAND_MARK, BRAND_NAME, BRAND_WORDMARK } from "../../utils/branding";
 import { APP_VERSION } from "../../data/versionHistory";
 import { History } from "lucide-react";
@@ -72,6 +75,8 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
   const isSalesRoute = location.pathname.startsWith("/sales") || location.pathname.startsWith("/offline-sales");
 
   // ✅ dropdown open states
+  // Which locked module the shop just tapped, if any.
+  const [lockedModule, setLockedModule] = useState(null);
   const [openItems, setOpenItems] = useState(false);
   const [openCustomers, setOpenCustomers] = useState(false);
   const [openSuppliers, setOpenSuppliers] = useState(false);
@@ -381,6 +386,9 @@ return (
               item.type !== "dropdown-configuration"
             ) {
               if (!hasPermission(role, item.permission)) return null;
+              // Note: modules the shop has NOT bought are deliberately still listed —
+              // hiding them means nobody ever discovers the feature, and this nav is the
+              // only place they would. They render locked and open an explanation.
               if (item.path === "/reports" && !canUseFeature("ADVANCED_REPORTS")) return null;
               if (item.path === "/expenses" && !canUseFeature("FINANCIALS")) return null;
               if (item.path === "/cash-drops" && !canUseFeature("FINANCIALS")) return null;
@@ -1335,7 +1343,23 @@ return (
               );
             }
 
-            // ✅ normal item
+            // ✅ normal item — locked ones render dimmed and explain themselves
+            if (!canOpenPath(item.path)) {
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={() => setLockedModule(moduleForPath(item.path))}
+                  style={{ animationDelay: navDelay }}
+                  className="shell-nav-item-enter group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-slate-500 transition-colors hover:bg-slate-800/60 hover:text-slate-300"
+                >
+                  <Icon size={20} />
+                  <span className="flex-1 text-left font-medium">{t(item.name)}</span>
+                  <Lock size={14} className="text-slate-600 group-hover:text-amber-400" />
+                </button>
+              );
+            }
+
             return (
               <NavLink
                 key={item.path}
@@ -1378,6 +1402,12 @@ return (
         </div>
         ) : null}
       </aside>
+
+      <LockedFeatureDialog
+        moduleKey={lockedModule}
+        open={Boolean(lockedModule)}
+        onClose={() => setLockedModule(null)}
+      />
     </>
   );
 };

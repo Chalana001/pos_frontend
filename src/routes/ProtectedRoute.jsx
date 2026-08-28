@@ -1,13 +1,17 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { hasPermission } from '../utils/permissions';
 import { hasPlanFeature } from '../utils/subscriptionFeatures';
+import { canOpenPath, moduleForPath } from '../utils/moduleAccess';
+import LockedFeatureDialog from '../components/common/LockedFeatureDialog';
 
-const ProtectedRoute = ({ children, permission, feature, requiresOnline = false }) => {
+const ProtectedRoute = ({ children, permission, feature, requiresOnline = false, skipModuleGate = false }) => {
   const { user, isAuthenticated, loading, planLoading, isOnline, hasOnlineSession } = useAuth();
   const { t } = useLanguage();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (loading || planLoading) {
     return (
@@ -59,6 +63,30 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false 
           <p className="text-slate-600">{t('Your current package does not include this feature.')}</p>
         </div>
       </div>
+    );
+  }
+
+  // Gate on the module that owns this route.
+  //
+  // The `feature` prop above only covers the handful of keys the old plan matrix knew
+  // about — it has no key for the POS screen or the dashboard, so those pages stayed
+  // reachable even with their module switched off. This asks the server's own route map
+  // instead, so every page the catalog claims is covered without a prop per route.
+  //
+  // skipModuleGate is set on the instance that wraps <Layout />. That one guards the shell,
+  // not a page, but it still sees the child's pathname — so without this it would match
+  // /dashboard, decide "blocked", and render the message INSTEAD of the whole app,
+  // sidebar included. The per-page instance below it is the one that should answer.
+  if (!skipModuleGate && !canOpenPath(location.pathname)) {
+    // Someone reached this by typing the URL or following an old link — the sidebar
+    // never let them click through. Same dialog as the sidebar's, over the shell, and
+    // closing it takes them back rather than leaving a blank page behind.
+    return (
+      <LockedFeatureDialog
+        moduleKey={moduleForPath(location.pathname)}
+        open
+        onClose={() => navigate(-1)}
+      />
     );
   }
 

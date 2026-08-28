@@ -1,132 +1,285 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  ArrowLeft, Building2, Check, Clock, Mail, MessageCircle, Minus, Sparkles,
+} from 'lucide-react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
+import { getModuleState } from '../utils/moduleAccess';
 
-const formatPlanName = (name) => {
-  const labels = {
-    FREE: 'Free',
-    STANDARD: 'Standard',
-    PRO: 'Pro',
-    MONTHLY_LITE: 'Lite Monthly',
-    YEARLY_LITE: 'Lite Yearly',
-    MONTHLY_PRO: 'Pro Monthly',
-    YEARLY_PRO: 'Pro Yearly',
-    MONTHLY_DEMO: 'Demo',
-  };
-  return labels[name] || name?.replaceAll('_', ' ') || 'Package';
-};
-
+/**
+ * The packages page a shop owner sees.
+ *
+ * The comparison is generated from the module catalog the server sends, not from a
+ * hand-written feature list — so it can never advertise something the API would refuse.
+ * Rows where every package agrees are hidden by default: eleven identical ticks tell the
+ * reader nothing, and burying the four rows that actually differ is what makes a pricing
+ * table useless.
+ */
 const SubscriptionPage = () => {
+  const { user } = useAuth();
   const [plans, setPlans] = useState([]);
-  const [mySubscription, setMySubscription] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [support, setSupport] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const adminWhatsApp = "+94700000000";
+  const [showShared, setShowShared] = useState(false);
 
   useEffect(() => {
-    fetchSubscriptionData();
+    let cancelled = false;
+
+    const load = async () => {
+      const [plansRes, subRes, supportRes] = await Promise.allSettled([
+        api.get('/api/saas/plans', { meta: { background: true } }),
+        api.get('/api/saas/my-subscription', { meta: { background: true } }),
+        api.get('/api/saas/support-info', { meta: { background: true } }),
+      ]);
+      if (cancelled) return;
+
+      if (plansRes.status === 'fulfilled') setPlans(plansRes.value.data ?? []);
+      // A shop with no active subscription is an expected state, not an error.
+      if (subRes.status === 'fulfilled') setSubscription(subRes.value.data);
+      if (supportRes.status === 'fulfilled') setSupport(supportRes.value.data);
+      setLoading(false);
+    };
+
+    load();
+    return () => { cancelled = true; };
   }, []);
 
-  const fetchSubscriptionData = async () => {
-    try {
-      const plansRes = await api.get('/api/saas/plans');
-      setPlans(plansRes.data);
+  const currency = support?.currencyPrefix ?? 'Rs.';
+  const currentPlanName = subscription?.plan?.name ?? user?.planName ?? null;
 
-      const mySubRes = await api.get('/api/saas/my-subscription');
-      setMySubscription(mySubRes.data);
+  // Top-level modules only. Sub-features would triple the table's height for detail
+  // nobody compares packages on.
+  const rows = useMemo(() => {
+    const { catalog } = getModuleState();
+    const roots = (catalog ?? []).filter((entry) => !entry.parentKey && !entry.locked);
+    if (!roots.length || !plans.length) return [];
 
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        // 404 = no active subscription — silently set null (expected state for new tenants)
-        setMySubscription(null);
-      }
-      else {
-        console.error("Error fetching subscription data", error);
-      }
+    return roots.map((entry) => {
+      const included = plans.map((plan) => (plan.moduleKeys ?? []).includes(entry.key));
+      return {
+        ...entry,
+        included,
+        sharedByAll: included.every(Boolean),
+      };
+    });
+  }, [plans]);
 
-    } finally {
-      setLoading(false);
-    }
-  };
+  const differing = rows.filter((row) => !row.sharedByAll);
+  const shared = rows.filter((row) => row.sharedByAll);
+  const visibleRows = showShared ? [...differing, ...shared] : differing;
 
-  if (loading) return <div className="page-enter p-10 text-center">Loading plans...</div>;
-
-  const expireDate = mySubscription?.validUntil
-    ? new Date(mySubscription.validUntil).toLocaleDateString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric'
-      })
+  const contactHref = support?.supportPhone
+    ? `https://wa.me/${support.supportPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+        `Hi, this is ${user?.shopName || 'our shop'}. We'd like to talk about our package.`
+      )}`
     : null;
 
-  const isExpired = mySubscription?.validUntil
-    ? new Date(mySubscription.validUntil) < new Date()
-    : false;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
   return (
-    <div className="page-enter min-h-screen bg-gray-50 p-8">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-5xl">
+        <Link
+          to="/"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
+        >
+          <ArrowLeft size={15} />
+          Back to the app
+        </Link>
 
-        <div className={`admin-panel-card mb-8 rounded-lg border-l-4 p-6 shadow-sm ${isExpired ? 'bg-red-50 border-red-500' : 'bg-yellow-50 border-yellow-500'}`} style={{ animationDelay: '60ms' }}>
-          <h2 className={`text-xl font-bold ${isExpired ? 'text-red-700' : 'text-yellow-800'}`}>
-            {isExpired ? "Your Subscription Has Expired!" : "Subscription Status"}
-          </h2>
-          <p className="mt-2 text-gray-700 text-lg">
-            Your current package <strong>{formatPlanName(mySubscription?.plan?.name)}</strong>
-            {isExpired ? " expired on " : " is valid until "}
-            <span className="font-bold text-black">{expireDate || 'N/A'}</span>.
+        <header className="mb-7">
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Packages</h1>
+          <p className="mt-1.5 text-sm text-slate-600">
+            {currentPlanName
+              ? <>Your shop is on <strong className="font-semibold text-slate-900">{currentPlanName}</strong>. Here is what each package includes.</>
+              : <>Here is what each package includes.</>}
           </p>
-          <p className="mt-4 text-gray-800 font-medium bg-white p-3 rounded border inline-block">
-            To renew or upgrade your package, please contact Admin (Chalana) on WhatsApp or Call: <br/>
-            <a href={`https://wa.me/${adminWhatsApp.replace(/\D/g, '')}`} className="text-green-600 font-bold text-xl hover:underline">
-              {adminWhatsApp}
-            </a>
-          </p>
-        </div>
+        </header>
 
-        <h3 className="page-section-enter mb-6 text-center text-2xl font-bold text-gray-800" style={{ animationDelay: '100ms' }}>Available Packages</h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan, index) => {
-            const isActivePlan = mySubscription?.plan?.id === plan.id;
-
+        {/* ---------------------------------------------------------- cards */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {plans.map((plan) => {
+            const isCurrent = plan.name === currentPlanName;
             return (
               <div
                 key={plan.id}
-                className={`admin-kpi-card relative rounded-xl border-2 bg-white p-6 shadow-md transition-all ${
-                  isActivePlan ? 'border-blue-500 transform scale-105' : 'border-gray-200 hover:border-blue-300'
+                className={`relative flex flex-col rounded-2xl border bg-white p-5 ${
+                  isCurrent ? 'border-blue-500 shadow-md ring-1 ring-blue-500' : 'border-slate-200 shadow-sm'
                 }`}
-                style={{ animationDelay: `${130 + Math.min(index, 5) * 40}ms` }}
               >
-                {isActivePlan && (
-                  <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">
-                    CURRENT PLAN
-                  </div>
-                )}
+                {isCurrent ? (
+                  <span className="absolute -top-2.5 left-5 rounded-full bg-blue-600 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">
+                    Your package
+                  </span>
+                ) : null}
 
-                <h4 className="text-xl font-bold text-gray-800 uppercase">{formatPlanName(plan.name)}</h4>
-                <p className="text-gray-500 text-sm mt-1">Billing: {plan.billingCycle}</p>
+                <h2 className="text-lg font-semibold text-slate-900">{plan.label}</h2>
 
-                <div className="my-4">
-                  <span className="text-3xl font-extrabold text-gray-900">Rs. {plan.initialPrice}</span>
-                  {plan.billingCycle === 'MONTHLY'
-                    ? <span className="text-gray-500">/mo</span>
-                    : <span className="text-gray-500">/yr</span>}
-                </div>
+                <p className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-semibold tracking-tight text-slate-900">
+                    {currency} {plan.renewalPrice.toLocaleString()}
+                  </span>
+                  <span className="text-sm text-slate-500">
+                    /{plan.billingCycle === 'YEARLY' ? 'year' : 'month'}
+                  </span>
+                </p>
 
-                <ul className="mt-4 space-y-2 text-gray-600">
-                  <li className="flex items-center">
-                    <span className="text-green-500 mr-2">OK</span>
-                    Max Branches: <strong className="ml-1">{plan.maxBranches}</strong>
+                {plan.description ? (
+                  <p className="mt-2.5 text-sm leading-relaxed text-slate-600">{plan.description}</p>
+                ) : null}
+
+                <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
+                  <li className="flex items-center gap-2">
+                    <Sparkles size={14} className="shrink-0 text-blue-500" />
+                    {plan.enabledModuleCount} of {plan.totalModuleCount} features
                   </li>
-                  <li className="flex items-center">
-                    <span className="text-green-500 mr-2">OK</span>
-                    Renewal Cost: Rs. {plan.renewalPrice}
+                  <li className="flex items-center gap-2">
+                    <Building2 size={14} className="shrink-0 text-slate-400" />
+                    {plan.maxBranches} {plan.maxBranches === 1 ? 'branch' : 'branches'}
                   </li>
+                  {plan.trialDays > 0 ? (
+                    <li className="flex items-center gap-2">
+                      <Clock size={14} className="shrink-0 text-slate-400" />
+                      {plan.trialDays}-day free trial
+                    </li>
+                  ) : null}
                 </ul>
 
+                <div className="mt-auto pt-5">
+                  {isCurrent ? (
+                    <div className="rounded-lg bg-slate-100 py-2.5 text-center text-sm font-medium text-slate-500">
+                      Current package
+                    </div>
+                  ) : contactHref ? (
+                    <a
+                      href={contactHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg bg-blue-600 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                    >
+                      Ask about {plan.label}
+                    </a>
+                  ) : null}
+                </div>
               </div>
             );
           })}
         </div>
 
+        {/* ----------------------------------------------------- comparison */}
+        {visibleRows.length ? (
+          <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">What each package includes</h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {showShared
+                    ? `All ${rows.length} features`
+                    : `The ${differing.length} features that differ · ${shared.length} are in every package`}
+                </p>
+              </div>
+              {shared.length ? (
+                <button
+                  type="button"
+                  onClick={() => setShowShared((current) => !current)}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  {showShared ? 'Show only differences' : 'Show everything'}
+                </button>
+              ) : null}
+            </header>
+
+            <div className="w-full overflow-x-auto">
+              <table className="w-full min-w-[560px] border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100">
+                    <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Feature
+                    </th>
+                    {plans.map((plan) => (
+                      <th
+                        key={plan.id}
+                        className={`px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide ${
+                          plan.name === currentPlanName ? 'bg-blue-50 text-blue-700' : 'text-slate-500'
+                        }`}
+                      >
+                        {plan.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {visibleRows.map((row) => (
+                    <tr key={row.key} className={row.sharedByAll ? 'bg-slate-50/40' : undefined}>
+                      <td className="px-5 py-2.5">
+                        <span className="font-medium text-slate-800">{row.name}</span>
+                        <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
+                          {row.description}
+                        </span>
+                      </td>
+                      {row.included.map((included, index) => (
+                        <td
+                          key={plans[index].id}
+                          className={`px-3 py-2.5 text-center ${
+                            plans[index].name === currentPlanName ? 'bg-blue-50/60' : ''
+                          }`}
+                        >
+                          {included ? (
+                            <Check size={16} className="mx-auto text-emerald-600" />
+                          ) : (
+                            <Minus size={16} className="mx-auto text-slate-300" />
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+
+        {/* -------------------------------------------------------- contact */}
+        {support?.supportPhone || support?.supportEmail ? (
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-900">Want to change your package?</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Talk to {support?.platformName || 'us'} and we&apos;ll set it up for your shop.
+            </p>
+            <div className="mt-3.5 flex flex-wrap gap-2">
+              {contactHref ? (
+                <a
+                  href={contactHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+                >
+                  <MessageCircle size={15} />
+                  WhatsApp {support.supportPhone}
+                </a>
+              ) : null}
+              {support?.supportEmail ? (
+                <a
+                  href={`mailto:${support.supportEmail}?subject=${encodeURIComponent(
+                    `Package change — ${user?.shopName || 'shop'}`
+                  )}`}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  <Mail size={15} />
+                  {support.supportEmail}
+                </a>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
       </div>
     </div>
   );

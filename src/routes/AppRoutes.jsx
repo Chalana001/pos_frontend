@@ -108,7 +108,7 @@ const AppRoutes = () => {
       <Route
         path="/pricing"
         element={(
-          <ProtectedRoute requiresOnline>
+          <ProtectedRoute requiresOnline skipModuleGate>
             {withSuspense(<SubscriptionPage />)}
           </ProtectedRoute>
         )}
@@ -117,7 +117,7 @@ const AppRoutes = () => {
       <Route
         path="/"
         element={(
-          <ProtectedRoute>
+          <ProtectedRoute skipModuleGate>
             <BranchProvider>
               <AppConfigurationProvider>
                 <ShiftProvider>

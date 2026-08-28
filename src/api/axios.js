@@ -1,6 +1,7 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { getToken, clearAuth, notifyAuthExpired } from '../utils/auth';
+import { clearSupportSession, isSupportSession } from '../utils/supportSession';
 
 let isHandlingUnauthorized = false;
 const BACKEND_CONNECTION_ERROR_MESSAGE = 'Backend connection failed. Please check whether the server is running.';
@@ -53,11 +54,15 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    const hostname = window.location.hostname;
-    const tenantId = hostname.split('.')[0];
+    // A support-session token already names its tenant, and TenantFilter rejects a
+    // request whose header disagrees with the token — so on those, let the token decide.
+    if (!isSupportSession()) {
+      const hostname = window.location.hostname;
+      const tenantId = hostname.split('.')[0];
 
-    if (tenantId && tenantId !== 'www' && tenantId !== 'localhost' && tenantId !== '127') {
-      config.headers['X-Tenant-ID'] = tenantId;
+      if (tenantId && tenantId !== 'www' && tenantId !== 'localhost' && tenantId !== '127') {
+        config.headers['X-Tenant-ID'] = tenantId;
+      }
     }
 
     return config;
@@ -169,6 +174,21 @@ api.interceptors.response.use(
 
     const status = error.response.status;
     const message = error.response.data?.message || error.response.data?.detail || 'Something went wrong!';
+    const code = error.response.data?.code;
+
+    // A revoked or read-only support session is not the shop's problem — say so plainly
+    // instead of telling the operator their own session expired.
+    if (code === 'SUPPORT_SESSION_ENDED') {
+      toast.error('This support session has ended. Open a new one from the control panel.');
+      clearSupportSession();
+      clearAuth();
+      notifyAuthExpired();
+      return Promise.reject(error);
+    }
+    if (code === 'SUPPORT_SESSION_READ_ONLY') {
+      toast.error('Read-only support session — this change was not saved.');
+      return Promise.reject(error);
+    }
 
     if (status === 401) {
       if (!isHandlingUnauthorized) {

@@ -4,6 +4,8 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import VersionUpdateDialog from '../version/VersionUpdateDialog';
 import OfflineSyncAgent from './OfflineSyncAgent';
+import SupportSessionBanner from './SupportSessionBanner';
+import AnnouncementBanner from './AnnouncementBanner';
 
 const Layout = () => {
   const location = useLocation();
@@ -20,7 +22,11 @@ const Layout = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-transparent">
+    <div className="flex h-screen flex-col overflow-hidden bg-transparent">
+      <SupportSessionBanner />
+      <AnnouncementBanner />
+
+      <div className="flex min-h-0 flex-1 overflow-hidden">
       <Sidebar
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
@@ -34,6 +40,7 @@ const Layout = () => {
         <main className={`page-enter custom-scrollbar flex-1 overflow-y-auto ${isPosRoute ? 'p-1 lg:p-2' : 'p-6'}`}>
           <Outlet />
         </main>
+      </div>
       </div>
       <VersionUpdateDialog />
       <OfflineSyncAgent />
