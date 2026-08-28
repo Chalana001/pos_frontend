@@ -361,10 +361,10 @@ const Header = ({ onOpenSidebar, sidebarCollapsed }) => {
 
           {validUntilLabel && (
             <div className="shell-panel-hover hidden h-11 min-w-[142px] flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-right shadow-sm 2xl:flex">
-              <div className="text-[11px] font-bold uppercase leading-4 text-emerald-700">
+              <div className="text-xs font-bold uppercase leading-4 text-emerald-700">
                 {t(formatPlanName(user?.planName))}
               </div>
-              <div className="text-[11px] leading-4 text-emerald-800">
+              <div className="text-xs leading-4 text-emerald-800">
                 {t(`Valid until ${validUntilLabel}`)}
               </div>
             </div>
@@ -390,7 +390,7 @@ const Header = ({ onOpenSidebar, sidebarCollapsed }) => {
             >
               <Bell size={19} />
               {notificationCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
                   {notificationCount}
                 </span>
               ) : null}
@@ -466,7 +466,7 @@ const Header = ({ onOpenSidebar, sidebarCollapsed }) => {
 
               <div className="hidden min-w-0 max-w-[120px] text-left lg:block">
                 <div className="truncate text-sm font-semibold leading-4 text-slate-800">{user.username}</div>
-                <div className="truncate text-[11px] leading-4 text-slate-500">{t(user.role)}</div>
+                <div className="truncate text-xs leading-4 text-slate-500">{t(user.role)}</div>
               </div>
             </button>
 

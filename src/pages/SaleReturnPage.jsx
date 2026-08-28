@@ -296,14 +296,14 @@ const SaleReturnPage = () => {
           {/* Meta */}
           <div className="grid grid-cols-2 gap-3 text-sm text-left">
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
-              <div className="text-xs text-slate-400 uppercase mb-1">Refund Method</div>
+              <div className="text-xs text-slate-600 uppercase mb-1">Refund Method</div>
               <div className="font-semibold text-slate-700">
                 {REFUND_METHOD_OPTIONS.find((o) => o.value === successReturn.refundMethod)?.label ||
                   successReturn.refundMethod}
               </div>
             </div>
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
-              <div className="text-xs text-slate-400 uppercase mb-1">Reason</div>
+              <div className="text-xs text-slate-600 uppercase mb-1">Reason</div>
               <div className="font-semibold text-slate-700">{successReturn.reason}</div>
             </div>
           </div>
@@ -364,7 +364,7 @@ const SaleReturnPage = () => {
       <Card className="p-5 border-t-4 border-t-orange-400 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
-            <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Invoice</div>
+            <div className="text-xs text-slate-600 uppercase font-semibold mb-1">Invoice</div>
             <div className="text-xl font-bold font-mono text-slate-800">{sale.invoiceNo}</div>
             <div className="text-xs text-slate-500 mt-1">
               {new Date(sale.createdAt).toLocaleString()}
@@ -377,7 +377,7 @@ const SaleReturnPage = () => {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Grand Total</div>
+            <div className="text-xs text-slate-600 uppercase font-semibold mb-1">Grand Total</div>
             <div className="text-2xl font-bold text-slate-800">{fmt(sale.grandTotal)} LKR</div>
             {existingReturns.length > 0 && (
               <div className="mt-1 text-xs text-orange-600 font-semibold">
@@ -477,7 +477,7 @@ const SaleReturnPage = () => {
                     <td className="p-4">
                       <div className="font-medium text-slate-700">{item.itemName}</div>
                       {item.barcode && (
-                        <div className="text-xs text-slate-400 font-mono">{item.barcode}</div>
+                        <div className="text-xs text-slate-600 font-mono">{item.barcode}</div>
                       )}
                       {fullyReturned && (
                         <span className="text-xs bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-semibold">
@@ -492,7 +492,7 @@ const SaleReturnPage = () => {
                       {already > 0 ? (
                         <span className="text-orange-600 font-semibold">{already}</span>
                       ) : (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-slate-600">—</span>
                       )}
                     </td>
                     <td className="p-4 text-center font-semibold text-slate-700">{maxRet}</td>
@@ -501,7 +501,7 @@ const SaleReturnPage = () => {
                     </td>
                     <td className="p-4 text-center">
                       {fullyReturned || isCanceled ? (
-                        <span className="text-slate-300 text-sm">—</span>
+                        <span className="text-slate-600 text-sm">—</span>
                       ) : (
                         <input aria-label="Return quantity"
                           type="number"
@@ -524,7 +524,7 @@ const SaleReturnPage = () => {
                           -{fmt(refundLine)}
                         </span>
                       ) : (
-                        <span className="text-slate-300">—</span>
+                        <span className="text-slate-600">—</span>
                       )}
                     </td>
                   </tr>
@@ -578,7 +578,7 @@ const SaleReturnPage = () => {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g. Customer received wrong item, duplicate purchase, damaged product…"
-                className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-orange-400 focus:border-orange-400 placeholder:text-slate-400"
+                className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-orange-400 focus:border-orange-400 placeholder:text-slate-600"
               />
             </div>
 
@@ -586,14 +586,14 @@ const SaleReturnPage = () => {
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
                 Cashier Note{" "}
-                <span className="text-slate-400 font-normal">(optional)</span>
+                <span className="text-slate-600 font-normal">(optional)</span>
               </label>
               <textarea
                 rows={2}
                 value={cashierNote}
                 onChange={(e) => setCashierNote(e.target.value)}
                 placeholder="Internal note for manager reference…"
-                className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-orange-400 placeholder:text-slate-400"
+                className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-orange-400 placeholder:text-slate-600"
               />
             </div>
           </Card>
@@ -605,7 +605,7 @@ const SaleReturnPage = () => {
             </h3>
 
             {selectedLines.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-slate-400 gap-2">
+              <div className="flex flex-col items-center justify-center h-40 text-slate-600 gap-2">
                 <Package size={32} className="opacity-40" />
                 <span className="text-sm">No items selected yet</span>
               </div>
@@ -619,7 +619,7 @@ const SaleReturnPage = () => {
                     >
                       <div className="text-slate-700 truncate max-w-[60%]">
                         {item.itemName}{" "}
-                        <span className="text-slate-400 font-mono">×{returnQty}</span>
+                        <span className="text-slate-600 font-mono">×{returnQty}</span>
                       </div>
                       <div className="font-semibold text-red-600">
                         -{fmt(refundLine)} LKR
@@ -635,7 +635,7 @@ const SaleReturnPage = () => {
                       {fmt(totalRefund)} LKR
                     </span>
                   </div>
-                  <div className="mt-1 text-xs text-slate-400">
+                  <div className="mt-1 text-xs text-slate-600">
                     via{" "}
                     {REFUND_METHOD_OPTIONS.find((o) => o.value === refundMethod)?.label ||
                       refundMethod}
@@ -650,7 +650,7 @@ const SaleReturnPage = () => {
                 className={`w-full py-3 text-base font-bold shadow-md transition-all ${
                   selectedLines.length > 0 && reason.trim()
                     ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-200"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    : "bg-slate-200 text-slate-600 cursor-not-allowed"
                 }`}
                 onClick={handleSubmit}
                 disabled={isSubmitting || selectedLines.length === 0 || !reason.trim()}
@@ -669,7 +669,7 @@ const SaleReturnPage = () => {
               </Button>
 
               {(selectedLines.length === 0 || !reason.trim()) && (
-                <p className="text-xs text-slate-400 text-center mt-2">
+                <p className="text-xs text-slate-600 text-center mt-2">
                   {selectedLines.length === 0
                     ? "Enter return quantities above to enable"
                     : "Return reason is required"}

@@ -256,11 +256,11 @@ const PurchaseReturnPage = () => {
 
           <div className="grid grid-cols-2 gap-3 text-sm text-left">
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
-              <div className="text-xs text-slate-400 uppercase mb-1">Supplier</div>
+              <div className="text-xs text-slate-600 uppercase mb-1">Supplier</div>
               <div className="font-semibold text-slate-700">{successReturn.supplierName}</div>
             </div>
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
-              <div className="text-xs text-slate-400 uppercase mb-1">Reason</div>
+              <div className="text-xs text-slate-600 uppercase mb-1">Reason</div>
               <div className="font-semibold text-slate-700">{successReturn.reason}</div>
             </div>
           </div>
@@ -317,7 +317,7 @@ const PurchaseReturnPage = () => {
       <Card className="p-5 border-t-4 border-t-blue-600 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
-            <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Purchase Invoice</div>
+            <div className="text-xs text-slate-600 uppercase font-semibold mb-1">Purchase Invoice</div>
             <div className="text-xl font-bold font-mono text-slate-800">{purchase.invoiceNo}</div>
             <div className="text-xs text-slate-500 mt-1">{new Date(purchase.createdAt).toLocaleString()}</div>
             <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
@@ -326,7 +326,7 @@ const PurchaseReturnPage = () => {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-slate-400 uppercase font-semibold mb-1">Grand Total</div>
+            <div className="text-xs text-slate-600 uppercase font-semibold mb-1">Grand Total</div>
             <div className="text-2xl font-bold text-slate-800">
               {fmt(purchase.grandTotal)} LKR
             </div>
@@ -352,7 +352,7 @@ const PurchaseReturnPage = () => {
                 <div>
                   <span className="font-mono font-bold text-slate-700">{ret.debitNoteNo}</span>
                   <span className="ml-3 text-slate-500 text-xs">{new Date(ret.createdAt).toLocaleString()}</span>
-                  <span className="ml-2 text-xs text-slate-400">GRN: {ret.grnNo}</span>
+                  <span className="ml-2 text-xs text-slate-600">GRN: {ret.grnNo}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-red-600">-{fmt(ret.totalReturnAmount)} LKR</span>
@@ -429,7 +429,7 @@ const PurchaseReturnPage = () => {
                         <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${fullyReturned ? "opacity-50" : ""}`}>
                           <td className="p-4">
                             <div className="font-medium text-slate-700">{item.itemName}</div>
-                            {item.barcode && <div className="text-xs text-slate-400 font-mono">{item.barcode}</div>}
+                            {item.barcode && <div className="text-xs text-slate-600 font-mono">{item.barcode}</div>}
                             {fullyReturned && (
                               <span className="text-xs bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-semibold">
                                 Fully Returned
@@ -440,13 +440,13 @@ const PurchaseReturnPage = () => {
                           <td className="p-4 text-center">
                             {already > 0
                               ? <span className="text-blue-600 font-semibold">{already}</span>
-                              : <span className="text-slate-400">—</span>}
+                              : <span className="text-slate-600">—</span>}
                           </td>
                           <td className="p-4 text-center font-semibold text-slate-700">{maxRet}</td>
                           <td className="p-4 text-right text-slate-600">{fmt(item.costPrice)}</td>
                           <td className="p-4 text-center">
                             {fullyReturned ? (
-                              <span className="text-slate-300 text-sm">—</span>
+                              <span className="text-slate-600 text-sm">—</span>
                             ) : (
                               <input aria-label="Return quantity"
                                 type="number"
@@ -466,7 +466,7 @@ const PurchaseReturnPage = () => {
                           <td className="p-4 text-right pr-6">
                             {currentQty > 0
                               ? <span className="font-bold text-red-600">-{fmt(returnLine)}</span>
-                              : <span className="text-slate-300">—</span>}
+                              : <span className="text-slate-600">—</span>}
                           </td>
                         </tr>
                       );
@@ -493,20 +493,20 @@ const PurchaseReturnPage = () => {
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="e.g. Damaged goods, wrong items received, excess quantity…"
-                    className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder:text-slate-400"
+                    className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder:text-slate-600"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                    Note <span className="text-slate-400 font-normal">(optional)</span>
+                    Note <span className="text-slate-600 font-normal">(optional)</span>
                   </label>
                   <textarea
                     rows={2}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="Internal reference note…"
-                    className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-400 placeholder:text-slate-400"
+                    className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-400 placeholder:text-slate-600"
                   />
                 </div>
               </Card>
@@ -516,7 +516,7 @@ const PurchaseReturnPage = () => {
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-5">Return Summary</h3>
 
                 {selectedLines.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-40 text-slate-400 gap-2">
+                  <div className="flex flex-col items-center justify-center h-40 text-slate-600 gap-2">
                     <Package size={32} className="opacity-40" />
                     <span className="text-sm">No items selected yet</span>
                   </div>
@@ -526,7 +526,7 @@ const PurchaseReturnPage = () => {
                       {selectedLines.map(({ item, returnQty, returnLine }) => (
                         <div key={item.id} className="flex items-center justify-between text-sm">
                           <div className="text-slate-700 truncate max-w-[60%]">
-                            {item.itemName} <span className="text-slate-400 font-mono">×{returnQty}</span>
+                            {item.itemName} <span className="text-slate-600 font-mono">×{returnQty}</span>
                           </div>
                           <div className="font-semibold text-red-600">-{fmt(returnLine)} LKR</div>
                         </div>
@@ -537,7 +537,7 @@ const PurchaseReturnPage = () => {
                         <span className="text-sm font-bold text-slate-700">Total Return</span>
                         <span className="text-2xl font-bold text-red-600">{fmt(totalReturn)} LKR</span>
                       </div>
-                      <div className="mt-1 text-xs text-slate-400">
+                      <div className="mt-1 text-xs text-slate-600">
                         Debit note will be issued to {purchase.supplierName}
                       </div>
                     </div>
@@ -549,7 +549,7 @@ const PurchaseReturnPage = () => {
                     className={`w-full py-3 text-base font-bold shadow-md transition-all ${
                       selectedLines.length > 0 && reason.trim()
                         ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200"
-                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                        : "bg-slate-200 text-slate-600 cursor-not-allowed"
                     }`}
                     onClick={handleSubmit}
                     disabled={isSubmitting || selectedLines.length === 0 || !reason.trim()}
@@ -567,7 +567,7 @@ const PurchaseReturnPage = () => {
                     )}
                   </Button>
                   {(selectedLines.length === 0 || !reason.trim()) && (
-                    <p className="text-xs text-slate-400 text-center mt-2">
+                    <p className="text-xs text-slate-600 text-center mt-2">
                       {selectedLines.length === 0 ? "Enter return quantities above to enable" : "Return reason is required"}
                     </p>
                   )}

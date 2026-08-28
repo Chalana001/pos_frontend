@@ -426,7 +426,7 @@ const CashDrops = () => {
               <h3 className="text-sm font-medium text-slate-600 mb-2">
                 Total Drop Amount
                 {(startDate || endDate || search || cashierId !== "ALL") && (
-                  <span className="ml-1 font-normal text-slate-400">(filtered)</span>
+                  <span className="ml-1 font-normal text-slate-600">(filtered)</span>
                 )}
               </h3>
               <p className="text-2xl font-bold text-blue-600">
@@ -465,7 +465,7 @@ const CashDrops = () => {
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "170ms" }}>
           <div className={`grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 ${isAdmin ? "xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_auto]" : "xl:grid-cols-[minmax(260px,1fr)_180px_180px_auto]"} xl:items-center`}>
             <div className={`relative w-full col-span-full ${isAdmin ? "min-[620px]:col-span-2" : "min-[620px]:col-span-2"} min-[440px]:col-span-3 xl:col-span-1`}>
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-600" size={20} />
               <input aria-label="Search reason..."
                 type="text"
                 value={search}

@@ -481,17 +481,17 @@ const StockProcessingPage = () => {
                     {form.outputs.map((output, index) => (
                       <div key={output.outputItemId} className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(0,1.6fr)_120px_120px_110px_100px_72px]">
                         <div className="min-w-0">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Output Item</div>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 md:hidden">Output Item</div>
                           <div className="truncate font-semibold text-slate-800">{output.outputName}</div>
                           <div className="text-xs text-slate-500">{output.itemType}</div>
-                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
                             <span>Default Qty: {formatQty(output.defaultQty, output.defaultQtyUnit)}</span>
                             {!output.waste && <span>Default Sell: {formatCurrency(output.defaultSellingPrice ?? 0)}</span>}
                           </div>
                         </div>
 
                         <div>
-                          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Qty</div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 md:hidden">Qty</div>
                           <input aria-label="Qty"
                             type="number"
                             min="0"
@@ -504,7 +504,7 @@ const StockProcessingPage = () => {
                         </div>
 
                         <div>
-                          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Sell Price</div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 md:hidden">Sell Price</div>
                           <input aria-label="Batch sell price"
                             type="number"
                             min="0"
@@ -518,26 +518,26 @@ const StockProcessingPage = () => {
                         </div>
 
                         <div>
-                          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Unit</div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 md:hidden">Unit</div>
                           <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600">
                             {output.qtyUnit}
                           </div>
                         </div>
 
                         <div>
-                          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Est. Cost</div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 md:hidden">Est. Cost</div>
                           <div className="flex h-[42px] items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-blue-700">
                             {output.waste
-                              ? <span className="text-slate-400">—</span>
+                              ? <span className="text-slate-600">—</span>
                               : costPreview.costs[index] != null
                                 ? formatCurrency(costPreview.costs[index])
-                                : <span className="text-slate-400">—</span>
+                                : <span className="text-slate-600">—</span>
                             }
                           </div>
                         </div>
 
                         <div>
-                          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Type</div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 md:hidden">Type</div>
                           <div className={`flex h-[42px] items-center justify-center rounded-lg px-2 text-xs font-bold ${output.waste ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"}`}>
                             {output.waste ? "Waste" : "Stock"}
                           </div>

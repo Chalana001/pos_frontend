@@ -219,18 +219,18 @@ const ShiftHistory = () => {
                   >
                     <td className="p-4">
                       <p className="text-sm font-medium text-slate-800">{formatDateTime(s.openedAt)}</p>
-                      <p className="text-[10px] text-slate-400 font-mono uppercase">
+                      <p className="text-xs text-slate-600 font-mono uppercase">
                         {s.closedAt ? `Closed: ${formatDateTime(s.closedAt)}` : "Ongoing Shift"}
                       </p>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-slate-700">{s.cashierName || `User ${s.cashierUserId}`}</span>
-                        <span className="text-[10px] text-slate-500 uppercase">{s.branchName || `Branch #${s.branchId}`}</span>
+                        <span className="text-xs text-slate-500 uppercase">{s.branchName || `Branch #${s.branchId}`}</span>
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
                         s.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
                       }`}>
                         {s.status}
@@ -238,10 +238,10 @@ const ShiftHistory = () => {
                     </td>
                     <td className="p-4 text-right">
                       <p className="text-sm font-bold text-slate-800">{formatCurrency(s.expectedCash || 0)}</p>
-                      <p className="text-[10px] text-slate-400">Sales: {formatCurrency(s.cashSales)}</p>
+                      <p className="text-xs text-slate-600">Sales: {formatCurrency(s.cashSales)}</p>
                     </td>
                     <td className={`p-4 text-right font-bold text-sm ${
-                      (s.cashDifference || 0) < 0 ? 'text-red-600' : (s.cashDifference > 0 ? 'text-blue-600' : 'text-slate-400')
+                      (s.cashDifference || 0) < 0 ? 'text-red-600' : (s.cashDifference > 0 ? 'text-blue-600' : 'text-slate-600')
                     }`}>
                       {s.status === 'CLOSED' ? formatCurrency(s.cashDifference) : '--'}
                     </td>
@@ -250,7 +250,7 @@ const ShiftHistory = () => {
                         {s.closeNote || s.openNote || "—"}
                       </p>
                     </td>
-                    <td className="p-4 text-right text-slate-400">
+                    <td className="p-4 text-right text-slate-600">
                       <ChevronRight size={18} className="inline-block" />
                     </td>
                   </tr>
@@ -260,7 +260,7 @@ const ShiftHistory = () => {
           </div>
           {shifts.length === 0 && (
             <div className="p-12 text-center">
-              <p className="text-slate-400">No shift records found for the selected criteria.</p>
+              <p className="text-slate-600">No shift records found for the selected criteria.</p>
             </div>
           )}
           

@@ -106,7 +106,7 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
       <div className="p-4 min-h-[500px] flex flex-col">
         <div className="flex gap-3 mb-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
             <input aria-label="Search customers..."
               type="text"
               value={searchQuery}
@@ -128,7 +128,7 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
               onClick={() => { onSelectCustomer(customer); onClose(); }}
               className="w-full p-4 flex items-center gap-4 bg-white border border-slate-100 hover:border-blue-400 hover:bg-blue-50 rounded-xl transition-all text-left group"
             >
-              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-200 group-hover:text-blue-600 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-blue-200 group-hover:text-blue-600 transition-colors">
                  <User size={20} />
               </div>
               <div>

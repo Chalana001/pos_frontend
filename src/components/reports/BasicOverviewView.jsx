@@ -98,7 +98,7 @@ export default function BasicOverviewView({
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">Owner Command Center</p>
               <h2 className="mt-1 text-xl font-black">Current period versus previous period</h2>
             </div>
-            <p className="text-xs font-semibold text-slate-300">
+            <p className="text-xs font-semibold text-slate-600">
               Compared to {ownerSummary.comparisonPeriod.from} — {ownerSummary.comparisonPeriod.to}
             </p>
           </div>

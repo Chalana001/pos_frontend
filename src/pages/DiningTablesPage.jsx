@@ -259,7 +259,7 @@ const DiningTablesPage = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <div className="text-base font-semibold text-slate-900">{table.tableName}</div>
-                          <div className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${
+                          <div className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
                             table.status === 'OCCUPIED'
                               ? 'bg-amber-100 text-amber-700'
                               : 'bg-emerald-100 text-emerald-700'

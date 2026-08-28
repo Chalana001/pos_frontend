@@ -293,7 +293,7 @@ const ShiftDetailsPage = () => {
                       </span>
                     </td>
                     <td className="p-4 text-right font-bold text-slate-800">{formatCurrency(sale.grandTotal || 0)}</td>
-                    <td className="p-4 text-right text-slate-400">
+                    <td className="p-4 text-right text-slate-600">
                       <ChevronRight size={18} className="inline-block" />
                     </td>
                   </tr>

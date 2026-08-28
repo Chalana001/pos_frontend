@@ -91,7 +91,7 @@ const VALUATION_STATUS_STYLES = {
 export const ValuationStatusBadge = ({ status }) => {
   const [label, className] = VALUATION_STATUS_STYLES[status] || ["Unclassified", "bg-slate-100 text-slate-600"];
   return (
-    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}>
+    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${className}`}>
       {label}
     </span>
   );

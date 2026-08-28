@@ -932,7 +932,7 @@ export default function BulkAddItems() {
                     }}
                   />
                 ) : (
-                  <span className="text-gray-400 text-sm">
+                  <span className="text-slate-600 text-sm">
                     Image preview will appear here
                   </span>
                 )}
@@ -977,7 +977,7 @@ export default function BulkAddItems() {
               <div className="space-y-2">
                 <label htmlFor="bulkadditems-alt-name-sinhala-optional-used-on-receip" className="text-sm font-medium">
                   Alt Name (Sinhala)
-                  <span className="ml-2 text-xs text-slate-400 font-normal">Optional — used on receipts when set to Alt Name.</span>
+                  <span className="ml-2 text-xs text-slate-600 font-normal">Optional — used on receipts when set to Alt Name.</span>
                 </label>
                 <input id="bulkadditems-alt-name-sinhala-optional-used-on-receip"
                   className="w-full border rounded-lg px-3 py-2"
@@ -1214,7 +1214,7 @@ export default function BulkAddItems() {
                             value={draft.overheadCostValue}
                             onChange={(e) => updateDraft("overheadCostValue", e.target.value)}
                             disabled={draft.overheadCostMode === OVERHEAD_COST_MODES.NONE}
-                            className="w-full rounded-l-lg px-3 py-2 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                            className="w-full rounded-l-lg px-3 py-2 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600"
                             placeholder="0"
                           />
                           <span className="flex items-center rounded-r-lg border-l border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500">
@@ -1320,7 +1320,7 @@ export default function BulkAddItems() {
                             <div>
                               <label className="mb-1 block text-sm font-medium text-slate-700">Output Item</label>
                               <div className="relative">
-                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
                                 <input aria-label="Output item"
                                   type="text"
                                   value={output.search || ""}
@@ -1447,7 +1447,7 @@ export default function BulkAddItems() {
                         <div>
                           <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
                           <div className="relative">
-                            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
                             <input aria-label="Ingredient"
                               type="text"
                               value={ingredient.search || ""}

@@ -93,13 +93,13 @@ const SupplierViewPage = () => {
 
           <div className="grid min-w-[280px] grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "180ms" }}>
-              <div className="text-xs font-semibold uppercase text-slate-400">Payable</div>
+              <div className="text-xs font-semibold uppercase text-slate-600">Payable</div>
               <div className={`mt-1 text-2xl font-bold ${Number(supplier?.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-800"}`}>
                 {formatCurrency(supplier?.dueAmount || 0)}
               </div>
             </div>
             <div className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "220ms" }}>
-              <div className="text-xs font-semibold uppercase text-slate-400">Status</div>
+              <div className="text-xs font-semibold uppercase text-slate-600">Status</div>
               <div className="mt-2">
                 <span className={`rounded-full px-2 py-1 text-xs font-semibold ${supplier?.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                   {supplier?.active ? "Active" : "Inactive"}
@@ -121,25 +121,25 @@ const SupplierViewPage = () => {
         {hasBankDetails ? (
           <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2 lg:grid-cols-4">
             <div className="profile-detail-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "170ms" }}>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-400">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-600">
                 <Landmark size={14} /> Bank
               </div>
               <div className="mt-2 font-semibold text-slate-800">{bankDetails.bankName || "-"}</div>
             </div>
             <div className="profile-detail-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "210ms" }}>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-400">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-600">
                 <Building2 size={14} /> Branch
               </div>
               <div className="mt-2 font-semibold text-slate-800">{bankDetails.branchName || "-"}</div>
             </div>
             <div className="profile-detail-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "250ms" }}>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-400">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-600">
                 <UserRound size={14} /> Account Name
               </div>
               <div className="mt-2 font-semibold text-slate-800">{bankDetails.accountName || "-"}</div>
             </div>
             <div className="profile-detail-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "290ms" }}>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-400">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-600">
                 <CreditCard size={14} /> Account Number
               </div>
               <div className="mt-2 break-all font-semibold text-slate-800">{bankDetails.accountNumber || "-"}</div>
@@ -202,23 +202,23 @@ const SupplierViewPage = () => {
                         {purchase.invoiceNo}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${isCanceled ? "border-red-200 bg-red-100 text-red-700" : "border-green-200 bg-green-100 text-green-700"}`}>
+                        <span className={`rounded-full border px-2 py-1 text-xs font-bold uppercase ${isCanceled ? "border-red-200 bg-red-100 text-red-700" : "border-green-200 bg-green-100 text-green-700"}`}>
                           {isCanceled ? "Canceled" : "Completed"}
                         </span>
                       </td>
-                      <td className={`px-6 py-4 text-right font-semibold ${isCanceled ? "text-slate-400 line-through" : "text-slate-500"}`}>
+                      <td className={`px-6 py-4 text-right font-semibold ${isCanceled ? "text-slate-600 line-through" : "text-slate-500"}`}>
                         {formatCurrency(purchase.discountAmount || 0)}
                       </td>
-                      <td className={`px-6 py-4 text-right font-bold ${isCanceled ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                      <td className={`px-6 py-4 text-right font-bold ${isCanceled ? "text-slate-600 line-through" : "text-slate-800"}`}>
                         {formatCurrency(purchase.grandTotal || 0)}
                       </td>
-                      <td className={`px-6 py-4 text-right font-semibold ${isCanceled ? "text-slate-400 line-through" : "text-emerald-700"}`}>
+                      <td className={`px-6 py-4 text-right font-semibold ${isCanceled ? "text-slate-600 line-through" : "text-emerald-700"}`}>
                         {formatCurrency(purchase.paidAmount || 0)}
                       </td>
-                      <td className={`px-6 py-4 text-right font-bold ${isCanceled ? "text-slate-400 line-through" : Number(purchase.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-400"}`}>
+                      <td className={`px-6 py-4 text-right font-bold ${isCanceled ? "text-slate-600 line-through" : Number(purchase.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-600"}`}>
                         {formatCurrency(purchase.dueAmount || 0)}
                       </td>
-                      <td className="px-6 py-4 text-slate-400">
+                      <td className="px-6 py-4 text-slate-600">
                         <ChevronRight size={18} />
                       </td>
                     </tr>

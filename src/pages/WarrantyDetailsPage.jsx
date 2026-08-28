@@ -212,7 +212,7 @@ const WarrantyDetailsPage = () => {
               <div>
                 <h1 className="text-2xl font-bold text-slate-800">{warranty.warrantyNo}</h1>
                 <div className="mt-1 text-sm text-slate-500">{warranty.itemName}</div>
-                {warranty.altName && <div className="text-xs text-slate-400">{warranty.altName}</div>}
+                {warranty.altName && <div className="text-xs text-slate-600">{warranty.altName}</div>}
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -247,14 +247,14 @@ const WarrantyDetailsPage = () => {
           <h2 className="mb-4 text-lg font-bold text-slate-800">Warranty Record</h2>
           <div className="space-y-4 text-sm">
             <div className="flex items-start gap-3">
-              <User size={18} className="mt-0.5 text-slate-400" />
+              <User size={18} className="mt-0.5 text-slate-600" />
               <div>
                 <div className="text-slate-500">Customer</div>
                 <div className="font-semibold text-slate-800">{warranty.customerName}</div>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <CalendarDays size={18} className="mt-0.5 text-slate-400" />
+              <CalendarDays size={18} className="mt-0.5 text-slate-600" />
               <div>
                 <div className="text-slate-500">Coverage</div>
                 <div className="font-semibold text-slate-800">
@@ -372,7 +372,7 @@ const WarrantyDetailsPage = () => {
                     <td className="app-table-cell max-w-[260px] whitespace-normal">{claim.resolutionNote || "-"}</td>
                     <td className="app-table-cell">{claim.completedAt ? formatDateTime(claim.completedAt) : "-"}</td>
                     <td className="app-table-cell text-center">
-                      <span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${getClaimStatusClassName(claim.status)}`}>
+                      <span className={`rounded-full border px-2 py-1 text-xs font-bold uppercase tracking-wider ${getClaimStatusClassName(claim.status)}`}>
                         {claim.status.replace("_", " ")}
                       </span>
                     </td>

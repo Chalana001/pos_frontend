@@ -260,7 +260,7 @@ const BarcodePrintPage = () => {
                 Load
               </Button>
             </div>
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-slate-600 mt-2">
               This will clear the current queue and load the latest items.
             </p>
           </Card>
@@ -269,7 +269,7 @@ const BarcodePrintPage = () => {
           <Card className="sales-panel-enter sales-panel-hover" style={{ animationDelay: "180ms" }}>
             <h3 className="text-sm font-medium text-slate-600 mb-3">Add Items to Print</h3>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
               <input aria-label="Search by name or barcode..."
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Search by name or barcode..."
@@ -316,7 +316,7 @@ const BarcodePrintPage = () => {
                 <LoadingSpinner size="lg" text="Loading items..." />
               </div>
             ) : printList.length === 0 ? (
-              <div className="py-12 text-center text-slate-400">
+              <div className="py-12 text-center text-slate-600">
                 <Printer size={48} className="mx-auto mb-3 opacity-20" />
                 <p>Queue is empty. Search or load items to print.</p>
               </div>

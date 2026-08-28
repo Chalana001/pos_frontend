@@ -849,7 +849,7 @@ const ItemFormPage = ({ mode }) => {
                   <div className="md:col-span-2">
                     <label htmlFor="itemformpage-alt-name-sinhala-used-on-receipts-when-t" className="block text-sm font-medium text-slate-700 mb-1">
                       Alt Name (Sinhala)
-                      <span className="ml-2 text-xs text-slate-400 font-normal">Used on receipts when the design's name source is set to Alt Name.</span>
+                      <span className="ml-2 text-xs text-slate-600 font-normal">Used on receipts when the design's name source is set to Alt Name.</span>
                     </label>
                     <input id="itemformpage-alt-name-sinhala-used-on-receipts-when-t"
                       type="text"
@@ -1113,7 +1113,7 @@ const ItemFormPage = ({ mode }) => {
                             value={formData.overheadCostValue}
                             onChange={(e) => setFormData((prev) => ({ ...prev, overheadCostValue: e.target.value }))}
                             disabled={formData.overheadCostMode === OVERHEAD_COST_MODES.NONE}
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-600"
                           />
                           <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-600">
                             {formData.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "%" : "LKR"}
@@ -1133,7 +1133,7 @@ const ItemFormPage = ({ mode }) => {
                       disabled={formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE}
                       className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE
-                          ? "bg-slate-100 text-slate-400 border-slate-200"
+                          ? "bg-slate-100 text-slate-600 border-slate-200"
                           : "border-slate-300"
                       }`}
                     />
@@ -1197,7 +1197,7 @@ const ItemFormPage = ({ mode }) => {
                                 <div>
                                   <label className="mb-1 block text-sm font-medium text-slate-700">Output Item</label>
                                   <div className="relative">
-                                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
                                     <input aria-label={`Output item ${index + 1}`}
                                       type="text"
                                       value={output.search || ""}
@@ -1338,7 +1338,7 @@ const ItemFormPage = ({ mode }) => {
                             <div>
                               <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
                               <div className="relative">
-                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
                                 <input aria-label={`Ingredient ${index + 1}`}
                                   type="text"
                                   value={ingredient.search || ""}

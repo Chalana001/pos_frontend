@@ -86,7 +86,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
       <div className="space-y-6">
         {/* ---------------------------------------------------------- hero */}
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">
             <Lock size={12} />
             Not in your package
           </span>
@@ -95,7 +95,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
             {module?.headline ?? featureName}
           </h2>
 
-          <p className="mt-1.5 text-sm font-semibold uppercase tracking-wide text-slate-400">
+          <p className="mt-1.5 text-sm font-semibold uppercase tracking-wide text-slate-600">
             {featureName}
             {module?.categoryLabel ? ` · ${module.categoryLabel}` : ""}
           </p>
@@ -108,7 +108,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
         {/* ------------------------------------------- what it changes for them */}
         {outcomes.length ? (
           <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-5">
-            <p className="mb-3.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            <p className="mb-3.5 text-xs font-bold uppercase tracking-wide text-slate-500">
               What this changes for your shop
             </p>
             <ul className="grid gap-3 sm:grid-cols-2">
@@ -127,7 +127,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
         {/* -------------------------------------------- the concrete feature list */}
         {capabilities.length ? (
           <div>
-            <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            <p className="mb-2.5 text-xs font-bold uppercase tracking-wide text-slate-500">
               Everything included
             </p>
             <ul className="grid gap-2 sm:grid-cols-2">
@@ -152,7 +152,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
         {/* ------------------------------------- where it sits in what they have */}
         {siblings.length > 1 ? (
           <div>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
               Your {module.categoryLabel?.toLowerCase()}
             </p>
             <ul className="flex flex-wrap gap-1.5">
@@ -164,7 +164,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
                       ? "border-amber-300 bg-amber-50 font-bold text-amber-800"
                       : entry.enabled
                         ? "border-slate-200 bg-white text-slate-700"
-                        : "border-dashed border-slate-300 bg-white text-slate-400"
+                        : "border-dashed border-slate-300 bg-white text-slate-600"
                   }`}
                 >
                   {entry.key === moduleKey ? (
@@ -172,7 +172,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
                   ) : entry.enabled ? (
                     <Check size={11} className="text-emerald-600" />
                   ) : (
-                    <Lock size={11} className="text-slate-300" />
+                    <Lock size={11} className="text-slate-600" />
                   )}
                   {entry.name}
                 </li>

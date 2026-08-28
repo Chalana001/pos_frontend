@@ -669,7 +669,7 @@ const ReceiptSettingsPage = () => {
                       ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
                       : kotEnabled
                         ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        : 'cursor-not-allowed bg-slate-100 text-slate-400 opacity-70'
+                        : 'cursor-not-allowed bg-slate-100 text-slate-600 opacity-70'
                   }`}
                   title={!kotEnabled ? 'KOT is disabled in App Configuration' : undefined}
                 >
@@ -699,7 +699,7 @@ const ReceiptSettingsPage = () => {
                       ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
                       : barcodeFeatureEnabled
                         ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        : 'cursor-not-allowed bg-slate-100 text-slate-400 opacity-70'
+                        : 'cursor-not-allowed bg-slate-100 text-slate-600 opacity-70'
                   }`}
                   title={!barcodeFeatureEnabled ? 'Barcode printing is not included in your plan' : undefined}
                 >
@@ -952,7 +952,7 @@ const ReceiptSettingsPage = () => {
                             {/* Row 2: custom text input (only for supported types) */}
                             {supportsText ? (
                               <div className="mt-2 flex items-center gap-2">
-                                <Type size={13} className="shrink-0 text-slate-400" />
+                                <Type size={13} className="shrink-0 text-slate-600" />
                                 <input aria-label="Element text"
                                   type="text"
                                   value={line.customText || ''}
@@ -1006,7 +1006,7 @@ const ReceiptSettingsPage = () => {
                             {/* Row 2c: separator style picker */}
                             {line.type === 'SEPARATOR' ? (
                               <div className="mt-2 flex items-center gap-2">
-                                <span className="text-xs text-slate-400 shrink-0">Style</span>
+                                <span className="text-xs text-slate-600 shrink-0">Style</span>
                                 <div className="flex gap-1">
                                   <button
                                     type="button"
@@ -1086,7 +1086,7 @@ const ReceiptSettingsPage = () => {
                       </button>
                     </div>
 
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-600">
                       Live preview updates on the right panel as you edit each line. Use the <strong>Thanks Message</strong> line type to add a footer message — type the text directly in the custom text field.
                     </p>
                   </div>

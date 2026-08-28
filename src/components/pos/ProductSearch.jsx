@@ -51,7 +51,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
     <Modal isOpen={isOpen} onClose={onClose} title="Search Products" size="lg">
       <div className="p-4 bg-white min-h-[500px] flex flex-col">
         <div className="relative mb-4">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
           <input aria-label="Search by product name..."
             type="text"
             value={searchQuery}
@@ -66,7 +66,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
           {loading ? (
             <div className="flex justify-center py-10"><LoadingSpinner /></div>
           ) : items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-60">
+            <div className="flex flex-col items-center justify-center h-full text-slate-600 opacity-60">
               <Box size={48} className="mb-2" />
               <p>No products found</p>
             </div>
@@ -84,7 +84,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
                 >
                   <div>
                     <h3 className="font-bold text-slate-800 group-hover:text-blue-700">{item.name}</h3>
-                    {item.altName && <p className="text-xs text-slate-400">{item.altName}</p>}
+                    {item.altName && <p className="text-xs text-slate-600">{item.altName}</p>}
                     <div className="flex gap-3 text-sm text-slate-500 mt-1">
                       <span className="flex items-center gap-1"><Barcode size={14} /> {item.barcode}</span>
                       <span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">{item.category}</span>

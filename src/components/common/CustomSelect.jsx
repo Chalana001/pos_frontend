@@ -120,12 +120,12 @@ const CustomSelect = ({
             : "border-slate-300 hover:border-blue-400"
         } ${buttonClassName}`}
       >
-        <span className={`truncate text-xs ${selectedOption ? "font-medium text-slate-700" : "text-slate-400"}`}>
+        <span className={`truncate text-xs ${selectedOption ? "font-medium text-slate-700" : "text-slate-600"}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown
           size={14}
-          className={`shrink-0 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          className={`shrink-0 text-slate-600 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 

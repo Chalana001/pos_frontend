@@ -343,7 +343,7 @@ const PromotionsPage = () => {
                 </span>
               </div>
               <div className="relative mb-2">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
                 <input aria-label="Search targets" value={targetSearch} onChange={(event) => setTargetSearch(event.target.value)} placeholder="Search targets" className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm" />
               </div>
               <div className="custom-scrollbar max-h-64 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
@@ -353,7 +353,7 @@ const PromotionsPage = () => {
                   const checked = selectedTargetIds.some((id) => Number(id) === Number(target.id));
                   return (
                     <label key={target.id} className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm ${checked ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50"}`}>
-                      <span className="min-w-0 truncate"><span className="font-medium">{target.name}</span>{target.altName && <span className="text-xs text-slate-400 ml-1">{target.altName}</span>}{form.scope === "ITEM" && target.barcode ? <span className="text-slate-400"> ({target.barcode})</span> : ""}</span>
+                      <span className="min-w-0 truncate"><span className="font-medium">{target.name}</span>{target.altName && <span className="text-xs text-slate-600 ml-1">{target.altName}</span>}{form.scope === "ITEM" && target.barcode ? <span className="text-slate-600"> ({target.barcode})</span> : ""}</span>
                       <input type="checkbox" checked={checked} onChange={() => toggleTarget(target.id)} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                     </label>
                   );

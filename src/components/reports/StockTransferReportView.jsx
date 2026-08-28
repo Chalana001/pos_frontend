@@ -161,7 +161,7 @@ export default function StockTransferReportView({ data, pageData }) {
                   }`}
                 >
                   <span>{option.label}</span>
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
+                  <span className={`rounded-full px-1.5 py-0.5 text-xs ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
                     {count}
                   </span>
                 </button>

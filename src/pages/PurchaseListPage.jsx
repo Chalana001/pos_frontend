@@ -149,7 +149,7 @@ const PurchaseListPage = () => {
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "130ms" }}>
           <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
             <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
               <input aria-label="Search invoice, supplier, or GRN..."
                 type="text"
                 placeholder="Search invoice, supplier, or GRN..."
@@ -260,18 +260,18 @@ const PurchaseListPage = () => {
                         className={`cursor-pointer transition-colors ${isCanceled ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-slate-50"}`}
                         onClick={() => navigate(`/purchases/${purchase.purchaseId}`)}
                       >
-                        <td className={`px-6 py-4 whitespace-nowrap ${isCanceled ? "text-slate-400" : "text-slate-600"}`}>
+                        <td className={`px-6 py-4 whitespace-nowrap ${isCanceled ? "text-slate-600" : "text-slate-600"}`}>
                           {formatDateTime(purchase.createdAt)}
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap font-semibold ${isCanceled ? "text-red-400 line-through" : "text-slate-800"}`}>
                           {purchase.invoiceNo}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap font-medium ${isCanceled ? "text-slate-400" : "text-slate-700"}`}>
+                        <td className={`px-6 py-4 whitespace-nowrap font-medium ${isCanceled ? "text-slate-600" : "text-slate-700"}`}>
                           {purchase.supplierName}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span
-                            className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                            className={`rounded-full border px-2 py-1 text-xs font-bold uppercase tracking-wider ${
                               isCanceled
                                 ? "border-red-200 bg-red-100 text-red-700"
                                 : "border-green-200 bg-green-100 text-green-700"
@@ -280,33 +280,33 @@ const PurchaseListPage = () => {
                             {isCanceled ? "Canceled" : "Completed"}
                           </span>
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-right font-semibold ${isCanceled ? "text-slate-400 line-through" : "text-slate-500"}`}>
+                        <td className={`px-6 py-4 whitespace-nowrap text-right font-semibold ${isCanceled ? "text-slate-600 line-through" : "text-slate-500"}`}>
                           {formatCurrency(purchase.discountAmount || 0)}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-right font-bold ${isCanceled ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                        <td className={`px-6 py-4 whitespace-nowrap text-right font-bold ${isCanceled ? "text-slate-600 line-through" : "text-slate-800"}`}>
                           {formatCurrency(purchase.grandTotal || 0)}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-right font-semibold ${isCanceled ? "text-slate-400 line-through" : "text-emerald-700"}`}>
+                        <td className={`px-6 py-4 whitespace-nowrap text-right font-semibold ${isCanceled ? "text-slate-600 line-through" : "text-emerald-700"}`}>
                           {formatCurrency(purchase.paidAmount || 0)}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-xs font-semibold ${isCanceled ? "text-slate-400" : "text-slate-600"}`}>
+                        <td className={`px-6 py-4 whitespace-nowrap text-xs font-semibold ${isCanceled ? "text-slate-600" : "text-slate-600"}`}>
                           {Number(purchase.paidAmount || 0) > 0 ? formatCashSource(purchase.cashSource) : "No Cash Out"}
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap text-right font-bold ${
                           isCanceled
-                            ? "text-slate-400 line-through"
+                            ? "text-slate-600 line-through"
                             : Number(purchase.dueAmount || 0) > 0
                               ? "text-red-600"
-                              : "text-slate-400"
+                              : "text-slate-600"
                         }`}>
                           {formatCurrency(purchase.dueAmount || 0)}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className={`rounded border px-2 py-1 text-xs font-semibold ${isCanceled ? "border-slate-200 text-slate-400" : "bg-slate-100 text-slate-500"}`}>
+                          <span className={`rounded border px-2 py-1 text-xs font-semibold ${isCanceled ? "border-slate-200 text-slate-600" : "bg-slate-100 text-slate-500"}`}>
                             View Details
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-slate-400">
+                        <td className="px-6 py-4 text-slate-600">
                           <ChevronRight size={18} />
                         </td>
                       </tr>

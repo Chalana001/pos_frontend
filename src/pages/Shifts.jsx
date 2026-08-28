@@ -135,7 +135,7 @@ const Shifts = () => {
       {!hasOpenShift ? (
         <Card className="ops-alert-card" style={{ animationDelay: "90ms" }}>
           <div className="text-center py-12">
-            <Clock size={64} className="mx-auto text-slate-300 mb-4" />
+            <Clock size={64} className="mx-auto text-slate-600 mb-4" />
             <h3 className="text-xl font-semibold text-slate-800 mb-2">No Active Shift</h3>
             <p className="text-slate-600 mb-6">
               {isAdmin ? "Select branch and open a shift" : "Open a shift to start accepting orders"}
@@ -179,24 +179,24 @@ const Shifts = () => {
                 
                 {/* 1. Status & Time */}
                 <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "150ms" }}>
-                  <h3 className="text-[11px] lg:text-sm font-medium text-slate-600 mb-2">Status & Time</h3>
+                  <h3 className="text-xs lg:text-sm font-medium text-slate-600 mb-2">Status & Time</h3>
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-1 lg:gap-0">
-                    <span className="w-fit px-2 py-1 rounded text-[10px] lg:text-xs font-bold bg-green-100 text-green-800 uppercase">
+                    <span className="w-fit px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-800 uppercase">
                       {shift.status}
                     </span>
-                    <p className="text-[10px] lg:text-xs text-slate-500">{formatDateTime(shift.openedAt)}</p>
+                    <p className="text-xs text-slate-500">{formatDateTime(shift.openedAt)}</p>
                   </div>
                 </Card>
 
                 {/* 2. Opening Cash */}
                 <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "190ms" }}>
-                  <h3 className="text-[11px] lg:text-sm font-medium text-slate-600 mb-1 lg:mb-2">Opening Cash</h3>
+                  <h3 className="text-xs lg:text-sm font-medium text-slate-600 mb-1 lg:mb-2">Opening Cash</h3>
                   <p className="text-sm lg:text-xl font-bold text-slate-800">{formatCurrency(shift.openingCash)}</p>
                 </Card>
 
                 {/* 3. Net Cash */}
                 <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "230ms" }}>
-                  <h3 className="text-[11px] lg:text-sm font-medium text-slate-600 mb-1 lg:mb-2">Net Cash (Sales - Exp)</h3>
+                  <h3 className="text-xs lg:text-sm font-medium text-slate-600 mb-1 lg:mb-2">Net Cash (Sales - Exp)</h3>
                   <p className="text-sm lg:text-xl font-bold text-green-600">
                     {formatCurrency((shift.cashSales || 0) - (shift.totalExpenses || 0))}
                   </p>
@@ -206,7 +206,7 @@ const Shifts = () => {
                 <Card className="ops-summary-card shell-panel shell-panel-hover border-blue-200 bg-blue-50/30 flex flex-col justify-center" style={{ animationDelay: "270ms" }}>
                   <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2 lg:gap-0">
                     <div>
-                      <h3 className="text-[11px] lg:text-sm font-medium text-blue-700 mb-1">Expected in Drawer</h3>
+                      <h3 className="text-xs lg:text-sm font-medium text-blue-700 mb-1">Expected in Drawer</h3>
                       <p className="text-base lg:text-2xl font-bold text-blue-800">{formatCurrency(calculateExpectedCash(shift))}</p>
                     </div>
                     <Button 

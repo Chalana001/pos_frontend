@@ -60,7 +60,7 @@ const Register = () => {
             <div>
               <label htmlFor="register-username" className="block text-sm font-medium text-slate-700 mb-2">Username</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-600" size={20} />
                 <input id="register-username"
                   type="text"
                   value={username}
@@ -75,7 +75,7 @@ const Register = () => {
             <div>
               <label htmlFor="register-password" className="block text-sm font-medium text-slate-700 mb-2">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-600" size={20} />
                 <input id="register-password"
                   type="password"
                   value={password}
@@ -89,7 +89,7 @@ const Register = () => {
             <div>
               <label htmlFor="register-confirm-password" className="block text-sm font-medium text-slate-700 mb-2">Confirm Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-600" size={20} />
                 <input id="register-confirm-password"
                   type="password"
                   value={confirmPassword}

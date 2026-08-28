@@ -24,12 +24,12 @@ const Section = ({ title, items, totalCount, emptyText, renderRow, sumValue, sum
       >
         <div className="flex items-center gap-2 min-w-0">
           {hasItems ? (
-            open ? <ChevronDown size={16} className="text-slate-400 shrink-0" /> : <ChevronRight size={16} className="text-slate-400 shrink-0" />
+            open ? <ChevronDown size={16} className="text-slate-600 shrink-0" /> : <ChevronRight size={16} className="text-slate-600 shrink-0" />
           ) : (
             <span className="w-4 shrink-0" />
           )}
           <span className="font-semibold text-sm text-slate-700">{title}</span>
-          <span className="text-xs text-slate-400">({totalCount})</span>
+          <span className="text-xs text-slate-600">({totalCount})</span>
         </div>
         <span className={`font-bold text-sm shrink-0 ${sumTone || "text-slate-800"}`}>
           {formatCurrency(sumValue)}
@@ -40,7 +40,7 @@ const Section = ({ title, items, totalCount, emptyText, renderRow, sumValue, sum
         <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 px-3">
           {items.map(renderRow)}
           {totalCount > items.length && (
-            <p className="py-2 text-xs text-center text-slate-400">
+            <p className="py-2 text-xs text-center text-slate-600">
               +{totalCount - items.length} more — see full shift history for the rest
             </p>
           )}
@@ -48,7 +48,7 @@ const Section = ({ title, items, totalCount, emptyText, renderRow, sumValue, sum
       )}
 
       {!hasItems && (
-        <p className="px-3 py-2 text-xs text-slate-400">{emptyText}</p>
+        <p className="px-3 py-2 text-xs text-slate-600">{emptyText}</p>
       )}
     </div>
   );
@@ -142,13 +142,13 @@ const ShiftCloseSummary = ({ shiftId }) => {
           <div key={sale.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
             <div className="min-w-0">
               <p className="font-medium text-slate-700 truncate">{sale.invoiceNo}</p>
-              <p className="text-xs text-slate-400">{formatDateTime(sale.createdAt)}</p>
+              <p className="text-xs text-slate-600">{formatDateTime(sale.createdAt)}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {sale.status === "CANCELED" && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">CANCELED</span>
+                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">CANCELED</span>
               )}
-              <span className={`font-bold ${sale.status === "CANCELED" ? "text-slate-400 line-through" : "text-slate-800"}`}>
+              <span className={`font-bold ${sale.status === "CANCELED" ? "text-slate-600 line-through" : "text-slate-800"}`}>
                 {formatCurrency(sale.grandTotal || 0)}
               </span>
             </div>
@@ -168,7 +168,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
           <div key={expense.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
             <div className="min-w-0">
               <p className="font-medium text-slate-700 truncate">{expense.description || expense.category}</p>
-              <p className="text-xs text-slate-400">{formatDateTime(expense.createdAt)}</p>
+              <p className="text-xs text-slate-600">{formatDateTime(expense.createdAt)}</p>
             </div>
             <span className="font-bold text-slate-800 shrink-0">{formatCurrency(expense.amount || 0)}</span>
           </div>
@@ -187,7 +187,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
           <div key={drop.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
             <div className="min-w-0">
               <p className="font-medium text-slate-700 truncate">{drop.reason || "Cash drop"}</p>
-              <p className="text-xs text-slate-400">{formatDateTime(drop.createdAt)}</p>
+              <p className="text-xs text-slate-600">{formatDateTime(drop.createdAt)}</p>
             </div>
             <span className="font-bold text-slate-800 shrink-0">{formatCurrency(drop.amount || 0)}</span>
           </div>
@@ -206,13 +206,13 @@ const ShiftCloseSummary = ({ shiftId }) => {
           <div key={purchase.purchaseId} className="flex items-center justify-between gap-2 py-1.5 text-sm">
             <div className="min-w-0">
               <p className="font-medium text-slate-700 truncate">{purchase.invoiceNo} · {purchase.supplierName}</p>
-              <p className="text-xs text-slate-400">{formatDateTime(purchase.createdAt)}</p>
+              <p className="text-xs text-slate-600">{formatDateTime(purchase.createdAt)}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {purchase.status === "CANCELED" && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">CANCELED</span>
+                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">CANCELED</span>
               )}
-              <span className={`font-bold ${purchase.status === "CANCELED" ? "text-slate-400 line-through" : "text-slate-800"}`}>
+              <span className={`font-bold ${purchase.status === "CANCELED" ? "text-slate-600 line-through" : "text-slate-800"}`}>
                 {formatCurrency(purchase.cashSourceAmount || 0)}
               </span>
             </div>

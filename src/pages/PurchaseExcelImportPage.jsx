@@ -397,11 +397,11 @@ const PurchaseExcelImportPage = () => {
           {row.matchedItemId ? (
             <div className="space-y-0.5">
               <div className="font-semibold text-slate-800">{row.matchedName}</div>
-              <div className="text-slate-400">{row.matchedBarcode}</div>
-              {row.qtyUnit ? <div className="text-slate-400">Unit: {row.qtyUnit}</div> : null}
+              <div className="text-slate-600">{row.matchedBarcode}</div>
+              {row.qtyUnit ? <div className="text-slate-600">Unit: {row.qtyUnit}</div> : null}
             </div>
           ) : (
-            <span className="text-slate-400">—</span>
+            <span className="text-slate-600">—</span>
           )}
         </td>
         <td className="px-3 py-3">
@@ -702,7 +702,7 @@ const PurchaseExcelImportPage = () => {
       {/* Rows table */}
       {rows.length === 0 ? (
         <Card className="p-10 text-center text-sm text-slate-500">
-          <HelpCircle size={28} className="mx-auto mb-3 text-slate-300" />
+          <HelpCircle size={28} className="mx-auto mb-3 text-slate-600" />
           Upload an Excel file to load the preview table.
         </Card>
       ) : (

@@ -97,7 +97,7 @@ const CheckoutOverlay = ({
               className={`flex min-h-[122px] flex-col items-center justify-center gap-2.5 p-5 rounded-xl border-2 transition-all ${
                 orderType === ORDER_TYPES.CASH 
                 ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md' 
-                : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'
               }`}
             >
               <Banknote size={28} />
@@ -109,7 +109,7 @@ const CheckoutOverlay = ({
               className={`flex min-h-[122px] flex-col items-center justify-center gap-2.5 p-5 rounded-xl border-2 transition-all ${
                 orderType === ORDER_TYPES.CREDIT 
                 ? 'border-amber-500 bg-amber-50 text-amber-500 shadow-md' 
-                : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'
               }`}
             >
               <CreditCard size={28} />
@@ -122,7 +122,7 @@ const CheckoutOverlay = ({
             <div className="sales-panel-enter space-y-4" style={{ animationDelay: "220ms" }}>
               <label htmlFor="checkoutoverlay-cash-received" className="block text-sm font-black text-slate-700 uppercase">Cash Received</label>
               <div className="relative">
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">Rs.</span>
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-600">Rs.</span>
                 <input id="checkoutoverlay-cash-received"
                   ref={inputRef}
                   type="number"
@@ -281,7 +281,7 @@ const CheckoutOverlay = ({
               </>
             )}
           </Button>
-          <p className="text-center text-slate-400 text-xs mt-4 font-bold uppercase tracking-widest">Press Enter to complete</p>
+          <p className="text-center text-slate-600 text-xs mt-4 font-bold uppercase tracking-widest">Press Enter to complete</p>
         </div>
       </div>
     </div>

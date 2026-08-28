@@ -251,7 +251,7 @@ const SalesListPage = () => {
       <Card className="sales-panel-enter sales-panel-hover p-4" style={{ animationDelay: "130ms" }}>
         <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
           <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
             <input aria-label="Search invoice, customer, or phone..."
               type="text"
               placeholder="Search invoice, customer, or phone..."
@@ -354,7 +354,7 @@ const SalesListPage = () => {
               }}
               placeholder="Total amount"
               disabled={totalOperator === "ALL"}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-600"
             />
           </div>
         </div>
@@ -392,7 +392,7 @@ const SalesListPage = () => {
                     <td className="p-4 text-slate-600">
                       <div className="leading-tight">
                         <div>{formatDate(sale.createdAt)}</div>
-                        <div className="mt-1 text-xs text-slate-400">{formatTime(sale.createdAt)}</div>
+                        <div className="mt-1 text-xs text-slate-600">{formatTime(sale.createdAt)}</div>
                       </div>
                     </td>
                     <td className={`p-4 font-bold ${sale.status === "CANCELED" ? "text-red-500 line-through" : "text-blue-600"}`}>
@@ -424,10 +424,10 @@ const SalesListPage = () => {
                     <td className="p-4 text-right font-semibold text-emerald-700">
                       {formatCurrency(sale.paidAmount || 0)}
                     </td>
-                    <td className={`p-4 text-right font-semibold ${(sale.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-400"}`}>
+                    <td className={`p-4 text-right font-semibold ${(sale.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-600"}`}>
                       {formatCurrency(sale.dueAmount || 0)}
                     </td>
-                    <td className="p-4 text-slate-400 text-right">
+                    <td className="p-4 text-slate-600 text-right">
                       <ChevronRight size={18} className="inline-block" />
                     </td>
                   </tr>

@@ -408,7 +408,7 @@ const SalesDetailsPage = () => {
 
           {/* Right: Customer & Total */}
           <div className="text-right">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase mb-1">Customer</h3>
+            <h3 className="text-sm font-semibold text-slate-600 uppercase mb-1">Customer</h3>
             <div className="flex items-center justify-end gap-2 mb-3">
                 <div className={`font-bold text-lg ${isCanceled ? 'text-slate-500' : 'text-slate-700'}`}>
                     {sale.customerName || "Walk-in Customer"}
@@ -446,14 +446,14 @@ const SalesDetailsPage = () => {
       {/* --- SEPARATOR --- */}
       <div className="page-section-enter flex items-center gap-4 py-2 opacity-70" style={{ animationDelay: "180ms" }}>
         <div className="h-px bg-slate-300 flex-1"></div>
-        <span className="text-slate-400 text-sm font-semibold uppercase">Purchased Items</span>
+        <span className="text-slate-600 text-sm font-semibold uppercase">Purchased Items</span>
         <div className="h-px bg-slate-300 flex-1"></div>
       </div>
 
       {/* --- ITEMS TABLE --- */}
       <Card className={`sales-panel-enter p-0 overflow-hidden shadow-sm ${isCanceled ? 'opacity-70 grayscale-[30%]' : ''}`} style={{ animationDelay: "220ms" }}>
         {!sale.items || sale.items.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">
+            <div className="p-8 text-center text-slate-600">
                 <Package size={32} className="mx-auto mb-2 opacity-50"/>
                 No items found for this invoice.
             </div>
@@ -475,8 +475,8 @@ const SalesDetailsPage = () => {
                     <tbody className="divide-y divide-slate-100">
                         {sale.items.map((item, idx) => (
                             <tr key={idx} className="hover:bg-slate-50">
-                                <td className="p-4 text-slate-400">{idx + 1}</td>
-                                <td className="p-4"><span className="font-medium text-slate-700">{item.itemName}</span>{item.altName && <span className="block text-xs text-slate-400">{item.altName}</span>}</td>
+                                <td className="p-4 text-slate-600">{idx + 1}</td>
+                                <td className="p-4"><span className="font-medium text-slate-700">{item.itemName}</span>{item.altName && <span className="block text-xs text-slate-600">{item.altName}</span>}</td>
                                 <td className="p-4 text-slate-500 font-mono text-xs">{item.barcode}</td>
                                 <td className="p-4 text-right text-slate-600">
                                     {item.unitPrice?.toLocaleString(undefined, {minimumFractionDigits: 2})}
@@ -508,7 +508,7 @@ const SalesDetailsPage = () => {
         <>
           <div className="page-section-enter flex items-center gap-4 py-2 opacity-70" style={{ animationDelay: "260ms" }}>
             <div className="h-px bg-slate-300 flex-1"></div>
-            <span className="text-slate-400 text-sm font-semibold uppercase">Return History</span>
+            <span className="text-slate-600 text-sm font-semibold uppercase">Return History</span>
             <div className="h-px bg-slate-300 flex-1"></div>
           </div>
 
@@ -532,7 +532,7 @@ const SalesDetailsPage = () => {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
-                    <div className="text-xs text-slate-400 uppercase font-semibold">Refunded</div>
+                    <div className="text-xs text-slate-600 uppercase font-semibold">Refunded</div>
                     <div className="font-bold text-red-600 text-base">
                       -{Number(ret.totalRefundAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} LKR
                     </div>
@@ -622,7 +622,7 @@ const SalesDetailsPage = () => {
             </p>
             
             <textarea
-              className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none mb-6 text-sm bg-slate-50 text-slate-700 placeholder:text-slate-400 transition-all"
+              className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none mb-6 text-sm bg-slate-50 text-slate-700 placeholder:text-slate-600 transition-all"
               rows="3"
               placeholder="Type cancellation reason here..."
               value={cancelReason}

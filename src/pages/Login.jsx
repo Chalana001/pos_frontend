@@ -100,7 +100,7 @@ const Login = () => {
                   {t('Username')}
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-600" size={20} />
                   <input id="login-username"
                     type="text"
                     value={username}
@@ -117,7 +117,7 @@ const Login = () => {
                   {t('Password')}
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-600" size={20} />
                   <input id="login-password"
                     type={showPassword ? "text" : "password"}
                     value={password}
@@ -128,7 +128,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-600 hover:text-slate-900 focus:outline-none"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -163,7 +163,7 @@ const Login = () => {
                       lists who enrolled here — not everyone who has an account. */}
                   {offlineCandidates.length > 1 ? (
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-200" htmlFor="offline-user">
+                      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="offline-user">
                         {t('User')}
                       </label>
                       <select

@@ -91,7 +91,7 @@ const NumberField = ({ label, value, onCommit, min, max, step = 1, suffix }) => 
           className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         />
         {suffix ? (
-          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-600">
             {suffix}
           </span>
         ) : null}
@@ -134,7 +134,7 @@ const SizeField = ({ label, mmValue, unit, onCommitMm }) => {
           onBlur={commit}
           className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         />
-        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-600">
           {unit === 'in' ? 'in' : 'mm'}
         </span>
       </div>
@@ -257,7 +257,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
       {/* Row 2: free-text input (shop name / prefix / footer / custom text) */}
       {isText && textCfg ? (
         <div className="mt-2 flex items-center gap-2">
-          <Type size={13} className="shrink-0 text-slate-400" />
+          <Type size={13} className="shrink-0 text-slate-600" />
           <input aria-label="Element text"
             type="text"
             maxLength={textCfg.max}
@@ -311,7 +311,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
               buttonClassName="h-9 rounded-lg px-3"
             />
           </div>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-slate-600">
             Shows the earliest expiry among the item's stock batches. Hidden if no batch has an expiry date.
           </p>
         </div>
@@ -330,7 +330,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
                 buttonClassName="h-9 rounded-lg px-3"
               />
             </div>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-slate-600">
               EAN-13 falls back to Code 128 if a barcode isn't a valid 12–13 digit number.
             </p>
           </div>
@@ -493,7 +493,7 @@ const BarcodeSettingsPanel = ({
 
           <div className="space-y-2">
             {elements.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-8 text-center text-sm text-slate-400">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 py-8 text-center text-sm text-slate-600">
                 No elements. Add one below to start designing your label.
               </div>
             ) : (
@@ -532,7 +532,7 @@ const BarcodeSettingsPanel = ({
             </button>
           </div>
 
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-600">
             <BarcodeIcon size={12} className="mr-1 inline" />
             You can add multiple <strong>Custom Text</strong> lines (e.g. warranty, weight, made-in) anywhere in the order.
           </p>
@@ -649,7 +649,7 @@ const BarcodeSettingsPanel = ({
             </label>
           </div>
 
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-600">
             <BarcodeIcon size={12} className="mr-1 inline" />
             Only applies to items priced by weight. A scan that decodes but doesn't match a weighed item is
             treated as a normal barcode lookup — no special handling needed.

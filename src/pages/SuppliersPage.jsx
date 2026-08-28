@@ -93,7 +93,7 @@ const SuppliersPage = () => {
       <Card className="sales-panel-enter sales-panel-hover overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "90ms" }}>
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="relative max-w-xl">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
             <input aria-label="Search supplier, phone, email, or address..."
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -156,7 +156,7 @@ const SuppliersPage = () => {
                           {supplier.active ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-slate-400">
+                      <td className="px-6 py-4 text-slate-600">
                         <Eye size={18} />
                       </td>
                     </tr>

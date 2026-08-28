@@ -197,7 +197,7 @@ const StockTransfers = () => {
               Cancel
             </Button>
           ) : (
-            <span className="text-slate-400">-</span>
+            <span className="text-slate-600">-</span>
           ),
       },
     ],
@@ -248,7 +248,7 @@ const StockTransfers = () => {
               Receive
             </Button>
           ) : (
-            <span className="text-slate-400">-</span>
+            <span className="text-slate-600">-</span>
           ),
       },
     ],
@@ -323,7 +323,7 @@ const StockTransfers = () => {
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "140ms" }}>
           <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
             <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
               <input aria-label="Search transfer no, item, barcode, or note..."
                 type="text"
                 value={search}

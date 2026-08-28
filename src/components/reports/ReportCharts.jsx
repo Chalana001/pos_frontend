@@ -72,7 +72,7 @@ export const PremiumDonutChart = ({ data, total, valueLabel, gradientPrefix, for
             <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-900 text-[18px] font-black">
               {formatter(safeTotal)}
             </text>
-            <text x="50%" y="56%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-500 text-[11px] font-semibold uppercase tracking-wide">
+            <text x="50%" y="56%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-500 text-xs font-semibold uppercase tracking-wide">
               {valueLabel}
             </text>
             <Tooltip formatter={(value) => formatter(value)} {...tooltipProps} />
@@ -156,7 +156,7 @@ export const OverviewBarChart = ({ title, subtitle, data, nameKey, valueKey, for
                   <div key={`${title}-rank-${entry[nameKey]}-${index}`} className="rounded-xl border border-slate-200/80 bg-white/80 p-3 shadow-sm">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[11px] font-black text-white">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-black text-white">
                           {index + 1}
                         </span>
                         <span className="truncate text-sm font-bold text-slate-700">{entry[nameKey] || "Unknown"}</span>

@@ -291,7 +291,7 @@ const StockItemDetailsPage = () => {
             <ArrowLeft size={18} className="mr-2" /> Back to Stock
           </Button>
           <h1 className="text-3xl font-bold text-slate-800">{itemDetails.itemName}</h1>
-          {itemDetails.altName && <p className="text-sm text-slate-400 mt-1">{itemDetails.altName}</p>}
+          {itemDetails.altName && <p className="text-sm text-slate-600 mt-1">{itemDetails.altName}</p>}
           <div className="mt-2 flex flex-wrap gap-2">
             {metaBadges.map((badge) => (
               <span
@@ -403,7 +403,7 @@ const StockItemDetailsPage = () => {
         <div className="inventory-filter-bar border-b bg-white px-4 py-4" style={{ animationDelay: "210ms" }}>
           <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
             <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
               <input aria-label="Search invoice or GRN..."
                 type="text"
                 value={search}
@@ -435,7 +435,7 @@ const StockItemDetailsPage = () => {
                 <button
                   type="button"
                   onClick={clearSupplierFilter}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-600 hover:text-slate-900"
                 >
                   Clear
                 </button>
@@ -452,7 +452,7 @@ const StockItemDetailsPage = () => {
                       className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                     >
                       <span className="truncate">{supplier.name}</span>
-                      {supplier.phone ? <span className="ml-3 text-xs text-slate-400">{supplier.phone}</span> : null}
+                      {supplier.phone ? <span className="ml-3 text-xs text-slate-600">{supplier.phone}</span> : null}
                     </button>
                   ))}
                 </div>

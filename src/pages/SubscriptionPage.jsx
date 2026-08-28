@@ -116,7 +116,7 @@ const SubscriptionPage = () => {
                 }`}
               >
                 {isCurrent ? (
-                  <span className="absolute -top-2.5 left-5 rounded-full bg-blue-600 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">
+                  <span className="absolute -top-2.5 left-5 rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
                     Your package
                   </span>
                 ) : null}
@@ -142,12 +142,12 @@ const SubscriptionPage = () => {
                     {plan.enabledModuleCount} of {plan.totalModuleCount} features
                   </li>
                   <li className="flex items-center gap-2">
-                    <Building2 size={14} className="shrink-0 text-slate-400" />
+                    <Building2 size={14} className="shrink-0 text-slate-600" />
                     {plan.maxBranches} {plan.maxBranches === 1 ? 'branch' : 'branches'}
                   </li>
                   {plan.trialDays > 0 ? (
                     <li className="flex items-center gap-2">
-                      <Clock size={14} className="shrink-0 text-slate-400" />
+                      <Clock size={14} className="shrink-0 text-slate-600" />
                       {plan.trialDays}-day free trial
                     </li>
                   ) : null}
@@ -201,13 +201,13 @@ const SubscriptionPage = () => {
               <table className="w-full min-w-[560px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-slate-100">
-                    <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="px-5 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Feature
                     </th>
                     {plans.map((plan) => (
                       <th
                         key={plan.id}
-                        className={`px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide ${
+                        className={`px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide ${
                           plan.name === currentPlanName ? 'bg-blue-50 text-blue-700' : 'text-slate-500'
                         }`}
                       >
@@ -235,7 +235,7 @@ const SubscriptionPage = () => {
                           {included ? (
                             <Check size={16} className="mx-auto text-emerald-600" />
                           ) : (
-                            <Minus size={16} className="mx-auto text-slate-300" />
+                            <Minus size={16} className="mx-auto text-slate-600" />
                           )}
                         </td>
                       ))}

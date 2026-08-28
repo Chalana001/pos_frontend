@@ -1031,7 +1031,7 @@ const Reports = ({ mode = "basic" }) => {
         {!(["creditAging", "supplierPayables", "stockHealth"].includes(mode)) && <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
           <Calendar size={16} className="text-slate-500" />
           {activeDateLabel}
-          <span className="text-slate-300">|</span>
+          <span className="text-slate-600">|</span>
           <span className="font-medium text-slate-500">{datePreset === "allTime" ? "All records" : `${dateRange.from} to ${dateRange.to}`}</span>
         </div>}
       </div>
@@ -1145,7 +1145,7 @@ const Reports = ({ mode = "basic" }) => {
           </div>
         ) : !hasActiveReportData ? (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 py-20 text-center">
-            <PieIcon size={48} className="mx-auto mb-4 text-slate-300" />
+            <PieIcon size={48} className="mx-auto mb-4 text-slate-600" />
             <h3 className="text-lg font-medium text-slate-600">Loading Report</h3>
             <p className="text-slate-500">Choose a report type or date range to refresh the data.</p>
           </div>

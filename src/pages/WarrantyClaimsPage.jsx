@@ -109,7 +109,7 @@ const WarrantyClaimsPage = () => {
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "130ms" }}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative w-full lg:flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
               <input aria-label="Search warranty claims"
                 value={search}
                 onChange={(event) => {
@@ -177,13 +177,13 @@ const WarrantyClaimsPage = () => {
                       <td className="app-table-cell">
                         <div className="flex items-center gap-2">
                           <Wrench size={16} className="text-blue-600" />
-                          <div className="flex flex-col"><span>{row.itemName}</span>{row.altName && <span className="text-xs text-slate-400">{row.altName}</span>}</div>
+                          <div className="flex flex-col"><span>{row.itemName}</span>{row.altName && <span className="text-xs text-slate-600">{row.altName}</span>}</div>
                         </div>
                       </td>
                       <td className="app-table-cell">{row.actionType}</td>
                       <td className="app-table-cell">{formatDateTime(row.receivedAt)}</td>
                       <td className="app-table-cell text-center">
-                        <span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${getStatusClassName(row.status)}`}>
+                        <span className={`rounded-full border px-2 py-1 text-xs font-bold uppercase tracking-wider ${getStatusClassName(row.status)}`}>
                           {row.status.replace("_", " ")}
                         </span>
                       </td>

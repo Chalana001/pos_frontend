@@ -214,7 +214,7 @@ const Branches = () => {
             className="h-10 w-10 rounded-lg border border-slate-200 object-contain bg-white p-1"
           />
         ) : (
-          <span className="text-xs text-slate-400">No logo</span>
+          <span className="text-xs text-slate-600">No logo</span>
         )
       ),
     },
@@ -307,7 +307,7 @@ const Branches = () => {
         <Card className="admin-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "170ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Search</h3>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
             <input aria-label="Search branches..."
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Search branches..."

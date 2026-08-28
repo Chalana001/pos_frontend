@@ -338,7 +338,7 @@ const Users = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                     {/* Search */}
                     <div className="relative md:col-span-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
                         <input aria-label="Search by username..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}

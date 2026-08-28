@@ -303,13 +303,13 @@ const ItemsPage = () => {
       render: (i) => (
         <div className="flex flex-col">
           <span className="font-medium text-slate-800">{i.name}</span>
-          {i.altName && <span className="text-xs text-slate-400">{i.altName}</span>}
-          {i.itemType === ItemType.SERVICE && <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded w-fit mt-1">Service</span>}
-          {i.itemType === ItemType.WEIGHT && <span className="text-[10px] uppercase font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded w-fit mt-1">Weight Item</span>}
-          {i.itemType === ItemType.VOLUME && <span className="text-[10px] uppercase font-bold text-cyan-600 bg-cyan-100 px-1.5 py-0.5 rounded w-fit mt-1">Volume Item</span>}
-          {i.itemType === ItemType.RECIPE && <span className="text-[10px] uppercase font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded w-fit mt-1">Recipe</span>}
-          {kotEnabled && i.isKotEnabled && <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded w-fit mt-1">KOT</span>}
-          {i.posVisible === false && <span className="text-[10px] uppercase font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">Hidden in POS</span>}
+          {i.altName && <span className="text-xs text-slate-600">{i.altName}</span>}
+          {i.itemType === ItemType.SERVICE && <span className="text-xs uppercase font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded w-fit mt-1">Service</span>}
+          {i.itemType === ItemType.WEIGHT && <span className="text-xs uppercase font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded w-fit mt-1">Weight Item</span>}
+          {i.itemType === ItemType.VOLUME && <span className="text-xs uppercase font-bold text-cyan-600 bg-cyan-100 px-1.5 py-0.5 rounded w-fit mt-1">Volume Item</span>}
+          {i.itemType === ItemType.RECIPE && <span className="text-xs uppercase font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded w-fit mt-1">Recipe</span>}
+          {kotEnabled && i.isKotEnabled && <span className="text-xs uppercase font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded w-fit mt-1">KOT</span>}
+          {i.posVisible === false && <span className="text-xs uppercase font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">Hidden in POS</span>}
         </div>
       )
     },
@@ -324,7 +324,7 @@ const ItemsPage = () => {
               </span>
            </div>
            {!singleCategoryMode && item.subCategoryName && (
-               <span className="text-xs text-slate-400 ml-5 border-l-2 border-slate-200 pl-2 mt-0.5">
+               <span className="text-xs text-slate-600 ml-5 border-l-2 border-slate-200 pl-2 mt-0.5">
                   {item.subCategoryName}
                </span>
            )}
@@ -346,7 +346,7 @@ const ItemsPage = () => {
         </div>
       )
     },
-    { header: "Created", render: (i) => <span className="text-xs text-slate-400">{formatDateTime(i.createdAt)}</span> },
+    { header: "Created", render: (i) => <span className="text-xs text-slate-600">{formatDateTime(i.createdAt)}</span> },
     {
       header: "Status",
       render: (i) => (
@@ -419,7 +419,7 @@ const ItemsPage = () => {
         <div className="p-4 border-b border-slate-100 bg-slate-50/50">
           <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
             <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
               <input aria-label="Search name, barcode, or category..."
                 type="text"
                 value={searchQuery}
@@ -543,7 +543,7 @@ const ItemsPage = () => {
                 }}
                 placeholder="Price"
                 disabled={priceOperator === "ALL"}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-600"
               />
             </div>
 

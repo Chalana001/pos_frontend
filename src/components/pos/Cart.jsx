@@ -41,7 +41,7 @@ const Cart = ({
     { value: DISCOUNT_TYPES.FIXED, label: "Fixed (LKR)" },
     { value: DISCOUNT_TYPES.PERCENT, label: "Percent (%)" },
   ];
-  const compactSelectButtonClass = "min-h-[24px] rounded-md border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600 shadow-none";
+  const compactSelectButtonClass = "min-h-[24px] rounded-md border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs font-semibold text-slate-600 shadow-none";
   const compactSelectMenuClass = "min-w-[144px]";
   const safeWarrantyOptions = warrantyOptions.length > 0
     ? warrantyOptions
@@ -137,7 +137,7 @@ const Cart = ({
           </div>
           <div>
             <h2 className="font-bold text-slate-800">Current Order</h2>
-            <div className="mt-0.5 text-[11px] font-medium text-slate-500">
+            <div className="mt-0.5 text-xs font-medium text-slate-500">
               {cartSummary || `${cartItems.length} Items`}
             </div>
           </div>
@@ -180,17 +180,17 @@ const Cart = ({
                 <div className="flex items-center gap-2 p-2">
                   <div className="flex-1">
                     <h4 className="line-clamp-1 text-[13px] font-bold leading-tight text-slate-800">{item.name}</h4>
-                    {item.altName && <p className="text-[10px] leading-tight text-slate-400 line-clamp-1">{item.altName}</p>}
+                    {item.altName && <p className="text-xs leading-tight text-slate-600 line-clamp-1">{item.altName}</p>}
                     <div className="mt-0.5 flex items-center gap-1.5">
                       
                       {item.itemType === ItemType.SERVICE ? (
                         <div className="flex items-center gap-1">
-                          <span className="text-[10px] font-medium text-slate-400">Price:</span>
+                          <span className="text-xs font-medium text-slate-600">Price:</span>
                           <input aria-label="Unit price"
                             type="number"
                             min="0"
                             step="0.01"
-                            className="w-20 rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-right text-[10px] font-bold text-purple-600 outline-none focus:ring-1 focus:ring-purple-500"
+                            className="w-20 rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-right text-xs font-bold text-purple-600 outline-none focus:ring-1 focus:ring-purple-500"
                             value={item.unitPrice === 0 ? "" : item.unitPrice}
                             onChange={(e) => onUpdatePrice(index, e.target.value)}
                             onBlur={focusSearch}
@@ -202,25 +202,25 @@ const Cart = ({
                           />
                         </div>
                       ) : (
-                        <span className="text-[10px] font-medium text-slate-400">
+                        <span className="text-xs font-medium text-slate-600">
                           {getPriceLabel(item)}
                         </span>
                       )}
 
                       {item.weightItem && (
-                        <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">
+                        <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">
                           {item.qtyUnit || item.defaultUnit}
                         </span>
                       )}
                       {(item.effectiveDiscountValue ?? item.discountValue) > 0 && (
-                        <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
+                        <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
                           {(item.effectiveDiscountType || item.discountType) === DISCOUNT_TYPES.PERCENT
                             ? `-${item.effectiveDiscountValue ?? item.discountValue}%`
                             : `-${formatCurrency(item.effectiveDiscountValue ?? item.discountValue)}`}
                         </span>
                       )}
                       {item.promotionApplied && (
-                        <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">
+                        <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">
                           Promo
                         </span>
                       )}
@@ -229,7 +229,7 @@ const Cart = ({
                       {formatCurrency(calculateItemTotal(item))}
                     </div>
                     {item.promotionApplied && item.promotionName && (
-                      <div className="mt-0.5 max-w-[220px] truncate text-[10px] font-semibold text-emerald-700">
+                      <div className="mt-0.5 max-w-[220px] truncate text-xs font-semibold text-emerald-700">
                         {item.promotionName}
                       </div>
                     )}
@@ -311,12 +311,12 @@ const Cart = ({
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => setEditingIndex(editingIndex === index ? null : index)}
-                        className={`rounded-md p-1.5 transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
+                        className={`rounded-md p-1.5 transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-blue-600'}`}
                         title="Add Discount"
                       >
                         <Tag size={14} />
                       </button>
-                      <button onClick={() => onRemoveItem(index)} className="rounded-md bg-slate-50 p-1.5 text-slate-400 transition-all hover:bg-red-50 hover:text-red-500" title="Remove Item">
+                      <button onClick={() => onRemoveItem(index)} className="rounded-md bg-slate-50 p-1.5 text-slate-600 transition-all hover:bg-red-50 hover:text-red-500" title="Remove Item">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -326,8 +326,8 @@ const Cart = ({
                 {editingIndex === index && (
                   <div className="page-section-enter border-t border-slate-100 bg-slate-50 p-2.5" style={{ animationDelay: "20ms" }}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Item Discount</span>
-                      <button onClick={() => setEditingIndex(null)} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Item Discount</span>
+                      <button onClick={() => setEditingIndex(null)} className="text-slate-600 hover:text-slate-900"><X size={14} /></button>
                     </div>
                     <div className="flex gap-2">
                       <CustomSelect
@@ -351,7 +351,7 @@ const Cart = ({
                         className="flex-1 text-sm font-bold border border-slate-200 rounded-lg bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 shadow-inner"
                       />
                     </div>
-                    <p className="text-[9px] text-slate-400 mt-2 italic">Press Enter to apply</p>
+                    <p className="text-xs text-slate-600 mt-2 italic">Press Enter to apply</p>
                   </div>
                 )}
               </div>

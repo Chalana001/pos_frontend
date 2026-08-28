@@ -2142,7 +2142,7 @@ const POS = () => {
               </div>
               <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                  <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 text-slate-600 w-3.5 h-3.5 lg:w-4 lg:h-4" />
                   <input aria-label="Search barcode or name"
                     ref={searchInputRef}
                     type="text"
@@ -2236,7 +2236,7 @@ const POS = () => {
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="text-sm font-semibold text-slate-900">{table.tableName}</div>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${table.status === "OCCUPIED"
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-bold uppercase ${table.status === "OCCUPIED"
                             ? "bg-amber-100 text-amber-700"
                             : "bg-emerald-100 text-emerald-700"
                             }`}>
@@ -2263,7 +2263,7 @@ const POS = () => {
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
                     disabled={!canSell}
-                    className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-[10px] lg:text-sm font-semibold transition-all ${activeCategory === cat
+                    className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-xs lg:text-sm font-semibold transition-all ${activeCategory === cat
                       ? "bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200"
                       : "bg-slate-50 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
                       }`}
@@ -2287,14 +2287,14 @@ const POS = () => {
 
           <div className="flex-1 overflow-y-auto bg-slate-50 p-1.5 custom-scrollbar lg:p-3">
             {!canSell ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400">
+              <div className="h-full flex flex-col items-center justify-center text-slate-600">
                 <Lock className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
                 <p className="text-sm lg:text-lg font-medium text-center">
                   {canUseServer ? "Open a shift to view items" : "Select a branch online first to cache items for queue mode"}
                 </p>
               </div>
             ) : filteredItems.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400">
+              <div className="h-full flex flex-col items-center justify-center text-slate-600">
                 <Search className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
                 <p className="text-sm lg:text-lg font-medium text-center">No items found</p>
               </div>
@@ -2324,32 +2324,32 @@ const POS = () => {
                     >
                       <div className="absolute top-1 right-1 lg:top-2 lg:right-2 flex flex-col items-end gap-1">
                         {item.itemType === ItemType.SERVICE ? (
-                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-purple-50 text-purple-600 text-[8px] lg:text-[10px] font-bold rounded border border-purple-100 uppercase">Service</span>
+                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-purple-50 text-purple-600 text-xs font-bold rounded border border-purple-100 uppercase">Service</span>
                         ) : item.itemType === ItemType.RECIPE && !isOutOfStock ? (
-                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-rose-50 text-rose-600 text-[8px] lg:text-[10px] font-bold rounded border border-rose-100 uppercase">
+                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-rose-50 text-rose-600 text-xs font-bold rounded border border-rose-100 uppercase">
                             {item.isKotEnabled ? "Recipe • KOT" : "Recipe"}
                           </span>
                         ) : isOutOfStock ? (
-                          <span className={`px-1.5 lg:px-2 py-[1px] lg:py-0.5 text-[8px] lg:text-[10px] font-bold rounded border uppercase ${canSelectOutOfStock
+                          <span className={`px-1.5 lg:px-2 py-[1px] lg:py-0.5 text-xs font-bold rounded border uppercase ${canSelectOutOfStock
                             ? "border-amber-200 bg-amber-50 text-amber-600"
                             : "border-red-100 bg-red-50 text-red-500"
                             }`}>
                             {canSelectOutOfStock ? "Override" : "Out"}
                           </span>
                         ) : (
-                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-emerald-50 text-emerald-600 text-[8px] lg:text-[10px] font-bold rounded border border-emerald-100 whitespace-nowrap">{stockLabel}</span>
+                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-emerald-50 text-emerald-600 text-xs font-bold rounded border border-emerald-100 whitespace-nowrap">{stockLabel}</span>
                         )}
                       </div>
 
                       <div className="mt-1.5 flex h-8 w-8 items-center justify-center self-center rounded-full bg-slate-50 lg:mt-1.5 lg:h-10 lg:w-10">
-                        <ChefHat className={`w-4 h-4 lg:w-6 lg:h-6 ${tileDisabled ? "text-slate-200" : "text-slate-300"}`} />
+                        <ChefHat className={`w-4 h-4 lg:w-6 lg:h-6 ${tileDisabled ? "text-slate-200" : "text-slate-600"}`} />
                       </div>
                       <div className="mt-auto flex w-full flex-col items-center gap-0.5 pt-2">
-                        <h3 className="h-[2.3rem] overflow-hidden text-[10px] font-medium leading-[1.15rem] text-slate-700 line-clamp-2 break-all lg:h-[2.7rem] lg:text-[13px] lg:leading-[1.35rem] lg:line-clamp-2">
+                        <h3 className="h-[2.3rem] overflow-hidden text-xs font-medium leading-[1.15rem] text-slate-700 line-clamp-2 break-all lg:h-[2.7rem] lg:text-[13px] lg:leading-[1.35rem] lg:line-clamp-2">
                           {item.name}
                         </h3>
-                        {item.altName && <p className="text-[8px] leading-tight text-slate-400 line-clamp-1 lg:text-[10px]">{item.altName}</p>}
-                        <p className="text-[11px] font-bold text-blue-600 lg:text-[14px]">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
+                        {item.altName && <p className="text-xs leading-tight text-slate-600 line-clamp-1 lg:text-xs">{item.altName}</p>}
+                        <p className="text-xs font-bold text-blue-600 lg:text-[14px]">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
                       </div>
                     </div>
                   );
@@ -2440,15 +2440,15 @@ const POS = () => {
                   )}
                 </div>
                 {!kotEnabled ? (
-                  <div className="text-[11px] text-slate-500">KOT is disabled in App Configuration.</div>
+                  <div className="text-xs text-slate-500">KOT is disabled in App Configuration.</div>
                 ) : saleMode === SALE_MODES.DINE_IN && !selectedTableId ? (
-                  <div className="text-[11px] text-slate-500">Select a table before saving or sending KOT.</div>
+                  <div className="text-xs text-slate-500">Select a table before saving or sending KOT.</div>
                 ) : !canUseServer || queueCartActive ? (
-                  <div className="text-[11px] text-slate-500">KOT printing is available only for server-mode sales.</div>
+                  <div className="text-xs text-slate-500">KOT printing is available only for server-mode sales.</div>
                 ) : !hasKotItems ? (
-                  <div className="text-[11px] text-slate-500">No KOT-enabled items in the cart.</div>
+                  <div className="text-xs text-slate-500">No KOT-enabled items in the cart.</div>
                 ) : !canPrintKot ? (
-                  <div className="text-[11px] text-slate-500">KOT already sent for current items. Add new kitchen items to print again.</div>
+                  <div className="text-xs text-slate-500">KOT already sent for current items. Add new kitchen items to print again.</div>
                 ) : null}
               </>
             )}

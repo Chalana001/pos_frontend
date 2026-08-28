@@ -144,11 +144,11 @@ const DatePicker = ({
         disabled={disabled}
         onClick={() => setIsOpen((open) => !open)}
         className={`flex h-10 w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 text-left text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          disabled ? "cursor-not-allowed bg-slate-100 text-slate-400" : "hover:border-blue-400"
+          disabled ? "cursor-not-allowed bg-slate-100 text-slate-600" : "hover:border-blue-400"
         } ${buttonClassName}`}
       >
-        <span className={`truncate ${selectedDate ? "text-slate-700" : "text-slate-400"}`}>{displayLabel}</span>
-        <CalendarDays size={16} className="ml-2 shrink-0 text-slate-400" />
+        <span className={`truncate ${selectedDate ? "text-slate-700" : "text-slate-600"}`}>{displayLabel}</span>
+        <CalendarDays size={16} className="ml-2 shrink-0 text-slate-600" />
       </button>
 
       {isOpen && !disabled && menuStyle
@@ -176,7 +176,7 @@ const DatePicker = ({
                 </button>
               </div>
 
-              <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase text-slate-400">
+              <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold uppercase text-slate-600">
                 {DAY_LABELS.map((label) => (
                   <div key={label} className="py-1">
                     {label}
@@ -201,7 +201,7 @@ const DatePicker = ({
                         selected
                           ? "bg-blue-600 text-white shadow-sm"
                           : outsideMonth
-                            ? "text-slate-300 hover:bg-slate-50"
+                            ? "text-slate-600 hover:bg-slate-50"
                             : todayFlag
                               ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
                               : "text-slate-700 hover:bg-slate-100"

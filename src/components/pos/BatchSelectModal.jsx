@@ -13,7 +13,7 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <h3 className="text-lg font-bold text-slate-800">Select Batch</h3>
           <p className="text-sm text-slate-500 font-medium line-clamp-1">{item.name}</p>
-          {item.altName && <p className="text-xs text-slate-400">{item.altName}</p>}
+          {item.altName && <p className="text-xs text-slate-600">{item.altName}</p>}
         </div>
 
         <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
@@ -65,7 +65,7 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
                     }`}>
                       {formatCurrency(batch.price)}
                     </div>
-                    <div className="text-xs font-semibold text-slate-400 mt-1">
+                    <div className="text-xs font-semibold text-slate-600 mt-1">
                       <span className={isAvailable ? "text-emerald-600" : "text-red-500"}>
                         {stockLabel}
                       </span>{" "}
@@ -76,7 +76,7 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
               );
             })
           ) : (
-            <div className="text-center py-10 text-slate-400">
+            <div className="text-center py-10 text-slate-600">
               <Package size={48} className="mx-auto mb-3 opacity-20" />
               <p>No batches found for this item.</p>
             </div>
@@ -84,7 +84,7 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
         </div>
 
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-center">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-600">
             Batches are listed oldest first. Please verify the price and batch number on the physical product.
           </p>
         </div>

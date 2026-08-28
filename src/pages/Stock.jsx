@@ -422,7 +422,7 @@ const Stock = () => {
   const columns = useMemo(
     () => [
       { header: "Barcode", render: (item) => <span>{item.barcode ?? "-"}</span> },
-      { header: "Name", render: (item) => <div className="flex flex-col"><span className="font-medium text-slate-800">{item.itemName ?? "-"}</span>{item.altName && <span className="text-xs text-slate-400">{item.altName}</span>}</div> },
+      { header: "Name", render: (item) => <div className="flex flex-col"><span className="font-medium text-slate-800">{item.itemName ?? "-"}</span>{item.altName && <span className="text-xs text-slate-600">{item.altName}</span>}</div> },
       { header: "Category", render: (item) => <span>{singleCategoryMode ? item.subCategoryName || item.categoryName || "-" : item.categoryName || item.subCategoryName || "-"}</span> },
       { header: "Cost", render: (item) => <span>LKR {Number(item.costPrice || 0).toFixed(2)}</span> },
       { header: "Selling", render: (item) => <span>LKR {Number(item.sellingPrice || 0).toFixed(2)}</span> },
@@ -573,7 +573,7 @@ const Stock = () => {
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "150ms" }}>
           <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-[minmax(260px,1fr)_180px_220px_220px_auto] xl:items-center">
             <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-2 xl:col-span-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-600" size={20} />
               <input aria-label="Search name, barcode, or category..."
                 type="text"
                 value={searchQuery}
