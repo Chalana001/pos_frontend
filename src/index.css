@@ -180,6 +180,7 @@
   --c-rose-900: 136 19 55;
 
   --c-surface: 255 255 255;
+  --c-sidebar: 15 23 42;
 }
 
 :root[data-theme="dark"] {
@@ -338,6 +339,7 @@
   --c-rose-900: 255 228 230;
 
   --c-surface: 22 33 38;
+  --c-sidebar: 10 22 32;
 }
 
 /*
