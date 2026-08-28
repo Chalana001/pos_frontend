@@ -47,7 +47,7 @@ const Register = () => {
   return (
     <div className="auth-screen flex min-h-screen items-center justify-center p-4">
       <div className="auth-panel-enter w-full max-w-md" style={{ animationDelay: '90ms' }}>
-        <div className="page-section-enter mb-8 text-center" style={{ animationDelay: '180ms' }}>
+        <div className="always-dark page-section-enter mb-8 text-center" style={{ animationDelay: '180ms' }}>
           <div className="shell-chip mx-auto mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-blue-900">
             Admin Setup
           </div>
@@ -114,7 +114,7 @@ const Register = () => {
             </Button>
           </form>
 
-          <div className="page-section-enter mt-6 text-center" style={{ animationDelay: '340ms' }}>
+          <div className="always-dark page-section-enter mt-6 text-center" style={{ animationDelay: '340ms' }}>
             <p className="text-sm text-slate-600">
               Already have an account?{' '}
               <Link to="/login" className="text-blue-600 font-semibold hover:underline">

@@ -82,7 +82,7 @@ const Login = () => {
         <LanguageSelector />
       </div>
       <div className="auth-panel-enter w-full max-w-md" style={{ animationDelay: '90ms' }}>
-        <div className="page-section-enter mb-8 text-center" style={{ animationDelay: '180ms' }}>
+        <div className="always-dark page-section-enter mb-8 text-center" style={{ animationDelay: '180ms' }}>
           <div className="shell-chip mx-auto mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-blue-900">
             POS Workspace
           </div>

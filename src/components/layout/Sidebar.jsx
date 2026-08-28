@@ -320,7 +320,7 @@ return (
       )}
 
       <aside
-        className={`${isOpen ? "shell-sidebar-enter" : ""} fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[rgb(var(--c-sidebar))] text-white shadow-2xl transform transition-all duration-300 ease-in-out lg:static
+        className={`${isOpen ? "shell-sidebar-enter" : ""} always-dark fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[rgb(var(--c-sidebar))] text-white shadow-2xl transform transition-all duration-300 ease-in-out lg:static
         ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 ${isDesktopCollapsed ? "lg:w-[72px] lg:min-w-[72px]" : "lg:w-64"}`}
       >
         <div
