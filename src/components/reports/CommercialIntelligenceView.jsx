@@ -21,7 +21,7 @@ export default function CommercialIntelligenceView({ promotions, returnsData, wa
   const open = (path) => window.location.assign(path);
 
   return <div className="space-y-6">
-    <div className="flex flex-wrap gap-2">{[["promotions", "Promotions"], ["returns", "Returns"], ["warranty", "Warranty"]].map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`rounded-full px-4 py-2 text-sm font-bold ${tab === id ? "bg-blue-600 text-white" : "bg-slate-100"}`}>{label}</button>)}</div>
+    <div className="flex flex-wrap gap-2">{[["promotions", "Promotions"], ["returns", "Returns"], ["warranty", "Warranty"]].map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`min-h-11 rounded-full px-4 py-2 text-sm font-bold ${tab === id ? "bg-blue-600 text-white" : "bg-slate-100"}`}>{label}</button>)}</div>
     {tab === "promotions" && <>
       <MetricGrid tone="neutral" metrics={[["Bill Promotions", promos.length], ["Times Applied", promos.reduce((sum, row) => sum + Number(row.timesApplied || 0), 0)], ["Discount Given", formatCurrency(promoDiscount)], ["Associated Revenue", formatCurrency(promoRevenue)]]} />
       <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">This report covers bill-level promotions only. Associated revenue is not incremental uplift or ROI.</p>

@@ -337,11 +337,11 @@ const BarcodePrintPage = () => {
                     {/* Qty Controls */}
                     <div className="flex items-center gap-3">
                       <div className="flex items-center border border-slate-300 rounded-md overflow-hidden">
-                        <button onClick={() => updateQty(item.id, -1)} className="p-1.5 bg-slate-50 hover:bg-slate-200 text-slate-600 transition-colors">
+                        <button onClick={() => updateQty(item.id, -1)} className="inline-flex h-11 w-11 items-center justify-center bg-slate-50 hover:bg-slate-200 text-slate-600 transition-colors">
                           <Minus size={14} />
                         </button>
                         <span className="w-8 text-center text-sm font-medium text-slate-700">{item.printQty}</span>
-                        <button onClick={() => updateQty(item.id, 1)} className="p-1.5 bg-slate-50 hover:bg-slate-200 text-slate-600 transition-colors">
+                        <button onClick={() => updateQty(item.id, 1)} className="inline-flex h-11 w-11 items-center justify-center bg-slate-50 hover:bg-slate-200 text-slate-600 transition-colors">
                           <Plus size={14} />
                         </button>
                       </div>

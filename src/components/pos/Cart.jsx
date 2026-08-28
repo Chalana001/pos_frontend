@@ -148,7 +148,7 @@ const Cart = ({
           </span>
           <button
             onClick={onAddCustomer}
-            className={`inline-flex min-h-[38px] items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all ${
+            className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all ${
               customer
                 ? "border-blue-100 bg-blue-50 text-blue-700 hover:border-blue-200 hover:text-blue-800"
                 : "border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:text-blue-600"
@@ -258,7 +258,7 @@ const Cart = ({
                       <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
                         <button
                           onClick={() => onUpdateQty(index, Math.max(0, item.qty - stepValue))}
-                          className="rounded p-1 transition-all hover:bg-white"
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-md transition-all hover:bg-white"
                         >
                           <Minus size={14} />
                         </button>
@@ -279,7 +279,7 @@ const Cart = ({
 
                         <button
                           onClick={() => onUpdateQty(index, item.qty + stepValue)}
-                          className="rounded p-1 transition-all hover:bg-white"
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-md transition-all hover:bg-white"
                         >
                           <Plus size={14} />
                         </button>
@@ -308,15 +308,15 @@ const Cart = ({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => setEditingIndex(editingIndex === index ? null : index)}
-                        className={`rounded-md p-1.5 transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-blue-600'}`}
+                        className={`inline-flex h-11 w-11 items-center justify-center rounded-md transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-blue-600'}`}
                         title="Add Discount"
                       >
                         <Tag size={14} />
                       </button>
-                      <button onClick={() => onRemoveItem(index)} className="rounded-md bg-slate-50 p-1.5 text-slate-600 transition-all hover:bg-red-50 hover:text-red-500" title="Remove Item">
+                      <button onClick={() => onRemoveItem(index)} className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-slate-50 text-slate-600 transition-all hover:bg-red-50 hover:text-red-500" title="Remove Item">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -327,7 +327,7 @@ const Cart = ({
                   <div className="page-section-enter border-t border-slate-100 bg-slate-50 p-2.5" style={{ animationDelay: "20ms" }}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Item Discount</span>
-                      <button onClick={() => setEditingIndex(null)} className="text-slate-600 hover:text-slate-900"><X size={14} /></button>
+                      <button onClick={() => setEditingIndex(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-md text-slate-600 hover:text-slate-900"><X size={14} /></button>
                     </div>
                     <div className="flex gap-2">
                       <CustomSelect

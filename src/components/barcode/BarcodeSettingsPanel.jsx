@@ -148,7 +148,7 @@ const ToggleButton = ({ active, onClick, title, children }) => (
     type="button"
     onClick={onClick}
     title={title}
-    className={`flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-bold transition ${
+    className={`flex h-11 w-11 items-center justify-center rounded-lg border text-sm font-bold transition ${
       active
         ? 'border-blue-500 bg-blue-50 text-blue-600'
         : 'border-slate-300 bg-white text-slate-500 hover:border-slate-400'

@@ -311,14 +311,14 @@ return (
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 xl:hidden transition-opacity"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       <aside
-        className={`${isOpen ? "shell-sidebar-enter" : ""} fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0f172a] text-white shadow-2xl transform transition-all duration-300 ease-in-out xl:static
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0 ${isDesktopCollapsed ? "xl:w-[72px] xl:min-w-[72px]" : "xl:w-64"}`}
+        className={`${isOpen ? "shell-sidebar-enter" : ""} fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-[#0f172a] text-white shadow-2xl transform transition-all duration-300 ease-in-out lg:static
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 ${isDesktopCollapsed ? "lg:w-[72px] lg:min-w-[72px]" : "lg:w-64"}`}
       >
         <div
           className={`border-b border-slate-800 ${isDesktopCollapsed ? "cursor-pointer px-3 py-5" : "p-6"}`}
@@ -358,7 +358,7 @@ return (
                 type="button"
                 aria-label="Close sidebar menu"
                 onClick={handleSidebarClose}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
               >
                 <X size={20} />
               </button>

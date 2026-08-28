@@ -22,7 +22,7 @@ const LanguageSelector = ({ compact = false, className = 'flex' }) => {
         labelKey="label"
         placeholder={t('Language')}
         className="min-w-0 flex-1"
-        buttonClassName="h-9 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0 hover:border-transparent"
+        buttonClassName="h-11 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0 hover:border-transparent"
         menuClassName="min-w-[140px]"
       />
     </div>

@@ -2276,7 +2276,7 @@ const POS = () => {
                 <button
                   type="button"
                   onClick={scrollCategoriesForward}
-                  className="absolute right-0 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:h-9 lg:w-9"
+                  className="absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:h-9 lg:w-9"
                   aria-label="Scroll categories"
                 >
                   <ChevronRight size={16} />
@@ -2420,7 +2420,7 @@ const POS = () => {
                     type="button"
                     onClick={handlePrintBill}
                     disabled={cartItems.length === 0}
-                    className="inline-flex h-[40px] items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Printer size={16} />
                     Print Bill
@@ -2430,7 +2430,7 @@ const POS = () => {
                       type="button"
                       onClick={() => savePendingDraft()}
                       disabled={savingDraft || !selectedTableId || cartItems.length === 0}
-                      className="inline-flex h-[40px] items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Save size={16} />
                       {savingDraft ? "Saving..." : "Save Draft"}

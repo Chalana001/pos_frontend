@@ -780,7 +780,7 @@ const PurchaseFormPage = () => {
                               </td>
                               <td className="px-2 py-2 text-center">
                                 {idx === 0 && (
-                                  <button onClick={() => applyPricesToAll(branch.id)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-700" title="Copy prices to all branches">
+                                  <button onClick={() => applyPricesToAll(branch.id)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-700" title="Copy prices to all branches">
                                     <Copy size={14} />
                                   </button>
                                 )}

@@ -1591,13 +1591,13 @@ export default function BulkAddItems() {
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-2">
                             <button
-                              className="px-2 py-1 rounded border hover:bg-gray-50"
+                              className="min-h-11 px-3 py-1 rounded border hover:bg-gray-50"
                               onClick={() => editRow(row.tempId)}
                             >
                               Edit
                             </button>
                             <button
-                              className="px-2 py-1 rounded border hover:bg-red-50 text-red-600"
+                              className="min-h-11 px-3 py-1 rounded border hover:bg-red-50 text-red-600"
                               onClick={() => removeRow(row.tempId)}
                             >
                               Remove

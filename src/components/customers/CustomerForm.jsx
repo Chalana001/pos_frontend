@@ -60,14 +60,14 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="flex-1 text-sm px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700"
+                  className="flex-1 min-h-11 text-sm px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700"
                   disabled
                 >
                   Replace
                 </button>
                 <button
                   type="button"
-                  className="text-sm px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700"
+                  className="min-h-11 text-sm px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700"
                   disabled
                 >
                   Remove
@@ -76,7 +76,7 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
 
               <button
                 type="button"
-                className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700"
+                className="w-full min-h-11 text-sm px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700"
                 disabled
               >
                 + Add Another Image

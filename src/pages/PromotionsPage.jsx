@@ -420,7 +420,7 @@ const PromotionsPage = () => {
                         <td className="app-table-cell">{promotion.discountType === DISCOUNT_TYPES.PERCENT ? `${promotion.discountValue}%` : formatCurrency(promotion.discountValue)}</td>
                         <td className="app-table-cell text-xs text-slate-600">{promotion.startAt ? new Date(promotion.startAt).toLocaleString() : "-"} - {promotion.endAt ? new Date(promotion.endAt).toLocaleString() : "-"}</td>
                         <td className="app-table-cell text-center">
-                          <button onClick={() => toggleStatus(promotion)} className={`rounded-full px-3 py-1 text-xs font-bold ${promotion.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                          <button onClick={() => toggleStatus(promotion)} className={`min-h-11 rounded-full px-3 py-1 text-xs font-bold ${promotion.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
                             {promotion.active ? "Active" : "Inactive"}
                           </button>
                         </td>

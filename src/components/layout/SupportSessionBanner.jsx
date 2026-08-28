@@ -76,7 +76,7 @@ const SupportSessionBanner = () => {
       <button
         type="button"
         onClick={logout}
-        className="inline-flex items-center gap-1 rounded bg-white/20 px-2 py-1 text-xs font-medium transition-colors hover:bg-white/30"
+        className="inline-flex min-h-11 items-center gap-1 rounded bg-white/20 px-3 py-1 text-xs font-medium transition-colors hover:bg-white/30"
       >
         <LogOut size={12} />
         End session

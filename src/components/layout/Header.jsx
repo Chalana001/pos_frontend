@@ -330,7 +330,7 @@ const Header = ({ onOpenSidebar, sidebarCollapsed }) => {
             type="button"
             aria-label="Open sidebar menu"
             onClick={onOpenSidebar}
-            className={`shell-panel-hover inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 ${sidebarCollapsed ? '' : 'xl:hidden'}`}
+            className={`shell-panel-hover inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 ${sidebarCollapsed ? '' : 'lg:hidden'}`}
           >
             <Menu size={20} />
           </button>
@@ -549,7 +549,7 @@ const Header = ({ onOpenSidebar, sidebarCollapsed }) => {
 
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
+                    className="w-full min-h-11 flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
                   >
                     <LogOut size={16} />
                     {t('Logout')}
