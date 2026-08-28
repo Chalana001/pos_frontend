@@ -2,13 +2,159 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Design tokens — the same names and structure the super-admin panel uses, so
+  the two apps share one vocabulary.
+
+  Colours are channel triplets rather than hex, so Tailwind's
+  `rgb(var(--x) / <alpha-value>)` bridge works and `bg-surface/60` stays
+  available. The light values are the POS's existing palette written down, not
+  a new scheme: porting the panel's exact values would have quietly restyled
+  every screen. Dark is declared twice — once for the OS setting, once for an
+  explicit `data-theme` stamp — so a stamped choice wins in both directions.
+
+  Components that use these tokens follow the theme with no `dark:` variant.
+  Screens still written in `bg-white` / `text-slate-900` do not, and stay light
+  until they are migrated.
+*/
+:root {
+  --bg:            248 250 252;   /* slate-50   */
+  --surface:       255 255 255;
+  --surface-2:     248 250 252;   /* slate-50   */
+  --surface-3:     241 245 249;   /* slate-100  */
+  --border:        226 232 240;   /* slate-200  */
+  --border-strong: 203 213 225;   /* slate-300  */
+
+  --text:           15  23  42;   /* slate-900  */
+  --text-muted:     71  85 105;   /* slate-600  */
+  --text-subtle:   148 163 184;   /* slate-400  */
+
+  --accent:         37  99 235;   /* blue-600   */
+  --accent-hover:   29  78 216;   /* blue-700   */
+  --accent-soft:   239 246 255;   /* blue-50    */
+  --accent-fg:     255 255 255;
+
+  --success:        22 163  74;
+  --success-soft:  240 253 244;
+  --warning:       245 158  11;
+  --warning-soft:  255 251 235;
+  --danger:        220  38  38;
+  --danger-soft:   254 242 242;
+  --info:           79  70 229;
+  --info-soft:     238 242 255;
+
+  /* Chart series for the Reports screens. */
+  --series-1:  37  99 235;
+  --series-2: 234  88  12;
+  --series-3:  22 163  74;
+  --series-4: 245 158  11;
+
+  --grid:     226 232 240;
+
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05);
+  --shadow-md: 0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.04);
+  --shadow-lg: 0 16px 40px -12px rgb(15 23 42 / 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:             15  16  20;
+    --surface:        23  24  28;
+    --surface-2:      30  32  37;
+    --surface-3:      38  40  46;
+    --border:         44  47  54;
+    --border-strong:  63  67  76;
+
+    --text:          244 245 247;
+    --text-muted:    159 167 180;
+    --text-subtle:   118 126 139;
+
+    --accent:         57 135 229;
+    --accent-hover:   96 162 240;
+    --accent-soft:    22  49  84;
+    --accent-fg:     255 255 255;
+
+    --success:        25 158 112;
+    --success-soft:   16  56  44;
+    --warning:       201 133   0;
+    --warning-soft:   61  45   8;
+    --danger:        230 103 103;
+    --danger-soft:    68  27  27;
+    --info:          144 133 233;
+    --info-soft:      42  36  74;
+
+    --series-1:  57 135 229;
+    --series-2: 217  89  38;
+    --series-3:  25 158 112;
+    --series-4: 201 133   0;
+
+    --grid:      40  43  50;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:             15  16  20;
+  --surface:        23  24  28;
+  --surface-2:      30  32  37;
+  --surface-3:      38  40  46;
+  --border:         44  47  54;
+  --border-strong:  63  67  76;
+
+  --text:          244 245 247;
+  --text-muted:    159 167 180;
+  --text-subtle:   118 126 139;
+
+  --accent:         57 135 229;
+  --accent-hover:   96 162 240;
+  --accent-soft:    22  49  84;
+  --accent-fg:     255 255 255;
+
+  --success:        25 158 112;
+  --success-soft:   16  56  44;
+  --warning:       201 133   0;
+  --warning-soft:   61  45   8;
+  --danger:        230 103 103;
+  --danger-soft:    68  27  27;
+  --info:          144 133 233;
+  --info-soft:      42  36  74;
+
+  --series-1:  57 135 229;
+  --series-2: 217  89  38;
+  --series-3:  25 158 112;
+  --series-4: 201 133   0;
+
+  --grid:      40  43  50;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6);
+}
+
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply antialiased;
+    background-color: rgb(var(--bg));
+    color: rgb(var(--text));
     background-image:
       radial-gradient(circle at top left, rgb(219 234 254 / 0.9), transparent 28%),
       radial-gradient(circle at top right, rgb(224 231 255 / 0.75), transparent 24%),
       linear-gradient(180deg, #f8fbff 0%, #f8fafc 44%, #f1f5f9 100%);
+  }
+
+  /* The tinted wash above is a light-mode flourish; on a dark ground it turns
+     into two bright smears, so drop it and let the token carry the surface. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) body {
+      background-image: none;
+    }
+  }
+
+  :root[data-theme="dark"] body {
+    background-image: none;
   }
 }
 
@@ -18,23 +164,23 @@
   }
   
   .btn-primary {
-    @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+    @apply bg-accent text-accent-fg hover:bg-accent-hover focus:ring-accent;
   }
-  
+
   .btn-secondary {
-    @apply bg-slate-200 text-slate-700 hover:bg-slate-300 focus:ring-slate-500;
+    @apply bg-surface-3 text-text hover:bg-border focus:ring-border-strong;
   }
-  
+
   .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    @apply bg-danger text-white hover:brightness-95 focus:ring-danger;
   }
-  
+
   .input {
-    @apply w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply w-full px-4 py-2 bg-surface text-text border border-border-strong rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent;
   }
-  
+
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-slate-200 p-6;
+    @apply bg-surface rounded-xl shadow-card border border-border p-6;
   }
 
   .custom-scrollbar {
