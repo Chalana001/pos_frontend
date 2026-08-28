@@ -146,7 +146,7 @@ export default function RecipeIngredientsImportPage({ embedded = false }) {
             <Download size={16} className="mr-2" />
             {downloadingTemplate ? "Downloading..." : "Template"}
           </Button>
-          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={previewFile} />
+          <input aria-label="Choose a recipe ingredients Excel file" ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={previewFile} />
           <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={loadingFile}>
             <Upload size={16} className="mr-2" />
             {loadingFile ? "Loading..." : "Upload Excel"}
@@ -199,7 +199,7 @@ export default function RecipeIngredientsImportPage({ embedded = false }) {
                   return (
                     <tr key={row.rowNumber} className="border-t border-slate-200 align-top">
                       <td className="px-3 py-3">
-                        <input
+                        <input aria-label={`Import row ${row.rowNumber}`}
                           type="checkbox"
                           checked={row.selected ?? true}
                           onChange={() => toggleSelected(row.rowNumber)}

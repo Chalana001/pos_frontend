@@ -529,16 +529,16 @@ const PurchaseFormPage = () => {
             </div>
 
             <div>
-              <label className="label-text">Invoice No</label>
-              <input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="input w-full" placeholder="Ex: INV-999" />
+              <label htmlFor="purchaseformpage-invoice-no" className="label-text">Invoice No</label>
+              <input id="purchaseformpage-invoice-no" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="input w-full" placeholder="Ex: INV-999" />
             </div>
             <div>
               <label className="label-text">Date</label>
               <DatePicker value={date} onChange={setDate} buttonClassName="input h-10 w-full" />
             </div>
             <div>
-              <label className="label-text">Supplier Discount</label>
-              <input
+              <label htmlFor="purchaseformpage-supplier-discount" className="label-text">Supplier Discount</label>
+              <input id="purchaseformpage-supplier-discount"
                 type="number"
                 min="0"
                 max={subtotal || 0}
@@ -550,9 +550,9 @@ const PurchaseFormPage = () => {
               <p className="mt-1 text-xs text-slate-500">Discount given on this invoice.</p>
             </div>
             <div>
-              <label className="label-text">Paid to Supplier</label>
+              <label htmlFor="purchaseformpage-paid-to-supplier" className="label-text">Paid to Supplier</label>
               <div className="flex gap-2">
-                <input
+                <input id="purchaseformpage-paid-to-supplier"
                   type="number"
                   min="0"
                   max={grandTotal || 0}
@@ -643,7 +643,7 @@ const PurchaseFormPage = () => {
             <div className="p-4">
               <div className="relative mb-4">
                 <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
+                <input aria-label="Scan barcode or type name..."
                   ref={searchInputRef}
                   placeholder="Scan barcode or type name..."
                   value={search}
@@ -727,7 +727,7 @@ const PurchaseFormPage = () => {
                                 </div>
                               </td>
                               <td className="px-2 py-2">
-                                <input
+                                <input aria-label="Cost"
                                   type="number"
                                   className="input h-9 w-full min-w-[100px] px-2 text-right text-sm"
                                   placeholder="Cost"
@@ -736,7 +736,7 @@ const PurchaseFormPage = () => {
                                 />
                               </td>
                               <td className="px-2 py-2">
-                                <input
+                                <input aria-label="Sell"
                                   type="number"
                                   className="input h-9 w-full min-w-[100px] px-2 text-right text-sm"
                                   placeholder="Sell"
@@ -745,7 +745,7 @@ const PurchaseFormPage = () => {
                                 />
                               </td>
                               <td className="px-2 py-2">
-                                <input
+                                <input aria-label="Qty"
                                   ref={idx === 0 ? firstQtyInputRef : null}
                                   type="number"
                                   step={weightItem ? "0.1" : "1"}

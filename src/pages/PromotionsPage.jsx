@@ -344,7 +344,7 @@ const PromotionsPage = () => {
               </div>
               <div className="relative mb-2">
                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input value={targetSearch} onChange={(event) => setTargetSearch(event.target.value)} placeholder="Search targets" className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm" />
+                <input aria-label="Search targets" value={targetSearch} onChange={(event) => setTargetSearch(event.target.value)} placeholder="Search targets" className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm" />
               </div>
               <div className="custom-scrollbar max-h-64 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
                 {filteredTargets.length === 0 ? (

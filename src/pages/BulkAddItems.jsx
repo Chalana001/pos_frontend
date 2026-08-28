@@ -913,8 +913,8 @@ export default function BulkAddItems() {
             onToggle={() => setOpenImage((v) => !v)}
           >
             <div className="space-y-2">
-              <label className="text-sm font-medium">Image URL</label>
-              <input
+              <label htmlFor="bulkadditems-image-url" className="text-sm font-medium">Image URL</label>
+              <input id="bulkadditems-image-url"
                 className="w-full border rounded-lg px-3 py-2"
                 value={draft.imageUrl}
                 onChange={(e) => updateDraft("imageUrl", e.target.value)}
@@ -965,8 +965,8 @@ export default function BulkAddItems() {
           >
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Item Name *</label>
-                <input
+                <label htmlFor="bulkadditems-item-name" className="text-sm font-medium">Item Name *</label>
+                <input id="bulkadditems-item-name"
                   className="w-full border rounded-lg px-3 py-2"
                   value={draft.name}
                   onChange={(e) => updateDraft("name", e.target.value)}
@@ -975,11 +975,11 @@ export default function BulkAddItems() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">
+                <label htmlFor="bulkadditems-alt-name-sinhala-optional-used-on-receip" className="text-sm font-medium">
                   Alt Name (Sinhala)
                   <span className="ml-2 text-xs text-slate-400 font-normal">Optional — used on receipts when set to Alt Name.</span>
                 </label>
-                <input
+                <input id="bulkadditems-alt-name-sinhala-optional-used-on-receip"
                   className="w-full border rounded-lg px-3 py-2"
                   value={draft.altName}
                   onChange={(e) => updateDraft("altName", e.target.value)}
@@ -989,8 +989,8 @@ export default function BulkAddItems() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2 col-span-2 md:col-span-1">
-                  <label className="text-sm font-medium">Barcode</label>
-                  <input
+                  <label htmlFor="bulkadditems-barcode" className="text-sm font-medium">Barcode</label>
+                  <input id="bulkadditems-barcode"
                     className="w-full border rounded-lg px-3 py-2"
                     value={draft.barcode}
                     onChange={(e) => updateDraft("barcode", e.target.value)}
@@ -1000,8 +1000,8 @@ export default function BulkAddItems() {
                 </div>
 
                 <div className="space-y-2 col-span-2 md:col-span-1">
-                  <label className="text-sm font-medium">Reorder Level</label>
-                  <input
+                  <label htmlFor="bulkadditems-reorder-level" className="text-sm font-medium">Reorder Level</label>
+                  <input id="bulkadditems-reorder-level"
                     type="number"
                     min="0"
                     className={`w-full border rounded-lg px-3 py-2 ${
@@ -1108,8 +1108,8 @@ export default function BulkAddItems() {
                 </div>
 
                 <div className="space-y-2 col-span-1">
-                  <label className="text-sm font-medium">Cost {priceUnitLabel(draft.itemType)}</label>
-                  <input
+                  <label htmlFor="bulkadditems-cost" className="text-sm font-medium">Cost {priceUnitLabel(draft.itemType)}</label>
+                  <input id="bulkadditems-cost"
                     type="number"
                     min="0"
                     step="0.01"
@@ -1121,8 +1121,8 @@ export default function BulkAddItems() {
                 </div>
 
                 <div className="space-y-2 col-span-1">
-                  <label className="text-sm font-medium">Sell {priceUnitLabel(draft.itemType)}</label>
-                  <input
+                  <label htmlFor="bulkadditems-sell" className="text-sm font-medium">Sell {priceUnitLabel(draft.itemType)}</label>
+                  <input id="bulkadditems-sell"
                     type="number"
                     min="0"
                     step="0.01"
@@ -1207,7 +1207,7 @@ export default function BulkAddItems() {
                           {draft.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "Overhead Percent" : "Overhead Amount"}
                         </label>
                         <div className="flex rounded-lg border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-blue-500">
-                          <input
+                          <input aria-label="Overhead cost"
                             type="number"
                             min="0"
                             step="0.01"
@@ -1321,7 +1321,7 @@ export default function BulkAddItems() {
                               <label className="mb-1 block text-sm font-medium text-slate-700">Output Item</label>
                               <div className="relative">
                                 <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input
+                                <input aria-label="Output item"
                                   type="text"
                                   value={output.search || ""}
                                   onChange={(e) => searchProcessingOutputItems(index, e.target.value)}
@@ -1367,7 +1367,7 @@ export default function BulkAddItems() {
                             <div>
                               <label className="mb-1 block text-sm font-medium text-slate-700">Default Qty</label>
                               <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
-                                <input
+                                <input aria-label="Default quantity"
                                   type="number"
                                   min="0"
                                   step="0.001"
@@ -1448,7 +1448,7 @@ export default function BulkAddItems() {
                           <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
                           <div className="relative">
                             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
+                            <input aria-label="Ingredient"
                               type="text"
                               value={ingredient.search || ""}
                               onChange={(e) => searchIngredientItems(index, e.target.value)}
@@ -1495,7 +1495,7 @@ export default function BulkAddItems() {
 
                         <div>
                           <label className="mb-1 block text-sm font-medium text-slate-700">Qty</label>
-                          <input
+                          <input aria-label="Ingredient quantity"
                             type="number"
                             min="0"
                             step="0.001"
@@ -1617,8 +1617,8 @@ export default function BulkAddItems() {
       <Modal isOpen={showCatModal} onClose={() => !savingCat && setShowCatModal(false)} title="Add New Category">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Category Name</label>
-            <input
+            <label htmlFor="bulkadditems-category-name" className="block text-sm font-medium text-slate-700 mb-1">Category Name</label>
+            <input id="bulkadditems-category-name"
               type="text"
               value={newCatName}
               onChange={(e) => setNewCatName(e.target.value)}
@@ -1641,8 +1641,8 @@ export default function BulkAddItems() {
       <Modal isOpen={showSubCatModal} onClose={() => !savingSubCat && setShowSubCatModal(false)} title="Add New Sub-Category">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Sub-Category Name</label>
-            <input
+            <label htmlFor="bulkadditems-sub-category-name" className="block text-sm font-medium text-slate-700 mb-1">Sub-Category Name</label>
+            <input id="bulkadditems-sub-category-name"
               type="text"
               value={newSubCatName}
               onChange={(e) => setNewSubCatName(e.target.value)}

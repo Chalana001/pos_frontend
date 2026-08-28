@@ -574,7 +574,7 @@ const Stock = () => {
           <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-[minmax(260px,1fr)_180px_220px_220px_auto] xl:items-center">
             <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-2 xl:col-span-1 w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-              <input
+              <input aria-label="Search name, barcode, or category..."
                 type="text"
                 value={searchQuery}
                 onChange={handleSearch}
@@ -714,7 +714,7 @@ const Stock = () => {
                     labelKey="label"
                     buttonClassName="h-[42px] rounded-lg"
                   />
-                  <input
+                  <input aria-label="Quantity"
                     type="number"
                     min="0"
                     step={isMeasuredItem(selectedItem) ? getMeasuredStep(adjustFormData.qtyUnit) : "1"}
@@ -805,8 +805,8 @@ const Stock = () => {
               </div>
 
               <div className="page-section-enter" style={{ animationDelay: "150ms" }}>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Quantity to Transfer *</label>
-                <input
+                <label htmlFor="stock-quantity-to-transfer" className="block text-sm font-medium text-slate-700 mb-1">Quantity to Transfer *</label>
+                <input id="stock-quantity-to-transfer"
                   type="number"
                   min="0"
                   step={isMeasuredItem(selectedItem) ? getMeasuredStep(transferFormData.qtyUnit) : "1"}

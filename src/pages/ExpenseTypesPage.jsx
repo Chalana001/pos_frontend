@@ -125,8 +125,8 @@ const ExpenseTypesPage = () => {
         >
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-slate-700">Name</label>
-              <input
+              <label htmlFor="expensetypespage-name" className="text-sm font-medium text-slate-700">Name</label>
+              <input id="expensetypespage-name"
                 value={form.name}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder="Oil, Gas, Tea, Delivery"

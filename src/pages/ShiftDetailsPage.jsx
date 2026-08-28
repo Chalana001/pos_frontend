@@ -391,8 +391,8 @@ const ShiftDetailsPage = () => {
           {showCloseModal && <ShiftCloseSummary shiftId={shift.id} />}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
-            <input
+            <label htmlFor="shiftdetailspage-counted-cash-amount" className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
+            <input id="shiftdetailspage-counted-cash-amount"
               type="number"
               step="0.01"
               value={countedCash}

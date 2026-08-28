@@ -404,7 +404,7 @@ const StockItemDetailsPage = () => {
           <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
             <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
+              <input aria-label="Search invoice or GRN..."
                 type="text"
                 value={search}
                 onChange={(e) => {
@@ -417,7 +417,7 @@ const StockItemDetailsPage = () => {
             </div>
 
             <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-3">
-              <input
+              <input aria-label="Search supplier..."
                 type="text"
                 value={selectedSupplier ? selectedSupplier.name : supplierQuery}
                 onFocus={() => setSupplierDropdownOpen(true)}

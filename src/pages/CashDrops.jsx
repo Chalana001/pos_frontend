@@ -466,7 +466,7 @@ const CashDrops = () => {
           <div className={`grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 ${isAdmin ? "xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_auto]" : "xl:grid-cols-[minmax(260px,1fr)_180px_180px_auto]"} xl:items-center`}>
             <div className={`relative w-full col-span-full ${isAdmin ? "min-[620px]:col-span-2" : "min-[620px]:col-span-2"} min-[440px]:col-span-3 xl:col-span-1`}>
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-              <input
+              <input aria-label="Search reason..."
                 type="text"
                 value={search}
                 onChange={(e) => {
@@ -553,10 +553,10 @@ const CashDrops = () => {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="page-section-enter" style={{ animationDelay: "60ms" }}>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="cashdrops-amount" className="block text-sm font-medium text-slate-700 mb-1">
               Amount *
             </label>
-            <input
+            <input id="cashdrops-amount"
               type="text"
               inputMode="decimal"
               value={formData.amount}
@@ -637,8 +637,8 @@ const CashDrops = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
-            <input
+            <label htmlFor="cashdrops-outside-amount" className="block text-sm font-medium text-slate-700 mb-1">Amount *</label>
+            <input id="cashdrops-outside-amount"
               type="text"
               inputMode="decimal"
               value={outsideForm.amount}

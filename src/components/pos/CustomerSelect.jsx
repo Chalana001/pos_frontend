@@ -68,20 +68,20 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
         <form onSubmit={handleAddCustomer} className="p-6 space-y-4">
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-bold text-slate-700">Name</label>
-              <input type="text" value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} className="input w-full mt-1" required />
+              <label htmlFor="customerselect-name" className="text-sm font-bold text-slate-700">Name</label>
+              <input id="customerselect-name" type="text" value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} className="input w-full mt-1" required />
             </div>
             <div>
-              <label className="text-sm font-bold text-slate-700">Phone</label>
-              <input type="text" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} className="input w-full mt-1" required />
+              <label htmlFor="customerselect-phone" className="text-sm font-bold text-slate-700">Phone</label>
+              <input id="customerselect-phone" type="text" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} className="input w-full mt-1" required />
             </div>
             <div>
               <label className="text-sm font-bold text-slate-700">Address</label>
               <textarea value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} className="input w-full mt-1" rows="3" />
             </div>
             <div>
-              <label className="text-sm font-bold text-slate-700">Credit Limit</label>
-              <input
+              <label htmlFor="customerselect-credit-limit" className="text-sm font-bold text-slate-700">Credit Limit</label>
+              <input id="customerselect-credit-limit"
                 type="number"
                 min="0"
                 step="0.01"
@@ -107,7 +107,7 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
         <div className="flex gap-3 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-            <input
+            <input aria-label="Search customers..."
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

@@ -420,7 +420,7 @@ const ItemsPage = () => {
           <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
             <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
+              <input aria-label="Search name, barcode, or category..."
                 type="text"
                 value={searchQuery}
                 onChange={handleSearch}
@@ -533,7 +533,7 @@ const ItemsPage = () => {
             </div>
 
             <div className="col-span-full min-[440px]:col-span-3 min-[620px]:col-span-2 xl:col-span-2">
-              <input
+              <input aria-label="Price"
                 type="number"
                 min="0"
                 value={priceAmount}

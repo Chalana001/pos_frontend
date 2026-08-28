@@ -372,7 +372,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                 <Download size={16} className="mr-2" />
                 {downloadingTemplate ? "Downloading..." : "Items Template"}
               </Button>
-              <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={previewFile} />
+              <input aria-label="Choose an items Excel file" ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={previewFile} />
               <Button type="button" onClick={() => fileInputRef.current?.click()} disabled={loadingFile}>
                 <Upload size={16} className="mr-2" />
                 {loadingFile ? "Loading..." : "Upload Excel"}
@@ -426,7 +426,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                   return (
                     <tr key={row.rowNumber} className="border-t border-slate-200 align-top">
                       <td className="px-3 py-3">
-                        <input
+                        <input aria-label={`Import row ${row.rowNumber}`}
                           type="checkbox"
                           checked={row.selected ?? true}
                           onChange={() => toggleSelected(row.rowNumber)}
@@ -435,16 +435,16 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                       </td>
                       <td className="px-3 py-3 font-medium text-slate-700">{row.rowNumber}</td>
                       <td className="px-3 py-3">
-                        <input className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.importKey || ""} onChange={(e) => updateRow(row.rowNumber, "importKey", e.target.value)} placeholder="R001" />
+                        <input aria-label={`Import key for row ${row.rowNumber}`} className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.importKey || ""} onChange={(e) => updateRow(row.rowNumber, "importKey", e.target.value)} placeholder="R001" />
                       </td>
                       <td className="px-3 py-3">
                         <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${statusClass}`}>{row.status}</span>
                       </td>
                       <td className="px-3 py-3">
-                        <input className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.barcode || ""} onChange={(e) => updateRow(row.rowNumber, "barcode", e.target.value)} placeholder="Auto" />
+                        <input aria-label="Auto" className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.barcode || ""} onChange={(e) => updateRow(row.rowNumber, "barcode", e.target.value)} placeholder="Auto" />
                       </td>
                       <td className="px-3 py-3">
-                        <input className="w-44 rounded-lg border border-slate-300 px-2 py-2" value={row.name || ""} onChange={(e) => updateRow(row.rowNumber, "name", e.target.value)} />
+                        <input aria-label="Category" className="w-44 rounded-lg border border-slate-300 px-2 py-2" value={row.name || ""} onChange={(e) => updateRow(row.rowNumber, "name", e.target.value)} />
                       </td>
                       <td className="px-3 py-3">
                         <CustomSelect
@@ -469,13 +469,13 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                         <CustomSelect value={row.defaultUnit || ""} onChange={(value) => updateRow(row.rowNumber, "defaultUnit", value)} options={unitOptions} valueKey="value" labelKey="label" className="w-28" />
                       </td>
                       <td className="px-3 py-3">
-                        <input type="number" min="0" step="0.01" className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.costPrice ?? ""} onChange={(e) => updateRow(row.rowNumber, "costPrice", toNumberOrNull(e.target.value))} />
+                        <input aria-label={`Cost price for row ${row.rowNumber}`} type="number" min="0" step="0.01" className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.costPrice ?? ""} onChange={(e) => updateRow(row.rowNumber, "costPrice", toNumberOrNull(e.target.value))} />
                       </td>
                       <td className="px-3 py-3">
-                        <input type="number" min="0" step="0.01" className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.sellingPrice ?? ""} onChange={(e) => updateRow(row.rowNumber, "sellingPrice", toNumberOrNull(e.target.value))} />
+                        <input aria-label={`Selling price for row ${row.rowNumber}`} type="number" min="0" step="0.01" className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.sellingPrice ?? ""} onChange={(e) => updateRow(row.rowNumber, "sellingPrice", toNumberOrNull(e.target.value))} />
                       </td>
                       <td className="px-3 py-3">
-                        <input type="number" min="0" step="0.001" className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.reorderLevel ?? ""} onChange={(e) => updateRow(row.rowNumber, "reorderLevel", toNumberOrNull(e.target.value))} />
+                        <input aria-label={`Reorder level for row ${row.rowNumber}`} type="number" min="0" step="0.001" className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={row.reorderLevel ?? ""} onChange={(e) => updateRow(row.rowNumber, "reorderLevel", toNumberOrNull(e.target.value))} />
                       </td>
                       <td className="px-3 py-3">
                         <CustomSelect value={String(row.active ?? true)} onChange={(value) => updateRow(row.rowNumber, "active", value === "true")} options={booleanOptions} valueKey="value" labelKey="label" className="w-24" />
@@ -500,7 +500,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                         </span>
                       </td>
                       <td className="px-3 py-3">
-                        <input className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={Array.isArray(row.branchIds) ? row.branchIds.join(",") : ""} onChange={(e) => updateRow(row.rowNumber, "branchIdsText", e.target.value)} placeholder="1,2" disabled={row.itemType !== ItemType.SERVICE} />
+                        <input aria-label={`Branch IDs for row ${row.rowNumber}`} className="w-28 rounded-lg border border-slate-300 px-2 py-2" value={Array.isArray(row.branchIds) ? row.branchIds.join(",") : ""} onChange={(e) => updateRow(row.rowNumber, "branchIdsText", e.target.value)} placeholder="1,2" disabled={row.itemType !== ItemType.SERVICE} />
                       </td>
                       <td className="px-3 py-3">
                         <div className={`flex min-w-[240px] items-start gap-2 rounded-lg border px-3 py-2 text-xs ${

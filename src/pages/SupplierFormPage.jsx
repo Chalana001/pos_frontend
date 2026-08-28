@@ -100,8 +100,8 @@ const SupplierFormPage = () => {
 
           <div className="page-section-enter grid grid-cols-1 gap-4 p-6 md:grid-cols-2" style={{ animationDelay: "130ms" }}>
             <div>
-              <label className="label-text">Supplier Name *</label>
-              <input
+              <label htmlFor="supplierformpage-supplier-name" className="label-text">Supplier Name *</label>
+              <input id="supplierformpage-supplier-name"
                 value={formData.name}
                 onChange={(event) => updateField("name", event.target.value)}
                 className="input w-full"
@@ -110,8 +110,8 @@ const SupplierFormPage = () => {
               />
             </div>
             <div>
-              <label className="label-text">Phone *</label>
-              <input
+              <label htmlFor="supplierformpage-phone" className="label-text">Phone *</label>
+              <input id="supplierformpage-phone"
                 value={formData.phone}
                 onChange={(event) => updateField("phone", event.target.value)}
                 className="input w-full"
@@ -119,8 +119,8 @@ const SupplierFormPage = () => {
               />
             </div>
             <div>
-              <label className="label-text">Email</label>
-              <input
+              <label htmlFor="supplierformpage-email" className="label-text">Email</label>
+              <input id="supplierformpage-email"
                 type="email"
                 value={formData.email}
                 onChange={(event) => updateField("email", event.target.value)}
@@ -153,20 +153,20 @@ const SupplierFormPage = () => {
 
           <div className="page-section-enter grid grid-cols-1 gap-4 p-6 md:grid-cols-2" style={{ animationDelay: "180ms" }}>
             <div>
-              <label className="label-text">Bank Name</label>
-              <input value={formData.bankName} onChange={(event) => updateField("bankName", event.target.value)} className="input w-full" />
+              <label htmlFor="supplierformpage-bank-name" className="label-text">Bank Name</label>
+              <input id="supplierformpage-bank-name" value={formData.bankName} onChange={(event) => updateField("bankName", event.target.value)} className="input w-full" />
             </div>
             <div>
-              <label className="label-text">Branch Name</label>
-              <input value={formData.branchName} onChange={(event) => updateField("branchName", event.target.value)} className="input w-full" />
+              <label htmlFor="supplierformpage-branch-name" className="label-text">Branch Name</label>
+              <input id="supplierformpage-branch-name" value={formData.branchName} onChange={(event) => updateField("branchName", event.target.value)} className="input w-full" />
             </div>
             <div>
-              <label className="label-text">Account Number</label>
-              <input value={formData.accountNumber} onChange={(event) => updateField("accountNumber", event.target.value)} className="input w-full" />
+              <label htmlFor="supplierformpage-account-number" className="label-text">Account Number</label>
+              <input id="supplierformpage-account-number" value={formData.accountNumber} onChange={(event) => updateField("accountNumber", event.target.value)} className="input w-full" />
             </div>
             <div>
-              <label className="label-text">Account Name</label>
-              <input value={formData.accountName} onChange={(event) => updateField("accountName", event.target.value)} className="input w-full" />
+              <label htmlFor="supplierformpage-account-name" className="label-text">Account Name</label>
+              <input id="supplierformpage-account-name" value={formData.accountName} onChange={(event) => updateField("accountName", event.target.value)} className="input w-full" />
             </div>
           </div>
 

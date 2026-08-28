@@ -308,7 +308,7 @@ const Branches = () => {
           <h3 className="text-sm font-medium text-slate-600 mb-2">Search</h3>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
+            <input aria-label="Search branches..."
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Search branches..."
               value={search}
@@ -332,8 +332,8 @@ const Branches = () => {
       <SharedModal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Create Branch">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="text-sm font-medium text-slate-700">Code</label>
-            <input
+            <label htmlFor="branches-code" className="text-sm font-medium text-slate-700">Code</label>
+            <input id="branches-code"
               className="input mt-1"
               value={createForm.code}
               onChange={(e) => setCreateForm({ ...createForm, code: e.target.value })}
@@ -342,8 +342,8 @@ const Branches = () => {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Name</label>
-            <input
+            <label htmlFor="branches-name" className="text-sm font-medium text-slate-700">Name</label>
+            <input id="branches-name"
               className="input mt-1"
               value={createForm.name}
               onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
@@ -352,8 +352,8 @@ const Branches = () => {
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-sm font-medium text-slate-700">Address</label>
-            <input
+            <label htmlFor="branches-address" className="text-sm font-medium text-slate-700">Address</label>
+            <input id="branches-address"
               className="input mt-1"
               value={createForm.address}
               onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
@@ -362,8 +362,8 @@ const Branches = () => {
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-sm font-medium text-slate-700">Phone</label>
-            <input
+            <label htmlFor="branches-phone" className="text-sm font-medium text-slate-700">Phone</label>
+            <input id="branches-phone"
               className="input mt-1"
               value={createForm.phone}
               onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
@@ -419,8 +419,8 @@ const Branches = () => {
       <SharedModal isOpen={editOpen} onClose={() => setEditOpen(false)} title={`Edit Branch - ${selected?.name || ""}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
-            <label className="text-sm font-medium text-slate-700">Name</label>
-            <input
+            <label htmlFor="branches-name-2" className="text-sm font-medium text-slate-700">Name</label>
+            <input id="branches-name-2"
               className="input mt-1"
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
@@ -428,8 +428,8 @@ const Branches = () => {
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-sm font-medium text-slate-700">Address</label>
-            <input
+            <label htmlFor="branches-address-2" className="text-sm font-medium text-slate-700">Address</label>
+            <input id="branches-address-2"
               className="input mt-1"
               value={editForm.address}
               onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
@@ -437,8 +437,8 @@ const Branches = () => {
           </div>
 
           <div className="md:col-span-2">
-            <label className="text-sm font-medium text-slate-700">Phone</label>
-            <input
+            <label htmlFor="branches-phone-2" className="text-sm font-medium text-slate-700">Phone</label>
+            <input id="branches-phone-2"
               className="input mt-1"
               value={editForm.phone}
               onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}

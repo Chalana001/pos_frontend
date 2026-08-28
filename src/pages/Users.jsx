@@ -339,7 +339,7 @@ const Users = () => {
                     {/* Search */}
                     <div className="relative md:col-span-2">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input
+                        <input aria-label="Search by username..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -381,8 +381,8 @@ const Users = () => {
             <SharedModal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Create User">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                        <label className="text-sm font-medium text-slate-700">Username</label>
-                        <input
+                        <label htmlFor="users-username" className="text-sm font-medium text-slate-700">Username</label>
+                        <input id="users-username"
                             className="input mt-1"
                             value={createForm.username}
                             onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
@@ -391,8 +391,8 @@ const Users = () => {
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium text-slate-700">Password</label>
-                        <input
+                        <label htmlFor="users-password" className="text-sm font-medium text-slate-700">Password</label>
+                        <input id="users-password"
                             type="password"
                             className="input mt-1"
                             value={createForm.password}
@@ -476,8 +476,8 @@ const Users = () => {
                 title={`Reset Password - ${selectedUser?.username || ""}`}
             >
                 <div>
-                    <label className="text-sm font-medium text-slate-700">New Password</label>
-                    <input
+                    <label htmlFor="users-new-password" className="text-sm font-medium text-slate-700">New Password</label>
+                    <input id="users-new-password"
                         type="password"
                         className="input mt-1"
                         value={resetForm.newPassword}

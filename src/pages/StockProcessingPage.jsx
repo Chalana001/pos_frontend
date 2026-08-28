@@ -427,8 +427,8 @@ const StockProcessingPage = () => {
 
             <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Process Qty</label>
-                <input
+                <label htmlFor="stockprocessingpage-process-qty" className="mb-1 block text-sm font-medium text-slate-700">Process Qty</label>
+                <input id="stockprocessingpage-process-qty"
                   type="number"
                   min="0"
                   step="0.001"
@@ -492,7 +492,7 @@ const StockProcessingPage = () => {
 
                         <div>
                           <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Qty</div>
-                          <input
+                          <input aria-label="Qty"
                             type="number"
                             min="0"
                             step="0.001"
@@ -505,7 +505,7 @@ const StockProcessingPage = () => {
 
                         <div>
                           <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 md:hidden">Sell Price</div>
-                          <input
+                          <input aria-label="Batch sell price"
                             type="number"
                             min="0"
                             step="0.01"

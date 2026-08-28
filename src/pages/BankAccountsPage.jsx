@@ -226,8 +226,8 @@ const BankAccountsPage = () => {
       <Modal isOpen={showModal} onClose={closeModal} title={form.id ? "Edit Bank Account" : "Add Bank Account"}>
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-slate-700">Account Name *</label>
-            <input
+            <label htmlFor="bankaccountspage-account-name" className="text-sm font-medium text-slate-700">Account Name *</label>
+            <input id="bankaccountspage-account-name"
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
               placeholder="e.g. Commercial Bank - 001"
@@ -238,8 +238,8 @@ const BankAccountsPage = () => {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Bank Name</label>
-            <input
+            <label htmlFor="bankaccountspage-bank-name" className="text-sm font-medium text-slate-700">Bank Name</label>
+            <input id="bankaccountspage-bank-name"
               value={form.bankName}
               onChange={(event) => setForm((prev) => ({ ...prev, bankName: event.target.value }))}
               placeholder="e.g. Commercial Bank"
@@ -248,8 +248,8 @@ const BankAccountsPage = () => {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700">Account Number</label>
-            <input
+            <label htmlFor="bankaccountspage-account-number" className="text-sm font-medium text-slate-700">Account Number</label>
+            <input id="bankaccountspage-account-number"
               value={form.accountNumber}
               onChange={(event) => setForm((prev) => ({ ...prev, accountNumber: event.target.value }))}
               placeholder="e.g. 8001234567"

@@ -15,7 +15,7 @@ export default function SupplierModal({ open, onClose, onSaved }) {
   return (
     <Modal isOpen={open} onClose={onClose} title="Add Supplier" size="sm">
       <div className="space-y-4">
-        <input
+        <input aria-label="Supplier Name"
           placeholder="Supplier Name"
           value={name}
           onChange={(e) => setName(e.target.value)}

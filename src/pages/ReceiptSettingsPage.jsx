@@ -953,7 +953,7 @@ const ReceiptSettingsPage = () => {
                             {supportsText ? (
                               <div className="mt-2 flex items-center gap-2">
                                 <Type size={13} className="shrink-0 text-slate-400" />
-                                <input
+                                <input aria-label="Element text"
                                   type="text"
                                   value={line.customText || ''}
                                   onChange={(e) => updateTemplateLine(index, 'customText', e.target.value)}
@@ -977,7 +977,7 @@ const ReceiptSettingsPage = () => {
                                     <span>Logo Width</span>
                                     <span className="font-semibold text-slate-700">{form.logoWidthPercent}%</span>
                                   </div>
-                                  <input
+                                  <input aria-label="Logo width"
                                     type="range"
                                     min="35"
                                     max="200"
@@ -991,7 +991,7 @@ const ReceiptSettingsPage = () => {
                                     <span>Top Spacing</span>
                                     <span className="font-semibold text-slate-700">{form.logoTopSpacing}mm</span>
                                   </div>
-                                  <input
+                                  <input aria-label="Logo top spacing"
                                     type="range"
                                     min="0"
                                     max="20"
@@ -1117,10 +1117,10 @@ const ReceiptSettingsPage = () => {
                     {activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? (
                       <div>
                         <div className="flex items-center justify-between text-sm text-slate-700">
-                          <label className="font-medium">Invoice Logo Size</label>
+                          <label htmlFor="receiptsettingspage-invoice-logo-size" className="font-medium">Invoice Logo Size</label>
                           <span>{form.invoiceLogoWidthPercent}%</span>
                         </div>
-                        <input
+                        <input id="receiptsettingspage-invoice-logo-size"
                           type="range"
                           min="35"
                           max="200"
@@ -1137,8 +1137,8 @@ const ReceiptSettingsPage = () => {
                     {/* Paper width */}
                     {activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? (
                       <div>
-                        <label className="text-sm font-medium text-slate-700">Paper Size</label>
-                        <input
+                        <label htmlFor="receiptsettingspage-paper-size" className="text-sm font-medium text-slate-700">Paper Size</label>
+                        <input id="receiptsettingspage-paper-size"
                           value="A4 (210 mm)"
                           disabled
                           readOnly
@@ -1189,7 +1189,7 @@ const ReceiptSettingsPage = () => {
                             </button>
                           ))}
                           {/* Free-type input */}
-                          <input
+                          <input aria-label="Custom"
                             type="text"
                             maxLength={6}
                             value={form.currencySymbol || ''}
@@ -1244,8 +1244,8 @@ const ReceiptSettingsPage = () => {
                       </div>
 
                       <div>
-                        <label className="text-sm font-medium text-slate-700">Copies</label>
-                        <input
+                        <label htmlFor="receiptsettingspage-copies" className="text-sm font-medium text-slate-700">Copies</label>
+                        <input id="receiptsettingspage-copies"
                           type="number"
                           min="1"
                           max="10"

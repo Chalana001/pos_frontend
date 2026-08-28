@@ -568,8 +568,8 @@ const SalesDetailsPage = () => {
               </div>
             </div>
 
-            <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Amount</label>
-            <input
+            <label htmlFor="salesdetailspage-amount" className="mb-1 block text-xs font-semibold uppercase text-slate-600">Amount</label>
+            <input id="salesdetailspage-amount"
               type="number"
               min="0"
               max={saleDue}

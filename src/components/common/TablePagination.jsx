@@ -28,7 +28,7 @@ const TablePagination = ({
         </Button>
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-500">Go to</span>
-          <input
+          <input aria-label="Go to page"
             type="number"
             min="1"
             max={displayTotalPages}

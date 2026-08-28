@@ -186,7 +186,7 @@ const Cart = ({
                       {item.itemType === ItemType.SERVICE ? (
                         <div className="flex items-center gap-1">
                           <span className="text-[10px] font-medium text-slate-400">Price:</span>
-                          <input
+                          <input aria-label="Unit price"
                             type="number"
                             min="0"
                             step="0.01"
@@ -263,7 +263,7 @@ const Cart = ({
                           <Minus size={14} />
                         </button>
 
-                        <input
+                        <input aria-label="Quantity"
                           type="number"
                           value={item.qty === 0 ? "" : item.qty}
                           onChange={(e) => handleManualQtyChange(index, e.target.value)}
@@ -340,7 +340,7 @@ const Cart = ({
                         buttonClassName={compactSelectButtonClass}
                         menuClassName={compactSelectMenuClass}
                       />
-                      <input
+                      <input aria-label="Line discount"
                         type="number"
                         autoFocus
                         min="0"
@@ -368,7 +368,7 @@ const Cart = ({
           </div>
           <div className="flex justify-between items-center text-slate-500 text-sm">
             <span className="flex items-center gap-1"><Tag size={12} /> Bill Discount</span>
-            <input
+            <input aria-label="Bill discount"
               type="number"
               min="0"
               value={safeBillDiscount || ""}

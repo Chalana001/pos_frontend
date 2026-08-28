@@ -376,7 +376,7 @@ const PurchaseExcelImportPage = () => {
           </span>
         </td>
         <td className="px-3 py-3">
-          <input
+          <input aria-label="Barcode"
             className="w-32 rounded-lg border border-slate-300 px-2 py-2 disabled:bg-slate-100 disabled:text-slate-500"
             value={row.barcode || ""}
             disabled={!isEditableIdentifier}
@@ -385,7 +385,7 @@ const PurchaseExcelImportPage = () => {
           />
         </td>
         <td className="px-3 py-3">
-          <input
+          <input aria-label="Item name"
             className="w-44 rounded-lg border border-slate-300 px-2 py-2 disabled:bg-slate-100 disabled:text-slate-500"
             value={row.name || ""}
             disabled={!isEditableIdentifier}
@@ -405,7 +405,7 @@ const PurchaseExcelImportPage = () => {
           )}
         </td>
         <td className="px-3 py-3">
-          <input
+          <input aria-label="Cost price"
             type="number"
             min="0"
             step="0.01"
@@ -415,7 +415,7 @@ const PurchaseExcelImportPage = () => {
           />
         </td>
         <td className="px-3 py-3">
-          <input
+          <input aria-label="Selling price"
             type="number"
             min="0"
             step="0.01"
@@ -425,7 +425,7 @@ const PurchaseExcelImportPage = () => {
           />
         </td>
         <td className="px-3 py-3">
-          <input
+          <input aria-label="Quantity"
             type="number"
             min="0"
             step="0.001"
@@ -551,8 +551,8 @@ const PurchaseExcelImportPage = () => {
               </div>
             </div>
             <div>
-              <label className="label-text">Invoice No</label>
-              <input
+              <label htmlFor="purchaseexcelimportpage-invoice-no" className="label-text">Invoice No</label>
+              <input id="purchaseexcelimportpage-invoice-no"
                 value={invoiceNo}
                 onChange={(e) => setInvoiceNo(e.target.value)}
                 className="input w-full"
@@ -564,8 +564,8 @@ const PurchaseExcelImportPage = () => {
               <DatePicker value={date} onChange={setDate} buttonClassName="input h-10 w-full" />
             </div>
             <div>
-              <label className="label-text">Supplier Discount</label>
-              <input
+              <label htmlFor="purchaseexcelimportpage-supplier-discount" className="label-text">Supplier Discount</label>
+              <input id="purchaseexcelimportpage-supplier-discount"
                 type="number"
                 min="0"
                 max={subtotal || 0}
@@ -576,9 +576,9 @@ const PurchaseExcelImportPage = () => {
               />
             </div>
             <div>
-              <label className="label-text">Paid to Supplier</label>
+              <label htmlFor="purchaseexcelimportpage-paid-to-supplier" className="label-text">Paid to Supplier</label>
               <div className="flex gap-2">
-                <input
+                <input id="purchaseexcelimportpage-paid-to-supplier"
                   type="number"
                   min="0"
                   max={grandTotal || 0}
@@ -663,7 +663,7 @@ const PurchaseExcelImportPage = () => {
                 <Download size={16} className="mr-2" />
                 {downloadingTemplate ? "Downloading..." : "Template"}
               </Button>
-              <input
+              <input aria-label="Choose a purchase Excel file"
                 ref={fileInputRef}
                 type="file"
                 accept=".xlsx,.xls"

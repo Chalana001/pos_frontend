@@ -322,7 +322,7 @@ const Expenses = () => {
             <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-[minmax(240px,1fr)_160px_160px_220px_200px_auto] xl:items-center">
               <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-2 xl:col-span-1 w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-                <input
+                <input aria-label="Search description..."
                   type="text"
                   value={search}
                   onChange={(e) => {
@@ -448,8 +448,8 @@ const Expenses = () => {
           </div>
 
           <div className="page-section-enter" style={{ animationDelay: "140ms" }}>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Amount</label>
-            <input
+            <label htmlFor="expenses-amount" className="block text-sm font-medium text-slate-700 mb-1">Amount</label>
+            <input id="expenses-amount"
               type="text"
               inputMode="decimal"
               className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -80,7 +80,7 @@ const NumberField = ({ label, value, onCommit, min, max, step = 1, suffix }) => 
     <div>
       <label className="text-sm font-medium text-slate-700">{label}</label>
       <div className="relative mt-1">
-        <input
+        <input aria-label={label}
           type="number"
           min={min}
           max={max}
@@ -126,7 +126,7 @@ const SizeField = ({ label, mmValue, unit, onCommitMm }) => {
     <div>
       <label className="text-sm font-medium text-slate-700">{label}</label>
       <div className="relative mt-1">
-        <input
+        <input aria-label={label}
           type="number"
           step={unit === 'in' ? 0.01 : 1}
           value={text}
@@ -175,7 +175,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
     >
       {/* Row 1: enabled + type + font + align + B/I/U + move + remove */}
       <div className="flex flex-wrap items-center gap-2">
-        <input
+        <input aria-label="Show this element on the label"
           type="checkbox"
           checked={el.enabled !== false}
           onChange={(e) => updateElement(index, 'enabled', e.target.checked)}
@@ -258,7 +258,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
       {isText && textCfg ? (
         <div className="mt-2 flex items-center gap-2">
           <Type size={13} className="shrink-0 text-slate-400" />
-          <input
+          <input aria-label="Element text"
             type="text"
             maxLength={textCfg.max}
             value={el.customText || ''}
@@ -275,8 +275,8 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
       {isItemName ? (
         <div className="mt-2 grid gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-medium text-slate-500">Max Characters</label>
-            <input
+            <label htmlFor="barcodesettingspanel-max-characters" className="text-xs font-medium text-slate-500">Max Characters</label>
+            <input id="barcodesettingspanel-max-characters"
               type="number"
               min={5}
               max={60}
@@ -596,8 +596,8 @@ const BarcodeSettingsPanel = ({
 
           <div className="grid gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-slate-500">Prefix Digits</label>
-              <input
+              <label htmlFor="barcodesettingspanel-prefix-digits" className="text-xs font-medium text-slate-500">Prefix Digits</label>
+              <input id="barcodesettingspanel-prefix-digits"
                 type="text"
                 maxLength={4}
                 value={form.scaleBarcodePrefix || ''}

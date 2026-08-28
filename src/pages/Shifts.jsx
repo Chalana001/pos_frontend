@@ -233,8 +233,8 @@ const Shifts = () => {
       <Modal isOpen={showOpenModal} onClose={() => setShowOpenModal(false)} title="Open New Shift">
         <form onSubmit={handleOpenShift} className="space-y-4">
           <div className="page-section-enter" style={{ animationDelay: "60ms" }}>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Opening Cash Amount *</label>
-            <input
+            <label htmlFor="shifts-opening-cash-amount" className="block text-sm font-medium text-slate-700 mb-1">Opening Cash Amount *</label>
+            <input id="shifts-opening-cash-amount"
               type="number"
               step="0.01"
               value={openingCash}
@@ -278,8 +278,8 @@ const Shifts = () => {
           )}
 
           <div className="page-section-enter" style={{ animationDelay: "100ms" }}>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
-            <input
+            <label htmlFor="shifts-counted-cash-amount" className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
+            <input id="shifts-counted-cash-amount"
               type="number"
               step="0.01"
               value={countedCash}

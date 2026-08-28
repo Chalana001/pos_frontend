@@ -448,7 +448,7 @@ const PurchaseReturnPage = () => {
                             {fullyReturned ? (
                               <span className="text-slate-300 text-sm">—</span>
                             ) : (
-                              <input
+                              <input aria-label="Return quantity"
                                 type="number"
                                 min={0}
                                 max={maxRet}

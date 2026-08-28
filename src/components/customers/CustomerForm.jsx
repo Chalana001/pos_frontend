@@ -24,10 +24,10 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
 
             <div className="p-5 space-y-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="customerform-image-url" className="block text-sm font-medium text-slate-700 mb-1">
                   Image URL
                 </label>
-                <input
+                <input id="customerform-image-url"
                   type="text"
                   value={formData.imageUrl || ""}
                   onChange={(e) => {
@@ -89,10 +89,10 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
         <div className="page-section-enter space-y-4 lg:col-span-2" style={{ animationDelay: "170ms" }}>
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="customerform-customer-name" className="block text-sm font-medium text-slate-700 mb-1">
               Customer Name *
             </label>
-            <input
+            <input id="customerform-customer-name"
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -103,10 +103,10 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
 
           {/* Phone */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="customerform-phone-number" className="block text-sm font-medium text-slate-700 mb-1">
               Phone Number *
             </label>
-            <input
+            <input id="customerform-phone-number"
               type="text"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -117,10 +117,10 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="customerform-email" className="block text-sm font-medium text-slate-700 mb-1">
               Email
             </label>
-            <input
+            <input id="customerform-email"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -129,10 +129,10 @@ const CustomerForm = ({ formData, setFormData, onSubmit, onCancel, submitting })
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="customerform-credit-limit" className="block text-sm font-medium text-slate-700 mb-1">
               Credit Limit
             </label>
-            <input
+            <input id="customerform-credit-limit"
               type="number"
               min="0"
               step="0.01"

@@ -52,7 +52,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
       <div className="p-4 bg-white min-h-[500px] flex flex-col">
         <div className="relative mb-4">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-          <input
+          <input aria-label="Search by product name..."
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

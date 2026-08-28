@@ -1187,8 +1187,8 @@ const Reports = ({ mode = "basic" }) => {
                   <select className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm" value={scheduleForm.frequency} onChange={(event) => setScheduleForm((value) => ({ ...value, frequency: event.target.value }))}>
                     <option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option>
                   </select>
-                  <input type="datetime-local" className="h-10 rounded-xl border border-slate-200 px-3 text-sm" value={scheduleForm.nextRunAt} onChange={(event) => setScheduleForm((value) => ({ ...value, nextRunAt: event.target.value }))} />
-                  <input type="email" placeholder="Email recipient (optional)" className="h-10 rounded-xl border border-slate-200 px-3 text-sm" value={scheduleForm.emailTo} onChange={(event) => setScheduleForm((value) => ({ ...value, emailTo: event.target.value }))} />
+                  <input aria-label="Email recipient (optional)" type="datetime-local" className="h-10 rounded-xl border border-slate-200 px-3 text-sm" value={scheduleForm.nextRunAt} onChange={(event) => setScheduleForm((value) => ({ ...value, nextRunAt: event.target.value }))} />
+                  <input aria-label="Email recipient (optional)" type="email" placeholder="Email recipient (optional)" className="h-10 rounded-xl border border-slate-200 px-3 text-sm" value={scheduleForm.emailTo} onChange={(event) => setScheduleForm((value) => ({ ...value, emailTo: event.target.value }))} />
                   <Button variant="outline" onClick={createSchedule}>Create Schedule</Button>
                 </div>
                 {reportSchedules.length > 0 && <div className="mt-4 divide-y divide-slate-100">

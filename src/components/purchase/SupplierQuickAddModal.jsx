@@ -43,8 +43,8 @@ const SupplierQuickAddModal = ({ isOpen, onClose, onCreated }) => {
     <Modal isOpen={isOpen} onClose={onClose} title="Quick Add Supplier">
       <div className="space-y-4 p-1">
         <div className="page-section-enter" style={{ animationDelay: "60ms" }}>
-          <label className="block text-sm font-medium text-gray-700">Supplier Name *</label>
-          <input 
+          <label htmlFor="supplierquickaddmodal-supplier-name" className="block text-sm font-medium text-gray-700">Supplier Name *</label>
+          <input id="supplierquickaddmodal-supplier-name" 
             className="input w-full mt-1" 
             placeholder="Ex: Perera Distributors" 
             value={name} 
@@ -54,8 +54,8 @@ const SupplierQuickAddModal = ({ isOpen, onClose, onCreated }) => {
         </div>
         
         <div className="page-section-enter" style={{ animationDelay: "100ms" }}>
-          <label className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
-          <input 
+          <label htmlFor="supplierquickaddmodal-phone-optional" className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
+          <input id="supplierquickaddmodal-phone-optional" 
             className="input w-full mt-1" 
             placeholder="077xxxxxxx" 
             value={phone} 

@@ -93,7 +93,7 @@ const WarrantiesPage = () => {
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4" style={{ animationDelay: "130ms" }}>
           <div className="relative max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
+            <input aria-label="Search warranty no, barcode, invoice, customer, or item..."
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);

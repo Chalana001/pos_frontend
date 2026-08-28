@@ -795,10 +795,10 @@ const ItemFormPage = ({ mode }) => {
                 </div>
                 <div className="p-5 space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="itemformpage-image-url" className="block text-sm font-medium text-slate-700 mb-1">
                       Image URL
                     </label>
-                    <input
+                    <input id="itemformpage-image-url"
                       type="text"
                       value={formData.imageUrl}
                       onChange={(e) => {
@@ -837,8 +837,8 @@ const ItemFormPage = ({ mode }) => {
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Item Name *</label>
-                    <input
+                    <label htmlFor="itemformpage-item-name" className="block text-sm font-medium text-slate-700 mb-1">Item Name *</label>
+                    <input id="itemformpage-item-name"
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -847,11 +847,11 @@ const ItemFormPage = ({ mode }) => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="itemformpage-alt-name-sinhala-used-on-receipts-when-t" className="block text-sm font-medium text-slate-700 mb-1">
                       Alt Name (Sinhala)
                       <span className="ml-2 text-xs text-slate-400 font-normal">Used on receipts when the design's name source is set to Alt Name.</span>
                     </label>
-                    <input
+                    <input id="itemformpage-alt-name-sinhala-used-on-receipts-when-t"
                       type="text"
                       value={formData.altName}
                       onChange={(e) => setFormData({ ...formData, altName: e.target.value })}
@@ -861,8 +861,8 @@ const ItemFormPage = ({ mode }) => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Barcode *</label>
-                    <input
+                    <label htmlFor="itemformpage-barcode" className="block text-sm font-medium text-slate-700 mb-1">Barcode *</label>
+                    <input id="itemformpage-barcode"
                       type="text"
                       value={formData.barcode}
                       onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
@@ -1052,10 +1052,10 @@ const ItemFormPage = ({ mode }) => {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="itemformpage-cost-price" className="block text-sm font-medium text-slate-700 mb-1">
                       Cost Price {priceUnitLabel(formData.itemType)}
                     </label>
-                    <input
+                    <input id="itemformpage-cost-price"
                       type="number"
                       min="0"
                       step="0.01"
@@ -1066,10 +1066,10 @@ const ItemFormPage = ({ mode }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="itemformpage-selling-price" className="block text-sm font-medium text-slate-700 mb-1">
                       Selling Price {priceUnitLabel(formData.itemType)}
                     </label>
-                    <input
+                    <input id="itemformpage-selling-price"
                       type="number"
                       min="0"
                       step="0.01"
@@ -1102,11 +1102,11 @@ const ItemFormPage = ({ mode }) => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label htmlFor="itemformpage-overhead-cost" className="block text-sm font-medium text-slate-700 mb-1">
                           {formData.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "Overhead Percent" : "Overhead Amount"}
                         </label>
                         <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
-                          <input
+                          <input id="itemformpage-overhead-cost"
                             type="number"
                             min="0"
                             step="0.01"
@@ -1124,8 +1124,8 @@ const ItemFormPage = ({ mode }) => {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Reorder Level</label>
-                    <input
+                    <label htmlFor="itemformpage-reorder-level" className="block text-sm font-medium text-slate-700 mb-1">Reorder Level</label>
+                    <input id="itemformpage-reorder-level"
                       type="number"
                       min="0"
                       value={formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE ? "0" : formData.reorderLevel}
@@ -1198,7 +1198,7 @@ const ItemFormPage = ({ mode }) => {
                                   <label className="mb-1 block text-sm font-medium text-slate-700">Output Item</label>
                                   <div className="relative">
                                     <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <input
+                                    <input aria-label={`Output item ${index + 1}`}
                                       type="text"
                                       value={output.search || ""}
                                       onChange={(e) => searchProcessingOutputItems(index, e.target.value)}
@@ -1244,7 +1244,7 @@ const ItemFormPage = ({ mode }) => {
                                 <div>
                                   <label className="mb-1 block text-sm font-medium text-slate-700">Default Qty</label>
                                   <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
-                                    <input
+                                    <input aria-label={`Default quantity for output ${index + 1}`}
                                       type="number"
                                       min="0"
                                       step="0.001"
@@ -1260,8 +1260,8 @@ const ItemFormPage = ({ mode }) => {
                                 </div>
 
                                 <div>
-                                  <label className="mb-1 block text-sm font-medium text-slate-700">Default Sell Price</label>
-                                  <input
+                                  <label htmlFor="itemformpage-default-sell-price" className="mb-1 block text-sm font-medium text-slate-700">Default Sell Price</label>
+                                  <input id="itemformpage-default-sell-price"
                                     type="number"
                                     min="0"
                                     step="0.01"
@@ -1339,7 +1339,7 @@ const ItemFormPage = ({ mode }) => {
                               <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
                               <div className="relative">
                                 <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input
+                                <input aria-label={`Ingredient ${index + 1}`}
                                   type="text"
                                   value={ingredient.search || ""}
                                   onChange={(e) => searchIngredientItems(index, e.target.value)}
@@ -1386,7 +1386,7 @@ const ItemFormPage = ({ mode }) => {
 
                             <div>
                               <label className="mb-1 block text-sm font-medium text-slate-700">Qty</label>
-                              <input
+                              <input aria-label={`Quantity for ingredient ${index + 1}`}
                                 type="number"
                                 min="0"
                                 step="0.001"
@@ -1428,7 +1428,7 @@ const ItemFormPage = ({ mode }) => {
               <Section title="Label and Certificate" open={secLabels} onToggle={() => setSecLabels((value) => !value)}>
                 <div className="space-y-4">
                   <div className="flex gap-2">
-                    <input
+                    <input aria-label="Add label"
                       type="text"
                       value={labelInput}
                       onChange={(e) => setLabelInput(e.target.value)}
@@ -1470,8 +1470,8 @@ const ItemFormPage = ({ mode }) => {
       <Modal isOpen={showCatModal} onClose={() => !savingCat && setShowCatModal(false)} title="Add New Category">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Category Name</label>
-            <input
+            <label htmlFor="itemformpage-new-category-name" className="block text-sm font-medium text-slate-700 mb-1">Category Name</label>
+            <input id="itemformpage-new-category-name"
               type="text"
               value={newCatName}
               onChange={(e) => setNewCatName(e.target.value)}
@@ -1494,8 +1494,8 @@ const ItemFormPage = ({ mode }) => {
       <Modal isOpen={showSubCatModal} onClose={() => !savingSubCat && setShowSubCatModal(false)} title="Add New Sub-Category">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Sub-Category Name</label>
-            <input
+            <label htmlFor="itemformpage-sub-category-name" className="block text-sm font-medium text-slate-700 mb-1">Sub-Category Name</label>
+            <input id="itemformpage-sub-category-name"
               type="text"
               value={newSubCatName}
               onChange={(e) => setNewSubCatName(e.target.value)}

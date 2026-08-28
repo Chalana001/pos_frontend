@@ -248,10 +248,10 @@ const CustomerViewPage = () => {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-bold text-slate-700">Payment Amount</label>
+            <label htmlFor="customerviewpage-payment-amount" className="mb-1 block text-sm font-bold text-slate-700">Payment Amount</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-slate-500">Rs.</span>
-              <input
+              <input id="customerviewpage-payment-amount"
                 type="number"
                 step="0.01"
                 min="1"

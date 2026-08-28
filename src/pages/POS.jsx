@@ -30,6 +30,7 @@ import InvoicePrinter from "../components/pos/InvoicePrinter";
 import { receiptSettingsAPI } from "../api/receiptSettings.api";
 import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
 import PanelResizeHandle from "../components/common/PanelResizeHandle";
+import ErrorBoundary from "../components/common/ErrorBoundary";
 import { BRAND_NAME_UPPER } from "../utils/branding";
 import { getConfigurableFeatureAvailability, hasPlanFeature } from "../utils/subscriptionFeatures";
 import {
@@ -2050,9 +2051,9 @@ const POS = () => {
   useKeyboard("F1", () => showPayment && setOrderType(ORDER_TYPES.CASH));
   useKeyboard("F2", () => showPayment && shouldUseServerForCheckout && setOrderType(ORDER_TYPES.CREDIT));
 
-  useKeyboard("Enter", () => {
-    if (showPayment && !loading) handlePlaceOrder();
-  });
+  // Bound only while the payment overlay is up. Registering it page-wide would
+  // preventDefault the Enter a barcode scanner sends to terminate a scan.
+  useKeyboard("Enter", handlePlaceOrder, { enabled: showPayment && !loading });
 
   const hasKotItems = getKotEligibleItems(cartItems).length > 0;
   const pendingKotItemsCount = getPendingKotItems().length;
@@ -2142,7 +2143,7 @@ const POS = () => {
               <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                  <input
+                  <input aria-label="Search barcode or name"
                     ref={searchInputRef}
                     type="text"
                     placeholder="Search barcode or name"
@@ -2362,6 +2363,14 @@ const POS = () => {
           isResizing={isResizingPanels}
           minHeightClassName="min-h-full"
         />
+        {/* The cart lines live in this page's state, not in <Cart>. Boxing the panel
+            off means a render fault here is recoverable — "Try again" remounts the
+            cart with the sale intact instead of losing it to a full reload. */}
+        <ErrorBoundary
+          variant="section"
+          title="The cart stopped responding"
+          description="Nothing has been charged. Load the cart again to carry on with this sale."
+        >
         <div
           ref={cartPanelRef}
           className={`sales-surface sales-panel-enter w-full min-w-0 flex-shrink-0 flex-col h-max rounded-xl transition-opacity duration-300 lg:h-full lg:overflow-hidden lg:rounded-2xl ${!canSell ? "pointer-events-none opacity-50 grayscale" : ""}`}
@@ -2445,6 +2454,7 @@ const POS = () => {
             )}
           />
         </div>
+        </ErrorBoundary>
       </div>
 
       <CustomerSelect isOpen={showCustomerSelect} onClose={() => { setShowCustomerSelect(false); }} onSelectCustomer={setCustomer} />

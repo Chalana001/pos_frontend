@@ -345,7 +345,7 @@ const AppConfigurationPage = () => {
                   <div className="mt-1 text-xs leading-5 text-slate-500">Allow KOT item tagging, manual KOT printing, and automatic KOT after takeaway payment.</div>
                 </div>
               </div>
-              <input
+              <input aria-label="Kitchen Order Tickets"
                 type="checkbox"
                 checked={!!form.kotEnabled}
                 onChange={(event) => updateField('kotEnabled', event.target.checked)}
@@ -365,7 +365,7 @@ const AppConfigurationPage = () => {
                   <div className="mt-1 text-xs leading-5 text-slate-500">When disabled, use Print Bill before checkout and skip the automatic paid receipt print.</div>
                 </div>
               </div>
-              <input
+              <input aria-label="Print Receipt After Checkout"
                 type="checkbox"
                 checked={form.printReceiptAfterCheckout !== false}
                 onChange={(event) => updateField('printReceiptAfterCheckout', event.target.checked)}
@@ -385,7 +385,7 @@ const AppConfigurationPage = () => {
                   <div className="mt-1 text-xs leading-5 text-slate-500">Show warranty selection in POS sales. Existing warranty records remain visible.</div>
                 </div>
               </div>
-              <input
+              <input aria-label="Sales Warranty"
                 type="checkbox"
                 checked={!!form.warrantyEnabled}
                 onChange={(event) => updateField('warrantyEnabled', event.target.checked)}

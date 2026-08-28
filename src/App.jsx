@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from "./routes/AppRoutes";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 
 export default function App() {
   useEffect(() => {
@@ -30,7 +31,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <ErrorBoundary>
+        <AppRoutes />
+      </ErrorBoundary>
       <Toaster 
         position="top-right" 
         reverseOrder={false} 

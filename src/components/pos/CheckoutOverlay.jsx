@@ -120,10 +120,10 @@ const CheckoutOverlay = ({
           {/* Cash Input Section */}
           {orderType === ORDER_TYPES.CASH && (
             <div className="sales-panel-enter space-y-4" style={{ animationDelay: "220ms" }}>
-              <label className="block text-sm font-black text-slate-700 uppercase">Cash Received</label>
+              <label htmlFor="checkoutoverlay-cash-received" className="block text-sm font-black text-slate-700 uppercase">Cash Received</label>
               <div className="relative">
                 <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">Rs.</span>
-                <input
+                <input id="checkoutoverlay-cash-received"
                   ref={inputRef}
                   type="number"
                   step="1"

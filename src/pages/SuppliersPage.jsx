@@ -94,7 +94,7 @@ const SuppliersPage = () => {
         <div className="border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="relative max-w-xl">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
+            <input aria-label="Search supplier, phone, email, or address..."
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

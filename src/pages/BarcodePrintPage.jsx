@@ -241,7 +241,7 @@ const BarcodePrintPage = () => {
           <Card className="sales-panel-enter sales-panel-hover" style={{ animationDelay: "130ms" }}>
             <h3 className="text-sm font-medium text-slate-600 mb-3">Load Recent Items</h3>
             <div className="flex gap-2">
-              <input
+              <input aria-label="Enter limit (e.g. 50)"
                 type="number"
                 min="1"
                 max="500"
@@ -270,7 +270,7 @@ const BarcodePrintPage = () => {
             <h3 className="text-sm font-medium text-slate-600 mb-3">Add Items to Print</h3>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
+              <input aria-label="Search by name or barcode..."
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Search by name or barcode..."
                 ref={searchRef}

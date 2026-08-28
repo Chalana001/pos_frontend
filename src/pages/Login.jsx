@@ -96,12 +96,12 @@ const Login = () => {
           {isOnline ? (
             <form onSubmit={handleSubmit} className="page-section-enter space-y-6" style={{ animationDelay: '260ms' }}>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="login-username" className="block text-sm font-medium text-slate-700 mb-2">
                   {t('Username')}
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-                  <input
+                  <input id="login-username"
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -113,12 +113,12 @@ const Login = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="login-password" className="block text-sm font-medium text-slate-700 mb-2">
                   {t('Password')}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-                  <input
+                  <input id="login-password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

@@ -6,10 +6,10 @@ const ItemForm = ({ formData, setFormData, onSubmit, onCancel, submitting }) => 
     <form onSubmit={onSubmit} className="space-y-4 mt-6">
       {/* Item Name */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label htmlFor="itemform-item-name" className="block text-sm font-medium text-slate-700 mb-1">
           Item Name *
         </label>
-        <input
+        <input id="itemform-item-name"
           type="text"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -20,10 +20,10 @@ const ItemForm = ({ formData, setFormData, onSubmit, onCancel, submitting }) => 
 
       {/* Barcode */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label htmlFor="itemform-barcode" className="block text-sm font-medium text-slate-700 mb-1">
           Barcode *
         </label>
-        <input
+        <input id="itemform-barcode"
           type="text"
           value={formData.barcode}
           onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
@@ -34,10 +34,10 @@ const ItemForm = ({ formData, setFormData, onSubmit, onCancel, submitting }) => 
 
       {/* Category */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label htmlFor="itemform-category" className="block text-sm font-medium text-slate-700 mb-1">
           Category
         </label>
-        <input
+        <input id="itemform-category"
           type="text"
           value={formData.category}
           onChange={(e) =>
@@ -50,10 +50,10 @@ const ItemForm = ({ formData, setFormData, onSubmit, onCancel, submitting }) => 
       {/* Prices */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label htmlFor="itemform-cost-price" className="block text-sm font-medium text-slate-700 mb-1">
             Cost Price *
           </label>
-          <input
+          <input id="itemform-cost-price"
             type="number"
             min="0"
             step="0.01"
@@ -67,10 +67,10 @@ const ItemForm = ({ formData, setFormData, onSubmit, onCancel, submitting }) => 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label htmlFor="itemform-selling-price" className="block text-sm font-medium text-slate-700 mb-1">
             Selling Price *
           </label>
-          <input
+          <input id="itemform-selling-price"
             type="number"
             min="0"
             step="0.01"
@@ -86,10 +86,10 @@ const ItemForm = ({ formData, setFormData, onSubmit, onCancel, submitting }) => 
 
       {/* Reorder */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label htmlFor="itemform-reorder-level" className="block text-sm font-medium text-slate-700 mb-1">
           Reorder Level
         </label>
-        <input
+        <input id="itemform-reorder-level"
           type="number"
           min="0"
           value={formData.reorderLevel}

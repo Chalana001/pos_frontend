@@ -214,8 +214,8 @@ const DiningTablesPage = () => {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-slate-700">Table Name</label>
-                <input
+                <label htmlFor="diningtablespage-table-name" className="text-sm font-medium text-slate-700">Table Name</label>
+                <input id="diningtablespage-table-name"
                   value={tableForm.tableName}
                   onChange={(event) => setTableForm((prev) => ({ ...prev, tableName: event.target.value }))}
                   placeholder="Table 01"

@@ -58,10 +58,10 @@ const Register = () => {
         <div className="auth-card rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="page-section-enter space-y-5" style={{ animationDelay: '260ms' }}>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Username</label>
+              <label htmlFor="register-username" className="block text-sm font-medium text-slate-700 mb-2">Username</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-                <input
+                <input id="register-username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -73,10 +73,10 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Password</label>
+              <label htmlFor="register-password" className="block text-sm font-medium text-slate-700 mb-2">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-                <input
+                <input id="register-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -87,10 +87,10 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Confirm Password</label>
+              <label htmlFor="register-confirm-password" className="block text-sm font-medium text-slate-700 mb-2">Confirm Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-                <input
+                <input id="register-confirm-password"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}

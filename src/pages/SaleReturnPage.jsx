@@ -503,7 +503,7 @@ const SaleReturnPage = () => {
                       {fullyReturned || isCanceled ? (
                         <span className="text-slate-300 text-sm">—</span>
                       ) : (
-                        <input
+                        <input aria-label="Return quantity"
                           type="number"
                           min={0}
                           max={maxRet}

@@ -133,8 +133,8 @@ const WarrantySettingsPage = () => {
         >
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-slate-700">Label</label>
-              <input
+              <label htmlFor="warrantysettingspage-label" className="text-sm font-medium text-slate-700">Label</label>
+              <input id="warrantysettingspage-label"
                 value={form.label}
                 onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
                 placeholder="1 Year Warranty"
@@ -144,8 +144,8 @@ const WarrantySettingsPage = () => {
 
             <div className="grid grid-cols-[1fr_150px] gap-3">
               <div>
-                <label className="text-sm font-medium text-slate-700">Period</label>
-                <input
+                <label htmlFor="warrantysettingspage-period" className="text-sm font-medium text-slate-700">Period</label>
+                <input id="warrantysettingspage-period"
                   type="number"
                   min="1"
                   step="1"
