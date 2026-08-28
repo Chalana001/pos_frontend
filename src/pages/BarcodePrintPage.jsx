@@ -290,6 +290,7 @@ const BarcodePrintPage = () => {
                     </div>
                     <button 
                       onClick={() => handleAddItem(item)}
+                      aria-label={`Add ${item.name} to the print list`}
                       className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md ml-2 flex-shrink-0"
                     >
                       <Plus size={18} />
@@ -347,7 +348,7 @@ const BarcodePrintPage = () => {
                       </div>
                       
                       {/* Delete Button */}
-                      <button 
+                      <button aria-label="Remove" 
                         onClick={() => removeItem(item.id)}
                         className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
                         title="Remove"

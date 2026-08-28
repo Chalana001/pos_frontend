@@ -1393,7 +1393,7 @@ export default function BulkAddItems() {
                             </label>
 
                             <div className="flex items-end">
-                              <button
+                              <button aria-label="Remove output"
                                 type="button"
                                 onClick={() => removeProcessingOutput(index)}
                                 className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"
@@ -1517,7 +1517,7 @@ export default function BulkAddItems() {
                         </div>
 
                         <div className="flex items-end">
-                          <button
+                          <button aria-label="Remove ingredient"
                             type="button"
                             onClick={() => removeIngredient(index)}
                             className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"

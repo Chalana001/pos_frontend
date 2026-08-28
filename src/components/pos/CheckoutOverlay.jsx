@@ -78,7 +78,7 @@ const CheckoutOverlay = ({
             <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Finalize Sale</h2>
             <p className="text-slate-500 text-sm font-medium">Select payment method and confirm</p>
           </div>
-          <button onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center hover:bg-slate-200 rounded-full transition-colors">
+          <button onClick={onClose} aria-label="Close checkout" className="inline-flex h-11 w-11 items-center justify-center hover:bg-slate-200 rounded-full transition-colors">
             <X size={22} />
           </button>
         </div>

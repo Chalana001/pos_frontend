@@ -181,7 +181,7 @@ const CustomerNotesTab = ({ customerId }) => {
 
                   {editingId !== n.id && (
                     <div className="flex gap-2">
-                      <button
+                      <button aria-label="Pin/Unpin"
                         type="button"
                         onClick={() => togglePin(n)}
                         className="p-2 rounded-lg border border-slate-200 hover:bg-white text-slate-700"
@@ -190,7 +190,7 @@ const CustomerNotesTab = ({ customerId }) => {
                         <Pin size={18} />
                       </button>
 
-                      <button
+                      <button aria-label="Edit"
                         type="button"
                         onClick={() => startEdit(n)}
                         className="p-2 rounded-lg border border-slate-200 hover:bg-white text-blue-700"
@@ -199,7 +199,7 @@ const CustomerNotesTab = ({ customerId }) => {
                         <Edit3 size={18} />
                       </button>
 
-                      <button
+                      <button aria-label="Delete"
                         type="button"
                         onClick={() => deleteNote(n.id)}
                         className="p-2 rounded-lg border border-slate-200 hover:bg-white text-red-700"

@@ -226,7 +226,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
           </>
         ) : null}
 
-        <button
+        <button aria-label="Move up"
           type="button"
           onClick={() => moveElement(index, -1)}
           disabled={index === 0}
@@ -235,7 +235,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
         >
           <ArrowUp size={14} />
         </button>
-        <button
+        <button aria-label="Move down"
           type="button"
           onClick={() => moveElement(index, 1)}
           disabled={index === count - 1}
@@ -244,7 +244,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
         >
           <ArrowDown size={14} />
         </button>
-        <button
+        <button aria-label="Remove element"
           type="button"
           onClick={() => removeElement(index)}
           title="Remove element"

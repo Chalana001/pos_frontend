@@ -364,14 +364,14 @@ const ItemsPage = () => {
       render: (i) =>
         hasPermission(user.role, "MANAGE_ITEMS") ? (
           <div className="flex items-center gap-1">
-            <button
+            <button aria-label="Edit"
               onClick={() => navigate(`/items/${i.id}/edit`)}
               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
               title="Edit"
             >
               <Edit size={18} />
             </button>
-            <button
+            <button aria-label="Delete"
               onClick={() => openDeleteModal(i)}
               className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
               title="Delete"

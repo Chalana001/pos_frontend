@@ -162,6 +162,7 @@ const DatePicker = ({
                 <button
                   type="button"
                   onClick={() => setVisibleMonth((current) => subMonths(current, 1))}
+                  aria-label="Previous month"
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
                 >
                   <ChevronLeft size={16} />
@@ -170,6 +171,7 @@ const DatePicker = ({
                 <button
                   type="button"
                   onClick={() => setVisibleMonth((current) => addMonths(current, 1))}
+                  aria-label="Next month"
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
                 >
                   <ChevronRight size={16} />

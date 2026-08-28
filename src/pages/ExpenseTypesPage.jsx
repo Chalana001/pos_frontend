@@ -219,7 +219,7 @@ const ExpenseTypesPage = () => {
                         </td>
                         <td className="app-table-cell">
                           <div className="flex justify-end gap-2">
-                            <button
+                            <button aria-label="Edit expense type"
                               type="button"
                               onClick={() => handleEdit(expenseType)}
                               className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-blue-600"
@@ -230,6 +230,7 @@ const ExpenseTypesPage = () => {
                             <button
                               type="button"
                               onClick={() => handleDelete(expenseType)}
+                              aria-label={`Delete expense type ${expenseType.name}`}
                               disabled={deletingId === expenseType.id}
                               className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-red-600 disabled:opacity-50"
                               title={expenseType.usageCount > 0 ? "In-use types will be deactivated" : "Delete expense type"}

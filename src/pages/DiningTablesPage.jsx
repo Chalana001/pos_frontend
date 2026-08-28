@@ -269,7 +269,7 @@ const DiningTablesPage = () => {
                         </div>
 
                         <div className="flex items-center gap-1">
-                          <button
+                          <button aria-label="Edit table"
                             type="button"
                             onClick={() => handleEdit(table)}
                             className="rounded-lg bg-white p-2 text-slate-500 transition hover:text-blue-600"
@@ -277,7 +277,7 @@ const DiningTablesPage = () => {
                           >
                             <Pencil size={15} />
                           </button>
-                          <button
+                          <button aria-label="Delete table"
                             type="button"
                             onClick={() => handleDelete(table.id)}
                             disabled={deletingId === table.id}

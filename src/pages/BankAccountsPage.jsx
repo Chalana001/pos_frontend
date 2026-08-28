@@ -164,7 +164,7 @@ const BankAccountsPage = () => {
       className: "text-right",
       render: (bankAccount) => (
         <div className="flex justify-end gap-2">
-          <button
+          <button aria-label="Edit bank account"
             type="button"
             onClick={(event) => {
               event.stopPropagation();
@@ -181,6 +181,7 @@ const BankAccountsPage = () => {
               event.stopPropagation();
               handleDelete(bankAccount);
             }}
+            aria-label={`Delete bank account ${bankAccount.accountName || bankAccount.bankName}`}
             disabled={deletingId === bankAccount.id}
             className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-red-600 disabled:opacity-50"
             title={bankAccount.usageCount > 0 ? "In-use accounts will be deactivated" : "Delete bank account"}

@@ -879,7 +879,7 @@ const ReceiptSettingsPage = () => {
                               {/* Bold / Italic / Underline — text lines only, not for ITEM_TABLE */}
                               {!isNoFormat && !isLogoLine && !isItemTable ? (
                                 <>
-                                  <button
+                                  <button aria-label="Bold"
                                     type="button"
                                     onClick={() => updateTemplateLine(index, 'bold', !line.bold)}
                                     title="Bold"
@@ -891,7 +891,7 @@ const ReceiptSettingsPage = () => {
                                   >
                                     <Bold size={14} />
                                   </button>
-                                  <button
+                                  <button aria-label="Italic"
                                     type="button"
                                     onClick={() => updateTemplateLine(index, 'italic', !line.italic)}
                                     title="Italic"
@@ -903,7 +903,7 @@ const ReceiptSettingsPage = () => {
                                   >
                                     <Italic size={14} />
                                   </button>
-                                  <button
+                                  <button aria-label="Underline"
                                     type="button"
                                     onClick={() => updateTemplateLine(index, 'underline', !line.underline)}
                                     title="Underline"
@@ -919,7 +919,7 @@ const ReceiptSettingsPage = () => {
                               ) : null}
 
                               {/* Move up/down */}
-                              <button
+                              <button aria-label="Move up"
                                 type="button"
                                 onClick={() => moveTemplateLine(index, -1)}
                                 disabled={index === 0}
@@ -928,7 +928,7 @@ const ReceiptSettingsPage = () => {
                               >
                                 <ArrowUp size={14} />
                               </button>
-                              <button
+                              <button aria-label="Move down"
                                 type="button"
                                 onClick={() => moveTemplateLine(index, 1)}
                                 disabled={index === templateLines.length - 1}
@@ -939,7 +939,7 @@ const ReceiptSettingsPage = () => {
                               </button>
 
                               {/* Remove */}
-                              <button
+                              <button aria-label="Remove line"
                                 type="button"
                                 onClick={() => removeTemplateLine(index)}
                                 title="Remove line"

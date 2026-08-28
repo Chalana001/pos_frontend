@@ -156,7 +156,7 @@ const Cart = ({
           >
             <UserPlus size={16} />
             <span className="max-w-[170px] truncate">
-              {customer ? customer.name : "Add Customer"}
+              {customer ? customer.name : "Add Customer (F4)"}
             </span>
           </button>
         </div>
@@ -258,6 +258,7 @@ const Cart = ({
                       <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
                         <button
                           onClick={() => onUpdateQty(index, Math.max(0, item.qty - stepValue))}
+                          aria-label="Decrease quantity"
                           className="inline-flex h-11 w-11 items-center justify-center rounded-md transition-all hover:bg-white"
                         >
                           <Minus size={14} />
@@ -279,6 +280,7 @@ const Cart = ({
 
                         <button
                           onClick={() => onUpdateQty(index, item.qty + stepValue)}
+                          aria-label="Increase quantity"
                           className="inline-flex h-11 w-11 items-center justify-center rounded-md transition-all hover:bg-white"
                         >
                           <Plus size={14} />
@@ -309,7 +311,7 @@ const Cart = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <button
+                      <button aria-label="Add Discount"
                         onClick={() => setEditingIndex(editingIndex === index ? null : index)}
                         className={`inline-flex h-11 w-11 items-center justify-center rounded-md transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-blue-600'}`}
                         title="Add Discount"

@@ -393,7 +393,7 @@ const Branches = () => {
                     <div className="text-sm font-medium text-slate-700">Logo preview ready</div>
                     <div className="text-xs text-slate-500">This image will be stored in the branch record.</div>
                   </div>
-                  <button
+                  <button aria-label="Remove logo"
                     type="button"
                     onClick={() => clearLogo("create")}
                     className="rounded-full p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
@@ -467,7 +467,7 @@ const Branches = () => {
                     <div className="text-sm font-medium text-slate-700">Current logo preview</div>
                     <div className="text-xs text-slate-500">Uploading a new image replaces the existing branch logo.</div>
                   </div>
-                  <button
+                  <button aria-label="Remove logo"
                     type="button"
                     onClick={() => clearLogo("edit")}
                     className="rounded-full p-1 text-slate-500 hover:bg-slate-200 hover:text-slate-700"

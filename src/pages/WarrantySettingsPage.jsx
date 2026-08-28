@@ -232,7 +232,7 @@ const WarrantySettingsPage = () => {
                         </td>
                         <td className="app-table-cell">
                           <div className="flex justify-end gap-2">
-                            <button
+                            <button aria-label="Edit warranty period"
                               type="button"
                               onClick={() => handleEdit(template)}
                               className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-blue-600"
@@ -240,7 +240,7 @@ const WarrantySettingsPage = () => {
                             >
                               <Pencil size={16} />
                             </button>
-                            <button
+                            <button aria-label="Delete warranty period"
                               type="button"
                               onClick={() => handleDelete(template.id)}
                               disabled={deletingId === template.id}

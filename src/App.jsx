@@ -3,6 +3,13 @@ import { Toaster } from 'react-hot-toast';
 import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from "./routes/AppRoutes";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import { useDocumentTitle } from "./hooks/useDocumentTitle";
+
+// Must render inside BrowserRouter - useLocation has no router context above it.
+function RouteTitle() {
+  useDocumentTitle();
+  return null;
+}
 
 export default function App() {
   useEffect(() => {
@@ -31,6 +38,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <RouteTitle />
       <ErrorBoundary>
         <AppRoutes />
       </ErrorBoundary>

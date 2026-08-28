@@ -415,6 +415,7 @@ const SaleReturnPage = () => {
                   <button
                     className="text-xs text-blue-600 hover:underline"
                     onClick={() => handlePrintReturn(ret)}
+                    aria-label="Print return receipt"
                   >
                     <Printer size={14} />
                   </button>
