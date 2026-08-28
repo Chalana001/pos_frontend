@@ -892,8 +892,8 @@ html[data-animation-level="balanced"] .custom-select-option {
 .shell-surface {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgb(226 232 240 / 0.9);
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.95) 0%, rgb(248 250 252 / 0.94) 100%);
+  border: 1px solid rgb(var(--c-slate-200) / 0.9);
+  background: linear-gradient(180deg, rgb(var(--c-surface) / 0.95) 0%, rgb(var(--c-slate-50) / 0.94) 100%);
   box-shadow: var(--motion-soft-shadow);
   backdrop-filter: blur(16px);
 }
@@ -912,8 +912,8 @@ html[data-animation-level="balanced"] .custom-select-option {
 }
 
 .shell-panel {
-  border: 1px solid rgb(226 232 240 / 0.85);
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(248 250 252 / 0.95));
+  border: 1px solid rgb(var(--c-slate-200) / 0.85);
+  background: linear-gradient(180deg, rgb(var(--c-surface) / 0.98), rgb(var(--c-slate-50) / 0.95));
   box-shadow: var(--motion-soft-shadow);
 }
 
@@ -924,7 +924,7 @@ html[data-animation-level="balanced"] .custom-select-option {
    Text wears text tokens; the coloured dot beside it carries the identity. The
    inline style means this needs !important to win. */
 .recharts-legend-item-text {
-  color: rgb(51 65 85) !important; /* slate-700 */
+  color: rgb(var(--c-slate-700)) !important; /* follows the theme; was a hardcoded slate-700, invisible on dark */
 }
 
 /* Opt-in dark surface for a Card.
@@ -1083,8 +1083,8 @@ html[data-animation-level="balanced"] .custom-select-option {
 
 .sales-surface {
   position: relative;
-  border: 1px solid rgb(226 232 240 / 0.9);
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.96), rgb(248 250 252 / 0.96));
+  border: 1px solid rgb(var(--c-slate-200) / 0.9);
+  background: linear-gradient(180deg, rgb(var(--c-surface) / 0.96), rgb(var(--c-slate-50) / 0.96));
   box-shadow: 0 18px 44px rgb(15 23 42 / 0.08);
 }
 
@@ -1755,4 +1755,14 @@ html[data-animation-level="balanced"] #root table tbody tr {
 
   --c-surface: 255 255 255;
   color-scheme: dark;
+}
+
+
+/* The glossy sweep across cards and panels is a light-mode flourish. Left at
+   full strength it reads as a pale smear on a dark plate, so it is dialled
+   right down rather than removed — the movement still registers. */
+:root[data-theme="dark"] .shell-surface::before,
+:root[data-theme="dark"] .dashboard-premium-card::before,
+:root[data-theme="dark"] .auth-card::before {
+  opacity: 0.22;
 }
