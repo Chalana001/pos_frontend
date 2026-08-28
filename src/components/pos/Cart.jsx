@@ -274,7 +274,7 @@ const Cart = ({
                               e.currentTarget.blur();
                             }
                           }}
-                          className="w-12 rounded bg-transparent px-1 text-center text-[13px] font-bold outline-none transition-all focus:bg-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          className="w-12 rounded bg-transparent px-1 text-center text-[13px] font-bold outline-none transition-all focus:bg-white focus-visible:ring-2 focus-visible:ring-blue-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           title="Click to edit quantity"
                         />
 

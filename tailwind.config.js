@@ -45,6 +45,13 @@ export default {
         'series-4': token('series-4'),
         grid: token('grid'),
       },
+      keyframes: {
+        shimmer: { '100%': { transform: 'translateX(100%)' } },
+      },
+      animation: {
+        // Matches the panel's shimmer so both apps load the same way.
+        shimmer: 'shimmer 1.6s infinite',
+      },
       boxShadow: {
         card: 'var(--shadow-sm)',
         raised: 'var(--shadow-md)',

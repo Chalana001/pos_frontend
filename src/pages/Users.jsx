@@ -90,7 +90,7 @@ const Users = () => {
     useEffect(() => {
         if (!isAdmin) return;
         fetchUsers();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [isAdmin]);
 
     const branchNameById = useMemo(() => {

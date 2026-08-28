@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Lock } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -90,7 +90,10 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
   const [openReports, setOpenReports] = useState(false);
   const [openConfiguration, setOpenConfiguration] = useState(false);
 
-  const closeAllDropdowns = () => {
+  // Only useState setters, which React guarantees are stable - so an empty
+  // dependency list is correct here, and it lets the twelve route effects
+  // below list this function without re-running on every render.
+  const closeAllDropdowns = useCallback(() => {
     setOpenItems(false);
     setOpenCustomers(false);
     setOpenSuppliers(false);
@@ -103,9 +106,9 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
     setOpenWarranties(false);
     setOpenReports(false);
     setOpenConfiguration(false);
-  };
+  }, []);
 
-  const openOnlyDropdown = (key) => {
+  const openOnlyDropdown = useCallback((key) => {
     closeAllDropdowns();
     if (key === "items") setOpenItems(true);
     if (key === "customers") setOpenCustomers(true);
@@ -119,7 +122,7 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
     if (key === "warranties") setOpenWarranties(true);
     if (key === "reports") setOpenReports(true);
     if (key === "configuration") setOpenConfiguration(true);
-  };
+  }, [closeAllDropdowns]);
 
   const toggleDropdown = (key, currentlyOpen) => {
     if (currentlyOpen) {
@@ -148,57 +151,57 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
   // ✅ auto open dropdown when inside those routes
   useEffect(() => {
     if (isItemsRoute) openOnlyDropdown("items");
-  }, [isItemsRoute]);
+  }, [isItemsRoute, openOnlyDropdown]);
 
   useEffect(() => {
     if (isCustomersRoute) openOnlyDropdown("customers");
-  }, [isCustomersRoute]);
+  }, [isCustomersRoute, openOnlyDropdown]);
 
   useEffect(() => {
     if (isSuppliersRoute) openOnlyDropdown("suppliers");
-  }, [isSuppliersRoute]);
+  }, [isSuppliersRoute, openOnlyDropdown]);
 
   useEffect(() => { 
     if (isShiftsRoute) openOnlyDropdown("shifts");
-   }, [isShiftsRoute]);
+   }, [isShiftsRoute, openOnlyDropdown]);
 
   useEffect(() => {
     if (isStockRoute) openOnlyDropdown("stock");
-  }, [isStockRoute]);
+  }, [isStockRoute, openOnlyDropdown]);
 
   useEffect(() => {
     if (isPurchaseRoute) openOnlyDropdown("purchase");
-  }, [isPurchaseRoute]);
+  }, [isPurchaseRoute, openOnlyDropdown]);
 
   useEffect(() => {
     if (isExpensesRoute) openOnlyDropdown("expenses");
-  }, [isExpensesRoute]);
+  }, [isExpensesRoute, openOnlyDropdown]);
 
   useEffect(() => {
     if (isCashDropsRoute) openOnlyDropdown("cashdrops");
-  }, [isCashDropsRoute]);
+  }, [isCashDropsRoute, openOnlyDropdown]);
 
   useEffect(() => {
     if (isWarrantyRoute) openOnlyDropdown("warranties");
-  }, [isWarrantyRoute]);
+  }, [isWarrantyRoute, openOnlyDropdown]);
 
   useEffect(() => {
     if (isConfigurationRoute) openOnlyDropdown("configuration");
-  }, [isConfigurationRoute]);
+  }, [isConfigurationRoute, openOnlyDropdown]);
 
   useEffect(() => {
     if (isReportsRoute) openOnlyDropdown("reports");
-  }, [isReportsRoute]);
+  }, [isReportsRoute, openOnlyDropdown]);
 
   // 🟢 Auto open Sales Dropdown
   useEffect(() => {
     if (isSalesRoute) openOnlyDropdown("sales");
-  }, [isSalesRoute]);
+  }, [isSalesRoute, openOnlyDropdown]);
 
   // 🔴 Mobile එකේදී වෙනත් පිටුවකට ගියාම Sidebar එක Auto Close වෙන්න
   useEffect(() => {
     setIsOpen(false);
-  }, [location.pathname, location.search]);
+  }, [location.pathname, location.search, setIsOpen]);
 
   // ✅ Menu config
   const menuItems = [

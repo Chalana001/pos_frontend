@@ -13,6 +13,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { SkeletonTable } from "../components/common/Skeleton";
 import CustomSelect from "../components/common/CustomSelect";
 import TablePagination from "../components/common/TablePagination";
 import Modal from "../components/common/Modal";
@@ -556,9 +557,7 @@ const ItemsPage = () => {
         </div>
 
         {loading ? (
-          <div className="py-20 flex justify-center">
-            <LoadingSpinner size="lg" text="Loading items..." />
-          </div>
+          <SkeletonTable rows={8} columns={columns.length} />
         ) : (
           <Table columns={columns} data={items} /> 
         )}

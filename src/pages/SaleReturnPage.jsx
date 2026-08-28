@@ -248,6 +248,7 @@ const SaleReturnPage = () => {
             <div className="bg-slate-50 px-4 py-2 text-xs font-semibold uppercase text-slate-500 border-b border-slate-200">
               Returned Items
             </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-xs text-slate-500">
@@ -291,6 +292,7 @@ const SaleReturnPage = () => {
                 </tr>
               </tfoot>
             </table>
+            </div>
           </div>
 
           {/* Meta */}

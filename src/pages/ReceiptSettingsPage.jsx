@@ -416,7 +416,7 @@ const ReceiptSettingsPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [isBarcodeTab, activeBranch, scalePresets.length, scalePresetsLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isBarcodeTab, activeBranch, scalePresets.length, scalePresetsLoading]);  
 
   const updateField = (field, value) => {
     setForm((prev) => normalizeReceiptSettings({ ...prev, [field]: value }));

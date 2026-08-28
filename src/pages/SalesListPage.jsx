@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { salesAPI } from "../api/sales.api";
 import { usersAPI } from "../api/users.api";
 import Card from "../components/common/Card";
+import { Skeleton } from "../components/common/Skeleton";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
 import DatePicker from "../components/common/DatePicker";
@@ -379,7 +380,13 @@ const SalesListPage = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan="10" className="p-6 text-center text-slate-500">Loading...</td></tr>
+                Array.from({ length: 8 }).map((_, row) => (
+                  <tr key={`skeleton-${row}`}>
+                    {Array.from({ length: 10 }).map((_, cell) => (
+                      <td key={cell} className="p-4"><Skeleton className="h-3.5 w-full" /></td>
+                    ))}
+                  </tr>
+                ))
               ) : data.length === 0 ? (
                 <tr><td colSpan="10" className="p-6 text-center text-slate-500">No records found.</td></tr>
               ) : (
