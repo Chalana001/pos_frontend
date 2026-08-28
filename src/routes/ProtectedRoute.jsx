@@ -1,5 +1,5 @@
-import React from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { hasPermission } from '../utils/permissions';
@@ -11,7 +11,26 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false,
   const { user, isAuthenticated, loading, planLoading, isOnline, hasOnlineSession } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
-  const navigate = useNavigate();
+
+  // Which locked path the reader has already dismissed. Stored as the path rather than a
+  // boolean so walking to a *different* locked page shows the dialog again instead of
+  // silently redirecting — and so no effect is needed to reset it.
+  const [dismissedPath, setDismissedPath] = useState(null);
+
+  // Somewhere this user can actually go once they close the dialog. Checked against both
+  // role and module, because either can rule a page out, and falling back to "/" would
+  // bounce through HomeRedirect straight into /dashboard — which may be the very module
+  // they just got blocked on.
+  const fallbackPath = useMemo(() => {
+    const candidates = [
+      hasPermission(user?.role, 'ACCESS_POS') ? '/pos' : null,
+      hasPermission(user?.role, 'VIEW_DASHBOARD') ? '/dashboard' : null,
+      hasPermission(user?.role, 'VIEW_SALES') ? '/sales' : null,
+      hasPermission(user?.role, 'VIEW_ITEMS') ? '/items' : null,
+    ].filter(Boolean);
+    // Items is a core module and can never be switched off, so this always resolves.
+    return candidates.find((path) => canOpenPath(path)) ?? '/items';
+  }, [user?.role]);
 
   if (loading || planLoading) {
     return (
@@ -79,13 +98,22 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false,
   // sidebar included. The per-page instance below it is the one that should answer.
   if (!skipModuleGate && !canOpenPath(location.pathname)) {
     // Someone reached this by typing the URL or following an old link — the sidebar
-    // never let them click through. Same dialog as the sidebar's, over the shell, and
-    // closing it takes them back rather than leaving a blank page behind.
+    // marks these locked rather than letting them through.
+    //
+    // Closing goes to a page they can use, with replace, so the locked URL leaves the
+    // history: navigate(-1) was wrong twice over — it does nothing at all when they
+    // arrived by typing the URL, leaving the modal up with the sidebar unclickable
+    // behind its backdrop, and when it did work it could land them on another locked
+    // page or outside the app entirely.
+    if (dismissedPath === location.pathname) {
+      return <Navigate to={fallbackPath} replace />;
+    }
+
     return (
       <LockedFeatureDialog
         moduleKey={moduleForPath(location.pathname)}
         open
-        onClose={() => navigate(-1)}
+        onClose={() => setDismissedPath(location.pathname)}
       />
     );
   }

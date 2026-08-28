@@ -8,14 +8,15 @@
 
   Colours are channel triplets rather than hex, so Tailwind's
   `rgb(var(--x) / <alpha-value>)` bridge works and `bg-surface/60` stays
-  available. The light values are the POS's existing palette written down, not
-  a new scheme: porting the panel's exact values would have quietly restyled
-  every screen. Dark is declared twice — once for the OS setting, once for an
-  explicit `data-theme` stamp — so a stamped choice wins in both directions.
+  available. The values are the POS's existing palette written down, not a new
+  scheme, so nothing shifted visually when they landed.
 
-  Components that use these tokens follow the theme with no `dark:` variant.
-  Screens still written in `bg-white` / `text-slate-900` do not, and stay light
-  until they are migrated.
+  Light only, deliberately. A dark set was tried and pulled: it activated off
+  the OS `prefers-color-scheme` setting, but only the handful of components
+  built on these tokens could follow it — the rest of the app is still written
+  in `bg-white` and `text-slate-900`. The result was dark panels against light
+  screens. Dark mode can come back once components actually use the tokens, and
+  it should be an explicit in-app choice, never an OS-driven one.
 */
 :root {
   --bg:            248 250 252;   /* slate-50   */
@@ -56,84 +57,6 @@
   --shadow-lg: 0 16px 40px -12px rgb(15 23 42 / 0.18);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:             15  16  20;
-    --surface:        23  24  28;
-    --surface-2:      30  32  37;
-    --surface-3:      38  40  46;
-    --border:         44  47  54;
-    --border-strong:  63  67  76;
-
-    --text:          244 245 247;
-    --text-muted:    159 167 180;
-    --text-subtle:   118 126 139;
-
-    --accent:         57 135 229;
-    --accent-hover:   96 162 240;
-    --accent-soft:    22  49  84;
-    --accent-fg:     255 255 255;
-
-    --success:        25 158 112;
-    --success-soft:   16  56  44;
-    --warning:       201 133   0;
-    --warning-soft:   61  45   8;
-    --danger:        230 103 103;
-    --danger-soft:    68  27  27;
-    --info:          144 133 233;
-    --info-soft:      42  36  74;
-
-    --series-1:  57 135 229;
-    --series-2: 217  89  38;
-    --series-3:  25 158 112;
-    --series-4: 201 133   0;
-
-    --grid:      40  43  50;
-
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
-    --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6);
-  }
-}
-
-:root[data-theme="dark"] {
-  --bg:             15  16  20;
-  --surface:        23  24  28;
-  --surface-2:      30  32  37;
-  --surface-3:      38  40  46;
-  --border:         44  47  54;
-  --border-strong:  63  67  76;
-
-  --text:          244 245 247;
-  --text-muted:    159 167 180;
-  --text-subtle:   118 126 139;
-
-  --accent:         57 135 229;
-  --accent-hover:   96 162 240;
-  --accent-soft:    22  49  84;
-  --accent-fg:     255 255 255;
-
-  --success:        25 158 112;
-  --success-soft:   16  56  44;
-  --warning:       201 133   0;
-  --warning-soft:   61  45   8;
-  --danger:        230 103 103;
-  --danger-soft:    68  27  27;
-  --info:          144 133 233;
-  --info-soft:      42  36  74;
-
-  --series-1:  57 135 229;
-  --series-2: 217  89  38;
-  --series-3:  25 158 112;
-  --series-4: 201 133   0;
-
-  --grid:      40  43  50;
-
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6);
-}
-
 @layer base {
   body {
     @apply antialiased;
@@ -145,17 +68,6 @@
       linear-gradient(180deg, #f8fbff 0%, #f8fafc 44%, #f1f5f9 100%);
   }
 
-  /* The tinted wash above is a light-mode flourish; on a dark ground it turns
-     into two bright smears, so drop it and let the token carry the surface. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) body {
-      background-image: none;
-    }
-  }
-
-  :root[data-theme="dark"] body {
-    background-image: none;
-  }
 }
 
 @layer components {
