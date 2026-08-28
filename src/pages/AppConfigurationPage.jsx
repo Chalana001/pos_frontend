@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Activity, Building2, ChefHat, FileText, Printer, ReceiptText, Save, Scale, Settings2, ShieldCheck, ShieldPlus, Table2, Ticket, Users, Wrench } from 'lucide-react';
+import { Activity, Building2, ChefHat, FileText, Printer, ReceiptText, Save, Scale, Settings2, ShieldCheck, ShieldPlus, Table2, Ticket, Users, Wrench, SunMoon } from 'lucide-react';
 
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
@@ -11,6 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
 import { useAnimationLevel } from '../hooks/useAnimationLevel';
 import { ANIMATION_LEVELS } from '../utils/animationPreferences';
+import { THEMES } from '../utils/themePreference';
+import { useTheme } from '../hooks/useTheme';
 import { getConfigurableFeatureAvailability, hasPlanFeature } from '../utils/subscriptionFeatures';
 
 const featureDefinitions = [
@@ -90,6 +92,7 @@ const AppConfigurationPage = () => {
   const [form, setForm] = useState(configuration);
   const [saving, setSaving] = useState(false);
   const [animationLevel, setAnimationLevel] = useAnimationLevel();
+  const [theme, setTheme] = useTheme();
   const featureAvailability = useMemo(
     () => getConfigurableFeatureAvailability(user?.planName),
     [user?.planName]
@@ -205,6 +208,12 @@ const AppConfigurationPage = () => {
       label: 'Always Allow',
       description: 'Allow stock override mode, still limited by the role permissions below.',
     },
+  ];
+
+  const themeOptions = [
+    { value: THEMES.LIGHT, label: 'Light' },
+    { value: THEMES.DARK, label: 'Dark' },
+    { value: THEMES.SYSTEM, label: 'System' },
   ];
 
   const animationLevelOptions = [
@@ -423,6 +432,30 @@ const AppConfigurationPage = () => {
         <Card className="admin-panel-card" title="Management" style={{ animationDelay: '130ms' }}>
           <div className="space-y-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <div className="mb-3 flex gap-3">
+                <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
+                  <SunMoon size={18} />
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-800">Appearance</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    This device only. Dark suits dim service areas; Light is easier under
+                    bright shop lighting. Receipts always print on white.
+                  </div>
+                </div>
+              </div>
+              <CustomSelect
+                value={theme}
+                onChange={setTheme}
+                options={themeOptions}
+                valueKey="value"
+                labelKey="label"
+                buttonClassName="h-11 rounded-xl bg-white"
+                placeholder="Select appearance"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
               <div className="mb-3 flex gap-3">
                 <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
                   <Activity size={18} />

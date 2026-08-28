@@ -163,16 +163,20 @@ const TILE_ALIASES = {
 export const tileTone = (name) => TILE[TILE_ALIASES[name] || 'neutral'];
 
 // ---------------------------------------------------------------------------
-// Chrome — slate-toned to sit with the app's existing Tailwind UI.
+// Chrome — themed to sit with the app's Tailwind UI in both light and dark.
 // Grid and axes must stay recessive: solid hairlines, one shade off the surface.
 // ---------------------------------------------------------------------------
 
+// Chart furniture reads the theme ramp rather than fixed slate, so axes,
+// gridlines and tick labels stay legible when the app goes dark. The SERIES
+// colours below are deliberately left alone: they are mid-tone hues that carry
+// on either ground, and remapping them would change what a series means.
 export const CHROME = {
-  surface: '#ffffff',
-  ink: '#0f172a',      // slate-900
-  inkMuted: '#64748b', // slate-500 — axis ticks, labels
-  grid: '#e2e8f0',     // slate-200 — hairline
-  axis: '#cbd5e1',     // slate-300 — baseline
+  surface:  'rgb(var(--c-surface))',
+  ink:      'rgb(var(--c-slate-900))', // strongest text, either theme
+  inkMuted: 'rgb(var(--c-slate-500))', // axis ticks, labels
+  grid:     'rgb(var(--c-slate-200))', // hairline
+  axis:     'rgb(var(--c-slate-300))', // baseline
 };
 
 // ---------------------------------------------------------------------------
@@ -196,7 +200,7 @@ export const axisProps = {
 export const tooltipStyle = {
   borderRadius: 10,
   border: `1px solid ${CHROME.grid}`,
-  boxShadow: '0 4px 16px rgba(15, 23, 42, 0.08)',
+  boxShadow: 'var(--shadow-md)',
   fontSize: 12,
   color: CHROME.ink,
   backgroundColor: CHROME.surface,
@@ -204,7 +208,7 @@ export const tooltipStyle = {
 
 export const tooltipProps = {
   contentStyle: tooltipStyle,
-  cursor: { fill: 'rgba(15, 23, 42, 0.04)' },
+  cursor: { fill: 'rgb(var(--c-slate-500) / 0.10)' },
 };
 
 // Mark geometry. 4px rounded data-ends anchored to the baseline; 2px lines;

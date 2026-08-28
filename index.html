@@ -17,6 +17,21 @@
         } catch {
           document.documentElement.dataset.animationLevel = "balanced";
         }
+
+        // Theme, stamped before first paint so a dark till never flashes white.
+        // Default is light: dark is a choice a person makes, never inherited
+        // from the operating system unless they pick "System" themselves.
+        try {
+          const stored = localStorage.getItem("pos_theme");
+          const choice = ["system", "light", "dark"].includes(stored) ? stored : "light";
+          const resolved = choice === "system"
+            ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+            : choice;
+          document.documentElement.dataset.theme = resolved;
+          document.documentElement.style.colorScheme = resolved;
+        } catch {
+          document.documentElement.dataset.theme = "light";
+        }
       })();
     </script>
     <title>ZenSys POS</title>
