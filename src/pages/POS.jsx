@@ -2202,11 +2202,35 @@ const POS = () => {
                 )}
               </div>
 
-              {saleMode === SALE_MODES.DINE_IN ? (
-                <div className="text-xs font-medium text-slate-500">
-                  {selectedTable ? `Selected: ${selectedTable.tableName}` : "Select a table to load or save a draft bill"}
-                </div>
-              ) : null}
+              <div className="ml-auto flex items-center gap-2 lg:gap-3">
+                {saleMode === SALE_MODES.DINE_IN ? (
+                  <div className="text-xs font-medium text-slate-500">
+                    {selectedTable ? `Selected: ${selectedTable.tableName}` : "Select a table to load or save a draft bill"}
+                  </div>
+                ) : null}
+                {categories.length > 4 ? (
+                  <div className="flex items-center gap-1.5 lg:gap-2">
+                    <button
+                      type="button"
+                      onClick={() => scrollCategories("left")}
+                      disabled={!categoryScroll.canLeft}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 lg:h-9 lg:w-9"
+                      aria-label="Scroll categories left"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollCategories("right")}
+                      disabled={!categoryScroll.canRight}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 lg:h-9 lg:w-9"
+                      aria-label="Scroll categories right"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </header>
 
@@ -2276,48 +2300,24 @@ const POS = () => {
           ) : null}
 
           <div className="page-section-enter flex-shrink-0 border-b border-slate-100 bg-white px-2 py-1.5 lg:px-4 lg:py-2.5" style={{ animationDelay: "220ms" }}>
-            <div>
-              {categories.length > 4 ? (
-                <div className="mb-1.5 flex items-center justify-end gap-1.5 lg:mb-2 lg:gap-2">
-                  <button
-                    type="button"
-                    onClick={() => scrollCategories("left")}
-                    disabled={!categoryScroll.canLeft}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 lg:h-9 lg:w-9"
-                    aria-label="Scroll categories left"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollCategories("right")}
-                    disabled={!categoryScroll.canRight}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 lg:h-9 lg:w-9"
-                    aria-label="Scroll categories right"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              ) : null}
-              <div
-                ref={categoryScrollRef}
-                onScroll={updateCategoryScroll}
-                className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5 lg:gap-2 lg:pb-0"
-              >
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    disabled={!canSell}
-                    className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-xs lg:text-sm font-semibold transition-all ${activeCategory === cat
-                      ? "bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200"
-                      : "bg-slate-50 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
-                      }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
+            <div
+              ref={categoryScrollRef}
+              onScroll={updateCategoryScroll}
+              className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5 lg:gap-2 lg:pb-0"
+            >
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  disabled={!canSell}
+                  className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-xs lg:text-sm font-semibold transition-all ${activeCategory === cat
+                    ? "bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200"
+                    : "bg-slate-50 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+                    }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
           </div>
 
