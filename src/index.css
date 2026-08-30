@@ -1827,6 +1827,14 @@ html[data-animation-level="balanced"] #root table tbody tr {
   color: rgb(var(--c-slate-50));
 }
 
+/* Setting colour on the plate is not enough: a child carrying its own
+   text-white or text-blue-100 wins on its own specificity and stays light —
+   which left the Finalize Sale total as white text on a white card. */
+:root[data-theme="dark"] :is(.bg-blue-500, .bg-blue-600, .bg-blue-700)
+  :is([class*="text-white"], [class*="text-blue-"]) {
+  color: rgb(var(--c-slate-50));
+}
+
 :root[data-theme="dark"] .hover\:bg-blue-600:hover,
 :root[data-theme="dark"] .hover\:bg-blue-700:hover {
   background-color: rgb(var(--c-slate-800));

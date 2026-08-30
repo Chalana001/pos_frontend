@@ -69,11 +69,11 @@ const CheckoutOverlay = ({
       : (isOnline && !!customer));
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm">
       <div className="shell-surface modal-panel-enter sales-highlight-ring flex h-full w-full max-w-md flex-col">
         
         {/* Header */}
-        <div className="page-section-enter flex items-center justify-between border-b bg-slate-50 p-5" style={{ animationDelay: "70ms" }}>
+        <div className="page-section-enter flex items-center justify-between border-b bg-slate-50 p-4 sm:p-5" style={{ animationDelay: "70ms" }}>
           <div>
             <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Finalize Sale</h2>
             <p className="text-slate-500 text-sm font-medium">Select payment method and confirm</p>
@@ -83,18 +83,18 @@ const CheckoutOverlay = ({
           </button>
         </div>
 
-        <div className="custom-scrollbar flex-1 overflow-y-auto p-5 space-y-6">
+        <div className="custom-scrollbar flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-6">
           {/* Total Display */}
-          <div className="sales-panel-enter bg-blue-600 px-6 py-7 rounded-2xl text-center shadow-lg shadow-blue-100" style={{ animationDelay: "120ms" }}>
+          <div className="sales-panel-enter bg-blue-600 px-6 py-4 sm:py-7 rounded-2xl text-center shadow-lg shadow-blue-100" style={{ animationDelay: "120ms" }}>
             <p className="text-blue-100 text-sm font-bold uppercase tracking-widest mb-1">Total Payable</p>
-            <h1 className="text-4xl font-black text-white">{formatCurrency(normalizedTotal)}</h1>
+            <h1 className="text-3xl sm:text-4xl font-black text-white">{formatCurrency(normalizedTotal)}</h1>
           </div>
 
           {/* Payment Methods */}
           <div className="sales-panel-enter grid grid-cols-2 gap-4" style={{ animationDelay: "180ms" }}>
             <button
               onClick={() => setOrderType(ORDER_TYPES.CASH)}
-              className={`flex min-h-[122px] flex-col items-center justify-center gap-2.5 p-5 rounded-xl border-2 transition-all ${
+              className={`flex min-h-[86px] sm:min-h-[122px] flex-col items-center justify-center gap-1.5 sm:gap-2.5 p-3 sm:p-5 rounded-xl border-2 transition-all ${
                 orderType === ORDER_TYPES.CASH 
                 ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md' 
                 : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'
@@ -106,7 +106,7 @@ const CheckoutOverlay = ({
             <button
               onClick={() => setOrderType(ORDER_TYPES.CREDIT)}
               disabled={!isOnline}
-              className={`flex min-h-[122px] flex-col items-center justify-center gap-2.5 p-5 rounded-xl border-2 transition-all ${
+              className={`flex min-h-[86px] sm:min-h-[122px] flex-col items-center justify-center gap-1.5 sm:gap-2.5 p-3 sm:p-5 rounded-xl border-2 transition-all ${
                 orderType === ORDER_TYPES.CREDIT 
                 ? 'border-amber-500 bg-amber-50 text-amber-500 shadow-md' 
                 : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'

@@ -329,6 +329,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Tell the server first — clearAuth() drops the token the request needs to identify
+    // which session to end. Deliberately not awaited: local sign-out must not wait on, or
+    // be blocked by, a network round trip.
+    if (getToken()) {
+      authAPI.logout().catch(() => {
+        // Offline, or the token had already expired. The session dies with the token either
+        // way; the point of the call is to kill it sooner, not to gate signing out on it.
+      });
+    }
+
     clearAuth();
     clearOfflineSession();
     // Never leave one shop's package behind on a shared device.
