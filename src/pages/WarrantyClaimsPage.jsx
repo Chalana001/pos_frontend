@@ -29,7 +29,7 @@ const getStatusClassName = (status) => {
     case "COMPLETED":
       return "border-emerald-200 bg-emerald-100 text-emerald-700";
     case "REJECTED":
-      return "border-rose-200 bg-rose-100 text-rose-700";
+      return "border-red-200 bg-red-100 text-red-700";
     case "CANCELED":
       return "border-slate-200 bg-slate-100 text-slate-600";
     default:

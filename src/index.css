@@ -1807,7 +1807,9 @@ html[data-animation-level="balanced"] #root table tbody tr {
   .text-cyan-600, .text-cyan-700,
   .text-indigo-600, .text-indigo-700, .text-indigo-800,
   .text-violet-600, .text-violet-700,
-  .text-purple-600, .text-purple-700
+  .text-purple-600, .text-purple-700,
+  .text-orange-500, .text-orange-600, .text-orange-700,
+  .text-rose-500, .text-rose-600, .text-rose-700
 ):not(.always-dark *) {
   color: rgb(var(--c-slate-800));
 }
@@ -1817,13 +1819,22 @@ html[data-animation-level="balanced"] #root table tbody tr {
    chip that reads VOLUME, the line that reads Service Item, a status badge with
    its status written in it. The colour was saying a second time what the label
    already said. Where a hue sits on a bare value instead — an amount due, a
-   stock count — it stays, because a number on its own says nothing. */
+   stock count — it stays, because a number on its own says nothing.
+
+   Orange and rose join them here rather than in the rename, because renaming
+   would have been wrong: orange is a "return" theme on two pages whose buttons
+   already read Process Return and Previous Returns, and rose marks RECIPE items
+   on a chip that has RECIPE written in it. Both name themselves; neither is a
+   state. Where rose really did mean a state — the REJECTED badge in procurement
+   and warranties — it was renamed to red instead, because that one is danger. */
 :root[data-theme="dark"] :is(
   .bg-blue-50, .bg-blue-100,
   .bg-cyan-50, .bg-cyan-100,
   .bg-indigo-50, .bg-indigo-100,
   .bg-violet-50, .bg-violet-100,
-  .bg-purple-50, .bg-purple-100
+  .bg-purple-50, .bg-purple-100,
+  .bg-orange-50, .bg-orange-100,
+  .bg-rose-50, .bg-rose-100, .bg-rose-200
 ):not(.always-dark *) {
   background-color: rgb(var(--c-slate-200));
 }
@@ -1831,7 +1842,9 @@ html[data-animation-level="balanced"] #root table tbody tr {
 :root[data-theme="dark"] :is(
   .border-blue-100, .border-blue-200,
   .border-cyan-200, .border-indigo-100,
-  .border-violet-200, .border-purple-200
+  .border-violet-200, .border-purple-200,
+  .border-orange-100, .border-orange-200, .border-orange-400,
+  .border-rose-200
 ):not(.always-dark *) {
   border-color: rgb(var(--c-slate-300));
 }

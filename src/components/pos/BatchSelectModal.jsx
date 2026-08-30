@@ -47,8 +47,8 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
                     </div>
 
                     {batch.expiry ? (
-                      <div className="flex items-center gap-1.5 text-xs text-orange-700 font-medium ml-1">
-                        <Calendar size={14} className="text-orange-500" />
+                      <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium ml-1">
+                        <Calendar size={14} className="text-amber-500" />
                         <span>Exp: {batch.expiry}</span>
                       </div>
                     ) : (

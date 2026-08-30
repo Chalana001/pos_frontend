@@ -25,7 +25,7 @@ const statusMeta = {
   LOW_STOCK: { label: "Low stock", className: "bg-amber-100 text-amber-700" },
   OUT_OF_STOCK: { label: "Out of stock", className: "bg-red-100 text-red-700" },
   NEGATIVE: { label: "Negative", className: "bg-red-100 text-red-700" },
-  EXPIRING_SOON: { label: "Expiring soon", className: "bg-orange-100 text-orange-700" },
+  EXPIRING_SOON: { label: "Expiring soon", className: "bg-amber-100 text-amber-700" },
   EXPIRED: { label: "Expired", className: "bg-red-100 text-red-700" },
   DEAD_STOCK: { label: "Dead stock", className: "bg-slate-100 text-slate-700" },
   BELOW_COST: { label: "Below cost", className: "bg-amber-100 text-amber-700" },
