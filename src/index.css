@@ -342,6 +342,132 @@
   --c-sidebar: 5 5 5;
 }
 
+
+/* The colour budget, enforced at the ramp instead of class by class.
+
+   Dark spends colour on three things - red (wrong), amber (due), emerald
+   (settled) - and the rules below this point neutralise the rest. They did it
+   by listing classes, which is why they leaked: a list covers bg-orange-50 and
+   says nothing about bg-orange-500, so a solid orange button on Sale Return and
+   a purple one on Stock stayed fully saturated on a black ground. Enumerating
+   the stragglers would only move the leak, because the next hue class someone
+   writes is not on the list either.
+
+   So the off-budget families are pointed at the neutral ramp at the source.
+   Every step, and every utility built from them - fill, text, border, ring,
+   shadow, accent, gradient stop - resolves grey with nothing to maintain.
+   Step for step, because both ramps run the same direction on a dark ground:
+   the low steps are the near-black tints and the high steps are the bright end,
+   so a -200 plate stays a plate and -800 text stays readable.
+
+   @media screen, because the print pin below is a bare :root and would lose the
+   specificity fight - receipts must keep coming out on white paper.
+   .always-dark re-declares all fourteen families itself and is more specific
+   still, so the sidebar and the logo in it are untouched. */
+@media screen {
+  :root[data-theme="dark"] {
+
+    --c-blue-50: var(--c-slate-50);
+    --c-blue-100: var(--c-slate-100);
+    --c-blue-200: var(--c-slate-200);
+    --c-blue-300: var(--c-slate-300);
+    --c-blue-400: var(--c-slate-400);
+    --c-blue-500: var(--c-slate-500);
+    --c-blue-600: var(--c-slate-600);
+    --c-blue-700: var(--c-slate-700);
+    --c-blue-800: var(--c-slate-800);
+    --c-blue-900: var(--c-slate-900);
+
+    --c-cyan-50: var(--c-slate-50);
+    --c-cyan-100: var(--c-slate-100);
+    --c-cyan-200: var(--c-slate-200);
+    --c-cyan-300: var(--c-slate-300);
+    --c-cyan-400: var(--c-slate-400);
+    --c-cyan-500: var(--c-slate-500);
+    --c-cyan-600: var(--c-slate-600);
+    --c-cyan-700: var(--c-slate-700);
+    --c-cyan-800: var(--c-slate-800);
+    --c-cyan-900: var(--c-slate-900);
+
+    --c-green-50: var(--c-slate-50);
+    --c-green-100: var(--c-slate-100);
+    --c-green-200: var(--c-slate-200);
+    --c-green-300: var(--c-slate-300);
+    --c-green-400: var(--c-slate-400);
+    --c-green-500: var(--c-slate-500);
+    --c-green-600: var(--c-slate-600);
+    --c-green-700: var(--c-slate-700);
+    --c-green-800: var(--c-slate-800);
+    --c-green-900: var(--c-slate-900);
+
+    --c-indigo-50: var(--c-slate-50);
+    --c-indigo-100: var(--c-slate-100);
+    --c-indigo-200: var(--c-slate-200);
+    --c-indigo-300: var(--c-slate-300);
+    --c-indigo-400: var(--c-slate-400);
+    --c-indigo-500: var(--c-slate-500);
+    --c-indigo-600: var(--c-slate-600);
+    --c-indigo-700: var(--c-slate-700);
+    --c-indigo-800: var(--c-slate-800);
+    --c-indigo-900: var(--c-slate-900);
+
+    --c-orange-50: var(--c-slate-50);
+    --c-orange-100: var(--c-slate-100);
+    --c-orange-200: var(--c-slate-200);
+    --c-orange-300: var(--c-slate-300);
+    --c-orange-400: var(--c-slate-400);
+    --c-orange-500: var(--c-slate-500);
+    --c-orange-600: var(--c-slate-600);
+    --c-orange-700: var(--c-slate-700);
+    --c-orange-800: var(--c-slate-800);
+    --c-orange-900: var(--c-slate-900);
+
+    --c-purple-50: var(--c-slate-50);
+    --c-purple-100: var(--c-slate-100);
+    --c-purple-200: var(--c-slate-200);
+    --c-purple-300: var(--c-slate-300);
+    --c-purple-400: var(--c-slate-400);
+    --c-purple-500: var(--c-slate-500);
+    --c-purple-600: var(--c-slate-600);
+    --c-purple-700: var(--c-slate-700);
+    --c-purple-800: var(--c-slate-800);
+    --c-purple-900: var(--c-slate-900);
+
+    --c-rose-50: var(--c-slate-50);
+    --c-rose-100: var(--c-slate-100);
+    --c-rose-200: var(--c-slate-200);
+    --c-rose-300: var(--c-slate-300);
+    --c-rose-400: var(--c-slate-400);
+    --c-rose-500: var(--c-slate-500);
+    --c-rose-600: var(--c-slate-600);
+    --c-rose-700: var(--c-slate-700);
+    --c-rose-800: var(--c-slate-800);
+    --c-rose-900: var(--c-slate-900);
+
+    --c-violet-50: var(--c-slate-50);
+    --c-violet-100: var(--c-slate-100);
+    --c-violet-200: var(--c-slate-200);
+    --c-violet-300: var(--c-slate-300);
+    --c-violet-400: var(--c-slate-400);
+    --c-violet-500: var(--c-slate-500);
+    --c-violet-600: var(--c-slate-600);
+    --c-violet-700: var(--c-slate-700);
+    --c-violet-800: var(--c-slate-800);
+    --c-violet-900: var(--c-slate-900);
+
+    --c-yellow-50: var(--c-slate-50);
+    --c-yellow-100: var(--c-slate-100);
+    --c-yellow-200: var(--c-slate-200);
+    --c-yellow-300: var(--c-slate-300);
+    --c-yellow-400: var(--c-slate-400);
+    --c-yellow-500: var(--c-slate-500);
+    --c-yellow-600: var(--c-slate-600);
+    --c-yellow-700: var(--c-slate-700);
+    --c-yellow-800: var(--c-slate-800);
+    --c-yellow-900: var(--c-slate-900);
+  }
+}
+
 /*
   Semantic tokens point at the ramp rather than restating it, so they follow the
   theme with no second definition. --accent is blue-600, which the mirror turns
@@ -1853,9 +1979,11 @@ html[data-animation-level="balanced"] #root table tbody tr {
 /* Buttons written with the raw utility rather than .btn-primary. The colour
    rule wins on specificity, so the paired text-white flips to black with it and
    the fill stays readable. Save All, Open POS and friends become white plates. */
-:root[data-theme="dark"] .bg-blue-500,
-:root[data-theme="dark"] .bg-blue-600,
-:root[data-theme="dark"] .bg-blue-700 {
+:root[data-theme="dark"] :is(
+  .bg-blue-500, .bg-blue-600, .bg-blue-700,
+  .bg-orange-500, .bg-orange-600,
+  .bg-purple-600, .bg-purple-700
+):not(.always-dark *) {
   background-color: rgb(var(--c-slate-900));
   color: rgb(var(--c-slate-50));
 }
@@ -1863,13 +1991,18 @@ html[data-animation-level="balanced"] #root table tbody tr {
 /* Setting colour on the plate is not enough: a child carrying its own
    text-white or text-blue-100 wins on its own specificity and stays light —
    which left the Finalize Sale total as white text on a white card. */
-:root[data-theme="dark"] :is(.bg-blue-500, .bg-blue-600, .bg-blue-700)
-  :is([class*="text-white"], [class*="text-blue-"]) {
+:root[data-theme="dark"] :is(
+  .bg-blue-500, .bg-blue-600, .bg-blue-700,
+  .bg-orange-500, .bg-orange-600,
+  .bg-purple-600, .bg-purple-700
+) :is([class*="text-white"], [class*="text-blue-"]) {
   color: rgb(var(--c-slate-50));
 }
 
-:root[data-theme="dark"] .hover\:bg-blue-600:hover,
-:root[data-theme="dark"] .hover\:bg-blue-700:hover {
+:root[data-theme="dark"] :is(
+  .hover\:bg-blue-600, .hover\:bg-blue-700,
+  .hover\:bg-orange-600, .hover\:bg-purple-700
+):hover:not(.always-dark *) {
   background-color: rgb(var(--c-slate-800));
   color: rgb(var(--c-slate-50));
 }

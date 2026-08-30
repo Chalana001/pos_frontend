@@ -8,7 +8,8 @@
     "lint": "eslint src",
     "build": "vite build",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
-    "build:check": "npm run build && npm run check:bundle",
+    "check:colours": "node scripts/check-colour-budget.mjs",
+    "build:check": "npm run check:colours && npm run build && npm run check:bundle",
     "preview": "vite preview"
   },
   "browserslist": {
