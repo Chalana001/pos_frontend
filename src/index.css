@@ -1952,3 +1952,20 @@ html[data-animation-level="balanced"] #root table tbody tr {
   .text-white {
   color: rgb(var(--c-slate-50));
 }
+
+
+/* Recharts paints its own tooltip surface before contentStyle lands, so the
+   themed style never won and the tooltip stayed a white card with pale text on
+   it. Same reason the legend rule above needs !important. */
+.recharts-default-tooltip {
+  background-color: rgb(var(--c-surface)) !important;
+  border-color: rgb(var(--c-slate-200)) !important;
+  border-radius: 10px;
+}
+
+.recharts-default-tooltip .recharts-tooltip-label,
+.recharts-default-tooltip .recharts-tooltip-item,
+.recharts-default-tooltip .recharts-tooltip-item-name,
+.recharts-default-tooltip .recharts-tooltip-item-value {
+  color: rgb(var(--c-slate-900)) !important;
+}
