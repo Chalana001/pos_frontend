@@ -44,7 +44,7 @@ export const PremiumDonutChart = ({ data, total, valueLabel, gradientPrefix, for
 
   return (
     <div className="grid min-h-[300px] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
-      <div className="relative min-h-[260px] rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-2 shadow-inner">
+      <div className="relative min-h-[260px] rounded-2xl bg-gradient-to-br from-slate-50 via-surface to-blue-50/40 p-2 shadow-inner">
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
           <PieChart>
             <Pie
@@ -116,7 +116,7 @@ export const OverviewBarChart = ({ title, subtitle, data, nameKey, valueKey, for
           <ChartEmptyState />
         ) : (
           <>
-            <div className="min-h-[280px] rounded-2xl bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-3 shadow-inner">
+            <div className="min-h-[280px] rounded-2xl bg-gradient-to-br from-slate-50 via-surface to-blue-50/40 p-3 shadow-inner">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} initialDimension={{ width: 600, height: 320 }}>
                 <BarChart data={data} margin={{ top: 12, right: 8, left: -8, bottom: 34 }}>
                   <CartesianGrid {...gridProps} />

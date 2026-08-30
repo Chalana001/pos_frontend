@@ -107,7 +107,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
 
         {/* ------------------------------------------- what it changes for them */}
         {outcomes.length ? (
-          <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-5">
+          <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-surface p-5">
             <p className="mb-3.5 text-xs font-bold uppercase tracking-wide text-slate-500">
               What this changes for your shop
             </p>
