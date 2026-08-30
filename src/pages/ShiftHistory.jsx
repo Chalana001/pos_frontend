@@ -231,7 +231,7 @@ const ShiftHistory = () => {
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
-                        s.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                        s.status === 'OPEN' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
                       }`}>
                         {s.status}
                       </span>

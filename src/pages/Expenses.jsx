@@ -298,8 +298,8 @@ const Expenses = () => {
 
       {isCashier && !hasActiveShift && (
         <Card className="ops-alert-card" style={{ animationDelay: "90ms" }}>
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm font-medium text-yellow-800">
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm font-medium text-amber-800">
               No active shift. Please open a shift to view and record expenses.
             </p>
           </div>

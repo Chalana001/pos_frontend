@@ -209,7 +209,7 @@ const ExpenseTypesPage = () => {
                         </td>
                         <td className="app-table-cell text-center">
                           <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                            expenseType.active ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"
+                            expenseType.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
                           }`}>
                             {expenseType.active ? "Active" : "Inactive"}
                           </span>

@@ -363,7 +363,7 @@ const StockItemDetailsPage = () => {
                     <td className="p-4 font-semibold text-slate-800">{batch.batchCode || `Batch #${batch.batchId}`}</td>
                     <td className="p-4 text-slate-600">{batch.branchName || `Branch #${batch.branchId}`}</td>
                     <td className="p-4">
-                      <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
                         {formatDisplayStockQuantity(batch, 0, itemDetails)}
                       </span>
                     </td>
@@ -547,7 +547,7 @@ const StockItemDetailsPage = () => {
                         className={`rounded border px-2 py-1 text-xs font-bold ${
                           entry.status === "CANCELED"
                             ? "border-red-200 bg-red-100 text-red-700"
-                            : "border-green-200 bg-green-100 text-green-700"
+                            : "border-emerald-200 bg-emerald-100 text-emerald-700"
                         }`}
                       >
                         {entry.status || "COMPLETED"}

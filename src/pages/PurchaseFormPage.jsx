@@ -491,7 +491,7 @@ const PurchaseFormPage = () => {
         </div>
         <div className="purchase-summary-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white px-5 py-3 text-right shadow-sm" style={{ animationDelay: "90ms" }}>
           <p className="text-sm font-medium text-slate-500">Grand Total</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(grandTotal)}</p>
+          <p className="text-2xl font-bold text-emerald-600">{formatCurrency(grandTotal)}</p>
           {normalizedDiscountAmount > 0 ? (
             <p className="mt-1 text-xs font-semibold text-slate-500">
               Subtotal {formatCurrency(subtotal)} - Discount {formatCurrency(normalizedDiscountAmount)}
@@ -749,7 +749,7 @@ const PurchaseFormPage = () => {
                                   ref={idx === 0 ? firstQtyInputRef : null}
                                   type="number"
                                   step={weightItem ? "0.1" : "1"}
-                                  className={`input h-9 w-full min-w-[92px] px-2 text-center text-sm font-bold ${inputs.qty > 0 ? 'border-green-500 bg-green-50' : ''}`}
+                                  className={`input h-9 w-full min-w-[92px] px-2 text-center text-sm font-bold ${inputs.qty > 0 ? 'border-emerald-500 bg-emerald-50' : ''}`}
                                   placeholder="Qty"
                                   value={inputs.qty}
                                   onChange={(e) => handleInputChange(branch.id, 'qty', e.target.value)}
@@ -887,7 +887,7 @@ const PurchaseFormPage = () => {
             <Button
               onClick={handleSubmit}
               size="lg"
-              className="bg-green-600 hover:bg-green-700 shadow-lg w-full md:w-auto px-8"
+              className="bg-emerald-600 hover:bg-emerald-700 shadow-lg w-full md:w-auto px-8"
               disabled={cartItems.length === 0}
             >
               <Save size={18} className="mr-2" /> Finalize Purchase

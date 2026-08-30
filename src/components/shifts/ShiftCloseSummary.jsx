@@ -136,7 +136,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
         totalCount={sales.total}
         emptyText="No sales in this shift"
         sumValue={salesSum}
-        sumTone="text-green-700"
+        sumTone="text-emerald-700"
         defaultOpen={sales.items.length > 0 && sales.items.length <= 5}
         renderRow={(sale) => (
           <div key={sale.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">

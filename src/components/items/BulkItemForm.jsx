@@ -35,7 +35,7 @@ export default function BulkItemForm({
         <div className="flex items-center gap-3">
           {/* Badge */}
           {badge ? (
-            <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+            <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium">
               {badge}
             </span>
           ) : null}

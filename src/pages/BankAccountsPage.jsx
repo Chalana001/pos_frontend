@@ -146,7 +146,7 @@ const BankAccountsPage = () => {
       className: "text-center",
       render: (bankAccount) => (
         <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-          bankAccount.active ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"
+          bankAccount.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
         }`}>
           {bankAccount.active ? "Active" : "Inactive"}
         </span>

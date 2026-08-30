@@ -147,7 +147,7 @@ const CustomerNotesTab = ({ customerId }) => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       {n.pinned && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800 font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 font-semibold">
                           <Pin size={14} />
                           Pinned
                         </span>

@@ -377,7 +377,7 @@ const SalesDetailsPage = () => {
                         CANCELED
                     </span>
                 ) : (
-                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-200">
+                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
                         {getPaymentLabel(sale)}
                     </span>
                 )}
@@ -420,7 +420,7 @@ const SalesDetailsPage = () => {
             
             <div className={`p-3 rounded-lg inline-block min-w-[200px] ${isCanceled ? 'bg-slate-100 opacity-80' : 'bg-slate-100'}`}>
                 <div className="text-xs text-slate-500 uppercase font-bold">Grand Total</div>
-                <div className={`text-2xl font-bold ${isCanceled ? 'text-slate-500 line-through' : 'text-green-600'}`}>
+                <div className={`text-2xl font-bold ${isCanceled ? 'text-slate-500 line-through' : 'text-emerald-600'}`}>
                     {sale.grandTotal?.toLocaleString(undefined, {minimumFractionDigits: 2})} <span className="text-sm text-slate-500">LKR</span>
                 </div>
                 <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-sm">

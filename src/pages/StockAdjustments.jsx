@@ -149,7 +149,7 @@ const StockAdjustments = () => {
           const positiveTypes = ["FOUND", "NEW_STOCK", "MANUAL"];
           const positive = positiveTypes.includes(adj.type);
           return (
-            <span className={`rounded-full px-2 py-1 text-xs font-medium ${positive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+            <span className={`rounded-full px-2 py-1 text-xs font-medium ${positive ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
               {adj.type?.replace("_", " ")}
             </span>
           );
@@ -162,7 +162,7 @@ const StockAdjustments = () => {
           const isPositive = qtyValue > 0;
           const unit = adj.qtyUnit ? ` ${adj.qtyUnit}` : "";
           return (
-            <span className={`font-semibold ${isPositive ? "text-green-600" : "text-red-600"}`}>
+            <span className={`font-semibold ${isPositive ? "text-emerald-600" : "text-red-600"}`}>
               {isPositive ? "+" : ""}
               {formatStockQuantity(qtyValue)}
               {unit}

@@ -248,7 +248,7 @@ const Users = () => {
             header: "Status",
             render: (u) => (
                 <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${u.enabled ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${u.enabled ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
                         }`}
                 >
                     {u.enabled ? "Enabled" : "Disabled"}
@@ -314,8 +314,8 @@ const Users = () => {
             <div className="page-enter space-y-6">
                 <h1 className="text-3xl font-bold text-slate-800">User Management</h1>
                 <Card className="ops-alert-card" style={{ animationDelay: "70ms" }}>
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm text-yellow-800">
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm text-amber-800">
                             ⚠️ Only ADMIN can access this page.
                         </p>
                     </div>

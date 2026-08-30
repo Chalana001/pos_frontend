@@ -225,7 +225,7 @@ const WarrantySettingsPage = () => {
                         </td>
                         <td className="app-table-cell text-center">
                           <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                            template.active ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-600"
+                            template.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
                           }`}>
                             {template.active ? "Active" : "Inactive"}
                           </span>

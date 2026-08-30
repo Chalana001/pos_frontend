@@ -503,7 +503,7 @@ const PurchaseExcelImportPage = () => {
         </div>
         <div className="purchase-summary-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white px-5 py-3 text-right shadow-sm">
           <p className="text-sm font-medium text-slate-500">Grand Total</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(grandTotal)}</p>
+          <p className="text-2xl font-bold text-emerald-600">{formatCurrency(grandTotal)}</p>
           {normalizedDiscount > 0 ? (
             <p className="mt-1 text-xs font-semibold text-slate-500">
               Subtotal {formatCurrency(subtotal)} - Discount {formatCurrency(normalizedDiscount)}
@@ -736,7 +736,7 @@ const PurchaseExcelImportPage = () => {
         <Button
           onClick={handleFinalize}
           size="lg"
-          className="bg-green-600 hover:bg-green-700 shadow-lg px-8"
+          className="bg-emerald-600 hover:bg-emerald-700 shadow-lg px-8"
           disabled={readyRows.length === 0 || submitting}
         >
           <Save size={18} className="mr-2" />

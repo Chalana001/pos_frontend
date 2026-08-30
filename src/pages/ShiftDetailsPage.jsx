@@ -188,7 +188,7 @@ const ShiftDetailsPage = () => {
         <div className="flex items-center gap-2 print:hidden">
           {shift.status === "CLOSED" && <Button variant="secondary" onClick={() => window.print()}><Printer size={17} className="mr-2" /> Print Z Report</Button>}
           {shift.status === "OPEN" && <Button variant="danger" onClick={() => setShowCloseModal(true)}>Close Shift</Button>}
-          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase w-fit ${shift.status === "OPEN" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase w-fit ${shift.status === "OPEN" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
         </div>
       </div>
 
@@ -230,7 +230,7 @@ const ShiftDetailsPage = () => {
         </Card>
         <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "170ms" }}>
           <div className="text-xs text-slate-500 uppercase font-bold">Cash Sales</div>
-          <div className="mt-2 text-lg font-bold text-green-600">{formatCurrency(shift.cashSales || 0)}</div>
+          <div className="mt-2 text-lg font-bold text-emerald-600">{formatCurrency(shift.cashSales || 0)}</div>
         </Card>
         <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "210ms" }}>
           <div className="text-xs text-slate-500 uppercase font-bold">Difference</div>
@@ -287,7 +287,7 @@ const ShiftDetailsPage = () => {
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${
                         sale.status === "CANCELED"
                           ? "bg-red-100 text-red-700 border-red-200"
-                          : "bg-green-100 text-green-700 border-green-200"
+                          : "bg-emerald-100 text-emerald-700 border-emerald-200"
                       }`}>
                         {sale.status || "COMPLETED"}
                       </span>
@@ -405,7 +405,7 @@ const ShiftDetailsPage = () => {
           </div>
 
           {countedCash && (
-            <div className={`rounded-lg p-4 ${parseFloat(countedCash) === calculateExpectedCash(shift) ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}`}>
+            <div className={`rounded-lg p-4 ${parseFloat(countedCash) === calculateExpectedCash(shift) ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
               <p className="text-sm font-medium">
                 Difference: {formatCurrency(Math.abs(parseFloat(countedCash) - calculateExpectedCash(shift)))}
               </p>

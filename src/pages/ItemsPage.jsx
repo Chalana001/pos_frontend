@@ -353,7 +353,7 @@ const ItemsPage = () => {
       render: (i) => (
         <span
           className={`px-2 py-1 rounded-full text-xs font-bold ${
-            i.active ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+            i.active ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"
           }`}
         >
           {i.active ? "Active" : "Inactive"}

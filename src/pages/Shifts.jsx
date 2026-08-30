@@ -181,7 +181,7 @@ const Shifts = () => {
                 <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "150ms" }}>
                   <h3 className="text-xs lg:text-sm font-medium text-slate-600 mb-2">Status & Time</h3>
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-1 lg:gap-0">
-                    <span className="w-fit px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-800 uppercase">
+                    <span className="w-fit px-2 py-1 rounded text-xs font-bold bg-emerald-100 text-emerald-800 uppercase">
                       {shift.status}
                     </span>
                     <p className="text-xs text-slate-500">{formatDateTime(shift.openedAt)}</p>
@@ -197,7 +197,7 @@ const Shifts = () => {
                 {/* 3. Net Cash */}
                 <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "230ms" }}>
                   <h3 className="text-xs lg:text-sm font-medium text-slate-600 mb-1 lg:mb-2">Net Cash (Sales - Exp)</h3>
-                  <p className="text-sm lg:text-xl font-bold text-green-600">
+                  <p className="text-sm lg:text-xl font-bold text-emerald-600">
                     {formatCurrency((shift.cashSales || 0) - (shift.totalExpenses || 0))}
                   </p>
                 </Card>
@@ -292,7 +292,7 @@ const Shifts = () => {
           </div>
 
           {countedCash && (
-            <div className={`page-section-enter rounded-lg p-4 ${parseFloat(countedCash) === calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift) ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}`} style={{ animationDelay: "140ms" }}>
+            <div className={`page-section-enter rounded-lg p-4 ${parseFloat(countedCash) === calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift) ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`} style={{ animationDelay: "140ms" }}>
               <p className="text-sm font-medium">
                 Difference: {formatCurrency(Math.abs(parseFloat(countedCash) - calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift)))}
               </p>

@@ -101,7 +101,7 @@ const SupplierViewPage = () => {
             <div className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "220ms" }}>
               <div className="text-xs font-semibold uppercase text-slate-600">Status</div>
               <div className="mt-2">
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${supplier?.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${supplier?.active ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
                   {supplier?.active ? "Active" : "Inactive"}
                 </span>
               </div>
@@ -202,7 +202,7 @@ const SupplierViewPage = () => {
                         {purchase.invoiceNo}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`rounded-full border px-2 py-1 text-xs font-bold uppercase ${isCanceled ? "border-red-200 bg-red-100 text-red-700" : "border-green-200 bg-green-100 text-green-700"}`}>
+                        <span className={`rounded-full border px-2 py-1 text-xs font-bold uppercase ${isCanceled ? "border-red-200 bg-red-100 text-red-700" : "border-emerald-200 bg-emerald-100 text-emerald-700"}`}>
                           {isCanceled ? "Canceled" : "Completed"}
                         </span>
                       </td>

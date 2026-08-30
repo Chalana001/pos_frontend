@@ -13,7 +13,7 @@ const Button = ({
     primary: 'btn-primary',
     secondary: 'btn-secondary',
     danger: 'btn-danger',
-    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
+    success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500',
     outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500',
   };
 
