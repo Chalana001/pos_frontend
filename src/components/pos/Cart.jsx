@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Trash2, Minus, Plus, Tag, UserPlus, Receipt, X } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { DISCOUNT_TYPES, ItemType } from "../../utils/constants";
@@ -30,7 +30,44 @@ const Cart = ({
   queueMode = false,
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
-  const cartItems = Array.isArray(items) ? items : [];
+  // Stable reference, so the effect below fires when the cart actually changes
+  // rather than on every render - otherwise it overwrites its own "previous"
+  // snapshot and can miss the change it is meant to chase.
+  const cartItems = useMemo(() => (Array.isArray(items) ? items : []), [items]);
+
+  const listRef = useRef(null);
+  const previousItemsRef = useRef([]);
+
+  // Follow the row that just changed.
+  //
+  // A cashier scanning into a full cart cannot see whether the scan landed: a
+  // new line is appended below the fold, and a repeat scan of something already
+  // in the cart just bumps a quantity that may be scrolled out of view. Either
+  // way the feedback is off screen. So chase whichever row moved - the appended
+  // one, or the one whose quantity went up.
+  useEffect(() => {
+    const previous = previousItemsRef.current;
+    previousItemsRef.current = cartItems;
+
+    const list = listRef.current;
+    if (!list || cartItems.length === 0) return;
+
+    // Nothing to chase on the first paint, or when a line was removed.
+    if (previous.length === 0 || cartItems.length < previous.length) return;
+
+    const target = cartItems.length > previous.length
+      ? cartItems.length - 1
+      : cartItems.findIndex((item, i) => previous[i] && item.qty > previous[i].qty);
+
+    if (target < 0) return;
+
+    const row = list.children[target];
+    if (!row) return;
+
+    // Honour the app's own animation preference rather than jumping regardless.
+    const still = document.documentElement.dataset.animationLevel === "off";
+    row.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
+  }, [cartItems]);
   const getMeasuredUnitOptions = (item) => {
     const defaultUnit = String(item?.defaultUnit || item?.qtyUnit || "").toUpperCase();
     return defaultUnit === "L" || defaultUnit === "ML"
@@ -163,7 +200,7 @@ const Cart = ({
       </div>
 
       {/* --- Items List --- */}
-      <div className="custom-scrollbar flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
+      <div ref={listRef} className="custom-scrollbar flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
         {cartItems.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale">
             <Receipt size={64} className="mb-4" />
