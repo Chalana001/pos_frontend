@@ -1766,3 +1766,20 @@ html[data-animation-level="balanced"] #root table tbody tr {
 :root[data-theme="dark"] .auth-card::before {
   opacity: 0.22;
 }
+
+
+/* The open nav group.
+   Light keeps the blue it always had. Dark drops the hue entirely: a bright
+   blue slab was the one loud thing left in an otherwise restrained shell, so
+   the marker becomes plain contrast instead of colour. The sidebar pins the
+   light ramp (.always-dark), so slate-50 here is the pale end and slate-900
+   the dark one — a white pill with navy text. */
+.sidebar-group-active {
+  background-color: rgb(var(--c-blue-600));
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .sidebar-group-active {
+  background-color: rgb(var(--c-slate-50));
+  color: rgb(var(--c-slate-900));
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronRight, Printer, WifiOff } from "lucide-react";
+import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronLeft, ChevronRight, Printer, WifiOff } from "lucide-react";
 import { forgetServerReachable, isServerReachable, markServerReachable } from "../utils/serverReachability";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { useSearchOnType } from "../hooks/useSearchOnType";
@@ -183,6 +183,7 @@ const POS = () => {
   useSearchOnType(setSearchQuery, searchInputRef);
   const [activeCategory, setActiveCategory] = useState("All");
   const [categories, setCategories] = useState(["All"]);
+  const [categoryScroll, setCategoryScroll] = useState({ canLeft: false, canRight: false });
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [selectedBatchItem, setSelectedBatchItem] = useState(null);
 
@@ -550,7 +551,20 @@ const POS = () => {
     return Math.max(0, Math.round(parsed + Number.EPSILON));
   };
 
-  const scrollCategoriesForward = () => {
+  const updateCategoryScroll = () => {
+    const container = categoryScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    const maxScroll = container.scrollWidth - container.clientWidth;
+    setCategoryScroll({
+      canLeft: container.scrollLeft > 4,
+      canRight: container.scrollLeft < maxScroll - 4,
+    });
+  };
+
+  const scrollCategories = (direction) => {
     const container = categoryScrollRef.current;
     if (!container) {
       return;
@@ -559,9 +573,15 @@ const POS = () => {
     const firstButton = container.querySelector("button");
     const buttonWidth = firstButton ? firstButton.getBoundingClientRect().width : 96;
     const gap = window.innerWidth >= 1024 ? 8 : 6;
-    const nextOffset = (buttonWidth + gap) * 4;
-    container.scrollBy({ left: nextOffset, behavior: "smooth" });
+    const offset = (buttonWidth + gap) * 4;
+    container.scrollBy({ left: direction === "left" ? -offset : offset, behavior: "smooth" });
   };
+
+  useEffect(() => {
+    updateCategoryScroll();
+    window.addEventListener("resize", updateCategoryScroll);
+    return () => window.removeEventListener("resize", updateCategoryScroll);
+  }, [categories]);
 
   const calculateItemBaseTotal = (item) => {
     const qty = Number(item?.qty || 0);
@@ -2256,8 +2276,34 @@ const POS = () => {
           ) : null}
 
           <div className="page-section-enter flex-shrink-0 border-b border-slate-100 bg-white px-2 py-1.5 lg:px-4 lg:py-2.5" style={{ animationDelay: "220ms" }}>
-            <div className="relative">
-              <div ref={categoryScrollRef} className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5 pr-11 lg:gap-2 lg:pb-0 lg:pr-14">
+            <div>
+              {categories.length > 4 ? (
+                <div className="mb-1.5 flex items-center justify-end gap-1.5 lg:mb-2 lg:gap-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollCategories("left")}
+                    disabled={!categoryScroll.canLeft}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 lg:h-9 lg:w-9"
+                    aria-label="Scroll categories left"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollCategories("right")}
+                    disabled={!categoryScroll.canRight}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 lg:h-9 lg:w-9"
+                    aria-label="Scroll categories right"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              ) : null}
+              <div
+                ref={categoryScrollRef}
+                onScroll={updateCategoryScroll}
+                className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5 lg:gap-2 lg:pb-0"
+              >
                 {categories.map((cat) => (
                   <button
                     key={cat}
@@ -2272,16 +2318,6 @@ const POS = () => {
                   </button>
                 ))}
               </div>
-              {categories.length > 4 ? (
-                <button
-                  type="button"
-                  onClick={scrollCategoriesForward}
-                  className="absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:h-9 lg:w-9"
-                  aria-label="Scroll categories"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              ) : null}
             </div>
           </div>
 

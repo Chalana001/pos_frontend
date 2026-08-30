@@ -411,7 +411,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("sales", openSales)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                      isSalesRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      isSalesRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -465,7 +465,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("reports", openReports)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                      isReportsRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      isReportsRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -633,7 +633,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("warranties", openWarranties)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                      isWarrantyRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      isWarrantyRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -686,7 +686,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("configuration", openConfiguration)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                      isConfigurationRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      isConfigurationRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -799,7 +799,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("items", openItems)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isItemsRoute
-                        ? "bg-blue-600 text-white"
+                        ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
                       }`}
                   >
@@ -906,7 +906,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("customers", openCustomers)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isCustomersRoute
-                        ? "bg-blue-600 text-white"
+                        ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
                       }`}
                   >
@@ -981,7 +981,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("suppliers", openSuppliers)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isSuppliersRoute
-                        ? "bg-blue-600 text-white"
+                        ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
                       }`}
                   >
@@ -1042,7 +1042,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("shifts", openShifts)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                      isShiftsRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      isShiftsRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -1092,7 +1092,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("expenses", openExpenses)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                      isExpensesRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      isExpensesRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -1139,7 +1139,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("cashdrops", openCashDrops)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                      isCashDropsRoute ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      isCashDropsRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -1194,7 +1194,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("stock", openStock)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isStockRoute
-                        ? "bg-blue-600 text-white"
+                        ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
                       }`}
                   >
@@ -1285,7 +1285,7 @@ return (
                   <button
                     onClick={() => toggleDropdown("purchase", openPurchase)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isPurchaseRoute
-                        ? "bg-blue-600 text-white"
+                        ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
                       }`}
                   >
@@ -1370,7 +1370,7 @@ return (
                 style={{ animationDelay: navDelay }}
                 className={({ isActive }) =>
                   `shell-nav-item-enter flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                    ? "bg-blue-600 text-white"
+                    ? "sidebar-group-active"
                     : "text-slate-300 hover:bg-slate-800 hover:text-white"
                   }`
                 }
