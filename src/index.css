@@ -1856,6 +1856,11 @@ html[data-animation-level="balanced"] #root table tbody tr {
 
 .checkout-body {
   padding: clamp(0.6rem, 2.2vh, 1.25rem) clamp(0.9rem, 2vw, 1.25rem);
+}
+
+/* The element that gets scaled. Its own height is what gets measured, so the
+   rhythm lives here rather than on the scroll container. */
+.checkout-fit {
   display: flex;
   flex-direction: column;
   gap: clamp(0.6rem, 2.7vh, 1.5rem);
@@ -1881,8 +1886,11 @@ html[data-animation-level="balanced"] #root table tbody tr {
    the curve, which would have pulled a normal desktop in with it. */
 @media (max-height: 680px) {
   .checkout-body {
-    gap: clamp(0.5rem, 2.2vh, 1rem);
     padding-block: clamp(0.5rem, 1.7vh, 0.9rem);
+  }
+
+  .checkout-fit {
+    gap: clamp(0.5rem, 2.2vh, 1rem);
   }
 
   .checkout-head {

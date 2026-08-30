@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { X, Banknote, CreditCard, Printer, CheckCircle2, FileText, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { ORDER_TYPES } from "../../utils/constants";
@@ -54,6 +54,69 @@ const CheckoutOverlay = ({
     }
   }, [isOpen]);
 
+  const bodyRef = useRef(null);
+  const fitRef = useRef(null);
+
+  // Shrink the panel to whatever height it actually has.
+  //
+  // Clamps alone cannot guarantee this: the body's height is not fixed. Cash and
+  // credit show different controls, and a missing customer or a rejected payment
+  // adds a row. So measure the content at its natural size, compare it with the
+  // room available, and scale by the ratio. zoom rather than transform, because
+  // zoom reflows: text stays crisp and the number input keeps its caret and
+  // scroll position.
+  const fitToHeight = useCallback(() => {
+    const body = bodyRef.current;
+    const fit = fitRef.current;
+    if (!body || !fit) return;
+
+    fit.style.zoom = "1";
+    const natural = fit.scrollHeight;
+
+    // clientHeight counts the body's own padding, which sits outside the element
+    // being scaled — comparing against it left a constant overflow the size of
+    // that padding, whatever the ratio worked out to.
+    const style = getComputedStyle(body);
+    // The 2px absorbs sub-pixel rounding; without it the fit lands a pixel over
+    // and the scrollbar appears for no visible reason.
+    const available = body.clientHeight
+      - parseFloat(style.paddingTop)
+      - parseFloat(style.paddingBottom)
+      - 2;
+    if (!natural || available <= 0) return;
+
+    // A floor, so an absurdly short window scrolls rather than shrinking the
+    // total past reading distance on a till. 0.6 was measured, not guessed: the
+    // tallest arrangement of this panel needs about 0.68 to fit a 560px window,
+    // and an earlier 0.7 floor clipped it and left the scrollbar in place.
+    fit.style.zoom = natural > available
+      ? String(Math.max(0.6, available / natural))
+      : "1";
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return undefined;
+
+    fitToHeight();
+
+    // Watch the panel, never the element being zoomed - that would re-trigger
+    // on its own change and loop.
+    const body = bodyRef.current;
+    const observer = body ? new ResizeObserver(fitToHeight) : null;
+    if (body) observer.observe(body);
+    window.addEventListener("resize", fitToHeight);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", fitToHeight);
+    };
+  }, [isOpen, fitToHeight]);
+
+  // Content swaps change the natural height, so re-fit when they do.
+  useEffect(() => {
+    fitToHeight();
+  }, [fitToHeight, orderType, errorMessage, customer, paidAmount, isOnline]);
+
   if (!isOpen) return null;
 
   const changeAmount = normalizedPaidAmount - normalizedTotal;
@@ -83,7 +146,8 @@ const CheckoutOverlay = ({
           </button>
         </div>
 
-        <div className="checkout-body custom-scrollbar flex-1 overflow-y-auto">
+        <div ref={bodyRef} className="checkout-body custom-scrollbar flex-1 overflow-y-auto">
+          <div ref={fitRef} className="checkout-fit">
           {/* Total Display */}
           <div className="checkout-total sales-panel-enter bg-blue-600 px-6 rounded-2xl text-center shadow-lg shadow-blue-100" style={{ animationDelay: "120ms" }}>
             <p className="text-blue-100 text-sm font-bold uppercase tracking-widest mb-1">Total Payable</p>
@@ -261,6 +325,7 @@ const CheckoutOverlay = ({
               </p>
             </div>
           </label>
+          </div>
         </div>
 
         {/* Action Button */}
