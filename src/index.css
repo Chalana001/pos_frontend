@@ -1801,19 +1801,39 @@ html[data-animation-level="balanced"] #root table tbody tr {
    Red, amber and green keep their hue everywhere, because those say something
    white cannot: failed, due, paid.
    Scoped to dark, so light mode is untouched. */
-:root[data-theme="dark"] .text-blue-400,
-:root[data-theme="dark"] .text-blue-500,
-:root[data-theme="dark"] .text-blue-600,
-:root[data-theme="dark"] .text-blue-700,
-:root[data-theme="dark"] .text-blue-800,
-:root[data-theme="dark"] .text-blue-900 {
+:root[data-theme="dark"] :is(
+  .text-blue-400, .text-blue-500, .text-blue-600,
+  .text-blue-700, .text-blue-800, .text-blue-900,
+  .text-cyan-600, .text-cyan-700,
+  .text-indigo-600, .text-indigo-700, .text-indigo-800,
+  .text-violet-600, .text-violet-700,
+  .text-purple-600, .text-purple-700
+):not(.always-dark *) {
   color: rgb(var(--c-slate-800));
 }
 
-/* Icon chips behind those glyphs lose their blue wash for the same reason. */
-:root[data-theme="dark"] .bg-blue-50,
-:root[data-theme="dark"] .bg-blue-100 {
+/* The pale plates those glyphs and chips sit on lose their wash for the same
+   reason. Every one of these marks something that already names itself: the
+   chip that reads VOLUME, the line that reads Service Item, a status badge with
+   its status written in it. The colour was saying a second time what the label
+   already said. Where a hue sits on a bare value instead — an amount due, a
+   stock count — it stays, because a number on its own says nothing. */
+:root[data-theme="dark"] :is(
+  .bg-blue-50, .bg-blue-100,
+  .bg-cyan-50, .bg-cyan-100,
+  .bg-indigo-50, .bg-indigo-100,
+  .bg-violet-50, .bg-violet-100,
+  .bg-purple-50, .bg-purple-100
+):not(.always-dark *) {
   background-color: rgb(var(--c-slate-200));
+}
+
+:root[data-theme="dark"] :is(
+  .border-blue-100, .border-blue-200,
+  .border-cyan-200, .border-indigo-100,
+  .border-violet-200, .border-purple-200
+):not(.always-dark *) {
+  border-color: rgb(var(--c-slate-300));
 }
 
 
