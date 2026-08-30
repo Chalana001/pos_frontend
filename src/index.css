@@ -184,10 +184,10 @@
 }
 
 :root[data-theme="dark"] {
-  --c-slate-50: 10 10 10;
-  --c-slate-100: 18 18 18;
-  --c-slate-200: 28 28 28;
-  --c-slate-300: 42 42 42;
+  --c-slate-50: 5 5 5;
+  --c-slate-100: 15 15 15;
+  --c-slate-200: 26 26 26;
+  --c-slate-300: 41 41 41;
   --c-slate-400: 110 110 110;
   --c-slate-500: 138 138 138;
   --c-slate-600: 168 168 168;
@@ -195,10 +195,10 @@
   --c-slate-800: 228 228 228;
   --c-slate-900: 250 250 250;
 
-  --c-gray-50: 10 10 10;
-  --c-gray-100: 18 18 18;
-  --c-gray-200: 28 28 28;
-  --c-gray-300: 42 42 42;
+  --c-gray-50: 5 5 5;
+  --c-gray-100: 15 15 15;
+  --c-gray-200: 26 26 26;
+  --c-gray-300: 41 41 41;
   --c-gray-400: 110 110 110;
   --c-gray-500: 138 138 138;
   --c-gray-600: 168 168 168;
@@ -206,10 +206,10 @@
   --c-gray-800: 228 228 228;
   --c-gray-900: 250 250 250;
 
-  --c-red-50: 28 15 15;
-  --c-red-100: 42 18 18;
-  --c-red-200: 60 23 23;
-  --c-red-300: 88 30 30;
+  --c-red-50: 24 10 10;
+  --c-red-100: 38 14 14;
+  --c-red-200: 56 19 19;
+  --c-red-300: 85 26 26;
   --c-red-400: 239 68 68;
   --c-red-500: 248 113 113;
   --c-red-600: 248 113 113;
@@ -217,10 +217,10 @@
   --c-red-800: 254 202 202;
   --c-red-900: 254 226 226;
 
-  --c-orange-50: 29 18 11;
-  --c-orange-100: 43 25 12;
-  --c-orange-200: 63 33 13;
-  --c-orange-300: 91 46 14;
+  --c-orange-50: 25 14 6;
+  --c-orange-100: 39 20 7;
+  --c-orange-200: 59 29 9;
+  --c-orange-300: 88 42 11;
   --c-orange-400: 249 115 22;
   --c-orange-500: 251 146 60;
   --c-orange-600: 251 146 60;
@@ -228,10 +228,10 @@
   --c-orange-800: 254 215 170;
   --c-orange-900: 255 237 213;
 
-  --c-amber-50: 29 22 10;
-  --c-amber-100: 43 31 10;
-  --c-amber-200: 62 43 10;
-  --c-amber-300: 90 60 10;
+  --c-amber-50: 24 17 5;
+  --c-amber-100: 39 26 6;
+  --c-amber-200: 58 39 6;
+  --c-amber-300: 87 57 7;
   --c-amber-400: 245 158 11;
   --c-amber-500: 251 191 36;
   --c-amber-600: 251 191 36;
@@ -239,10 +239,10 @@
   --c-amber-800: 253 230 138;
   --c-amber-900: 254 243 199;
 
-  --c-yellow-50: 28 24 10;
-  --c-yellow-100: 41 34 10;
-  --c-yellow-200: 59 47 10;
-  --c-yellow-300: 86 67 9;
+  --c-yellow-50: 23 19 5;
+  --c-yellow-100: 37 29 5;
+  --c-yellow-200: 55 43 6;
+  --c-yellow-300: 83 64 6;
   --c-yellow-400: 234 179 8;
   --c-yellow-500: 250 204 21;
   --c-yellow-600: 250 204 21;
@@ -250,10 +250,10 @@
   --c-yellow-800: 254 240 138;
   --c-yellow-900: 254 249 195;
 
-  --c-green-50: 12 25 17;
-  --c-green-100: 13 36 22;
-  --c-green-200: 15 51 28;
-  --c-green-300: 18 74 39;
+  --c-green-50: 7 20 12;
+  --c-green-100: 9 32 17;
+  --c-green-200: 11 47 25;
+  --c-green-300: 15 70 35;
   --c-green-400: 34 197 94;
   --c-green-500: 74 222 128;
   --c-green-600: 74 222 128;
@@ -261,10 +261,10 @@
   --c-green-800: 187 247 208;
   --c-green-900: 220 252 231;
 
-  --c-emerald-50: 10 24 20;
-  --c-emerald-100: 11 35 27;
-  --c-emerald-200: 11 49 36;
-  --c-emerald-300: 12 70 50;
+  --c-emerald-50: 6 19 15;
+  --c-emerald-100: 7 30 22;
+  --c-emerald-200: 7 45 32;
+  --c-emerald-300: 9 66 47;
   --c-emerald-400: 16 185 129;
   --c-emerald-500: 52 211 153;
   --c-emerald-600: 52 211 153;
@@ -272,10 +272,10 @@
   --c-emerald-800: 167 243 208;
   --c-emerald-900: 209 250 229;
 
-  --c-cyan-50: 10 24 26;
-  --c-cyan-100: 9 34 38;
-  --c-cyan-200: 9 48 54;
-  --c-cyan-300: 9 68 79;
+  --c-cyan-50: 5 19 22;
+  --c-cyan-100: 5 30 34;
+  --c-cyan-200: 5 44 51;
+  --c-cyan-300: 5 65 75;
   --c-cyan-400: 6 182 212;
   --c-cyan-500: 34 211 238;
   --c-cyan-600: 34 211 238;
@@ -283,10 +283,10 @@
   --c-cyan-800: 165 243 252;
   --c-cyan-900: 207 250 254;
 
-  --c-blue-50: 14 20 29;
-  --c-blue-100: 17 27 43;
-  --c-blue-200: 21 36 62;
-  --c-blue-300: 27 51 90;
+  --c-blue-50: 9 15 24;
+  --c-blue-100: 13 23 39;
+  --c-blue-200: 17 33 58;
+  --c-blue-300: 23 48 87;
   --c-blue-400: 59 130 246;
   --c-blue-500: 96 165 250;
   --c-blue-600: 96 165 250;
@@ -294,10 +294,10 @@
   --c-blue-800: 191 219 254;
   --c-blue-900: 219 234 254;
 
-  --c-indigo-50: 17 17 28;
-  --c-indigo-100: 22 23 42;
-  --c-indigo-200: 30 30 61;
-  --c-indigo-300: 40 41 89;
+  --c-indigo-50: 13 13 24;
+  --c-indigo-100: 18 19 38;
+  --c-indigo-200: 26 26 57;
+  --c-indigo-300: 37 38 85;
   --c-indigo-400: 99 102 241;
   --c-indigo-500: 129 140 248;
   --c-indigo-600: 129 140 248;
@@ -305,10 +305,10 @@
   --c-indigo-800: 199 210 254;
   --c-indigo-900: 224 231 255;
 
-  --c-violet-50: 20 17 29;
-  --c-violet-100: 28 21 43;
-  --c-violet-200: 38 28 62;
-  --c-violet-300: 54 38 90;
+  --c-violet-50: 16 12 24;
+  --c-violet-100: 24 17 39;
+  --c-violet-200: 34 24 58;
+  --c-violet-300: 51 35 87;
   --c-violet-400: 139 92 246;
   --c-violet-500: 167 139 250;
   --c-violet-600: 167 139 250;
@@ -316,10 +316,10 @@
   --c-violet-800: 221 214 254;
   --c-violet-900: 237 233 254;
 
-  --c-purple-50: 23 16 29;
-  --c-purple-100: 32 21 43;
-  --c-purple-200: 45 27 62;
-  --c-purple-300: 64 36 91;
+  --c-purple-50: 18 11 24;
+  --c-purple-100: 28 16 39;
+  --c-purple-200: 41 23 58;
+  --c-purple-300: 60 32 87;
   --c-purple-400: 168 85 247;
   --c-purple-500: 192 132 252;
   --c-purple-600: 192 132 252;
@@ -327,10 +327,10 @@
   --c-purple-800: 233 213 255;
   --c-purple-900: 243 232 255;
 
-  --c-rose-50: 29 14 17;
-  --c-rose-100: 43 17 22;
-  --c-rose-200: 61 22 28;
-  --c-rose-300: 90 28 39;
+  --c-rose-50: 24 10 12;
+  --c-rose-100: 38 13 17;
+  --c-rose-200: 58 18 25;
+  --c-rose-300: 86 25 35;
   --c-rose-400: 244 63 94;
   --c-rose-500: 251 113 133;
   --c-rose-600: 251 113 133;
@@ -338,7 +338,7 @@
   --c-rose-800: 254 205 211;
   --c-rose-900: 255 228 230;
 
-  --c-surface: 20 20 20;
+  --c-surface: 18 18 18;
   --c-sidebar: 5 5 5;
 }
 
@@ -386,8 +386,16 @@
 }
 
 /* Shadows are the one thing the ramp cannot express: on a dark ground a soft
-   grey shadow is invisible, so it has to go darker and deeper. */
+   grey shadow is invisible, so it has to go darker and deeper.
+
+   The accent goes monochrome here too: a primary action on a black screen does
+   not need a hue to be the loudest thing on it — a white fill with black text
+   already is. This carries .btn-primary with it. */
 :root[data-theme="dark"] {
+  --accent:       var(--c-slate-900);
+  --accent-hover: var(--c-slate-800);
+  --accent-fg:    5 5 5;
+
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45);
   --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.55), 0 2px 4px -2px rgb(0 0 0 / 0.4);
   --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.65);
@@ -1806,4 +1814,21 @@ html[data-animation-level="balanced"] #root table tbody tr {
 :root[data-theme="dark"] .bg-blue-50,
 :root[data-theme="dark"] .bg-blue-100 {
   background-color: rgb(var(--c-slate-200));
+}
+
+
+/* Buttons written with the raw utility rather than .btn-primary. The colour
+   rule wins on specificity, so the paired text-white flips to black with it and
+   the fill stays readable. Save All, Open POS and friends become white plates. */
+:root[data-theme="dark"] .bg-blue-500,
+:root[data-theme="dark"] .bg-blue-600,
+:root[data-theme="dark"] .bg-blue-700 {
+  background-color: rgb(var(--c-slate-900));
+  color: rgb(var(--c-slate-50));
+}
+
+:root[data-theme="dark"] .hover\:bg-blue-600:hover,
+:root[data-theme="dark"] .hover\:bg-blue-700:hover {
+  background-color: rgb(var(--c-slate-800));
+  color: rgb(var(--c-slate-50));
 }
