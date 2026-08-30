@@ -1914,3 +1914,21 @@ html[data-animation-level="balanced"] #root table tbody tr {
     height: 20px;
   }
 }
+
+
+/* Strong buttons written as a dark slate fill with white text.
+   The ramp inverts those fills - slate-800 is dark in light and near-white in
+   dark, which is right, it stays the high-emphasis button either way. But
+   text-white is pinned literally white, so the label vanished into the plate:
+   Print Receipt and Push Ready Sales had gone blank.
+
+   The sidebar is excluded. It pins the light ramp inside itself, so its
+   bg-slate-800 really is dark there and its white labels are correct. */
+:root[data-theme="dark"] :is(.bg-slate-700, .bg-slate-800, .bg-slate-900):not(.always-dark *) {
+  color: rgb(var(--c-slate-50));
+}
+
+:root[data-theme="dark"] :is(.bg-slate-700, .bg-slate-800, .bg-slate-900):not(.always-dark *)
+  .text-white {
+  color: rgb(var(--c-slate-50));
+}
