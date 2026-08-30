@@ -404,12 +404,15 @@ const Cart = ({
           </div>
         ) : null}
 
-        <div className={`grid gap-2 ${sideAction ? "grid-cols-4" : "grid-cols-1"}`}>
-          {sideAction ? <div className="col-span-1">{sideAction}</div> : null}
+        {/* Print Bill, Print KOT and Checkout share one row. The compact actions
+            size to their content; checkout takes whatever is left, so it stays
+            the widest thing here whether one secondary button shows or two. */}
+        <div className="flex items-stretch gap-2">
+          {sideAction}
           <Button
             onClick={onCheckout}
             disabled={cartItems.length === 0 || loading}
-            className={`${sideAction ? "col-span-3" : "col-span-1"} h-[50px] ${queueMode ? "bg-amber-500 hover:bg-amber-600 shadow-amber-200" : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"} text-white rounded-xl font-bold text-base shadow-md flex items-center justify-center gap-2 transition-all active:scale-95`}
+            className={`flex-1 h-[50px] ${queueMode ? "bg-amber-500 hover:bg-amber-600 shadow-amber-200" : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"} text-white rounded-xl font-bold text-base shadow-md flex items-center justify-center gap-2 transition-all active:scale-95`}
           >
             {loading ? "Processing..." : checkoutLabel}
           </Button>

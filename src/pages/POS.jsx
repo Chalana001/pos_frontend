@@ -2439,45 +2439,48 @@ const POS = () => {
             }
             queueMode={!shouldUseServerForCheckout}
             sideAction={(
-              <button
-                type="button"
-                onClick={handlePrintKot}
-                disabled={!kotEnabled || !canUseServer || queueCartActive || printingKot || !hasKotItems || !canPrintKot}
-                className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <ChefHat size={16} />
-                {printingKot ? "Printing..." : "Print KOT"}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrintBill}
+                  disabled={cartItems.length === 0}
+                  className="inline-flex h-[50px] shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Printer size={16} />
+                  Bill
+                </button>
+                {/* Hidden outright when KOT is off, rather than shown disabled beside
+                    a line of text explaining why it cannot be pressed. */}
+                {kotEnabled ? (
+                  <button
+                    type="button"
+                    onClick={handlePrintKot}
+                    disabled={!canUseServer || queueCartActive || printingKot || !hasKotItems || !canPrintKot}
+                    className="inline-flex h-[50px] shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ChefHat size={16} />
+                    KOT
+                  </button>
+                ) : null}
+              </>
             )}
             footerActions={(
               <>
-                <div className="grid grid-cols-2 gap-2">
+                {saleMode === SALE_MODES.DINE_IN ? (
                   <button
                     type="button"
-                    onClick={handlePrintBill}
-                    disabled={cartItems.length === 0}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => savePendingDraft()}
+                    disabled={savingDraft || !selectedTableId || cartItems.length === 0}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <Printer size={16} />
-                    Print Bill
+                    <Save size={16} />
+                    {savingDraft ? "Saving..." : "Save Draft"}
                   </button>
-                  {saleMode === SALE_MODES.DINE_IN ? (
-                    <button
-                      type="button"
-                      onClick={() => savePendingDraft()}
-                      disabled={savingDraft || !selectedTableId || cartItems.length === 0}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Save size={16} />
-                      {savingDraft ? "Saving..." : "Save Draft"}
-                    </button>
-                  ) : (
-                    <div />
-                  )}
-                </div>
-                {!kotEnabled ? (
-                  <div className="text-xs text-slate-500">KOT is disabled in App Configuration.</div>
-                ) : saleMode === SALE_MODES.DINE_IN && !selectedTableId ? (
+                ) : null}
+                {/* Only speaks when KOT is on and the button is present but unusable.
+                    With KOT off there is no button, so there is nothing to explain. */}
+                {!kotEnabled ? null
+                  : saleMode === SALE_MODES.DINE_IN && !selectedTableId ? (
                   <div className="text-xs text-slate-500">Select a table before saving or sending KOT.</div>
                 ) : !canUseServer || queueCartActive ? (
                   <div className="text-xs text-slate-500">KOT printing is available only for server-mode sales.</div>
