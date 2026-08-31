@@ -50,7 +50,7 @@ const Layout = () => {
       />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <Header onOpenSidebar={openSidebar} sidebarCollapsed={sidebarCollapsed} />
+        <Header onOpenSidebar={openSidebar} />
 
         <main className={`page-enter custom-scrollbar flex-1 overflow-y-auto ${isPosRoute ? 'p-1 lg:p-2' : 'p-6'}`}>
           <Outlet />

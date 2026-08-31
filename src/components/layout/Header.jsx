@@ -56,7 +56,7 @@ const hasOpenShift = (value) => (Array.isArray(value) ? value.length > 0 : Boole
 const getDismissedNotificationStorageKey = (user) =>
   `pos-dismissed-notifications:${user?.tenantId || 'tenant'}:${user?.username || 'user'}`;
 
-const Header = ({ onOpenSidebar, sidebarCollapsed }) => {
+const Header = ({ onOpenSidebar }) => {
   const { user, logout, isOnline, saveOfflinePin, hasOnlineSession } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { selectedBranchId } = useBranch();
@@ -331,7 +331,7 @@ const Header = ({ onOpenSidebar, sidebarCollapsed }) => {
             type="button"
             aria-label="Open sidebar menu"
             onClick={onOpenSidebar}
-            className={`shell-panel-hover inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 ${sidebarCollapsed ? '' : 'lg:hidden'}`}
+            className="shell-panel-hover inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 lg:hidden"
           >
             <Menu size={20} />
           </button>
