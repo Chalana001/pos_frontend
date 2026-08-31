@@ -340,7 +340,7 @@ const Header = ({ onOpenSidebar }) => {
         </div>
 
         <div className="page-section-enter flex shrink-0 items-center justify-end gap-2" style={{ animationDelay: '120ms' }}>
-          <ThemeSelector compact className="hidden lg:flex" />
+          <ThemeSelector compact />
           <LanguageSelector compact className="hidden sm:flex" />
 
           <Link
