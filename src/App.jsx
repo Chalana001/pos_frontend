@@ -46,8 +46,14 @@ export default function App() {
         position="top-right" 
         reverseOrder={false} 
         toastOptions={{
+          // Painted through the ramp so toasts follow the theme live: in light
+          // these resolve to the library's own white-card look, in dark to a
+          // surface card with near-white text instead of a glaring white one.
+          className: "app-toast",
           style: {
             zIndex: 9999,
+            background: "rgb(var(--c-surface))",
+            color: "rgb(var(--c-slate-900))",
           },
         }}
       />

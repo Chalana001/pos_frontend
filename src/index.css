@@ -1986,6 +1986,15 @@ html[data-animation-level="balanced"] #root table tbody tr {
 }
 
 
+/* Toasts read the ramp for their fill (set inline on the Toaster), and dark
+   adds the hairline every other dark surface carries so the card separates
+   from whatever it floats over. Border is not part of the library's inline
+   style, so no !important fight. */
+:root[data-theme="dark"] .app-toast {
+  border: 1px solid rgb(var(--c-slate-200));
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.55);
+}
+
 /* Finalize Purchase asked to be a white plate in dark rather than an emerald
    one - it is the panel's single commit action, the same job Save All and
    Confirm & Print do, and they are all white plates. Scoped to the one
