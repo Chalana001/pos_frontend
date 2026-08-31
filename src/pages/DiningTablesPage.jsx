@@ -11,6 +11,7 @@ import { useAppConfiguration } from '../context/AppConfigurationContext';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
 import { hasPlanFeature } from '../utils/subscriptionFeatures';
+import ResizableSplit from "../components/common/ResizableSplit";
 
 const INITIAL_TABLE_FORM = {
   id: null,
@@ -205,7 +206,7 @@ const DiningTablesPage = () => {
           </div>
         </Card>
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+        <ResizableSplit storageKey="pos_split_dining_tables" initialWidth={380} min={320} max={600}>
           <Card className="admin-panel-card" title="Add Table" style={{ animationDelay: '90ms' }}>
             <div className="space-y-4">
               <div>
@@ -294,7 +295,7 @@ const DiningTablesPage = () => {
               </div>
             )}
           </Card>
-        </div>
+        </ResizableSplit>
       )}
     </div>
   );

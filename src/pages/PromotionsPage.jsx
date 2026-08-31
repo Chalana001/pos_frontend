@@ -15,6 +15,7 @@ import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { DISCOUNT_TYPES } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
 import ConfirmDialog from "../components/common/ConfirmDialog";
+import ResizableSplit from "../components/common/ResizableSplit";
 
 const INITIAL_FORM = {
   id: null,
@@ -250,7 +251,7 @@ const PromotionsPage = () => {
         <p className="mt-1 text-sm text-slate-500">Create active item, category, bill, and customer promotion rules.</p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(360px,460px)_minmax(0,1fr)]">
+      <ResizableSplit storageKey="pos_split_promotions" initialWidth={440} min={360} max={640}>
         <Card
           className="admin-panel-card"
           title={form.id ? "Edit Promotion" : "Add Promotion"}
@@ -439,7 +440,7 @@ const PromotionsPage = () => {
             </div>
           )}
         </Card>
-      </div>
+      </ResizableSplit>
 
       <ConfirmDialog
         isOpen={!!deleteTarget}

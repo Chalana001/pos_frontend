@@ -5,9 +5,12 @@ const PanelResizeHandle = ({
   isResizing = false,
   className = "",
   minHeightClassName = "min-h-[520px]",
+  // POS splits at lg; the form-and-list screens split at xl. The handle has
+  // to appear exactly where its panes go side by side.
+  breakpointClassName = "lg:flex",
 }) => {
   return (
-    <div className={`hidden flex-shrink-0 items-stretch overflow-visible lg:flex lg:w-3 ${className}`}>
+    <div className={`hidden w-3 flex-shrink-0 items-stretch overflow-visible ${breakpointClassName} ${className}`}>
       <button
         type="button"
         aria-label="Resize panels"

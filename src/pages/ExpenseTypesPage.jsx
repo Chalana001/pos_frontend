@@ -6,6 +6,7 @@ import { expenseTypesAPI } from "../api/expenseTypes.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import ResizableSplit from "../components/common/ResizableSplit";
 
 const INITIAL_FORM = {
   id: null,
@@ -112,7 +113,7 @@ const ExpenseTypesPage = () => {
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(360px,440px)_minmax(0,1fr)]">
+      <ResizableSplit storageKey="pos_split_expense_types" initialWidth={420} min={360} max={620}>
         <Card
           className="admin-panel-card"
           title={form.id ? "Edit Expense Type" : "Add Expense Type"}
@@ -247,7 +248,7 @@ const ExpenseTypesPage = () => {
             </div>
           )}
         </Card>
-      </div>
+      </ResizableSplit>
     </div>
   );
 };
