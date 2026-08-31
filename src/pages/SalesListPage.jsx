@@ -415,9 +415,17 @@ const SalesListPage = () => {
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${
                         sale.status === "CANCELED"
                           ? "bg-red-100 text-red-700 border-red-200"
-                          : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                          : sale.hasReturns
+                            ? "bg-amber-100 text-amber-700 border-amber-200"
+                            : "bg-emerald-100 text-emerald-700 border-emerald-200"
                       }`}>
-                        {sale.status || "COMPLETED"}
+                        {sale.status === "CANCELED"
+                          ? "CANCELED"
+                          : sale.hasReturns
+                            ? ((sale.totalReturnedAmount || 0) >= (sale.grandTotal || 0) - 0.01
+                              ? "RETURNED"
+                              : "PARTIAL RETURN")
+                            : (sale.status || "COMPLETED")}
                       </span>
                     </td>
                     <td className="p-4 text-center">
@@ -427,6 +435,12 @@ const SalesListPage = () => {
                     </td>
                     <td className="p-4 text-right font-bold text-slate-800 text-base sm:text-lg">
                       {formatCurrency(sale.grandTotal)}
+                      {sale.hasReturns && (
+                        <div className="text-xs font-semibold text-amber-600">
+                          -{formatCurrency(sale.totalReturnedAmount || 0)} returned
+                          {(sale.returnCount || 0) > 1 ? ` (${sale.returnCount})` : ""}
+                        </div>
+                      )}
                     </td>
                     <td className="p-4 text-right font-semibold text-emerald-700">
                       {formatCurrency(sale.paidAmount || 0)}
