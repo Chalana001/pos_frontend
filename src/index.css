@@ -1092,21 +1092,31 @@ html[data-animation-level="balanced"] .custom-select-option {
    teal — but at dark-mode luminance. Left bright, it framed a near-black card
    with a glaring blue field and the two fought each other. */
 :root[data-theme="dark"] .auth-screen {
+  /* True black-and-white, the same budget as the rest of dark. The two
+     radials that were blue and teal become faint white light so the field
+     still has depth, and the grid keeps drawing on top of it. */
   background:
-    linear-gradient(135deg, rgb(0 0 0 / 0.38), transparent 40%),
-    radial-gradient(circle at 16% 18%, rgb(59 130 246 / 0.16), transparent 26%),
-    radial-gradient(circle at 86% 12%, rgb(45 212 191 / 0.12), transparent 24%),
-    linear-gradient(145deg, #070d14 0%, #0e2748 46%, #07302d 100%);
+    radial-gradient(circle at 16% 18%, rgb(255 255 255 / 0.05), transparent 26%),
+    radial-gradient(circle at 86% 12%, rgb(255 255 255 / 0.035), transparent 24%),
+    linear-gradient(145deg, #000000 0%, #0b0b0b 46%, #040404 100%);
+}
+
+/* The grid lines were tuned for the old blue field; on true black they get a
+   touch more presence so the kotu-kotu texture stays visible. */
+:root[data-theme="dark"] .auth-screen::before {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.08) 1px, transparent 1px);
 }
 
 /* The chip carries text-blue-900, which is correct on its pale light-mode
    plate and invisible on a dark one — so the dark plate brings its own text
    colour rather than relying on the utility. */
 :root[data-theme="dark"] .shell-chip {
-  border-color: rgb(148 197 253 / 0.30);
-  background: linear-gradient(180deg, rgb(59 130 246 / 0.20), rgb(59 130 246 / 0.12));
+  border-color: rgb(255 255 255 / 0.25);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.10), rgb(255 255 255 / 0.04));
   box-shadow: none;
-  color: rgb(191 219 254);
+  color: rgb(255 255 255 / 0.85);
 }
 
 .auth-screen {
