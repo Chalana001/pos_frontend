@@ -17,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { DEFAULT_BARCODE_LABEL_SETTINGS, normalizeBarcodeLabelSettings } from "../utils/barcodeLabelSettings";
 import { buildBarcodePrintHtml } from "../utils/buildBarcodePrintHtml";
 import { BRAND_NAME_UPPER } from "../utils/branding";
+import ResizableSplit from "../components/common/ResizableSplit";
 
 const BarcodePrintPage = () => {
   const { user } = useAuth();
@@ -232,10 +233,10 @@ const BarcodePrintPage = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 print:hidden md:grid-cols-3">
+      <ResizableSplit className="print:hidden" storageKey="pos_split_barcode_print" initialWidth={380} min={320} max={560}>
         
         {/* --- Left Column: Search & Load Recent --- */}
-        <div className="md:col-span-1 space-y-6">
+        <div className="space-y-6">
           
           {/* 🔴 අලුත් Card එක: Load Recent Items */}
           <Card className="sales-panel-enter sales-panel-hover" style={{ animationDelay: "130ms" }}>
@@ -303,7 +304,7 @@ const BarcodePrintPage = () => {
         </div>
 
         {/* --- Right Column: Print Cart --- */}
-        <div className="md:col-span-2">
+        <div>
           <Card className="sales-panel-enter" style={{ animationDelay: "230ms" }}>
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
               <h3 className="text-sm font-medium text-slate-600">Print Queue</h3>
@@ -362,7 +363,7 @@ const BarcodePrintPage = () => {
             )}
           </Card>
         </div>
-      </div>
+      </ResizableSplit>
 
 
       <div ref={printContainerRef} className="hidden print:flex print-container">

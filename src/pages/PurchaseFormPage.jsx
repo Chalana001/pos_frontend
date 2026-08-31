@@ -632,7 +632,7 @@ const PurchaseFormPage = () => {
 
       <div ref={panelsContainerRef} className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         <div
-          className="purchase-split-panel w-full min-w-0 flex-shrink-0 space-y-4"
+          className="purchase-split-panel custom-scrollbar w-full min-w-0 flex-shrink-0 space-y-4 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto"
           style={{ width: selectionPanelWidth ? `min(100%, ${selectionPanelWidth}px, 50%)` : "50%", animationDelay: "190ms" }}
         >
           <Card className="sales-panel-enter overflow-visible p-0" style={{ animationDelay: "180ms" }}>
@@ -804,7 +804,7 @@ const PurchaseFormPage = () => {
 
         <PanelResizeHandle onMouseDown={handleResizeStart} isResizing={isResizingPanels} />
 
-        <div className="purchase-split-panel min-w-0 flex-1 space-y-4" style={{ animationDelay: "230ms" }}>
+        <div className="purchase-split-panel custom-scrollbar min-w-0 flex-1 space-y-4 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto" style={{ animationDelay: "230ms" }}>
           <Card className="sales-panel-enter flex min-h-[520px] flex-col overflow-hidden p-0" style={{ animationDelay: "260ms" }}>
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

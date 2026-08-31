@@ -11,6 +11,7 @@ import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { Plus, Search, Trash2 } from "lucide-react";
+import ResizableSplit from "../components/common/ResizableSplit";
 import { ItemType, ItemTypeLabels, OVERHEAD_COST_MODES } from "../utils/constants"; // 🟢 Constant එක Import කළා
 
 const uuid = () =>
@@ -903,8 +904,8 @@ export default function BulkAddItems() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-5">
-        <div className="col-span-12 lg:col-span-5 space-y-4">
+      <ResizableSplit storageKey="pos_split_bulk_add" initialWidth={520} min={420} max={760}>
+        <div className="space-y-4">
           <AccordionSection
             title="Product Image"
             subtitle="Paste image URL to preview"
@@ -1541,7 +1542,7 @@ export default function BulkAddItems() {
           </Card>
         </div>
 
-        <div className="col-span-12 lg:col-span-7">
+        <div>
           <Card className="sales-panel-enter p-4 space-y-4" style={{ animationDelay: "130ms" }}>
             <div className="flex items-center justify-between">
               <div>
@@ -1612,7 +1613,7 @@ export default function BulkAddItems() {
             )}
           </Card>
         </div>
-      </div>
+      </ResizableSplit>
 
       <Modal isOpen={showCatModal} onClose={() => !savingCat && setShowCatModal(false)} title="Add New Category">
         <div className="space-y-4">
