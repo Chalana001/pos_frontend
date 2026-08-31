@@ -316,7 +316,7 @@ const PurchaseReturnPage = () => {
       )}
 
       {/* Purchase summary */}
-      <Card className="p-5 border-t-4 border-t-blue-600 shadow-sm">
+      <Card className="page-section-enter p-5 border-t-4 border-t-blue-600 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <div className="text-xs text-slate-600 uppercase font-semibold mb-1">Purchase Invoice</div>
@@ -343,7 +343,7 @@ const PurchaseReturnPage = () => {
 
       {/* Existing returns */}
       {existingReturns.length > 0 && (
-        <Card className="p-0 overflow-hidden shadow-sm">
+        <Card className="page-section-enter p-0 overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
           <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
             <RotateCcw size={15} className="text-blue-500" />
             <span className="text-sm font-semibold text-blue-700">Previous Debit Notes</span>
@@ -390,7 +390,7 @@ const PurchaseReturnPage = () => {
 
           {/* Items table */}
           {selectedGrn && (
-            <Card className="p-0 overflow-hidden shadow-sm">
+            <Card className="page-section-enter p-0 overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
               <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Package size={15} className="text-slate-500" />
@@ -483,7 +483,7 @@ const PurchaseReturnPage = () => {
           {selectedGrn && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left: Details */}
-              <Card className="p-6 space-y-5 shadow-sm">
+              <Card className="page-section-enter p-6 space-y-5 shadow-sm" style={{ animationDelay: "200ms" }}>
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Return Details</h3>
 
                 <div>

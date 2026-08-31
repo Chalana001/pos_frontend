@@ -351,7 +351,7 @@ const StockProcessingPage = () => {
 
   return (
     <div className="page-enter space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="page-section-enter flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Stock Processing</h1>
           <p className="mt-1 text-sm text-slate-500">Convert source stock into output items and review processing history.</p>
@@ -388,7 +388,7 @@ const StockProcessingPage = () => {
       </Card>
 
       <Modal isOpen={createOpen} onClose={closeCreateModal} title="New Stock Processing" size="xl">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="page-section-enter grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]" style={{ animationDelay: "120ms" }}>
           <div className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Source Item</label>

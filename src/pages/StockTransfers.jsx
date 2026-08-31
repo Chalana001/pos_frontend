@@ -386,7 +386,7 @@ const StockTransfers = () => {
             <LoadingSpinner size="lg" text="Loading transfers..." />
           </div>
         ) : (
-          <Table columns={activeTab === "outgoing" ? outgoingColumns : incomingColumns} data={currentData} />
+          <Table columns={activeTab === "outgoing" ? outgoingColumns : incomingColumns} data={currentData} emptyMessage="No transfers on this side yet - stock sent between branches will appear here." />
         )}
 
         <TablePagination

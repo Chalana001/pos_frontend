@@ -204,7 +204,7 @@ const CustomersListPage = () => {
             <LoadingSpinner size="lg" text="Loading customers..." />
           </div>
         ) : (
-          <Table columns={columns} data={customers} onRowClick={(customer) => navigate(`/customers/${customer.id}`)} />
+          <Table columns={columns} data={customers} emptyMessage="No customers yet - the first sale with a customer attached will create one, or add one from here." onRowClick={(customer) => navigate(`/customers/${customer.id}`)} />
         )}
 
         <TablePagination

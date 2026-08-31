@@ -86,7 +86,7 @@ const SubscriptionPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="page-section-enter mx-auto w-full max-w-5xl">
         <Link
           to="/"
           className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
@@ -105,7 +105,7 @@ const SubscriptionPage = () => {
         </header>
 
         {/* ---------------------------------------------------------- cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="page-section-enter grid gap-4 sm:grid-cols-2 lg:grid-cols-3" style={{ animationDelay: "120ms" }}>
           {plans.map((plan) => {
             const isCurrent = plan.name === currentPlanName;
             return (

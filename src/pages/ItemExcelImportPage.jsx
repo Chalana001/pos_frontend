@@ -394,7 +394,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
         </Card>
       ) : (
         <Card className="space-y-4 p-4">
-          <div className="overflow-auto rounded-lg border border-slate-200">
+          <div className="app-table-wrap rounded-lg border border-slate-200">
             <table className="min-w-[1780px] w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr className="text-left">

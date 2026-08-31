@@ -1,8 +1,23 @@
 import React from 'react';
 
-const Table = ({ columns, data, onRowClick, getRowKey, compact = false }) => {
+import { Skeleton } from './Skeleton';
+
+const Table = ({
+  columns,
+  data,
+  onRowClick,
+  getRowKey,
+  compact = false,
+  // While loading, hold the layout with skeleton rows instead of collapsing to
+  // a spinner - the header stays, nothing shifts when the data lands.
+  loading = false,
+  skeletonRows = 8,
+  // An empty list is where the next action gets taught. Callers say what
+  // "nothing here" means for them; the default stays the old neutral line.
+  emptyMessage = 'No data available',
+}) => {
   return (
-    <div className="app-table-wrap">
+    <div className="app-table-wrap" aria-busy={loading || undefined}>
       <table className={`app-table min-w-full ${compact ? 'app-table-compact' : ''}`}>
         <thead className="app-table-head">
           <tr>
@@ -17,13 +32,23 @@ const Table = ({ columns, data, onRowClick, getRowKey, compact = false }) => {
           </tr>
         </thead>
         <tbody className="app-table-body">
-          {data.length === 0 ? (
+          {loading ? (
+            Array.from({ length: skeletonRows }).map((_, rowIndex) => (
+              <tr key={`skeleton-${rowIndex}`}>
+                {columns.map((column, colIndex) => (
+                  <td key={column.key ?? column.accessor ?? colIndex} className="app-table-cell">
+                    <Skeleton className="h-3.5 w-full" />
+                  </td>
+                ))}
+              </tr>
+            ))
+          ) : data.length === 0 ? (
             <tr>
               <td
                 colSpan={columns.length}
                 className="app-table-empty"
               >
-                No data available
+                {emptyMessage}
               </td>
             </tr>
           ) : (

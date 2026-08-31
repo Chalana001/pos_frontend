@@ -7,7 +7,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
 import DatePicker from "../components/common/DatePicker";
-import LoadingSpinner from "../components/common/LoadingSpinner";
+import { Skeleton } from "../components/common/Skeleton";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
 import { useSearchOnType } from "../hooks/useSearchOnType";
@@ -221,12 +221,8 @@ const PurchaseListPage = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="py-12">
-            <LoadingSpinner size="lg" text="Loading purchases..." />
-          </div>
-        ) : (
-          <div className="app-table-wrap">
+        {(
+          <div className="app-table-wrap" aria-busy={loading || undefined}>
             <table className="app-table min-w-[1140px]">
               <thead className="app-table-head">
                 <tr>
@@ -244,7 +240,15 @@ const PurchaseListPage = () => {
                 </tr>
               </thead>
               <tbody className="app-table-body">
-                {data.length === 0 ? (
+                {loading ? (
+                  Array.from({ length: 8 }).map((_, row) => (
+                    <tr key={`skeleton-${row}`}>
+                      {Array.from({ length: 11 }).map((_, cell) => (
+                        <td key={cell} className="app-table-cell"><Skeleton className="h-3.5 w-full" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : data.length === 0 ? (
                   <tr>
                     <td colSpan="11" className="px-6 py-8 text-center text-slate-500">
                       No records found.

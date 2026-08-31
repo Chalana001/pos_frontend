@@ -6,6 +6,7 @@ import { tileTone } from "../utils/chartTheme";
 import { canAccessAllBranches } from "../utils/permissions";
 import Card from "../components/common/Card";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { Skeleton } from "../components/common/Skeleton";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -169,9 +170,27 @@ const Dashboard = () => {
   }, [branchId, chartMode]);
 
   if (loading) {
+    // Hold the page's real shape while the numbers come: heading, four KPI
+    // cards, chart plate. Nothing jumps when the data lands.
     return (
-      <div className="flex items-center justify-center h-full">
-        <LoadingSpinner size="lg" text="Loading dashboard..." />
+      <div className="space-y-6" aria-busy="true">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
+          <Skeleton className="h-4 w-44" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-6">
+              <Skeleton className="mb-3 h-3.5 w-24" />
+              <Skeleton className="mb-4 h-7 w-32" />
+              <Skeleton className="h-3 w-20" />
+            </Card>
+          ))}
+        </div>
+        <Card className="p-6">
+          <Skeleton className="mb-4 h-4 w-40" />
+          <Skeleton className="h-64 w-full" />
+        </Card>
       </div>
     );
   }

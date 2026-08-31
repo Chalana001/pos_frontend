@@ -1557,7 +1557,7 @@ export default function BulkAddItems() {
                 No items added yet. Add items from the form.
               </div>
             ) : (
-              <div className="overflow-auto rounded-lg border">
+              <div className="app-table-wrap rounded-lg border">
                 <table className="min-w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr className="text-left">

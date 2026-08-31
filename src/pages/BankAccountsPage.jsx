@@ -211,17 +211,13 @@ const BankAccountsPage = () => {
       </div>
 
       <Card className="sales-panel-enter overflow-hidden p-0" style={{ animationDelay: "90ms" }}>
-        {loading ? (
-          <div className="py-12">
-            <LoadingSpinner size="lg" text="Loading bank accounts..." />
-          </div>
-        ) : (
-          <Table
-            columns={columns}
-            data={bankAccounts}
-            onRowClick={(bankAccount) => navigate(`/cash-drops/bank-accounts/${bankAccount.id}`)}
-          />
-        )}
+        <Table
+          columns={columns}
+          data={bankAccounts}
+          loading={loading}
+          emptyMessage="No bank accounts yet - add one so cash drops have somewhere to bank to."
+          onRowClick={(bankAccount) => navigate(`/cash-drops/bank-accounts/${bankAccount.id}`)}
+        />
       </Card>
 
       <Modal isOpen={showModal} onClose={closeModal} title={form.id ? "Edit Bank Account" : "Add Bank Account"}>

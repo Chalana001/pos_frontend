@@ -373,7 +373,7 @@ const Users = () => {
                         <LoadingSpinner size="lg" text="Loading users..." />
                     </div>
                 ) : (
-                    <Table columns={columns} data={filteredUsers} />
+                    <Table columns={columns} data={filteredUsers} emptyMessage="No users match - clear the search or add a user to give a colleague access." />
                 )}
             </Card>
 

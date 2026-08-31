@@ -276,7 +276,7 @@ const StockAdjustments = () => {
             <LoadingSpinner size="lg" text="Loading adjustments..." />
           </div>
         ) : (
-          <Table columns={columns} data={adjustments} />
+          <Table columns={columns} data={adjustments} emptyMessage="No adjustments recorded - corrections made from a stock item’s page will show here." />
         )}
 
         <TablePagination

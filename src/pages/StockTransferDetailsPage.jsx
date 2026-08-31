@@ -104,7 +104,7 @@ export default function StockTransferDetailsPage() {
         <StatusBadge status={transfer.status} />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="page-section-enter grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric title="Transfer No" value={transfer.transferNo || "-"} helper="Reference number" icon={Package} />
         <Metric title="Requested" value={formatDateTime(transfer.requestedAt)} helper="Created time" icon={CalendarDays} />
         <Metric title="Requested By" value={transfer.requestedByUserName || "-"} helper="Source user" icon={UserRound} />
@@ -112,7 +112,7 @@ export default function StockTransferDetailsPage() {
       </div>
 
       <Card className="admin-panel-card overflow-hidden p-0" title="Transfer Summary">
-        <div className="grid gap-4 border-b border-slate-100 p-4 md:grid-cols-2">
+        <div className="page-section-enter grid gap-4 border-b border-slate-100 p-4 md:grid-cols-2" style={{ animationDelay: "120ms" }}>
           <div>
             <p className="text-xs font-bold uppercase text-slate-500">From Branch</p>
             <p className="mt-2 font-black text-slate-900">{transfer.fromBranchName || "-"}</p>

@@ -632,17 +632,13 @@ const Stock = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="py-12">
-            <LoadingSpinner size="lg" text="Loading stock..." />
-          </div>
-        ) : (
-          <Table
-            columns={columns}
-            data={stockItems}
-            onRowClick={(item) => navigate(`/stock/item/${item.itemId}`)}
-          />
-        )}
+        <Table
+          columns={columns}
+          data={stockItems}
+          loading={loading}
+          emptyMessage="No stock in this branch yet - received purchases and transfers will appear here."
+          onRowClick={(item) => navigate(`/stock/item/${item.itemId}`)}
+        />
 
         <TablePagination
           summary={`Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}

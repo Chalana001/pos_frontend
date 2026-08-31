@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ReceiptTemplate from '../components/receipt/ReceiptTemplate';
 import InvoiceTemplate from '../components/invoice/InvoiceTemplate';
 import CustomSelect from '../components/common/CustomSelect';
+import Modal from '../components/common/Modal';
 import BarcodeSettingsPanel, { BarcodePreview } from '../components/barcode/BarcodeSettingsPanel';
 import { useBranch } from '../context/BranchContext';
 import { useAuth } from '../context/AuthContext';
@@ -521,8 +522,15 @@ const ReceiptSettingsPage = () => {
     }
   };
 
-  const handleReset = () => {
-    if (!window.confirm('Reset all settings to default? Unsaved changes will be lost.')) return;
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+
+  // The one native confirm() in the app lived here. It ignored the theme, the
+  // animation level and the button language - the shared Modal is the dialog
+  // every other destructive action already uses.
+  const handleReset = () => setConfirmResetOpen(true);
+
+  const performReset = () => {
+    setConfirmResetOpen(false);
 
     if (isBarcodeTab) {
       setBarcodeForm(DEFAULT_BARCODE_LABEL_SETTINGS);
@@ -1300,6 +1308,27 @@ const ReceiptSettingsPage = () => {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={confirmResetOpen}
+        onClose={() => setConfirmResetOpen(false)}
+        title="Reset to defaults"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Reset all settings to default? Unsaved changes will be lost.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setConfirmResetOpen(false)}>
+              Keep editing
+            </Button>
+            <Button variant="danger" onClick={performReset}>
+              Reset settings
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
