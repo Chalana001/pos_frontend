@@ -148,7 +148,12 @@ const PurchaseFormPage = () => {
       const resizeHandleWidth = 12;
       const totalGapWidth = 32;
       const availableWidth = Math.max(0, containerWidth - resizeHandleWidth - totalGapWidth);
-      setSelectionPanelWidth(Math.max(420, Math.floor(availableWidth / 2)));
+      let width = Math.max(420, Math.floor(availableWidth * 0.4));
+      try {
+        const stored = Number(window.localStorage.getItem("pos_split_purchase_form"));
+        if (stored >= 420) width = stored;
+      } catch { /* storage unavailable */ }
+      setSelectionPanelWidth(Math.max(420, Math.min(Math.floor(availableWidth * 0.65), width)));
     };
 
     requestAnimationFrame(setDefaultPanelWidth);
@@ -165,13 +170,21 @@ const PurchaseFormPage = () => {
       const resizeHandleWidth = 12;
       const totalGapWidth = 32;
       const availableWidth = Math.max(0, containerWidth - resizeHandleWidth - totalGapWidth);
-      const maxWidth = Math.max(520, Math.floor(availableWidth * 0.5));
+      const maxWidth = Math.max(520, Math.floor(availableWidth * 0.65));
       const nextWidth = Math.max(420, Math.min(maxWidth, resizeStateRef.current.startWidth + deltaX));
       setSelectionPanelWidth(nextWidth);
     };
 
     const handleMouseUp = () => {
       setIsResizingPanels(false);
+      setSelectionPanelWidth((settled) => {
+        if (settled) {
+          try {
+            window.localStorage.setItem("pos_split_purchase_form", String(settled));
+          } catch { /* storage unavailable */ }
+        }
+        return settled;
+      });
     };
 
     document.body.style.cursor = "col-resize";
@@ -633,7 +646,7 @@ const PurchaseFormPage = () => {
       <div ref={panelsContainerRef} className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         <div
           className="purchase-split-panel custom-scrollbar w-full min-w-0 flex-shrink-0 space-y-4 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto"
-          style={{ width: selectionPanelWidth ? `min(100%, ${selectionPanelWidth}px, 50%)` : "50%", animationDelay: "190ms" }}
+          style={{ width: selectionPanelWidth ? `min(100%, ${selectionPanelWidth}px, 65%)` : "40%", animationDelay: "190ms" }}
         >
           <Card className="sales-panel-enter overflow-visible p-0" style={{ animationDelay: "180ms" }}>
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
