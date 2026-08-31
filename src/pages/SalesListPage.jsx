@@ -445,7 +445,7 @@ const SalesListPage = () => {
                     <td className="p-4 text-right font-semibold text-emerald-700">
                       {formatCurrency(sale.paidAmount || 0)}
                     </td>
-                    <td className={`p-4 text-right font-semibold ${(sale.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-600"}`}>
+                    <td className={`p-4 text-right font-semibold ${(sale.dueAmount || 0) > 0 ? "dark-hl text-red-600" : "text-slate-600"}`}>
                       {formatCurrency(sale.dueAmount || 0)}
                     </td>
                     <td className="p-4 text-slate-600 text-right">

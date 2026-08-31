@@ -172,7 +172,7 @@ const CustomerViewPage = () => {
                     <div className="mt-1 flex items-center justify-between">
                       <div
                         className={`text-xl font-bold ${
-                          (customer?.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-800"
+                          (customer?.dueAmount || 0) > 0 ? "dark-hl text-red-600" : "text-slate-800"
                         }`}
                       >
                         {formatCurrency(customer?.dueAmount || 0)}
@@ -244,7 +244,7 @@ const CustomerViewPage = () => {
         <form onSubmit={handlePaymentSubmit} className="space-y-4 p-6">
           <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
             <span className="text-sm font-medium text-slate-600">Total Due Amount</span>
-            <span className="text-lg font-bold text-red-600">{formatCurrency(customer?.dueAmount || 0)}</span>
+            <span className="dark-hl text-lg font-bold text-red-600">{formatCurrency(customer?.dueAmount || 0)}</span>
           </div>
 
           <div>

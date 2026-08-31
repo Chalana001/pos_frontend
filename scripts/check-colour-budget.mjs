@@ -19,7 +19,10 @@
 import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const BUDGET = new Set(["red", "amber", "emerald"]);
+// Dark keeps NO hue families: everything remaps to the neutral ramp, and the
+// one accent (--c-highlight, the logo cyan) is applied by hand via .dark-hl /
+// .dark-hl-chip on the few signals that must pull the eye.
+const BUDGET = new Set([]);
 
 /* Neutrals are the ground itself, so they are never off-budget. */
 const NEUTRAL = new Set(["slate", "gray", "grey", "zinc", "neutral", "stone"]);

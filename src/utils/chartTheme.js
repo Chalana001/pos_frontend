@@ -143,8 +143,10 @@ export const TILE = {
   neutral: { value: 'text-slate-900', chip: 'bg-slate-100 text-slate-600' },
   accent: { value: 'text-slate-900', chip: 'bg-blue-50 text-blue-700' },
   good: { value: 'text-emerald-700', chip: 'bg-emerald-50 text-emerald-700' },
-  warning: { value: 'text-amber-700', chip: 'bg-amber-50 text-amber-700' },
-  critical: { value: 'text-red-700', chip: 'bg-red-50 text-red-700' },
+  // dark-hl: in dark these values wear the one cyan accent - they are the
+  // money-at-risk / stock-at-risk numbers; light keeps amber and red.
+  warning: { value: 'dark-hl text-amber-700', chip: 'bg-amber-50 text-amber-700' },
+  critical: { value: 'dark-hl text-red-700', chip: 'bg-red-50 text-red-700' },
 };
 
 // Older code passed a raw hue name ("indigo", "violet", "cyan"…). Map those onto

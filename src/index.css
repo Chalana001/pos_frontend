@@ -465,6 +465,43 @@
     --c-yellow-700: var(--c-slate-700);
     --c-yellow-800: var(--c-slate-800);
     --c-yellow-900: var(--c-slate-900);
+
+    /* The last three coloured families go neutral too: dark now spends its
+       one accent - the logo cyan - only on what must pull the eye, and a
+       status chip with its status written in it is not that. */
+
+    --c-red-50: var(--c-slate-50);
+    --c-red-100: var(--c-slate-100);
+    --c-red-200: var(--c-slate-200);
+    --c-red-300: var(--c-slate-300);
+    --c-red-400: var(--c-slate-400);
+    --c-red-500: var(--c-slate-500);
+    --c-red-600: var(--c-slate-600);
+    --c-red-700: var(--c-slate-700);
+    --c-red-800: var(--c-slate-800);
+    --c-red-900: var(--c-slate-900);
+
+    --c-amber-50: var(--c-slate-50);
+    --c-amber-100: var(--c-slate-100);
+    --c-amber-200: var(--c-slate-200);
+    --c-amber-300: var(--c-slate-300);
+    --c-amber-400: var(--c-slate-400);
+    --c-amber-500: var(--c-slate-500);
+    --c-amber-600: var(--c-slate-600);
+    --c-amber-700: var(--c-slate-700);
+    --c-amber-800: var(--c-slate-800);
+    --c-amber-900: var(--c-slate-900);
+
+    --c-emerald-50: var(--c-slate-50);
+    --c-emerald-100: var(--c-slate-100);
+    --c-emerald-200: var(--c-slate-200);
+    --c-emerald-300: var(--c-slate-300);
+    --c-emerald-400: var(--c-slate-400);
+    --c-emerald-500: var(--c-slate-500);
+    --c-emerald-600: var(--c-slate-600);
+    --c-emerald-700: var(--c-slate-700);
+    --c-emerald-800: var(--c-slate-800);
+    --c-emerald-900: var(--c-slate-900);
   }
 }
 
@@ -1986,6 +2023,25 @@ html[data-animation-level="balanced"] #root table tbody tr {
 }
 
 
+/* The one colour dark mode keeps: the logo's cyan, spent only on what must
+   pull the eye - money at risk, the offline state, stock at risk. Everything
+   else on the black screen is white. Apply .dark-hl to text and
+   .dark-hl-chip to a badge; both are inert in light, which keeps its own
+   semantic colours. */
+:root[data-theme="dark"] {
+  --c-highlight: 0 180 200;
+}
+
+:root[data-theme="dark"] .dark-hl:not(.always-dark *) {
+  color: rgb(var(--c-highlight)) !important;
+}
+
+:root[data-theme="dark"] .dark-hl-chip:not(.always-dark *) {
+  background-color: rgb(var(--c-highlight) / 0.14) !important;
+  border-color: rgb(var(--c-highlight) / 0.35) !important;
+  color: rgb(var(--c-highlight)) !important;
+}
+
 /* The toast success icon: the library's green circle in light, a white
    circle with a black check in dark - on the black-and-white screen the
    green disc was the odd one out. The Toaster reads these variables. */
@@ -1996,6 +2052,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
 
 :root[data-theme="dark"] {
   --toast-icon: 250 250 250;
+  --toast-icon-error: 250 250 250;
   --toast-icon-check: 5 5 5;
 }
 
@@ -2022,18 +2079,17 @@ html[data-animation-level="balanced"] #root table tbody tr {
   background-color: rgb(var(--c-slate-800));
 }
 
-/* The budget colours have the same trap the blue plates had: in dark, red,
-   emerald and amber fills brighten (red-500 becomes #f87171, emerald-600
-   #34d399, amber-600 #fbbf24) while a paired text-white stays white - and
-   white on those bright grounds measures 1.7-2.8:1. The ratchet never caught
-   it because it deliberately exempts budget hues. Bright fill, near-black
-   text - the same rule every music-app play button follows. */
+/* With the whole palette neutral, a solid mid-step fill would land on a
+   muddy grey plate. The former budget fills take the white-plate treatment
+   the blue buttons already have - Confirm, Open New Shift, Cancel Order all
+   read as white plates with near-black text. */
 :root[data-theme="dark"] :is(
   .btn-danger,
   .bg-red-400, .bg-red-500, .bg-red-600, .bg-red-700,
   .bg-emerald-400, .bg-emerald-500, .bg-emerald-600, .bg-emerald-700,
   .bg-amber-400, .bg-amber-500, .bg-amber-600, .bg-amber-700
 ):not(.always-dark *) {
+  background-color: rgb(var(--c-slate-900));
   color: rgb(var(--c-slate-50));
 }
 
@@ -2042,7 +2098,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
   .bg-red-400, .bg-red-500, .bg-red-600, .bg-red-700,
   .bg-emerald-400, .bg-emerald-500, .bg-emerald-600, .bg-emerald-700,
   .bg-amber-400, .bg-amber-500, .bg-amber-600, .bg-amber-700
-):not(.always-dark *) [class*="text-white"] {
+):not(.always-dark *) :is([class*="text-white"], [class*="text-red-"], [class*="text-amber-"], [class*="text-emerald-"]) {
   color: rgb(var(--c-slate-50));
 }
 

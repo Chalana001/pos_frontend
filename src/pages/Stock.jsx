@@ -548,11 +548,11 @@ const Stock = () => {
             <div>
               <h3 className="text-sm font-medium text-slate-600 mb-2">Reorder Alerts</h3>
               <div className="flex items-end gap-3">
-                <p className="text-2xl font-bold text-amber-600">
+                <p className="dark-hl text-2xl font-bold text-amber-600">
                   {loadingCounts ? "..." : reorderAlertCount}
                 </p>
                 {outOfStockCount > 0 && (
-                  <span className="mb-1 text-xs font-semibold text-red-600">{outOfStockCount} out</span>
+                  <span className="dark-hl mb-1 text-xs font-semibold text-red-600">{outOfStockCount} out</span>
                 )}
               </div>
             </div>

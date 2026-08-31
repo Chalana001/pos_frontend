@@ -61,6 +61,12 @@ export default function App() {
               secondary: "rgb(var(--toast-icon-check))",
             },
           },
+          error: {
+            iconTheme: {
+              primary: "rgb(var(--toast-icon-error, 255 75 75))",
+              secondary: "rgb(var(--toast-icon-check))",
+            },
+          },
         }}
       />
     </BrowserRouter>

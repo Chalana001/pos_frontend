@@ -148,7 +148,7 @@ const SuppliersPage = () => {
                       </td>
                       <td className="px-6 py-4 text-slate-600">{supplier.phone || "-"}</td>
                       <td className="px-6 py-4 text-slate-600">{supplier.email || "-"}</td>
-                      <td className={`px-6 py-4 text-right font-bold ${Number(supplier.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-500"}`}>
+                      <td className={`px-6 py-4 text-right font-bold ${Number(supplier.dueAmount || 0) > 0 ? "dark-hl text-red-600" : "text-slate-500"}`}>
                         {formatCurrency(supplier.dueAmount || 0)}
                       </td>
                       <td className="px-6 py-4 text-center">

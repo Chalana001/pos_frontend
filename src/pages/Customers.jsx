@@ -105,7 +105,7 @@ const CustomersListPage = () => {
     {
       header: "Due Amount",
       render: (c) => (
-        <span className={(c.dueAmount || 0) > 0 ? "text-red-600 font-semibold" : ""}>
+        <span className={(c.dueAmount || 0) > 0 ? "dark-hl text-red-600 font-semibold" : ""}>
           {formatCurrency(c.dueAmount || 0)}
         </span>
       ),
