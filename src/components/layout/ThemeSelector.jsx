@@ -14,9 +14,11 @@ import { useLanguage } from '../../context/LanguageContext';
  * other pills earn their width by shrinking, but this one cannot usefully
  * shrink - "System" does not truncate well in two languages - and hiding it
  * outright left phones and small tills with no way to switch theme at all.
- * So there it becomes an icon button in the same 44px chrome as the
+ * So from sm to lg it becomes an icon button in the same 44px chrome as the
  * notification bell, stepping through the three themes in the dropdown's
- * own order.
+ * own order. Below sm even 44px is too much - the smallest tills overflow -
+ * so there the control moves into the user menu next to Language, and this
+ * component renders nothing visible.
  */
 const ORDER = [THEMES.LIGHT, THEMES.DARK, THEMES.SYSTEM];
 
@@ -47,7 +49,7 @@ const ThemeSelector = ({ compact = false }) => {
         onClick={() => setTheme(next)}
         aria-label={`${t('Theme')}: ${labelOf(theme)}`}
         title={`${t('Theme')}: ${labelOf(theme)}`}
-        className="shell-panel-hover inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 lg:hidden"
+        className="shell-panel-hover hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 sm:inline-flex lg:hidden"
       >
         <Icon size={18} aria-hidden="true" />
       </button>

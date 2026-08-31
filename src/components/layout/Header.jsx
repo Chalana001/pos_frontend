@@ -26,6 +26,8 @@ import LanguageSelector from './LanguageSelector';
 import ThemeSelector from './ThemeSelector';
 import { useLanguage } from '../../context/LanguageContext';
 import { LANGUAGES } from '../../utils/translations';
+import { useTheme } from '../../hooks/useTheme';
+import { THEMES } from '../../utils/themePreference';
 import { useBranch } from '../../context/BranchContext';
 import { useShift } from '../../context/ShiftContext';
 import Modal from '../common/Modal';
@@ -59,6 +61,7 @@ const getDismissedNotificationStorageKey = (user) =>
 const Header = ({ onOpenSidebar }) => {
   const { user, logout, isOnline, saveOfflinePin, hasOnlineSession } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const [theme, setTheme] = useTheme();
   const { selectedBranchId } = useBranch();
   const { activeShift, loadingShift } = useShift();
   const navigate = useNavigate();
@@ -499,6 +502,32 @@ const Header = ({ onOpenSidebar }) => {
                           onClick={() => setLanguage(option.value)}
                           className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${
                             language === option.value
+                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Same rule as Language above: below sm the toolbar has no
+                      room for this control, so it lives here instead. */}
+                  <div className="border-b border-slate-100 px-4 py-2 sm:hidden">
+                    <div className="mb-1.5 text-xs font-semibold text-slate-500">{t('Theme')}</div>
+                    <div className="flex gap-1.5">
+                      {[
+                        { value: THEMES.LIGHT, label: t('Light') },
+                        { value: THEMES.DARK, label: t('Dark') },
+                        { value: THEMES.SYSTEM, label: t('System') },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setTheme(option.value)}
+                          className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${
+                            theme === option.value
                               ? 'border-blue-200 bg-blue-50 text-blue-700'
                               : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                           }`}
