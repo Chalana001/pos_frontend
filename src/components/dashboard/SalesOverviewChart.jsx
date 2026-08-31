@@ -12,7 +12,10 @@ import {
   DOT_RADIUS,
 } from "../../utils/chartTheme";
 
-const CHART_MARGIN = { top: 10, right: 10, left: -20, bottom: 0 };
+// left was -20 from the era when the axis said "Rs. 38K"; the tighter trim
+// clipped the longer "LKR 38.0K" ticks to "t 38.0K". Zero lets the default
+// 60px axis hold the whole label.
+const CHART_MARGIN = { top: 10, right: 10, left: 0, bottom: 0 };
 
 const formatXAxis = (value, chartMode) => {
   if (!value) return "";

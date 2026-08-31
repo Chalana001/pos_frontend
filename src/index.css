@@ -1976,6 +1976,31 @@ html[data-animation-level="balanced"] #root table tbody tr {
 }
 
 
+/* The budget colours have the same trap the blue plates had: in dark, red,
+   emerald and amber fills brighten (red-500 becomes #f87171, emerald-600
+   #34d399, amber-600 #fbbf24) while a paired text-white stays white - and
+   white on those bright grounds measures 1.7-2.8:1. The ratchet never caught
+   it because it deliberately exempts budget hues. Bright fill, near-black
+   text - the same rule every music-app play button follows. */
+:root[data-theme="dark"] :is(
+  .btn-danger,
+  .bg-red-400, .bg-red-500, .bg-red-600, .bg-red-700,
+  .bg-emerald-400, .bg-emerald-500, .bg-emerald-600, .bg-emerald-700,
+  .bg-amber-400, .bg-amber-500, .bg-amber-600, .bg-amber-700
+):not(.always-dark *) {
+  color: rgb(var(--c-slate-50));
+}
+
+:root[data-theme="dark"] :is(
+  .btn-danger,
+  .bg-red-400, .bg-red-500, .bg-red-600, .bg-red-700,
+  .bg-emerald-400, .bg-emerald-500, .bg-emerald-600, .bg-emerald-700,
+  .bg-amber-400, .bg-amber-500, .bg-amber-600, .bg-amber-700
+):not(.always-dark *) [class*="text-white"] {
+  color: rgb(var(--c-slate-50));
+}
+
+
 /* Buttons written with the raw utility rather than .btn-primary. The colour
    rule wins on specificity, so the paired text-white flips to black with it and
    the fill stays readable. Save All, Open POS and friends become white plates. */

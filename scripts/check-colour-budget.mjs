@@ -57,11 +57,14 @@ const css = await readFile(resolve("src/index.css"), "utf8");
 /* Families pointed at the neutral ramp. */
 const remapped = new Set([...css.matchAll(REMAP)].map((m) => m[1]));
 
-/* Fills that flip their own text with them. The rule is the one that paints a
-   slate-900 plate and sets a colour in the same block. */
+/* Fills whose dark rules flip their text with them - either the slate-900
+   plate treatment (blue and friends) or the near-black text flip the budget
+   colours use, since their fills brighten in dark while text-white does not. */
 const plated = new Set();
 for (const rule of css.split("}")) {
-  if (!rule.includes("background-color: rgb(var(--c-slate-900))")) continue;
+  const flips = rule.includes("background-color: rgb(var(--c-slate-900))")
+    || (rule.includes('[data-theme="dark"]') && rule.includes("color: rgb(var(--c-slate-50))"));
+  if (!flips) continue;
   for (const [, cls] of rule.matchAll(PLATE_FILL)) plated.add(cls);
 }
 
@@ -84,7 +87,9 @@ await Promise.all(files.map(async (file) => {
   for (const [attr] of source.matchAll(WHITE_ON_FILL)) {
     if (!attr.includes("text-white")) continue;
     for (const [, cls, hue, step] of attr.matchAll(/(bg-([a-z]+)-(\d{3}))/g)) {
-      if (!isOffBudget(hue) || Number(step) < 400 || plated.has(cls)) continue;
+      // Budget hues are NOT exempt here: their fills brighten in dark exactly
+      // like the off-budget ones, which is how white-on-amber shipped at 1.7:1.
+      if (NEUTRAL.has(hue) || NOT_A_HUE.has(hue) || Number(step) < 400 || plated.has(cls)) continue;
       unplated.set(cls, (unplated.get(cls) ?? new Set()).add(where));
     }
   }
