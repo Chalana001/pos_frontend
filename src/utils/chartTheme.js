@@ -25,7 +25,7 @@
 // choice — adjacent slots are the pairs that touch in a stack, bar group or line
 // chart. Do not reorder, do not append a 9th colour.
 export const SERIES = [
-  '#2a78d6', // 1 blue
+  '#00b4c8', // 1 cyan - sampled from the ZenSys mark's glow, so the lead series wears the brand
   '#eb6834', // 2 orange
   '#1baf7a', // 3 aqua
   '#eda100', // 4 yellow
