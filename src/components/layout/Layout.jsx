@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -6,15 +6,30 @@ import VersionUpdateDialog from '../version/VersionUpdateDialog';
 import OfflineSyncAgent from './OfflineSyncAgent';
 import SupportSessionBanner from './SupportSessionBanner';
 import AnnouncementBanner from './AnnouncementBanner';
+import { isSidebarInline, prefersCollapsedSidebar } from '../../utils/sidebarLayout';
 
 const Layout = () => {
   const location = useLocation();
   const isPosRoute = location.pathname === '/pos';
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(prefersCollapsedSidebar);
+
+  // Only act on a crossing, not on every resize, so expanding the rail by hand
+  // at a laptop width is not undone by the next pixel of drag.
+  useEffect(() => {
+    let wasCramped = prefersCollapsedSidebar();
+    const onResize = () => {
+      const cramped = prefersCollapsedSidebar();
+      if (cramped === wasCramped) return;
+      wasCramped = cramped;
+      setSidebarCollapsed(cramped);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const openSidebar = () => {
-    if (window.innerWidth >= 1280) {
+    if (isSidebarInline()) {
       setSidebarCollapsed(false);
       return;
     }

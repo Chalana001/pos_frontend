@@ -11,6 +11,7 @@ import LockedFeatureDialog from "../common/LockedFeatureDialog";
 import { BRAND_MARK, BRAND_NAME, BRAND_WORDMARK } from "../../utils/branding";
 import { APP_VERSION } from "../../data/versionHistory";
 import { History } from "lucide-react";
+import { isSidebarInline } from '../../utils/sidebarLayout';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -133,7 +134,7 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
   };
 
   const handleSidebarOpen = () => {
-    if (window.innerWidth >= 1280) {
+    if (isSidebarInline()) {
       setIsDesktopCollapsed(false);
       return;
     }
@@ -141,7 +142,7 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
   };
 
   const handleSidebarClose = () => {
-    if (window.innerWidth >= 1280) {
+    if (isSidebarInline()) {
       setIsDesktopCollapsed(true);
       return;
     }
