@@ -348,7 +348,7 @@ const Header = ({ onOpenSidebar }) => {
 
           <Link
             to="/offline-sales"
-            className={`${toolbarItemClass} shell-panel-hover hidden gap-2 lg:inline-flex`}
+            className={`${toolbarItemClass} shell-panel-hover hidden gap-2 xl:inline-flex`}
           >
             <UploadCloud size={16} />
             <span className="whitespace-nowrap">Offline Queue</span>
