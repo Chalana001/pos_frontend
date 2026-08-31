@@ -55,6 +55,12 @@ export default function App() {
             background: "rgb(var(--c-surface))",
             color: "rgb(var(--c-slate-900))",
           },
+          success: {
+            iconTheme: {
+              primary: "rgb(var(--toast-icon))",
+              secondary: "rgb(var(--toast-icon-check))",
+            },
+          },
         }}
       />
     </BrowserRouter>

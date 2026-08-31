@@ -1986,6 +1986,19 @@ html[data-animation-level="balanced"] #root table tbody tr {
 }
 
 
+/* The toast success icon: the library's green circle in light, a white
+   circle with a black check in dark - on the black-and-white screen the
+   green disc was the odd one out. The Toaster reads these variables. */
+:root {
+  --toast-icon: 97 211 69;
+  --toast-icon-check: 255 255 255;
+}
+
+:root[data-theme="dark"] {
+  --toast-icon: 250 250 250;
+  --toast-icon-check: 5 5 5;
+}
+
 /* Toasts read the ramp for their fill (set inline on the Toaster), and dark
    adds the hairline every other dark surface carries so the card separates
    from whatever it floats over. Border is not part of the library's inline
