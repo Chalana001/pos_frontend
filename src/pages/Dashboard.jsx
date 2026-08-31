@@ -179,7 +179,7 @@ const Dashboard = () => {
   if (selectedBranchId === null || selectedBranchId === undefined) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
           <div className="text-sm text-slate-500">
             {new Date().toLocaleDateString("en-LK", {
@@ -223,7 +223,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="dashboard-rise-in flex items-center justify-between" style={{ animationDelay: "40ms" }}>
+      <div className="dashboard-rise-in flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1" style={{ animationDelay: "40ms" }}>
         <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
         <div className="text-sm text-slate-500">
           {new Date().toLocaleDateString("en-LK", {
