@@ -513,9 +513,9 @@ const Header = ({ onOpenSidebar }) => {
                   </div>
 
                   {/* Same rule as Language above, with its own cutoff: the
-                      toolbar holds the theme icon down to 260px, so only
+                      toolbar holds the theme icon down to 285px, so only
                       under that does the control live here instead. */}
-                  <div className="border-b border-slate-100 px-4 py-2 min-[260px]:hidden">
+                  <div className="border-b border-slate-100 px-4 py-2 min-[285px]:hidden">
                     <div className="mb-1.5 text-xs font-semibold text-slate-500">{t('Theme')}</div>
                     <div className="flex gap-1.5">
                       {[

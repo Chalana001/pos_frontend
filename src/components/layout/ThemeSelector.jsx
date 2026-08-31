@@ -16,7 +16,7 @@ import { useLanguage } from '../../context/LanguageContext';
  * outright left phones and small tills with no way to switch theme at all.
  * So below lg it becomes an icon button in the same 44px chrome as the
  * notification bell, stepping through the three themes in the dropdown's
- * own order. Measured, the toolbar holds that icon down to 260px; under
+ * own order. Measured, the toolbar holds that icon down to 285px; under
  * that the control moves into the user menu next to Language, and this
  * component renders nothing visible.
  */
@@ -49,7 +49,7 @@ const ThemeSelector = ({ compact = false }) => {
         onClick={() => setTheme(next)}
         aria-label={`${t('Theme')}: ${labelOf(theme)}`}
         title={`${t('Theme')}: ${labelOf(theme)}`}
-        className="shell-panel-hover hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 min-[260px]:inline-flex lg:hidden"
+        className="shell-panel-hover hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 min-[285px]:inline-flex lg:hidden"
       >
         <Icon size={18} aria-hidden="true" />
       </button>
