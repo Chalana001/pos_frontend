@@ -12,7 +12,7 @@ import PurchaseA4Print from "../components/purchase/PurchaseA4Print";
 import { useAuth } from "../context/AuthContext"; 
 import {
   ArrowLeft, Printer, Calendar, FileText,
-  Truck, ChevronDown, ChevronUp, MapPin, Package, Ban, Wallet, RotateCcw
+  Truck, ChevronDown, ChevronUp, MapPin, Package, Ban, Wallet, RotateCcw, Barcode
 } from "lucide-react";
 import { hasPermission } from "../utils/permissions";
 import { hasPlanFeature } from "../utils/subscriptionFeatures";
@@ -204,6 +204,32 @@ const PurchaseDetailsPage = () => {
         </Button>
         
         <div className="flex gap-3 flex-wrap">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              // ලැබුණ items ටිකම, ගත්ත qty එක print qty විදිහට - labels
+              // ටික අලුත් stock එකට එකපාර print කරන්න.
+              const printItems = (purchase.grnList || [])
+                .flatMap((grn) => grn.items || [])
+                .filter((item) => item.itemId && item.barcode)
+                .map((item) => ({
+                  id: item.itemId,
+                  name: item.itemName,
+                  barcode: item.barcode,
+                  sellingPrice: Number(item.sellingPrice) || 0,
+                  printQty: Math.max(1, Math.round(Number(item.qty) || 1)),
+                }));
+              if (printItems.length === 0) {
+                toast.error("No items with barcodes on this purchase");
+                return;
+              }
+              navigate("/items/print-barcodes", {
+                state: { printItems, source: purchase.invoiceNo },
+              });
+            }}
+          >
+            <Barcode size={18} className="mr-2" /> Print Barcodes
+          </Button>
           {canProcessReturn && (
             <Button
               className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shadow-sm"

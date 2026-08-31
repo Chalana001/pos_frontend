@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { Search, Plus, Trash2, Printer, Minus, RefreshCw } from "lucide-react";
 
@@ -26,6 +27,7 @@ const BarcodePrintPage = () => {
   const printContainerRef = useRef(null);
 
   const [labelSettings, setLabelSettings] = useState(DEFAULT_BARCODE_LABEL_SETTINGS);
+  const location = useLocation();
   const [printList, setPrintList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [directPrinting, setDirectPrinting] = useState(false);
@@ -81,9 +83,30 @@ const BarcodePrintPage = () => {
     }
   };
 
-  // Page එක ලෝඩ් වෙද්දී default limit එකට (20) items ගන්නවා
+  // Page එක ලෝඩ් වෙද්දී auto-load කරන්නේ නැහැ - Load එබුවම විතරයි. Purchase
+  // details එකෙන් "Print Barcodes" එක්ක ආවොත් ඒ invoice එකේ items ටික
+  // purchased qty එක්කම queue එකට එනවා.
   useEffect(() => {
-    loadRecentItems(recentLimit);
+    const handoff = location.state?.printItems;
+    if (!Array.isArray(handoff) || handoff.length === 0) return;
+    const merged = new Map();
+    handoff.forEach((item) => {
+      if (!item?.id) return;
+      const existing = merged.get(item.id);
+      const qty = Math.max(1, Math.round(Number(item.printQty) || 1));
+      if (existing) {
+        existing.printQty += qty;
+      } else {
+        merged.set(item.id, { ...item, printQty: qty });
+      }
+    });
+    setPrintList([...merged.values()]);
+    toast.success(
+      location.state?.source
+        ? `Loaded ${merged.size} items from ${location.state.source}`
+        : `Loaded ${merged.size} items`
+    );
+    // The handoff seeds the queue once on arrival.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
