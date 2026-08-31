@@ -8,7 +8,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ReceiptTemplate from '../components/receipt/ReceiptTemplate';
 import InvoiceTemplate from '../components/invoice/InvoiceTemplate';
 import CustomSelect from '../components/common/CustomSelect';
-import Modal from '../components/common/Modal';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import BarcodeSettingsPanel, { BarcodePreview } from '../components/barcode/BarcodeSettingsPanel';
 import { useBranch } from '../context/BranchContext';
 import { useAuth } from '../context/AuthContext';
@@ -1309,26 +1309,16 @@ const ReceiptSettingsPage = () => {
         </div>
       </div>
 
-      <Modal
+      <ConfirmDialog
         isOpen={confirmResetOpen}
         onClose={() => setConfirmResetOpen(false)}
+        onConfirm={performReset}
         title="Reset to defaults"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">
-            Reset all settings to default? Unsaved changes will be lost.
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setConfirmResetOpen(false)}>
-              Keep editing
-            </Button>
-            <Button variant="danger" onClick={performReset}>
-              Reset settings
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        message="Reset all settings to default?"
+        detail="Unsaved changes will be lost."
+        confirmLabel="Reset settings"
+        cancelLabel="Keep editing"
+      />
     </div>
   );
 };

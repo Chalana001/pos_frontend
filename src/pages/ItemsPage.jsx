@@ -19,6 +19,7 @@ import TablePagination from "../components/common/TablePagination";
 import Modal from "../components/common/Modal";
 import { ItemType } from "../utils/constants"; // 🟢 Constant එක Import කළා
 import { useSearchOnType } from "../hooks/useSearchOnType";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const buildItemTypeOptions = (configuration, availability) => [
   { value: "ALL", label: "All Types" },
@@ -574,8 +575,20 @@ const ItemsPage = () => {
         />
       </Card>
 
-      <Modal isOpen={deleteModalOpen} onClose={closeDeleteModal} title="Delete Item" size="md">
-        <div className="space-y-5">
+      <ConfirmDialog
+        isOpen={deleteModalOpen}
+        onClose={closeDeleteModal}
+        onConfirm={deleteCheck?.canDelete ? handlePermanentDelete : handleDeactivate}
+        title="Delete Item"
+        size="md"
+        busy={deleteLoading}
+        confirmDisabled={!deleteCheck?.canDelete && !deleteCheck?.itemId}
+        confirmLabel={
+          deleteCheck?.canDelete
+            ? (deleteLoading ? "Deleting..." : "Delete Permanently")
+            : (deleteLoading ? "Deactivating..." : "Deactivate Instead")
+        }
+      >
           <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
             <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={20} />
             <div>
@@ -607,23 +620,7 @@ const ItemsPage = () => {
               </p>
             </div>
           )}
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={closeDeleteModal} disabled={deleteLoading}>
-              Cancel
-            </Button>
-            {deleteCheck?.canDelete ? (
-              <Button type="button" variant="danger" onClick={handlePermanentDelete} disabled={deleteLoading}>
-                {deleteLoading ? "Deleting..." : "Delete Permanently"}
-              </Button>
-            ) : (
-              <Button type="button" variant="danger" onClick={handleDeactivate} disabled={deleteLoading || !deleteCheck?.itemId}>
-                {deleteLoading ? "Deactivating..." : "Deactivate Instead"}
-              </Button>
-            )}
-          </div>
-        </div>
-      </Modal>
+      </ConfirmDialog>
     </div>
   );
 };

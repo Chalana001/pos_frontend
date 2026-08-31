@@ -33,6 +33,7 @@ import PanelResizeHandle from "../components/common/PanelResizeHandle";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 import { BRAND_NAME_UPPER } from "../utils/branding";
 import { getConfigurableFeatureAvailability, hasPlanFeature } from "../utils/subscriptionFeatures";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   STOCK_BASE_UNITS_PER_UNIT,
   baseToDisplayQuantity,
@@ -2515,26 +2516,18 @@ const POS = () => {
         customer={customer}
         errorMessage={checkoutError}
       />
-      <Modal
+      <ConfirmDialog
         isOpen={!!stockOverrideDialog}
         onClose={() => handleStockOverrideDialogClose(false)}
+        onConfirm={() => handleStockOverrideDialogClose(true)}
         title="Confirm Stock Override"
-        size="sm"
+        tone="warning"
+        message="Stock is insufficient for this sale."
+        detail="Continuing will complete the sale and allow negative stock for the shortage items."
+        cancelLabel="Go Back"
+        confirmLabel="Allow Override"
       >
-        <div className="space-y-5">
-          <div className="flex gap-3">
-            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-100">
-              <AlertTriangle size={22} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">Stock is insufficient for this sale.</p>
-              <p className="mt-1 text-sm leading-6 text-slate-500">
-                Continuing will complete the sale and allow negative stock for the shortage items.
-              </p>
-            </div>
-          </div>
-
-          {stockOverrideDialog?.shortages?.length ? (
+        {stockOverrideDialog?.shortages?.length ? (
             <div className="overflow-hidden rounded-xl border border-amber-100 bg-amber-50/50">
               <div className="border-b border-amber-100 px-4 py-2 text-xs font-bold uppercase text-amber-700">
                 Shortage Items
@@ -2556,25 +2549,7 @@ const POS = () => {
               {stockOverrideDialog?.message}
             </div>
           )}
-
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => handleStockOverrideDialogClose(false)}
-            >
-              Go Back
-            </Button>
-            <Button
-              type="button"
-              className="bg-amber-600 text-white shadow-md shadow-amber-200 hover:bg-amber-700"
-              onClick={() => handleStockOverrideDialogClose(true)}
-            >
-              Allow Override
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      </ConfirmDialog>
       <ReceiptPrinter ref={printRef} />
       <InvoicePrinter ref={invoicePrintRef} />
       <KotPrinter ref={kotPrintRef} />

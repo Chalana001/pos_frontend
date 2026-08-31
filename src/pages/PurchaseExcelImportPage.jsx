@@ -26,6 +26,7 @@ import { purchasesAPI } from "../api/purchases.api";
 import { suppliersAPI } from "../api/suppliers.api";
 import { useAuth } from "../context/AuthContext";
 import { formatCurrency, getLocalDateString } from "../utils/formatters";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const paymentMethodOptions = [
   { value: "CASH", label: "Cash" },
@@ -750,11 +751,14 @@ const PurchaseExcelImportPage = () => {
         onCreated={handleSupplierCreated}
       />
 
-      <Modal
+      <ConfirmDialog
         isOpen={showSkipModal}
         onClose={() => setShowSkipModal(false)}
+        onConfirm={submitPurchase}
         title="Skip non-ready rows?"
-        size="sm"
+        tone="primary"
+        busy={submitting}
+        confirmLabel={<><Save size={16} className="mr-2" />Continue & Save</>}
       >
         <div className="space-y-3 text-sm text-slate-600">
           <p>
@@ -764,16 +768,7 @@ const PurchaseExcelImportPage = () => {
           <p>Only <span className="font-semibold text-emerald-700">{summary.ready}</span> READY row(s) will be saved as a purchase.</p>
           <p className="text-xs text-slate-500">You can cancel and fix those rows, or proceed.</p>
         </div>
-        <div className="mt-5 flex justify-end gap-3">
-          <Button variant="secondary" onClick={() => setShowSkipModal(false)}>
-            Cancel
-          </Button>
-          <Button onClick={submitPurchase} disabled={submitting}>
-            <Save size={16} className="mr-2" />
-            Continue & Save
-          </Button>
-        </div>
-      </Modal>
+      </ConfirmDialog>
     </div>
   );
 };

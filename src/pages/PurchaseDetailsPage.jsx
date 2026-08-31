@@ -19,6 +19,7 @@ import { hasPlanFeature } from "../utils/subscriptionFeatures";
 import { BRAND_NAME_UPPER } from "../utils/branding";
 import { toast } from "react-hot-toast"; 
 import { formatCurrency } from "../utils/formatters";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const paymentMethodOptions = [
   { value: "CASH", label: "Cash" },
@@ -57,7 +58,6 @@ const PurchaseDetailsPage = () => {
 
   // Modal States
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -103,21 +103,20 @@ const PurchaseDetailsPage = () => {
   };
 
   // 1. Open Modal
-  const handleCancelClick = () => {
-    setCancelReason(""); 
+  const handleCancelClick = () => { 
     setShowCancelModal(true);
   };
 
   // 2. Execute Cancel
-  const executeCancelPurchase = async () => {
-    if (!cancelReason.trim()) {
+  const executeCancelPurchase = async (reason) => {
+    if (!reason?.trim()) {
       toast.error("Cancel reason is required!");
       return;
     }
 
     try {
       setIsCanceling(true);
-      await purchasesAPI.cancel(id, { reason: cancelReason });
+      await purchasesAPI.cancel(id, { reason: reason });
       toast.success("Purchase canceled successfully!");
       setShowCancelModal(false); 
       loadData(); 
@@ -574,39 +573,18 @@ const PurchaseDetailsPage = () => {
             </div>
       </Modal>
 
-      <Modal isOpen={showCancelModal} onClose={() => setShowCancelModal(false)} title="Cancel Purchase" size="sm">
-            
-            <p className="text-sm text-slate-500 mb-5 leading-relaxed">
-              Are you sure you want to cancel this purchase? This action will reverse the stock. Please provide a reason below.
-            </p>
-            
-            <textarea
-              className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none mb-6 text-sm bg-slate-50 text-slate-700 placeholder:text-slate-600 transition-all"
-              rows="3"
-              placeholder="Type cancellation reason here..."
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              autoFocus
-            />
-            
-            <div className="flex justify-end gap-3">
-              <Button 
-                variant="secondary" 
-                onClick={() => setShowCancelModal(false)}
-                disabled={isCanceling}
-                className="hover:bg-slate-100"
-              >
-                Go Back
-              </Button>
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200 transition-all" 
-                onClick={executeCancelPurchase}
-                disabled={isCanceling}
-              >
-                {isCanceling ? "Processing..." : "Confirm Cancel"}
-              </Button>
-            </div>
-      </Modal>
+      <ConfirmDialog
+            isOpen={showCancelModal}
+            onClose={() => setShowCancelModal(false)}
+            onConfirm={executeCancelPurchase}
+            title="Cancel Purchase"
+            message="Are you sure you want to cancel this purchase?"
+            detail="This action will reverse the stock. Please provide a reason below."
+            input={{ multiline: true, placeholder: "Type cancellation reason here..." }}
+            busy={isCanceling}
+            cancelLabel="Go Back"
+            confirmLabel={isCanceling ? "Canceling..." : "Cancel Purchase"}
+          />
 
     </div>
   );

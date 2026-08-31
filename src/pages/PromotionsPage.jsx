@@ -14,6 +14,7 @@ import Modal from "../components/common/Modal";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { DISCOUNT_TYPES } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const INITIAL_FORM = {
   id: null,
@@ -440,27 +441,16 @@ const PromotionsPage = () => {
         </Card>
       </div>
 
-      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Promotion" size="sm">
-        <div className="space-y-5">
-          <div className="flex gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
-              <Trash2 size={20} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">
-                Delete "{deleteTarget?.name}"?
-              </p>
-              <p className="mt-1 text-sm leading-6 text-slate-500">
-                This removes the promotion rule immediately.
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="danger" onClick={() => deletePromotion(deleteTarget)}>Delete</Button>
-          </div>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => deletePromotion(deleteTarget)}
+        title="Delete Promotion"
+        icon={Trash2}
+        message={`Delete "${deleteTarget?.name}"?`}
+        detail="This removes the promotion rule immediately."
+        confirmLabel="Delete"
+      />
     </div>
   );
 };

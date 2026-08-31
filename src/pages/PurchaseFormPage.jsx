@@ -17,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { ItemType } from "../utils/constants";
 import { formatCurrency, getLocalDateString } from "../utils/formatters";
 import { useSearchOnType } from "../hooks/useSearchOnType";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   formatDisplayStockQuantity,
   formatStockQuantity,
@@ -902,33 +903,22 @@ const PurchaseFormPage = () => {
         onCreated={handleSupplierCreated}
       />
 
-      <Modal
+      <ConfirmDialog
         isOpen={!!pendingNegativeStockItem}
         onClose={() => resolveNegativeStockDialog(false)}
+        onConfirm={() => resolveNegativeStockDialog(true)}
         title="Negative Stock Detected"
-        size="sm"
-      >
-        {pendingNegativeStockItem && (
-          <div>
-            <p className="text-sm text-slate-600">
-              <span className="font-semibold text-slate-800">{pendingNegativeStockItem.name}</span> currently has{" "}
-              <span className="font-bold text-red-600">{formatDisplayStockQuantity(pendingNegativeStockItem)}</span> stock.
-            </p>
-            <p className="mt-2 text-sm text-slate-600">
-              Do you want to adjust this back to 0 before adding the new purchase quantity? If you choose No, the purchased
-              quantity will simply be added on top of the current negative stock.
-            </p>
-            <div className="mt-5 flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => resolveNegativeStockDialog(false)}>
-                No, just add on top
-              </Button>
-              <Button onClick={() => resolveNegativeStockDialog(true)}>
-                Yes, adjust to 0 first
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+        tone="primary"
+        message={pendingNegativeStockItem ? (
+          <>
+            <span className="font-semibold text-slate-800">{pendingNegativeStockItem.name}</span> currently has{" "}
+            <span className="font-bold text-red-600">{formatDisplayStockQuantity(pendingNegativeStockItem)}</span> stock.
+          </>
+        ) : null}
+        detail="Do you want to adjust this back to 0 before adding the new purchase quantity? If you choose No, the purchased quantity will simply be added on top of the current negative stock."
+        cancelLabel="No, just add on top"
+        confirmLabel="Yes, adjust to 0 first"
+      />
     </div>
   );
 };
