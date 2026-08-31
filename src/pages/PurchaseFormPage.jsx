@@ -804,8 +804,8 @@ const PurchaseFormPage = () => {
 
         <PanelResizeHandle onMouseDown={handleResizeStart} isResizing={isResizingPanels} />
 
-        <div className="purchase-split-panel custom-scrollbar min-w-0 flex-1 space-y-4 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto" style={{ animationDelay: "230ms" }}>
-          <Card className="sales-panel-enter flex min-h-[520px] flex-col overflow-hidden p-0" style={{ animationDelay: "260ms" }}>
+        <div className="purchase-split-panel min-w-0 flex-1 space-y-4 lg:flex lg:max-h-[calc(100vh-11rem)] lg:flex-col" style={{ animationDelay: "230ms" }}>
+          <Card className="sales-panel-enter flex min-h-[520px] flex-col overflow-hidden p-0 lg:min-h-0 lg:flex-1" style={{ animationDelay: "260ms" }}>
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -821,7 +821,7 @@ const PurchaseFormPage = () => {
                 </div>
               </div>
             </div>
-            <div className="custom-scrollbar flex-1 overflow-x-auto">
+            <div className="custom-scrollbar min-h-0 flex-1 overflow-x-auto lg:overflow-y-auto">
               <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="border-b bg-white text-slate-500">
                   <tr>
@@ -888,7 +888,7 @@ const PurchaseFormPage = () => {
             <Button
               onClick={handleSubmit}
               size="lg"
-              className="bg-emerald-600 hover:bg-emerald-700 shadow-lg w-full md:w-auto px-8"
+              className="finalize-purchase-btn bg-emerald-600 hover:bg-emerald-700 shadow-lg w-full md:w-auto px-8"
               disabled={cartItems.length === 0}
             >
               <Save size={18} className="mr-2" /> Finalize Purchase

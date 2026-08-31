@@ -1976,6 +1976,20 @@ html[data-animation-level="balanced"] #root table tbody tr {
 }
 
 
+/* Finalize Purchase asked to be a white plate in dark rather than an emerald
+   one - it is the panel's single commit action, the same job Save All and
+   Confirm & Print do, and they are all white plates. Scoped to the one
+   button; light keeps its emerald. */
+:root[data-theme="dark"] .finalize-purchase-btn,
+:root[data-theme="dark"] .finalize-purchase-btn:hover {
+  background-color: rgb(var(--c-slate-900));
+  color: rgb(var(--c-slate-50));
+}
+
+:root[data-theme="dark"] .finalize-purchase-btn:hover {
+  background-color: rgb(var(--c-slate-800));
+}
+
 /* The budget colours have the same trap the blue plates had: in dark, red,
    emerald and amber fills brighten (red-500 becomes #f87171, emerald-600
    #34d399, amber-600 #fbbf24) while a paired text-white stays white - and
