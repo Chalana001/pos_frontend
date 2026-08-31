@@ -1,6 +1,61 @@
-export const APP_VERSION = "2.3.0";
+export const APP_VERSION = "2.4.0";
 
 export const VERSION_HISTORY = [
+  {
+    version: "2.4.0",
+    title: "Dark Mode, One-Colour Focus & Faster Everyday Flows",
+    releaseDate: "2026-08-31",
+    summary:
+      "The whole POS learns a real dark mode: a Light / Dark / System switch in the header repaints every screen through one palette, and dark deliberately spends only one colour - the ZenSys logo cyan - on the few numbers a shop owner must not miss (money due, going offline, stock running out). Everything else on the black screen is clean white, receipts always print on white paper, and light mode is untouched. Around it, the release tightens daily work: every confirmation in the app now goes through one consistent dialog, the busy two-pane screens grew a draggable divider with independently scrolling sides, barcode labels for a delivery are now two clicks from the purchase itself, and a sale that was returned finally says so in the history list. Under the hood, sign-in gets brute-force lockout and instantly revocable sessions.",
+    highlights: [
+      "Dark mode across the entire app - pick Light, Dark, or System from the header; the choice is remembered per device and receipts still print on white.",
+      "Dark spends one colour only: the logo cyan marks money at risk, the offline state, and stock at risk - everything else is black and white, so the important numbers are impossible to miss.",
+      "A sale with returns now shows it in Sales History - a RETURNED or PARTIAL RETURN badge plus the refunded amount right under the total, instead of hiding inside the sale.",
+      "Print barcode labels for a delivery straight from the purchase: a Print Barcodes button on the purchase carries its items into the queue with quantities preset to what was bought.",
+      "Promotions, Dining Tables, Expense Types, Bulk Add, Barcode Print and New Purchase all gained the POS-style draggable divider, each side scrolling on its own, with your chosen width remembered.",
+      "Every confirmation in the app - deletes, cancellations, resets, overrides - now uses one consistent dialog, and destructive actions always confirm in the danger style.",
+      "Repeated failed sign-ins lock the account for a cooldown instead of inviting more guesses, and resetting a password now signs out every device that user was logged into.",
+      "Fixed: processing a sale return could not work at all from the return screen - quantities typed in one row mirrored into every row and submission was rejected.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Theme switch (Light / Dark / System) in the header - a dropdown on wide screens, an icon that steps through the modes on tablets, and an entry in the profile menu on phones. The choice is stored per device and applied before first paint, so there is no flash.",
+          "A full dark palette built as a remap of the existing one: every screen follows a single data-theme switch, with the sidebar, the logo and its animation deliberately unchanged, and print output always pinned to white paper.",
+          "The one-accent rule for dark: the logo cyan (#00b4c8) is reserved for due and overdue money, the offline indicator, and low/out/negative stock counts. A build-time check now fails if any other colour class sneaks into dark unmapped.",
+          "Print Barcodes from a purchase - the button on Purchase Details seeds the print queue with that invoice's items, print quantity preset to the purchased quantity, duplicate lines merged. The barcode page itself no longer auto-loads anything; Load fetches recent items only when asked.",
+          "Draggable two-pane layout (the POS split) on Promotions, Dining Tables, Expense Types, Bulk Add Items, Barcode Print and New Purchase - both sides scroll independently and the divider position is remembered per screen.",
+          "Returns visible in Sales History: RETURNED / PARTIAL RETURN status plus the refunded amount and count under the grand total.",
+          "Shared confirmation dialog used by every destructive or confirming action, with a reason input where one is required - the app no longer opens a single native browser dialog anywhere.",
+          "Table skeletons and teaching empty states built into the shared table - lists hold their layout while loading and say where their first record will come from when empty.",
+          "Account lockout after repeated failed sign-ins (answering with a cooldown rather than a retry hint), a logout that actually revokes the token, a durable per-user session cut-off that survives restarts, and a password-strength rule enforced on every password form with the same rule mirrored in the admin panel.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "The dashboard chart lead series and the reports first series now wear the logo cyan instead of a generic blue.",
+          "The sidebar collapses to an icon rail on laptop-width screens instead of crowding the POS grid, and the header adapts down to very small tills - the branch selector becomes an icon, the theme control moves into the profile menu, and nothing overlaps at any width.",
+          "New Purchase defaults to a 40/60 split in favour of the items list, the divider now drags in both directions, and only the items table scrolls - Finalize stays pinned in view.",
+          "Finalize Purchase, Confirm & Print and the other commit buttons read as white plates in dark, keeping one consistent action style.",
+          "Toasts follow the theme - dark shows a dark card with white text and white icons instead of a glaring white rectangle.",
+          "The sign-in screen in dark is true black and white with the grid texture kept; light keeps the branded blue.",
+          "The Sales Overview axis no longer clips its LKR labels, and Procurement Planning first-paints a skeleton and uses the app's own form controls.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Sale returns were broken end to end from the return screen: every row shared one quantity bucket (typing in one row changed all of them), already-returned quantities never subtracted, and submitting was rejected - the sale's line items now carry the id the flow needed.",
+          "Dark-mode contrast failures on solid red, amber and emerald fills (measured as low as 1.7:1) - those fills now render as white plates with dark text.",
+          "The table hover stripe stayed blue on the black-and-white screen; it now follows the theme accent.",
+          "The header right side overlapped the branch selector between 1024 and 1250 pixels wide.",
+          "The split divider stopped short of the taller pane instead of running its full height.",
+        ],
+      },
+    ],
+  },
   {
     version: "2.3.0",
     title: "Demand Forecasting, Procurement Planning & Scheduled Report Exports",
