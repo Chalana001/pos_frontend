@@ -1413,7 +1413,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
   html[data-animation-level="off"] #root table tbody tr:hover,
   html[data-animation-level="balanced"] #root table tbody tr:hover {
     transform: none;
-    box-shadow: inset 3px 0 0 rgb(37 99 235 / 0.55);
+    box-shadow: inset 3px 0 0 rgb(var(--accent) / 0.55);
   }
 }
 
@@ -1424,7 +1424,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
 @media (hover: hover) and (pointer: fine) {
   #root table tbody tr:hover {
     transform: translateY(-1px);
-    box-shadow: inset 3px 0 0 rgb(37 99 235 / 0.55);
+    box-shadow: inset 3px 0 0 rgb(var(--accent) / 0.55);
   }
 }
 
