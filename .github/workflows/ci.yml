@@ -135,7 +135,9 @@ jobs:
               ! -name '.user.ini' ! -name '.well-known' ! -name '.htaccess' \
               -exec rm -rf {} +
             tar -xzf "$BUNDLE" -C "$SITE_DIR"
-            chown -R www:www "$SITE_DIR"
+            # aaPanel pins .user.ini immutable (chattr +i), so a blanket
+            # chown -R dies on it; own everything else.
+            find "$SITE_DIR" -mindepth 1 -maxdepth 1 ! -name '.user.ini'               -exec chown -R www:www {} +
             rm -f "$BUNDLE"
 
             echo "== 3/4 health check over the real domain"
@@ -158,6 +160,6 @@ jobs:
               ! -name '.user.ini' ! -name '.well-known' ! -name '.htaccess' \
               -exec rm -rf {} +
             unzip -qo "$BACKUP_ZIP" -d "$SITE_DIR"
-            chown -R www:www "$SITE_DIR"
+            find "$SITE_DIR" -mindepth 1 -maxdepth 1 ! -name '.user.ini'               -exec chown -R www:www {} +
             echo "restored $(basename "$BACKUP_ZIP")"
             exit 1
