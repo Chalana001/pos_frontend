@@ -25,9 +25,13 @@ import { ANIMATION_LEVELS } from "../utils/animationPreferences";
 
 const SalesOverviewChart = lazy(() => import("../components/dashboard/SalesOverviewChart"));
 
-const getChartDateRange = () => {
+const getChartDateRange = (mode = "daily") => {
   const today = new Date();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  // Daily charts this month's days; monthly needs a year of months, or the
+  // chart holds a single half-filled bucket and draws nothing.
+  const firstDay = mode === "monthly"
+    ? new Date(today.getFullYear(), today.getMonth() - 11, 1)
+    : new Date(today.getFullYear(), today.getMonth(), 1);
   const to = new Date(today.getTime() - (today.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
   const from = new Date(firstDay.getTime() - (firstDay.getTimezoneOffset() * 60000)).toISOString().split("T")[0];
   return { from, to };
@@ -155,12 +159,16 @@ const Dashboard = () => {
     setChartMode(mode);
     setChartLoading(true);
     try {
-      const { from, to } = getChartDateRange();
+      const { from, to } = getChartDateRange(mode);
       const params = { branchId, from, to };
       const response = mode === "daily"
         ? await dashboardAPI.getDailyChart(params)
         : await dashboardAPI.getMonthlyChart(params);
-      setChartData(response.data);
+      // The monthly endpoint keys buckets as { month: "2026-09" }, but the
+      // chart reads { date } - remap or the plot stays empty.
+      setChartData(mode === "daily"
+        ? response.data
+        : response.data.map(({ month, sales }) => ({ date: `${month}-01`, sales })));
     } catch (error) {
       console.error(`Failed to fetch ${mode} chart data:`, error);
       setChartData([]);
