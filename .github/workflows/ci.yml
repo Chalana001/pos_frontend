@@ -1,21 +1,34 @@
-# CI for the POS web app.
+# POS web app CI/CD.
 #
-# The gate is exactly what a local `npm run build:check` runs, in the same
-# order: the colour-budget ratchet first (source-only, fails fast), then the
-# production build, then the bundle-size budget. Lint runs alongside because
-# it is the only test surface the frontends have.
-name: ci
+# `build` runs on every push and PR: lint, the dark-mode colour-budget
+# ratchet, the production build (with the real production env baked in from
+# repo variables/secrets - a Vite bundle hardcodes them at build time), and
+# the bundle budget. `deploy` runs only for main after build is green and
+# ships the exact bundle that passed.
+#
+# On the VPS the deploy zips the live site folder into a dated backup first,
+# replaces the folder's contents while preserving the server-owned dotfiles
+# (.user.ini, .well-known - aaPanel and SSL renewal live there), fixes
+# ownership, and then fetches the site over the real domain expecting the app
+# shell AND its main script to answer. If either fails, the backup zip is
+# restored and the run goes red - a broken deploy puts the old site back.
+name: POS Frontend CI/CD
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: pos-frontend-cicd-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v4
         with:
@@ -31,10 +44,115 @@ jobs:
       - name: Colour budget
         run: npm run check:colours
 
+      - name: Guard the production env
+        # An empty VITE_API_URL builds a bundle that talks to nowhere; catch
+        # the missing repo variable here with a readable message instead of
+        # shipping a dead app.
+        run: |
+          if [ -z "${{ vars.VITE_API_URL }}" ]; then
+            echo "::error::Repo variable VITE_API_URL is not set (Settings > Secrets and variables > Actions > Variables)."
+            exit 1
+          fi
+
       - name: Build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_PRINT_AGENT_URL: ${{ vars.VITE_PRINT_AGENT_URL }}
+          VITE_PRINT_AGENT_TOKEN: ${{ secrets.VITE_PRINT_AGENT_TOKEN }}
         run: npm run build
 
       - name: Bundle budget
-        # Known red on the entry chunk (67KB vs 65KB budget, pre-existing);
-        # report it without failing the pipeline until the budget is retuned.
+        # Known red on the entry chunk (67KB vs 65KB, pre-existing); report
+        # without failing until the budget is retuned.
         run: npm run check:bundle || echo "::warning::bundle budget exceeded (known, tracked)"
+
+      - name: Pack the tested bundle
+        run: tar -czf pos-frontend-dist.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pos-frontend-dist
+          path: pos-frontend-dist.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pos-frontend-dist
+
+      - name: Upload bundle to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          source: "pos-frontend-dist.tar.gz"
+          target: "/tmp"
+
+      - name: Switch the site to the new bundle
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          envs: SITE_URL
+          command_timeout: 10m
+          script: |
+            set -e
+
+            SITE_DIR="/www/wwwroot/demo.chalanawijesingha.xyz"
+            BACKUP_DIR="/www/backup/site/pos-frontend"
+            BUNDLE="/tmp/pos-frontend-dist.tar.gz"
+            SITE_URL="${SITE_URL:-https://demo.chalanawijesingha.xyz}"
+
+            [ -f "$BUNDLE" ] || { echo "uploaded bundle missing"; exit 1; }
+            [ -d "$SITE_DIR" ] || { echo "site folder missing: $SITE_DIR"; exit 1; }
+
+            echo "== 1/4 back up the live site"
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_ZIP="$BACKUP_DIR/site-$(date +%Y%m%d_%H%M%S).zip"
+            (cd "$SITE_DIR" && zip -qr "$BACKUP_ZIP" .)
+            (cd "$BACKUP_DIR" && ls -t site-*.zip | tail -n +4 | xargs -r rm -f --)
+            echo "   $BACKUP_ZIP"
+
+            echo "== 2/4 swap in the new bundle"
+            # server-owned files stay: aaPanel's .user.ini and the SSL
+            # renewal directory are not the app's to delete.
+            find "$SITE_DIR" -mindepth 1 -maxdepth 1 \
+              ! -name '.user.ini' ! -name '.well-known' ! -name '.htaccess' \
+              -exec rm -rf {} +
+            tar -xzf "$BUNDLE" -C "$SITE_DIR"
+            chown -R www:www "$SITE_DIR"
+            rm -f "$BUNDLE"
+
+            echo "== 3/4 health check over the real domain"
+            HEALTHY=""
+            INDEX=$(curl -sf -m 15 "$SITE_URL/" || true)
+            if echo "$INDEX" | grep -q 'id="root"'; then
+              ASSET=$(echo "$INDEX" | grep -oE '/assets/index-[^"]+\.js' | head -1)
+              if [ -n "$ASSET" ] && curl -sf -m 15 -o /dev/null "$SITE_URL$ASSET"; then
+                HEALTHY="yes"
+              fi
+            fi
+
+            if [ -n "$HEALTHY" ]; then
+              echo "== 4/4 DEPLOYED: the site serves the new bundle."
+              exit 0
+            fi
+
+            echo "== 4/4 HEALTH CHECK FAILED - restoring the backup"
+            find "$SITE_DIR" -mindepth 1 -maxdepth 1 \
+              ! -name '.user.ini' ! -name '.well-known' ! -name '.htaccess' \
+              -exec rm -rf {} +
+            unzip -qo "$BACKUP_ZIP" -d "$SITE_DIR"
+            chown -R www:www "$SITE_DIR"
+            echo "restored $(basename "$BACKUP_ZIP")"
+            exit 1
