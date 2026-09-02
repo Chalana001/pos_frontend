@@ -67,7 +67,11 @@ jobs:
         run: npm run check:bundle || echo "::warning::bundle budget exceeded (known, tracked)"
 
       - name: Pack the tested bundle
-        run: tar -czf pos-frontend-dist.tar.gz -C dist .
+        # version.txt rides inside the bundle: the live folder always says
+        # which version it holds, and the next deploy names its backup by it.
+        run: |
+          node -p "require('./package.json').version" > dist/version.txt
+          tar -czf pos-frontend-dist.tar.gz -C dist .
 
       - uses: actions/upload-artifact@v4
         with:
@@ -118,7 +122,8 @@ jobs:
 
             echo "== 1/4 back up the live site"
             mkdir -p "$BACKUP_DIR"
-            BACKUP_ZIP="$BACKUP_DIR/site-$(date +%Y%m%d_%H%M%S).zip"
+            OLD_VER=$(cat "$SITE_DIR/version.txt" 2>/dev/null || echo unknown)
+            BACKUP_ZIP="$BACKUP_DIR/site-v${OLD_VER}-$(date +%Y%m%d_%H%M%S).zip"
             (cd "$SITE_DIR" && zip -qr "$BACKUP_ZIP" .)
             (cd "$BACKUP_DIR" && ls -t site-*.zip | tail -n +4 | xargs -r rm -f --)
             echo "   $BACKUP_ZIP"
