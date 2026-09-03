@@ -72,39 +72,32 @@ const ReceiptPrinter = forwardRef((props, ref) => {
       }
 
       // ── Legacy React-component based printing (fallback) ──────────────────
-      const itemsPerPage = 15;
-      const totalPages = Math.max(1, Math.ceil(itemList.length / itemsPerPage));
-
-      const pagesHtml = Array.from({ length: totalPages }, (_, pageIndex) => {
-        const currentItems = itemList.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage);
-        const isLastPage = pageIndex === totalPages - 1;
-
-        return renderToStaticMarkup(
-          <ReceiptTemplate
-            templateType={PRINT_TEMPLATE_TYPES.THERMAL}
-            settings={settings}
-            branchData={branchData}
-            storeName={storeName}
-            orderData={orderData}
-            items={currentItems}
-            customerData={customerData}
-            pageNumber={pageIndex + 1}
-            totalPages={totalPages}
-            showTotals={isLastPage}
-            showCredits={isLastPage}
-            showContinued={!isLastPage}
-            mode="print"
-            language={language}
-          />
-        );
-      }).join('');
+      // Thermal roll paper is continuous — one receipt, height driven by content.
+      const pagesHtml = renderToStaticMarkup(
+        <ReceiptTemplate
+          templateType={PRINT_TEMPLATE_TYPES.THERMAL}
+          settings={settings}
+          branchData={branchData}
+          storeName={storeName}
+          orderData={orderData}
+          items={itemList}
+          customerData={customerData}
+          pageNumber={1}
+          totalPages={1}
+          showTotals
+          showCredits
+          showContinued={false}
+          mode="print"
+          language={language}
+        />
+      );
 
       const receiptHtml = `
         <!DOCTYPE html>
         <html lang="${language === 'si' ? 'si' : 'en'}">
         <head>
           <style>
-            @page { size: auto; margin: 0; }
+            @page { size: ${settings.paperWidthMm}mm auto; margin: 0; }
             html, body { margin: 0; padding: 0; background-color: #ffffff; }
             body { margin: 0; padding: 0; background-color: #ffffff; }
           </style>
