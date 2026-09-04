@@ -297,6 +297,7 @@ const PurchaseFormPage = () => {
         cost: item.costPrice || 0,
         sell: item.sellingPrice || 0,
         qty: "",
+        free: "",
         qtyUnit: item.defaultUnit || "PCS",
         expiry: ""
       };
@@ -360,9 +361,11 @@ const PurchaseFormPage = () => {
 
     Object.entries(branchInputs).forEach(([branchIdStr, data]) => {
       const weightItem = isMeasuredItem(selectedItem);
-      const qty = weightItem ? parseFloat(data.qty) : Number(data.qty);
+      const qty = (weightItem ? parseFloat(data.qty) : Number(data.qty)) || 0;
+      const freeQty = (weightItem ? parseFloat(data.free) : Number(data.free)) || 0;
 
-      if (qty > 0) {
+      // A row may be paid, free-of-charge (supplier FOC), or both.
+      if (qty > 0 || freeQty > 0) {
         const branch = branches.find(b => b.id == branchIdStr);
 
         newRows.push({
@@ -373,12 +376,14 @@ const PurchaseFormPage = () => {
           branchId: Number(branchIdStr),
           branchName: branch?.name || "Unknown",
           qty: qty,
+          freeQty: freeQty,
           qtyUnit: weightItem ? data.qtyUnit : undefined,
           weightItem: weightItem,
           costPrice: Number(data.cost),
           sellingPrice: Number(data.sell),
           expiryDate: data.expiry || null,
           zeroNegativeStock: !!selectedItem.zeroNegativeStock,
+          // Free units add nothing to the payable amount.
           lineTotal: calculateMeasuredLineTotal(qty, data.qtyUnit, data.cost, weightItem)
         });
       }
@@ -429,7 +434,8 @@ const PurchaseFormPage = () => {
 
       branchesMap[item.branchId].items.push({
         itemId: item.itemId,
-        qty: item.qty,
+        qty: item.qty > 0 ? item.qty : null,
+        freeQty: item.freeQty > 0 ? item.freeQty : null,
         qtyUnit: item.qtyUnit,
         costPrice: item.costPrice,
         sellingPrice: item.sellingPrice,
@@ -479,8 +485,14 @@ const PurchaseFormPage = () => {
     .filter((branch) => branchIdsInPurchase.includes(Number(branch.id)))
     .map((branch) => ({ value: String(branch.id), label: branch.name }));
   const effectiveCostForLine = (item, index) => {
+    // Free units dilute the unit cost even when there is no invoice discount:
+    // the money paid is spread over everything received (paid + free).
+    const freeQtyPrimary = getPrimaryUnitQty({ ...item, qty: item.freeQty || 0 });
+    const totalQty = getPrimaryUnitQty(item) + freeQtyPrimary;
+
     if (normalizedDiscountAmount <= 0 || subtotal <= 0) {
-      return item.costPrice;
+      if (freeQtyPrimary <= 0) return item.costPrice;
+      return totalQty > 0 ? item.lineTotal / totalQty : item.costPrice;
     }
 
     const allocatedBefore = cartItems.slice(0, index).reduce((sum, line) => {
@@ -491,9 +503,8 @@ const PurchaseFormPage = () => {
       ? normalizedDiscountAmount - allocatedBefore
       : Number(((normalizedDiscountAmount * item.lineTotal) / subtotal).toFixed(2));
     const netLineTotal = Math.max(0, item.lineTotal - lineDiscount);
-    const qty = getPrimaryUnitQty(item);
 
-    return qty > 0 ? netLineTotal / qty : item.costPrice;
+    return totalQty > 0 ? netLineTotal / totalQty : item.costPrice;
   };
 
   return (
@@ -724,6 +735,7 @@ const PurchaseFormPage = () => {
                           <th className="w-[120px] px-2 py-2 text-right">Cost</th>
                           <th className="w-[120px] px-2 py-2 text-right">Sell</th>
                           <th className="w-[110px] px-2 py-2 text-center">Qty</th>
+                          <th className="w-[96px] px-2 py-2 text-center">Free</th>
                           {isMeasuredItem(selectedItem) && <th className="w-[92px] px-2 py-2 text-center">Unit</th>}
                           <th className="w-[160px] px-2 py-2 text-center">Expiry</th>
                           <th className="w-[42px] px-2 py-2 text-center"></th>
@@ -767,6 +779,20 @@ const PurchaseFormPage = () => {
                                   placeholder="Qty"
                                   value={inputs.qty}
                                   onChange={(e) => handleInputChange(branch.id, 'qty', e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleAddToList();
+                                  }}
+                                />
+                              </td>
+                              <td className="px-2 py-2">
+                                <input aria-label="Free qty"
+                                  type="number"
+                                  step={weightItem ? "0.1" : "1"}
+                                  className={`input h-9 w-full min-w-[80px] px-2 text-center text-sm font-bold ${inputs.free > 0 ? 'border-sky-500 bg-sky-50' : ''}`}
+                                  placeholder="Free"
+                                  title="Free-of-charge units from the supplier (not billed)"
+                                  value={inputs.free}
+                                  onChange={(e) => handleInputChange(branch.id, 'free', e.target.value)}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleAddToList();
                                   }}
@@ -872,7 +898,7 @@ const PurchaseFormPage = () => {
                         </td>
                         <td className="p-3 text-right text-slate-600">
                           <div>{item.costPrice.toFixed(2)}</div>
-                          {normalizedDiscountAmount > 0 ? (
+                          {normalizedDiscountAmount > 0 || item.freeQty > 0 ? (
                             <div className="text-xs font-semibold text-emerald-600">
                               Eff. {effectiveCostForLine(item, index).toFixed(2)}
                             </div>
@@ -882,6 +908,11 @@ const PurchaseFormPage = () => {
                         <td className="p-3 text-center font-bold text-slate-800">
                           {item.weightItem ? item.qty.toFixed(2) : item.qty}
                           {item.qtyUnit && <span className="text-xs text-slate-500 ml-1">{item.qtyUnit}</span>}
+                          {item.freeQty > 0 && (
+                            <div className="text-xs font-semibold text-sky-600">
+                              +{item.weightItem ? item.freeQty.toFixed(2) : item.freeQty} free
+                            </div>
+                          )}
                         </td>
                         <td className="p-3 text-right font-bold text-slate-800">{item.lineTotal.toLocaleString()}</td>
                         <td className="p-3 text-center">

@@ -99,6 +99,11 @@ const PurchaseReturnPage = () => {
   const maxReturnableQty = (grnItemId, originalQty) =>
     Math.max(0, originalQty - (alreadyReturnedMap[grnItemId] || 0));
 
+  // Free (FOC) units were received into stock too, so they count as returnable.
+  // Their refund uses the line's diluted cost price, so a full return refunds
+  // exactly what was paid.
+  const receivedQty = (item) => Number(item.qty || 0) + Number(item.freeQty || 0);
+
   const setQtyForItem = (grnItemId, value) => {
     const parsed = Math.max(0, parseInt(value, 10) || 0);
     setReturnQtys((prev) => ({ ...prev, [grnItemId]: parsed }));
@@ -107,7 +112,7 @@ const PurchaseReturnPage = () => {
   const toggleSelectAll = () => {
     if (!selectedGrn) return;
     const allAtMax = selectedGrn.items.every((item) => {
-      const max = maxReturnableQty(item.id, Number(item.qty));
+      const max = maxReturnableQty(item.id, receivedQty(item));
       return (returnQtys[item.id] || 0) === max;
     });
     if (allAtMax) {
@@ -115,7 +120,7 @@ const PurchaseReturnPage = () => {
     } else {
       const newQtys = {};
       selectedGrn.items.forEach((item) => {
-        const max = maxReturnableQty(item.id, Number(item.qty));
+        const max = maxReturnableQty(item.id, receivedQty(item));
         if (max > 0) newQtys[item.id] = max;
       });
       setReturnQtys(newQtys);
@@ -400,7 +405,7 @@ const PurchaseReturnPage = () => {
                 </div>
                 <button className="text-xs text-blue-600 hover:underline font-medium" onClick={toggleSelectAll}>
                   {selectedGrn.items.every((item) =>
-                    (returnQtys[item.id] || 0) === maxReturnableQty(item.id, Number(item.qty))
+                    (returnQtys[item.id] || 0) === maxReturnableQty(item.id, receivedQty(item))
                   ) ? "Deselect All" : "Select All"}
                 </button>
               </div>
@@ -420,7 +425,7 @@ const PurchaseReturnPage = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {selectedGrn.items?.map((item) => {
-                      const originalQty = Number(item.qty);
+                      const originalQty = receivedQty(item);
                       const already = alreadyReturnedMap[item.id] || 0;
                       const maxRet = maxReturnableQty(item.id, originalQty);
                       const currentQty = returnQtys[item.id] || 0;
@@ -438,7 +443,12 @@ const PurchaseReturnPage = () => {
                               </span>
                             )}
                           </td>
-                          <td className="p-4 text-center text-slate-600">{item.qty}</td>
+                          <td className="p-4 text-center text-slate-600">
+                            {item.qty}
+                            {Number(item.freeQty) > 0 && (
+                              <span className="ml-1 text-xs font-semibold text-sky-600">+{item.freeQty} free</span>
+                            )}
+                          </td>
                           <td className="p-4 text-center">
                             {already > 0
                               ? <span className="text-blue-600 font-semibold">{already}</span>

@@ -217,7 +217,8 @@ const PurchaseDetailsPage = () => {
                   name: item.itemName,
                   barcode: item.barcode,
                   sellingPrice: Number(item.sellingPrice) || 0,
-                  printQty: Math.max(1, Math.round(Number(item.qty) || 1)),
+                  // Free (FOC) units were received too, so they need labels as well.
+                  printQty: Math.max(1, Math.round((Number(item.qty) || 0) + (Number(item.freeQty) || 0)) || 1),
                 }));
               if (printItems.length === 0) {
                 toast.error("No items with barcodes on this purchase");
@@ -445,6 +446,11 @@ const PurchaseDetailsPage = () => {
                                                         <span className="bg-slate-100 px-2 py-1 rounded font-bold text-slate-700">
                                                             {item.qty}
                                                         </span>
+                                                        {Number(item.freeQty) > 0 && (
+                                                            <span className="ml-1 bg-sky-100 px-2 py-1 rounded text-xs font-bold text-sky-700">
+                                                                +{item.freeQty} free
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="p-3 text-right font-bold text-slate-800 pr-6">
                                                         {item.lineTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}
