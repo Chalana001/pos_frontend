@@ -104,6 +104,12 @@ const PurchaseReturnPage = () => {
   // exactly what was paid.
   const receivedQty = (item) => Number(item.qty || 0) + Number(item.freeQty || 0);
 
+  // costPrice is per PRIMARY unit (pc / kg / l); a line entered in G or ML needs
+  // the /1000, otherwise the preview shows 1000x the real refund. The backend
+  // computes the authoritative amount the same way.
+  const lineRefund = (item, qty) =>
+    (qty * Number(item.costPrice || 0)) / (item.qtyUnit === "G" || item.qtyUnit === "ML" ? 1000 : 1);
+
   const setQtyForItem = (grnItemId, value) => {
     const parsed = Math.max(0, parseInt(value, 10) || 0);
     setReturnQtys((prev) => ({ ...prev, [grnItemId]: parsed }));
@@ -134,7 +140,7 @@ const PurchaseReturnPage = () => {
       .map((item) => ({
         item,
         returnQty: returnQtys[item.id] || 0,
-        returnLine: (returnQtys[item.id] || 0) * Number(item.costPrice || 0),
+        returnLine: lineRefund(item, returnQtys[item.id] || 0),
       }))
       .filter((l) => l.returnQty > 0);
   }, [selectedGrn, returnQtys]);
@@ -429,7 +435,7 @@ const PurchaseReturnPage = () => {
                       const already = alreadyReturnedMap[item.id] || 0;
                       const maxRet = maxReturnableQty(item.id, originalQty);
                       const currentQty = returnQtys[item.id] || 0;
-                      const returnLine = currentQty * Number(item.costPrice || 0);
+                      const returnLine = lineRefund(item, currentQty);
                       const fullyReturned = maxRet === 0;
 
                       return (
