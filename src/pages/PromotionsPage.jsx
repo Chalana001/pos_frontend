@@ -115,6 +115,10 @@ const PromotionsPage = () => {
     setForm((prev) => ({
       ...prev,
       scope,
+      // Cleared, not just hidden: leaving stale limits in state meant a cap typed for a bill
+      // promotion followed the form into an item promotion and was saved with it.
+      minBillAmount: "",
+      maxDiscountAmount: "",
       itemIds: [],
       categoryIds: [],
       subCategoryIds: [],
@@ -323,18 +327,23 @@ const PromotionsPage = () => {
               </label>
             </div>
 
-            {(form.scope === "BILL" || form.scope === "CUSTOMER") && (
-              <div className="grid grid-cols-2 gap-3">
-                <label>
-                  <span className="text-sm font-medium text-slate-700">Minimum Bill</span>
-                  <input type="number" min="0" step="0.01" value={form.minBillAmount} onChange={(event) => updateForm("minBillAmount", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                </label>
-                <label>
-                  <span className="text-sm font-medium text-slate-700">Max Discount</span>
-                  <input type="number" min="0" step="0.01" value={form.maxDiscountAmount} onChange={(event) => updateForm("maxDiscountAmount", event.target.value)} placeholder="No cap" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                </label>
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-3">
+              <label>
+                <span className="text-sm font-medium text-slate-700">Minimum Bill</span>
+                <input type="number" min="0" step="0.01" value={form.minBillAmount} onChange={(event) => updateForm("minBillAmount", event.target.value)} placeholder="No minimum" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+              <label>
+                <span className="text-sm font-medium text-slate-700">
+                  {form.scope === "ITEM" || form.scope === "CATEGORY" ? "Max Discount / Line" : "Max Discount"}
+                </span>
+                <input type="number" min="0" step="0.01" value={form.maxDiscountAmount} onChange={(event) => updateForm("maxDiscountAmount", event.target.value)} placeholder="No cap" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+            </div>
+            <p className="-mt-2 text-xs text-slate-500">
+              {form.scope === "ITEM" || form.scope === "CATEGORY"
+                ? "Minimum bill is checked against the whole cart at normal price. The cap limits what this promotion takes off each line."
+                : "Minimum bill is checked against the cart after line discounts."}
+            </p>
 
             {targetRequired ? (
             <div>
@@ -415,8 +424,11 @@ const PromotionsPage = () => {
                         </td>
                         <td className="app-table-cell">
                           {promotion.scope}{promotion.scope !== "BILL" ? ` (${targetCount})` : ""}
-                          {(promotion.scope === "BILL" || promotion.scope === "CUSTOMER") && promotion.minBillAmount > 0 ? (
+                          {promotion.minBillAmount > 0 ? (
                             <div className="text-xs text-slate-500">Min {formatCurrency(promotion.minBillAmount)}</div>
+                          ) : null}
+                          {promotion.maxDiscountAmount > 0 ? (
+                            <div className="text-xs text-slate-500">Cap {formatCurrency(promotion.maxDiscountAmount)}</div>
                           ) : null}
                         </td>
                         <td className="app-table-cell">{promotion.discountType === DISCOUNT_TYPES.PERCENT ? `${promotion.discountValue}%` : formatCurrency(promotion.discountValue)}</td>
@@ -449,7 +461,7 @@ const PromotionsPage = () => {
         title="Delete Promotion"
         icon={Trash2}
         message={`Delete "${deleteTarget?.name}"?`}
-        detail="This removes the promotion rule immediately."
+        detail="It stops applying straight away. Past sales keep their discount and still report against this promotion."
         confirmLabel="Delete"
       />
     </div>
