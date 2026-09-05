@@ -18,7 +18,9 @@ const OfflineSalesPage = lazy(() => import('../pages/OfflineSalesPage'));
 const SalesListPage = lazy(() => import('../pages/SalesListPage'));
 const SalesDetailsPage = lazy(() => import('../pages/SalesDetailsPage'));
 const SaleReturnPage = lazy(() => import('../pages/SaleReturnPage'));
-const PromotionsPage = lazy(() => import('../pages/PromotionsPage'));
+const PromotionsPage = lazy(() => import('../pages/promotions/PromotionsPage'));
+const PromotionBuilderPage = lazy(() => import('../pages/promotions/PromotionBuilderPage'));
+const PromotionHistoryPage = lazy(() => import('../pages/promotions/PromotionHistoryPage'));
 const WarrantiesPage = lazy(() => import('../pages/WarrantiesPage'));
 const WarrantyClaimsPage = lazy(() => import('../pages/WarrantyClaimsPage'));
 const WarrantyDetailsPage = lazy(() => import('../pages/WarrantyDetailsPage'));
@@ -139,6 +141,9 @@ const AppRoutes = () => {
         <Route path="sales/:id" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<SalesDetailsPage />)}</ProtectedRoute>} />
         <Route path="sales/:id/return" element={<ProtectedRoute permission="PROCESS_RETURNS" feature="ORDER_RETURNS" requiresOnline>{withSuspense(<SaleReturnPage />)}</ProtectedRoute>} />
         <Route path="promotions" element={<ProtectedRoute permission="MANAGE_PROMOTIONS" requiresOnline>{withSuspense(<PromotionsPage />)}</ProtectedRoute>} />
+        <Route path="promotions/new" element={<ProtectedRoute permission="MANAGE_PROMOTIONS" requiresOnline>{withSuspense(<PromotionBuilderPage />)}</ProtectedRoute>} />
+        <Route path="promotions/:id/edit" element={<ProtectedRoute permission="MANAGE_PROMOTIONS" requiresOnline>{withSuspense(<PromotionBuilderPage />)}</ProtectedRoute>} />
+        <Route path="promotions/history" element={<ProtectedRoute permission="VIEW_PROMOTION_HISTORY" requiresOnline>{withSuspense(<PromotionHistoryPage />)}</ProtectedRoute>} />
         <Route path="warranties" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantiesPage />)}</ProtectedRoute>} />
         <Route path="warranties/claims" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantyClaimsPage />)}</ProtectedRoute>} />
         <Route path="warranties/settings" element={<ProtectedRoute permission="MANAGE_WARRANTY_SETTINGS" requiresOnline>{withSuspense(<WarrantySettingsPage />)}</ProtectedRoute>} />
