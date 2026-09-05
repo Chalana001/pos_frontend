@@ -196,6 +196,9 @@ const POS = () => {
   const [cartMode, setCartMode] = useState(null);
   const [billDiscount, setBillDiscount] = useState(0);
   const [billPromotionPreview, setBillPromotionPreview] = useState(null);
+  // One promo code per cart. Validated by the preview as it is typed, consumed only inside
+  // the sale transaction, cleared with the cart.
+  const [promotionCode, setPromotionCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -738,6 +741,7 @@ const POS = () => {
     setCustomer(null);
     setCartMode(null);
     setBillDiscount(0);
+      setPromotionCode("");
     setOrderType(ORDER_TYPES.CASH);
     setPaidAmount(0);
     setPaymentMethod("CASH");
@@ -753,6 +757,7 @@ const POS = () => {
     setCustomer(null);
     setCartMode(null);
     setBillDiscount(0);
+      setPromotionCode("");
   };
 
   const mapPendingItemToCartItem = (pendingItem) => {
@@ -1435,7 +1440,8 @@ const POS = () => {
     discountValue: toNonNegativeNumber(item.discountValue),
     customerId: customer?.id || null,
     billDiscount: toNonNegativeNumber(billDiscount),
-  }))), [billDiscount, cartItems, customer?.id]);
+    promotionCode: promotionCode || null,
+  }))), [billDiscount, cartItems, customer?.id, promotionCode]);
 
   useEffect(() => {
     if (!canUseServer || queueCartActive || isFreeLocalSalesPlan || !effectiveBranchId || cartItems.length === 0) {
@@ -1450,6 +1456,7 @@ const POS = () => {
           branchId: effectiveBranchId,
           customerId: customer ? customer.id : null,
           billDiscount,
+          promotionCode: promotionCode || null,
           items: cartItems.map((item) => createOrderItemPayload(item, false)),
         });
         const previewItems = Array.isArray(response.data?.items) ? response.data.items : [];
@@ -1460,6 +1467,7 @@ const POS = () => {
           billPromotionDiscountAmount: Number(response.data?.billPromotionDiscountAmount || 0),
           appliedBillDiscountAmount: Number(response.data?.appliedBillDiscountAmount ?? billDiscount),
           billPromotionApplied: !!response.data?.billPromotionApplied,
+          codeStatus: response.data?.codeStatus || null,
         });
 
         setCartItems((currentItems) => currentItems.map((item, index) => {
@@ -1810,6 +1818,7 @@ const POS = () => {
         tableId: saleMode === SALE_MODES.DINE_IN ? selectedTableId : null,
         customerId: customer ? customer.id : null,
         billDiscount,
+        promotionCode: promotionCode || null,
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
         paymentMethod: orderType === ORDER_TYPES.CASH ? paymentMethod : "CREDIT",
         items: orderItems,
@@ -2427,6 +2436,9 @@ const POS = () => {
             warrantyEnabled={canAddWarranty}
             billDiscount={billDiscount}
             setBillDiscount={setBillDiscount}
+            promotionCode={promotionCode}
+            setPromotionCode={setPromotionCode}
+            codeStatus={billPromotionPreview?.codeStatus || null}
             billPromotion={billPromotionPreview}
             onCheckout={handleCheckout}
             loading={loading}

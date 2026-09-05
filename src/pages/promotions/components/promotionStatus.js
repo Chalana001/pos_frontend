@@ -13,6 +13,7 @@ export const promotionStatus = (promotion, now = new Date()) => {
   const end = promotion.endAt ? new Date(promotion.endAt) : null;
   if (end && end < now) return "ENDED";
   if (!promotion.active) return "PAUSED";
+  if (promotion.exhausted) return "EXHAUSTED";
   if (start && start > now) return "SCHEDULED";
   if (end && end - now < 48 * 60 * 60 * 1000) return "ENDING_SOON";
   return "LIVE";

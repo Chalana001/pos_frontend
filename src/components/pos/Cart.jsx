@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Trash2, Minus, Plus, Tag, UserPlus, Receipt, X } from "lucide-react";
+import { Trash2, Minus, Plus, Tag, UserPlus, Receipt, X, KeyRound } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { DISCOUNT_TYPES, ItemType } from "../../utils/constants";
 import Button from "../../components/common/Button";
@@ -22,6 +22,9 @@ const Cart = ({
   warrantyOptions = [],
   warrantyEnabled = true,
   billPromotion,
+  promotionCode,
+  setPromotionCode,
+  codeStatus,
   focusSearch,
   cartSummary,
   footerActions,
@@ -426,6 +429,36 @@ const Cart = ({
               <span className="shrink-0 font-black">-{formatCurrency(billPromotion.billPromotionDiscountAmount || 0)}</span>
             </div>
           ) : null}
+          {typeof setPromotionCode === "function" && (
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-slate-500 text-sm">
+                <span className="flex items-center gap-1"><KeyRound size={12} /> Promo Code</span>
+                <input aria-label="Promo code"
+                  type="text"
+                  value={promotionCode || ""}
+                  onChange={(e) => setPromotionCode(e.target.value.toUpperCase())}
+                  onBlur={focusSearch}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.currentTarget.blur();
+                  }}
+                  placeholder="None"
+                  maxLength={40}
+                  className={`w-32 text-right font-mono font-bold uppercase bg-white border rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none ${
+                    codeStatus && !codeStatus.valid ? "border-red-300 text-red-700" : "border-slate-200 text-slate-800"
+                  }`}
+                />
+              </div>
+              {codeStatus && promotionCode ? (
+                <div className={`rounded-lg px-2.5 py-1.5 text-xs ${
+                  codeStatus.valid ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                }`}>
+                  {codeStatus.valid
+                    ? `Code applied: ${codeStatus.promotionName || codeStatus.code}`
+                    : codeStatus.message || "This code cannot be used"}
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
 
         <div className="pt-2.5 border-t border-slate-200 flex justify-between items-end">

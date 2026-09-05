@@ -14,6 +14,7 @@ import { useAppConfiguration } from "../../context/AppConfigurationContext";
 import { DISCOUNT_TYPES } from "../../utils/constants";
 import { formatCurrency } from "../../utils/formatters";
 import ItemPriceTable from "./components/ItemPriceTable";
+import PromotionCodesPanel from "./components/PromotionCodesPanel";
 import ScopePicker from "./components/ScopePicker";
 
 const EFFECT_TYPES = [
@@ -46,6 +47,9 @@ const INITIAL_FORM = {
   getQty: "",
   stackingMode: "BEST_ONLY",
   allowManualStacking: true,
+  maxTotalRedemptions: "",
+  maxRedemptionsPerCustomer: "",
+  budgetAmount: "",
   tiers: [],
   scheduleDays: 0,
   scheduleStart: "",
@@ -139,6 +143,9 @@ const PromotionBuilderPage = () => {
           getQty: promotion.getQty ?? "",
           stackingMode: promotion.stackingMode || "BEST_ONLY",
           allowManualStacking: promotion.allowManualStacking !== false,
+          maxTotalRedemptions: promotion.maxTotalRedemptions ?? "",
+          maxRedemptionsPerCustomer: promotion.maxRedemptionsPerCustomer ?? "",
+          budgetAmount: promotion.budgetAmount ?? "",
           tiers: (promotion.tiers || []).map((tier) => ({
             minQty: tier.minQty ?? "",
             minAmount: tier.minAmount ?? "",
@@ -399,6 +406,9 @@ const PromotionBuilderPage = () => {
     getQty: form.getQty === "" ? null : Number(form.getQty),
     stackingMode: form.stackingMode,
     allowManualStacking: form.allowManualStacking,
+    maxTotalRedemptions: form.maxTotalRedemptions === "" ? null : Number(form.maxTotalRedemptions),
+    maxRedemptionsPerCustomer: form.maxRedemptionsPerCustomer === "" ? null : Number(form.maxRedemptionsPerCustomer),
+    budgetAmount: form.budgetAmount === "" ? null : Number(form.budgetAmount),
     tiers: effect === "TIERED"
       ? form.tiers.map((tier) => ({
           minQty: isLineScope && tier.minQty !== "" ? Number(tier.minQty) : null,
@@ -882,6 +892,40 @@ const PromotionBuilderPage = () => {
           mistyped offer price. Below-cost pricing is refused unless you allow it here.
         </p>
 
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <label>
+            <span className="text-sm font-medium text-slate-700">Total redemptions</span>
+            <input
+              type="number" min="0" step="1" placeholder="Unlimited"
+              value={form.maxTotalRedemptions}
+              onChange={(event) => updateForm("maxTotalRedemptions", event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <label>
+            <span className="text-sm font-medium text-slate-700">Per customer</span>
+            <input
+              type="number" min="0" step="1" placeholder="Unlimited"
+              value={form.maxRedemptionsPerCustomer}
+              onChange={(event) => updateForm("maxRedemptionsPerCustomer", event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <label>
+            <span className="text-sm font-medium text-slate-700">Budget</span>
+            <input
+              type="number" min="0" step="0.01" placeholder="Unlimited"
+              value={form.budgetAmount}
+              onChange={(event) => updateForm("budgetAmount", event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          The promotion stops applying once any of these is reached — the total number of sales,
+          sales per customer, or the total discount given. Per-customer needs a customer on the sale.
+        </p>
+
         <div className="mt-5 grid gap-4 md:grid-cols-[2fr_1fr]">
           <div>
             <span className="text-sm font-medium text-slate-700">Combining with other offers</span>
@@ -915,6 +959,15 @@ const PromotionBuilderPage = () => {
           </label>
         </div>
       </section>
+
+      {isEdit ? (
+        <PromotionCodesPanel promotionId={Number(id)} />
+      ) : (
+        <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
+          <span className="font-bold text-slate-600">6 · Promo codes</span> — save the promotion first, then add
+          codes here. With no codes it applies automatically; with any, only when one is presented.
+        </section>
+      )}
 
       {/* Summary */}
       <div className="sticky bottom-4 z-20 rounded-xl border border-slate-300 bg-white/95 p-4 shadow-lg backdrop-blur">
