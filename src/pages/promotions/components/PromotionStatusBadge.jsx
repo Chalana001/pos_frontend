@@ -3,6 +3,8 @@ import React from "react";
 import { promotionStatus } from "./promotionStatus";
 
 const STYLES = {
+  DRAFT: { label: "Draft", className: "bg-slate-100 text-slate-600 border border-dashed border-slate-300" },
+  PENDING_APPROVAL: { label: "Awaiting approval", className: "bg-violet-100 text-violet-700" },
   LIVE: { label: "Live", className: "bg-emerald-100 text-emerald-700" },
   ENDING_SOON: { label: "Ending soon", className: "bg-amber-100 text-amber-700" },
   SCHEDULED: { label: "Scheduled", className: "bg-blue-100 text-blue-700" },

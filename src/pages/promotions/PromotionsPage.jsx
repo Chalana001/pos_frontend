@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { Copy, History, Pencil, Plus, Search, Tag, Trash2 } from "lucide-react";
+import { Copy, History, Pencil, Plus, Search, Settings, Tag, Trash2 } from "lucide-react";
 
 import { branchesAPI } from "../../api/branches.api";
 import { promotionsAPI } from "../../api/promotions.api";
@@ -12,12 +12,17 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { DISCOUNT_TYPES } from "../../utils/constants";
 import { formatCurrency } from "../../utils/formatters";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
+import PromotionSettingsModal from "./components/PromotionSettingsModal";
+import { useAuth } from "../../context/AuthContext";
+import { hasPermission } from "../../utils/permissions";
 import { promotionStatus } from "./components/promotionStatus";
 
 const STATUS_FILTERS = [
   { key: "ALL", label: "All" },
   { key: "LIVE", label: "Live" },
   { key: "SCHEDULED", label: "Scheduled" },
+  { key: "PENDING_APPROVAL", label: "Awaiting approval" },
+  { key: "DRAFT", label: "Drafts" },
   { key: "PAUSED", label: "Paused" },
   { key: "ENDED", label: "Ended" },
 ];
@@ -29,6 +34,10 @@ const STATUS_FILTERS = [
  */
 const PromotionsPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canApprove = hasPermission(user?.role, "APPROVE_PROMOTIONS");
+  const canEditSettings = hasPermission(user?.role, "MANAGE_PROMOTION_SETTINGS");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [promotions, setPromotions] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,13 +83,49 @@ const PromotionsPage = () => {
     });
   }, [promotions, search, statusFilter, branchFilter]);
 
-  const toggleStatus = async (promotion) => {
+  const lifecycle = async (promotion, action) => {
     try {
-      await promotionsAPI.updateStatus(promotion.id, !promotion.active);
-      toast.success(promotion.active ? "Promotion paused" : "Promotion resumed");
+      let note;
+      if (action === "reject") {
+        note = window.prompt(`Why is "${promotion.name}" being rejected?`) ?? undefined;
+        if (note === undefined) return;
+      }
+      const call = {
+        submit: () => promotionsAPI.submit(promotion.id),
+        approve: () => promotionsAPI.approve(promotion.id),
+        reject: () => promotionsAPI.reject(promotion.id, note),
+        pause: () => promotionsAPI.pause(promotion.id),
+        resume: () => promotionsAPI.resume(promotion.id),
+      }[action];
+      const response = await call();
+      const status = response.data?.status;
+      toast.success(
+        status === "PENDING_APPROVAL" ? "Sent for approval"
+          : status === "ACTIVE" ? "Promotion is on"
+          : status === "PAUSED" ? "Promotion paused"
+          : "Updated"
+      );
       await loadData();
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to update promotion");
+    }
+  };
+
+  // What a row can do next depends on its stored status, not on the derived badge.
+  const lifecycleActions = (promotion) => {
+    switch (promotion.status) {
+      case "DRAFT":
+        return [{ key: "submit", label: "Activate", primary: true }];
+      case "PENDING_APPROVAL":
+        return canApprove
+          ? [{ key: "approve", label: "Approve", primary: true }, { key: "reject", label: "Reject" }]
+          : [];
+      case "PAUSED":
+        return [{ key: "resume", label: "Resume", primary: true }];
+      case "ACTIVE":
+        return [{ key: "pause", label: "Pause" }];
+      default:
+        return [];
     }
   };
 
@@ -137,6 +182,11 @@ const PromotionsPage = () => {
           <p className="mt-1 text-sm text-slate-500">Campaigns running now and scheduled to start.</p>
         </div>
         <div className="flex items-center gap-2">
+          {canEditSettings && (
+            <Button variant="secondary" onClick={() => setSettingsOpen(true)} aria-label="Promotion settings">
+              <Settings size={16} />
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => navigate("/promotions/history")}>
             <History size={16} className="mr-2" /> History
           </Button>
@@ -241,12 +291,20 @@ const PromotionsPage = () => {
                       {promotion.endAt ? new Date(promotion.endAt).toLocaleDateString() : "—"}
                     </td>
                     <td className="app-table-cell text-center">
-                      <button type="button" onClick={() => toggleStatus(promotion)} className="min-h-11">
-                        <PromotionStatusBadge promotion={promotion} />
-                      </button>
+                      <PromotionStatusBadge promotion={promotion} />
                     </td>
                     <td className="app-table-cell">
                       <div className="flex justify-end gap-2">
+                        {lifecycleActions(promotion).map((action) => (
+                          <Button
+                            key={action.key}
+                            size="sm"
+                            variant={action.primary ? "primary" : "secondary"}
+                            onClick={() => lifecycle(promotion, action.key)}
+                          >
+                            {action.label}
+                          </Button>
+                        ))}
                         <Button size="sm" variant="secondary" aria-label="Edit"
                                 onClick={() => navigate(`/promotions/${promotion.id}/edit`)}>
                           <Pencil size={14} />
@@ -268,6 +326,8 @@ const PromotionsPage = () => {
           </div>
         )}
       </Card>
+
+      <PromotionSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <ConfirmDialog
         isOpen={!!deleteTarget}

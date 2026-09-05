@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { ArrowLeft, Save, Search } from "lucide-react";
+import { ArrowLeft, FlaskConical, Save, Search } from "lucide-react";
 
 import { branchesAPI } from "../../api/branches.api";
 import { categoriesAPI } from "../../api/categories.api";
@@ -15,6 +15,9 @@ import { DISCOUNT_TYPES } from "../../utils/constants";
 import { formatCurrency } from "../../utils/formatters";
 import ItemPriceTable from "./components/ItemPriceTable";
 import PromotionCodesPanel from "./components/PromotionCodesPanel";
+import PromotionAuditPanel from "./components/PromotionAuditPanel";
+import PromotionSimulateModal from "./components/PromotionSimulateModal";
+import PromotionStatusBadge from "./components/PromotionStatusBadge";
 import ScopePicker from "./components/ScopePicker";
 
 const EFFECT_TYPES = [
@@ -60,6 +63,8 @@ const INITIAL_FORM = {
   endAt: "",
   branchId: "",
   active: true,
+  status: "",
+  lifecycle: "",
   priority: 0,
   minBillAmount: "",
   maxDiscountAmount: "",
@@ -95,6 +100,8 @@ const PromotionBuilderPage = () => {
   const [targetSearch, setTargetSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [check, setCheck] = useState(null);
+  const [simulateOpen, setSimulateOpen] = useState(false);
 
   const updateForm = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -133,6 +140,8 @@ const PromotionBuilderPage = () => {
           endAt: toLocalInput(promotion.endAt),
           branchId: promotion.branchId || "",
           active: promotion.active !== false,
+          status: promotion.status || "",
+          lifecycle: promotion.lifecycle || "",
           priority: promotion.priority || 0,
           minBillAmount: promotion.minBillAmount || "",
           maxDiscountAmount: promotion.maxDiscountAmount || "",
@@ -224,6 +233,31 @@ const PromotionBuilderPage = () => {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceSignature, form.scope]);
+
+  // ── pre-save check ─────────────────────────────────────────────────────────────────────
+
+  const checkSignature = useMemo(
+    () => JSON.stringify({ f: form, l: itemLines.map((line) => [line.id, line.offerPrice]) }),
+    [form, itemLines]
+  );
+
+  useEffect(() => {
+    if (loading || !form.name.trim() || !form.startAt || !form.endAt || validate()) {
+      setCheck(null);
+      return undefined;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const response = await promotionsAPI.check(buildPayload(true), isEdit ? id : undefined);
+        setCheck(response.data);
+      } catch {
+        // An incomplete form is refused by the same validation the save uses; nothing to show yet.
+        setCheck(null);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkSignature, loading]);
 
   // ── item line editing ─────────────────────────────────────────────────────────────────
 
@@ -387,7 +421,7 @@ const PromotionBuilderPage = () => {
     return "";
   };
 
-  const buildPayload = () => ({
+  const buildPayload = (activate = form.active) => ({
     name: form.name.trim(),
     scope: form.scope,
     discountType: form.discountType,
@@ -395,7 +429,7 @@ const PromotionBuilderPage = () => {
     startAt: form.startAt,
     endAt: form.endAt,
     branchId: form.branchId ? Number(form.branchId) : null,
-    active: form.active,
+    active: activate,
     priority: Number.parseInt(form.priority, 10) || 0,
     minBillAmount: Number(form.minBillAmount || 0),
     maxDiscountAmount: Number(form.maxDiscountAmount || 0),
@@ -435,7 +469,7 @@ const PromotionBuilderPage = () => {
     customerIds: form.scope === "CUSTOMER" ? form.customerIds : [],
   });
 
-  const save = async () => {
+  const save = async (activate) => {
     const message = validate();
     if (message) {
       toast.error(message);
@@ -443,12 +477,16 @@ const PromotionBuilderPage = () => {
     }
     try {
       setSaving(true);
-      if (isEdit) {
-        await promotionsAPI.update(id, buildPayload());
-        toast.success("Promotion updated");
+      const response = isEdit
+        ? await promotionsAPI.update(id, buildPayload(activate))
+        : await promotionsAPI.create(buildPayload(activate));
+      const status = response.data?.status;
+      if (status === "PENDING_APPROVAL") {
+        toast.success("Saved — waiting for another admin to approve it");
+      } else if (status === "DRAFT") {
+        toast.success("Saved as a draft");
       } else {
-        await promotionsAPI.create(buildPayload());
-        toast.success("Promotion created");
+        toast.success(isEdit ? "Promotion updated" : "Promotion created");
       }
       navigate("/promotions");
     } catch (error) {
@@ -494,10 +532,19 @@ const PromotionBuilderPage = () => {
             </p>
           </div>
         </div>
-        <Button onClick={save} disabled={saving}>
-          <Save size={16} className="mr-2" />
-          {saving ? "Saving…" : isEdit ? "Save changes" : "Create promotion"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {isEdit && form.lifecycle && <PromotionStatusBadge status={form.lifecycle} />}
+          <Button variant="secondary" onClick={() => { if (validate()) { toast.error(validate()); return; } setSimulateOpen(true); }}>
+            <FlaskConical size={16} className="mr-2" /> Simulate
+          </Button>
+          <Button variant="secondary" onClick={() => save(false)} disabled={saving}>
+            {form.status === "ACTIVE" || form.status === "PENDING_APPROVAL" ? "Save & pause" : "Save as draft"}
+          </Button>
+          <Button onClick={() => save(true)} disabled={saving}>
+            <Save size={16} className="mr-2" />
+            {saving ? "Saving…" : check?.approvalRequired ? "Save & send for approval" : "Save & activate"}
+          </Button>
+        </div>
       </div>
 
       {/* 1. Basics */}
@@ -788,14 +835,10 @@ const PromotionBuilderPage = () => {
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </label>
-          <label className="flex items-center justify-between self-end rounded-lg border border-slate-200 px-3 py-2">
-            <span className="text-sm font-medium text-slate-700">Active</span>
-            <input
-              type="checkbox" checked={form.active}
-              onChange={(event) => updateForm("active", event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-          </label>
+          <div className="self-end rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            Whether it runs is decided by the save button: <span className="font-semibold">Save & activate</span> switches
+            it on{check?.approvalRequired ? " after approval" : ""}; <span className="font-semibold">Save as draft</span> keeps it off.
+          </div>
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto_auto]">
@@ -960,6 +1003,8 @@ const PromotionBuilderPage = () => {
         </div>
       </section>
 
+      {isEdit && <PromotionAuditPanel promotionId={Number(id)} />}
+
       {isEdit ? (
         <PromotionCodesPanel promotionId={Number(id)} />
       ) : (
@@ -987,8 +1032,27 @@ const PromotionBuilderPage = () => {
           {summary.belowCost > 0 && (
             <span className="font-bold text-red-600">{summary.belowCost} below cost</span>
           )}
+          {check?.approvalRequired && (
+            <span className="font-bold text-violet-700">
+              Needs approval{check.deepestDiscountPercent != null ? ` · deepest cut ${Number(check.deepestDiscountPercent).toFixed(0)}%` : ""}
+            </span>
+          )}
         </div>
+        {check?.warnings?.length > 0 && (
+          <ul className="mt-2 space-y-1 text-xs text-amber-800">
+            {check.warnings.map((warning, index) => (
+              <li key={`${warning.code}-${warning.promotionId ?? index}`}>⚠ {warning.message}</li>
+            ))}
+          </ul>
+        )}
       </div>
+
+      <PromotionSimulateModal
+        isOpen={simulateOpen}
+        onClose={() => setSimulateOpen(false)}
+        payload={buildPayload(true)}
+        branchId={form.branchId}
+      />
     </div>
   );
 };

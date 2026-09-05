@@ -9,6 +9,11 @@
 export const promotionStatus = (promotion, now = new Date()) => {
   if (!promotion) return "ENDED";
   if (promotion.deleted) return "ARCHIVED";
+  // The backend derives the same thing and sends it as `lifecycle`; prefer that when present so
+  // the list and the server never disagree about what a promotion is doing.
+  if (promotion.lifecycle) return promotion.lifecycle;
+  if (promotion.status === "DRAFT") return "DRAFT";
+  if (promotion.status === "PENDING_APPROVAL") return "PENDING_APPROVAL";
   const start = promotion.startAt ? new Date(promotion.startAt) : null;
   const end = promotion.endAt ? new Date(promotion.endAt) : null;
   if (end && end < now) return "ENDED";

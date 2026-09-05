@@ -23,4 +23,20 @@ export const promotionsAPI = {
   generateCodes: (promotionId, payload) => api.post(`/promotions/${promotionId}/codes`, payload),
   setCodeActive: (promotionId, codeId, active) =>
     api.patch(`/promotions/${promotionId}/codes/${codeId}/status`, { active }),
+
+  // Lifecycle. Draft -> (pending approval) -> active <-> paused. Approve needs an admin who is
+  // not the submitter; the backend enforces that, the UI only hides what cannot succeed.
+  settings: () => api.get("/promotions/settings"),
+  updateSettings: (payload) => api.put("/promotions/settings", payload),
+  submit: (id) => api.post(`/promotions/${id}/submit`),
+  approve: (id, note) => api.post(`/promotions/${id}/approve`, { note: note || null }),
+  reject: (id, note) => api.post(`/promotions/${id}/reject`, { note: note || null }),
+  pause: (id, note) => api.post(`/promotions/${id}/pause`, { note: note || null }),
+  resume: (id) => api.post(`/promotions/${id}/resume`),
+  audit: (id) => api.get(`/promotions/${id}/audit`),
+
+  // What an unsaved promotion would have cost over recent real sales, and what it collides with.
+  simulate: (payload) => api.post("/promotions/simulate", payload),
+  check: (payload, excludeId) =>
+    api.post("/promotions/check", payload, { params: excludeId ? { excludeId } : {} }),
 };
