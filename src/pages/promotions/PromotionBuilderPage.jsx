@@ -16,9 +16,40 @@ import { formatCurrency } from "../../utils/formatters";
 import ItemPriceTable from "./components/ItemPriceTable";
 import ScopePicker from "./components/ScopePicker";
 
+const EFFECT_TYPES = [
+  { key: "DISCOUNT", label: "Discount", hint: "A percentage or amount off" },
+  { key: "FIXED_PRICE", label: "Fixed price", hint: "Everything at one price", lineOnly: true },
+  { key: "BUY_X_GET_Y_FREE", label: "Buy X get Y free", hint: "Buy 2, get 1 free", lineOnly: true },
+  { key: "TIERED", label: "Quantity / spend tiers", hint: "More off the more they buy" },
+  { key: "BUNDLE", label: "Bundle", hint: "Any 3 for 1,000" },
+  { key: "CHEAPEST_FREE", label: "Cheapest free", hint: "Buy 3, cheapest is free" },
+];
+
+const STACKING_MODES = [
+  { key: "BEST_ONLY", label: "Best offer wins", hint: "Competes with others; the biggest discount applies" },
+  { key: "STACKABLE", label: "Stacks on top", hint: "Adds to whatever else applies" },
+  { key: "EXCLUSIVE", label: "Cannot be combined", hint: "If it wins, nothing else applies to the line or the bill" },
+];
+
+const DAYS = [
+  { bit: 1, label: "Mon" }, { bit: 2, label: "Tue" }, { bit: 4, label: "Wed" }, { bit: 8, label: "Thu" },
+  { bit: 16, label: "Fri" }, { bit: 32, label: "Sat" }, { bit: 64, label: "Sun" },
+];
+
+const EMPTY_TIER = { minQty: "", minAmount: "", discountType: DISCOUNT_TYPES.PERCENT, discountValue: "" };
+
 const INITIAL_FORM = {
   name: "",
   scope: "ITEM",
+  effectType: "DISCOUNT",
+  buyQty: "",
+  getQty: "",
+  stackingMode: "BEST_ONLY",
+  allowManualStacking: true,
+  tiers: [],
+  scheduleDays: 0,
+  scheduleStart: "",
+  scheduleEnd: "",
   discountType: DISCOUNT_TYPES.PERCENT,
   discountValue: "",
   startAt: "",
@@ -103,6 +134,22 @@ const PromotionBuilderPage = () => {
           maxDiscountAmount: promotion.maxDiscountAmount || "",
           marginFloorPercent: promotion.marginFloorPercent ?? "",
           allowBelowCost: !!promotion.allowBelowCost,
+          effectType: promotion.effectType || "DISCOUNT",
+          buyQty: promotion.buyQty ?? "",
+          getQty: promotion.getQty ?? "",
+          stackingMode: promotion.stackingMode || "BEST_ONLY",
+          allowManualStacking: promotion.allowManualStacking !== false,
+          tiers: (promotion.tiers || []).map((tier) => ({
+            minQty: tier.minQty ?? "",
+            minAmount: tier.minAmount ?? "",
+            discountType: tier.discountType || DISCOUNT_TYPES.PERCENT,
+            discountValue: tier.discountValue ?? "",
+          })),
+          // The API allows several schedules; the screen edits one, which covers happy hour
+          // and weekday specials. Extra rows round-trip untouched.
+          scheduleDays: promotion.schedules?.[0]?.daysOfWeek ?? 0,
+          scheduleStart: (promotion.schedules?.[0]?.startTime || "").slice(0, 5),
+          scheduleEnd: (promotion.schedules?.[0]?.endTime || "").slice(0, 5),
           categoryIds: promotion.categoryIds || [],
           subCategoryIds: promotion.subCategoryIds || [],
           customerIds: promotion.customerIds || [],
@@ -254,6 +301,12 @@ const PromotionBuilderPage = () => {
       // into the next one and be saved with it.
       minBillAmount: "",
       maxDiscountAmount: "",
+      // Fixed price and buy-X-get-Y only mean something on items or categories.
+      effectType: (scope === "BILL" || scope === "CUSTOMER")
+        && (prev.effectType === "FIXED_PRICE" || prev.effectType === "BUY_X_GET_Y_FREE")
+        ? "DISCOUNT"
+        : prev.effectType,
+      tiers: [],
       categoryIds: [],
       subCategoryIds: [],
       customerIds: [],
@@ -262,6 +315,17 @@ const PromotionBuilderPage = () => {
     setTargetSearch("");
   };
 
+  const isLineScope = form.scope === "ITEM" || form.scope === "CATEGORY";
+  const effect = form.effectType;
+
+  const updateTier = (index, patch) => setForm((prev) => ({
+    ...prev,
+    tiers: prev.tiers.map((tier, i) => (i === index ? { ...tier, ...patch } : tier)),
+  }));
+  const addTier = () => setForm((prev) => ({ ...prev, tiers: [...prev.tiers, { ...EMPTY_TIER }] }));
+  const removeTier = (index) => setForm((prev) => ({ ...prev, tiers: prev.tiers.filter((_, i) => i !== index) }));
+  const toggleDay = (bit) => setForm((prev) => ({ ...prev, scheduleDays: prev.scheduleDays ^ bit }));
+
   // ── save ──────────────────────────────────────────────────────────────────────────────
 
   const validate = () => {
@@ -269,8 +333,43 @@ const PromotionBuilderPage = () => {
     if (!form.startAt || !form.endAt) return "Start and end dates are required";
     if (new Date(form.startAt) >= new Date(form.endAt)) return "End date must be after start date";
     const value = Number(form.discountValue);
-    if (!Number.isFinite(value) || value <= 0) return "Discount value must be greater than zero";
-    if (form.discountType === DISCOUNT_TYPES.PERCENT && value > 100) return "Percent discount cannot exceed 100";
+    const buy = Number(form.buyQty);
+    const get = Number(form.getQty);
+    switch (effect) {
+      case "DISCOUNT":
+        if (!Number.isFinite(value) || value <= 0) return "Discount value must be greater than zero";
+        if (form.discountType === DISCOUNT_TYPES.PERCENT && value > 100) return "Percent discount cannot exceed 100";
+        break;
+      case "FIXED_PRICE":
+        if (!Number.isFinite(value) || value <= 0) return "Fixed price must be greater than zero";
+        break;
+      case "BUY_X_GET_Y_FREE":
+        if (!Number.isFinite(buy) || buy <= 0) return "Buy quantity must be greater than zero";
+        if (!Number.isFinite(get) || get <= 0) return "Free quantity must be greater than zero";
+        break;
+      case "TIERED":
+        if (form.tiers.length === 0) return "Add at least one tier";
+        for (const tier of form.tiers) {
+          const threshold = Number(isLineScope ? tier.minQty : tier.minAmount);
+          if (!Number.isFinite(threshold) || threshold <= 0) {
+            return isLineScope ? "Each tier needs a minimum quantity" : "Each tier needs a minimum bill amount";
+          }
+          const tierValue = Number(tier.discountValue);
+          if (!Number.isFinite(tierValue) || tierValue <= 0) return "Each tier needs a discount greater than zero";
+          if (tier.discountType === DISCOUNT_TYPES.PERCENT && tierValue > 100) return "A tier's percent cannot exceed 100";
+        }
+        break;
+      case "BUNDLE":
+        if (!Number.isFinite(buy) || buy < 2) return "A bundle needs at least 2 items";
+        if (!Number.isFinite(value) || value <= 0) return "Bundle price must be greater than zero";
+        break;
+      case "CHEAPEST_FREE":
+        if (!Number.isFinite(buy) || buy < 2) return "Cheapest-free needs a group of at least 2";
+        break;
+      default:
+        break;
+    }
+    if ((form.scheduleStart === "") !== (form.scheduleEnd === "")) return "Set both a start and an end time, or neither";
     if (form.scope === "ITEM" && itemLines.length === 0) return "Add at least one item";
     if (form.scope !== "ITEM" && form.scope !== "BILL" && selectedTargetIds.length === 0) {
       return "Select at least one target";
@@ -295,6 +394,26 @@ const PromotionBuilderPage = () => {
     maxDiscountAmount: Number(form.maxDiscountAmount || 0),
     marginFloorPercent: form.marginFloorPercent === "" ? null : Number(form.marginFloorPercent),
     allowBelowCost: form.allowBelowCost,
+    effectType: effect,
+    buyQty: form.buyQty === "" ? null : Number(form.buyQty),
+    getQty: form.getQty === "" ? null : Number(form.getQty),
+    stackingMode: form.stackingMode,
+    allowManualStacking: form.allowManualStacking,
+    tiers: effect === "TIERED"
+      ? form.tiers.map((tier) => ({
+          minQty: isLineScope && tier.minQty !== "" ? Number(tier.minQty) : null,
+          minAmount: !isLineScope && tier.minAmount !== "" ? Number(tier.minAmount) : null,
+          discountType: tier.discountType,
+          discountValue: Number(tier.discountValue),
+        }))
+      : [],
+    schedules: form.scheduleDays || form.scheduleStart
+      ? [{
+          daysOfWeek: form.scheduleDays,
+          startTime: form.scheduleStart || null,
+          endTime: form.scheduleEnd || null,
+        }]
+      : [],
     items: form.scope === "ITEM"
       ? itemLines.map((line) => ({
           id: Number(line.id),
@@ -403,29 +522,111 @@ const PromotionBuilderPage = () => {
         <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">2 · What it applies to</h2>
         <ScopePicker value={form.scope} onChange={changeScope} />
 
+        <div className="mt-5">
+          <span className="text-sm font-medium text-slate-700">Offer type</span>
+          <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
+            {EFFECT_TYPES.filter((type) => !type.lineOnly || isLineScope).map((type) => {
+              const selected = effect === type.key;
+              return (
+                <button
+                  key={type.key}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => updateForm("effectType", type.key)}
+                  className={`rounded-lg border px-3 py-2 text-left ${
+                    selected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20" : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className={`text-sm font-bold ${selected ? "text-blue-700" : "text-slate-800"}`}>{type.label}</div>
+                  <div className="text-xs text-slate-500">{type.hint}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="mt-5 grid gap-4 md:grid-cols-3">
-          <label>
-            <span className="text-sm font-medium text-slate-700">
-              {form.scope === "ITEM" ? "Default discount type" : "Discount type"}
-            </span>
-            <select
-              value={form.discountType}
-              onChange={(event) => updateForm("discountType", event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            >
-              <option value={DISCOUNT_TYPES.PERCENT}>Percent (%)</option>
-              <option value={DISCOUNT_TYPES.FIXED}>Fixed amount</option>
-            </select>
-          </label>
-          <label>
-            <span className="text-sm font-medium text-slate-700">Value</span>
-            <input
-              type="number" min="0" step="0.01"
-              value={form.discountValue}
-              onChange={(event) => updateForm("discountValue", event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-          </label>
+          {(effect === "DISCOUNT") && (
+            <>
+              <label>
+                <span className="text-sm font-medium text-slate-700">
+                  {form.scope === "ITEM" ? "Default discount type" : "Discount type"}
+                </span>
+                <select
+                  value={form.discountType}
+                  onChange={(event) => updateForm("discountType", event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                >
+                  <option value={DISCOUNT_TYPES.PERCENT}>Percent (%)</option>
+                  <option value={DISCOUNT_TYPES.FIXED}>Fixed amount</option>
+                </select>
+              </label>
+              <label>
+                <span className="text-sm font-medium text-slate-700">Value</span>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={form.discountValue}
+                  onChange={(event) => updateForm("discountValue", event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+            </>
+          )}
+          {effect === "FIXED_PRICE" && (
+            <label>
+              <span className="text-sm font-medium text-slate-700">Fixed price</span>
+              <input
+                type="number" min="0" step="0.01" placeholder="Every targeted item sells at this"
+                value={form.discountValue}
+                onChange={(event) => updateForm("discountValue", event.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          )}
+          {effect === "BUY_X_GET_Y_FREE" && (
+            <>
+              <label>
+                <span className="text-sm font-medium text-slate-700">Buy</span>
+                <input
+                  type="number" min="0" step="1" placeholder="2"
+                  value={form.buyQty}
+                  onChange={(event) => updateForm("buyQty", event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+              <label>
+                <span className="text-sm font-medium text-slate-700">Get free</span>
+                <input
+                  type="number" min="0" step="1" placeholder="1"
+                  value={form.getQty}
+                  onChange={(event) => updateForm("getQty", event.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+            </>
+          )}
+          {(effect === "BUNDLE" || effect === "CHEAPEST_FREE") && (
+            <label>
+              <span className="text-sm font-medium text-slate-700">Items per group</span>
+              <input
+                type="number" min="2" step="1" placeholder="3"
+                value={form.buyQty}
+                onChange={(event) => updateForm("buyQty", event.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          )}
+          {effect === "BUNDLE" && (
+            <label>
+              <span className="text-sm font-medium text-slate-700">Bundle price</span>
+              <input
+                type="number" min="0" step="0.01" placeholder="Total for the group"
+                value={form.discountValue}
+                onChange={(event) => updateForm("discountValue", event.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          )}
           <label>
             <span className="text-sm font-medium text-slate-700">Priority</span>
             <input
@@ -436,7 +637,59 @@ const PromotionBuilderPage = () => {
             />
           </label>
         </div>
-        {form.scope === "ITEM" && (
+
+        {effect === "TIERED" && (
+          <div className="mt-5 rounded-lg border border-slate-200 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-700">
+                {isLineScope ? "Quantity breaks" : "Spend ladder"}
+              </span>
+              <Button size="sm" variant="secondary" onClick={addTier}>Add tier</Button>
+            </div>
+            {form.tiers.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                {isLineScope
+                  ? "E.g. 3 or more: 10% off · 6 or more: 20% off. The highest break reached applies to the whole line."
+                  : "E.g. over 5,000: 500 off · over 10,000: 1,200 off. The highest step the bill reaches applies."}
+              </p>
+            ) : form.tiers.map((tier, index) => (
+              <div key={index} className="mb-2 grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
+                <label>
+                  <span className="text-xs font-medium text-slate-600">{isLineScope ? "From quantity" : "From bill amount"}</span>
+                  <input
+                    type="number" min="0" step={isLineScope ? "1" : "0.01"}
+                    value={isLineScope ? tier.minQty : tier.minAmount}
+                    onChange={(event) => updateTier(index, isLineScope ? { minQty: event.target.value } : { minAmount: event.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label>
+                  <span className="text-xs font-medium text-slate-600">Type</span>
+                  <select
+                    value={tier.discountType}
+                    onChange={(event) => updateTier(index, { discountType: event.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  >
+                    <option value={DISCOUNT_TYPES.PERCENT}>Percent (%)</option>
+                    <option value={DISCOUNT_TYPES.FIXED}>Fixed amount</option>
+                  </select>
+                </label>
+                <label>
+                  <span className="text-xs font-medium text-slate-600">Value</span>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={tier.discountValue}
+                    onChange={(event) => updateTier(index, { discountValue: event.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  />
+                </label>
+                <Button size="sm" variant="secondary" onClick={() => removeTier(index)} aria-label="Remove tier">×</Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {form.scope === "ITEM" && effect === "DISCOUNT" && (
           <p className="mt-2 text-xs text-slate-500">
             Used for any item you leave without its own offer price.
           </p>
@@ -534,6 +787,52 @@ const PromotionBuilderPage = () => {
             />
           </label>
         </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto_auto]">
+          <div>
+            <span className="text-sm font-medium text-slate-700">Days</span>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {DAYS.map((day) => {
+                const on = (form.scheduleDays & day.bit) !== 0;
+                return (
+                  <button
+                    key={day.bit}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleDay(day.bit)}
+                    className={`rounded-md px-3 py-1.5 text-xs font-bold ${
+                      on ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              {form.scheduleDays === 0 ? "Every day within the dates." : "Only on the selected days."}
+            </p>
+          </div>
+          <label>
+            <span className="text-sm font-medium text-slate-700">From time</span>
+            <input
+              type="time" value={form.scheduleStart}
+              onChange={(event) => updateForm("scheduleStart", event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <label>
+            <span className="text-sm font-medium text-slate-700">To time</span>
+            <input
+              type="time" value={form.scheduleEnd}
+              onChange={(event) => updateForm("scheduleEnd", event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Leave the times empty for all day. An end before the start runs overnight — 22:00 to 02:00.
+        </p>
       </section>
 
       {/* 5. Limits */}
@@ -582,6 +881,39 @@ const PromotionBuilderPage = () => {
           A cap limits what this promotion takes off a single line — the safety net for a
           mistyped offer price. Below-cost pricing is refused unless you allow it here.
         </p>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-[2fr_1fr]">
+          <div>
+            <span className="text-sm font-medium text-slate-700">Combining with other offers</span>
+            <div className="mt-2 grid gap-2 md:grid-cols-3">
+              {STACKING_MODES.map((mode) => {
+                const selected = form.stackingMode === mode.key;
+                return (
+                  <button
+                    key={mode.key}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => updateForm("stackingMode", mode.key)}
+                    className={`rounded-lg border px-3 py-2 text-left ${
+                      selected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20" : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div className={`text-sm font-bold ${selected ? "text-blue-700" : "text-slate-800"}`}>{mode.label}</div>
+                    <div className="text-xs text-slate-500">{mode.hint}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <label className="flex items-center justify-between self-end rounded-lg border border-slate-200 px-3 py-2">
+            <span className="text-sm font-medium text-slate-700">Cashier can add a discount on top</span>
+            <input
+              type="checkbox" checked={form.allowManualStacking}
+              onChange={(event) => updateForm("allowManualStacking", event.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+          </label>
+        </div>
       </section>
 
       {/* Summary */}

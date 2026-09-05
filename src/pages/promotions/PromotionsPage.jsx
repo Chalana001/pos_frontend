@@ -113,6 +113,14 @@ const PromotionsPage = () => {
   };
 
   const discountLabel = (promotion) => {
+    switch (promotion.effectType) {
+      case "FIXED_PRICE": return `Fixed ${formatCurrency(promotion.discountValue)}`;
+      case "BUY_X_GET_Y_FREE": return `Buy ${promotion.buyQty} get ${promotion.getQty} free`;
+      case "TIERED": return `${promotion.tiers?.length || 0} tier${promotion.tiers?.length === 1 ? "" : "s"}`;
+      case "BUNDLE": return `Any ${promotion.buyQty} for ${formatCurrency(promotion.discountValue)}`;
+      case "CHEAPEST_FREE": return `Buy ${promotion.buyQty}, cheapest free`;
+      default: break;
+    }
     const perItem = promotion.scope === "ITEM"
       && (promotion.items || []).some((line) => line.offerPrice != null);
     if (perItem) return "Per-item prices";
