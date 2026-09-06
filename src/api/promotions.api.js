@@ -35,6 +35,14 @@ export const promotionsAPI = {
   resume: (id) => api.post(`/promotions/${id}/resume`),
   audit: (id) => api.get(`/promotions/${id}/audit`),
 
+  // Rule-based customer segments — what a promotion means by "our best customers".
+  segments: () => api.get("/customer-segments"),
+  createSegment: (payload) => api.post("/customer-segments", payload),
+  updateSegment: (id, payload) => api.put(`/customer-segments/${id}`, payload),
+  deleteSegment: (id) => api.delete(`/customer-segments/${id}`),
+  recomputeSegment: (id) => api.post(`/customer-segments/${id}/recompute`),
+  recomputeSegments: () => api.post("/customer-segments/recompute"),
+
   // What an unsaved promotion would have cost over recent real sales, and what it collides with.
   simulate: (payload) => api.post("/promotions/simulate", payload),
   check: (payload, excludeId) =>
