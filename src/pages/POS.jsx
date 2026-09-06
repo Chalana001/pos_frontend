@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronLeft, ChevronRight, Printer, WifiOff } from "lucide-react";
@@ -8,6 +8,7 @@ import { useSearchOnType } from "../hooks/useSearchOnType";
 import { itemsAPI } from "../api/items.api";
 import { ordersAPI } from "../api/orders.api";
 import { promotionsAPI } from "../api/promotions.api";
+import { previewOffline } from "../offline/offlinePricing";
 import { shiftsAPI } from "../api/shifts.api";
 import { diningTablesAPI } from "../api/diningTables.api";
 import { pendingOrdersAPI } from "../api/pendingOrders.api";
@@ -48,6 +49,8 @@ import {
   cacheItemsForBranch,
   cacheReceiptSettings,
   getCachedItemsForBranch,
+  cachePromotionBundle,
+  getPromotionBundle,
   getCachedReceiptSettings,
   getFreeLocalSalesSummary,
   getOfflineQueuePressure,
@@ -199,6 +202,9 @@ const POS = () => {
   // One promo code per cart. Validated by the preview as it is typed, consumed only inside
   // the sale transaction, cleared with the cart.
   const [promotionCode, setPromotionCode] = useState("");
+  // The promotion rules this till holds. Refreshed while online, priced from while offline —
+  // without it an outage means every customer pays list price.
+  const [promotionBundle, setPromotionBundle] = useState(null);
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -1421,6 +1427,14 @@ const POS = () => {
       discountValue: useEffectiveDiscount ? getEffectiveDiscountValue(item) : toNonNegativeNumber(item.discountValue),
     };
 
+    // Offline, the till is the only thing that knows which promotion priced this line; the
+    // server records it rather than working it out again.
+    if (item.promotionApplied && item.promotionId) {
+      payload.promotionId = item.promotionId;
+      payload.promotionName = item.promotionName || undefined;
+      payload.promotionDiscountAmount = Number(item.promotionDiscountAmount || 0);
+    }
+
     if (canAddWarranty) {
       payload.warrantyLabel = item.warrantyLabel || undefined;
       payload.warrantyPeriodValue = item.warrantyPeriodValue || undefined;
@@ -1429,6 +1443,33 @@ const POS = () => {
 
     return payload;
   };
+
+  // Keep the bundle fresh while there is a connection, and load whatever was last stored when
+  // there is not. Fetched per branch, because a promotion can be pinned to one.
+  useEffect(() => {
+    if (!effectiveBranchId) {
+      setPromotionBundle(null);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      if (canUseServer) {
+        try {
+          const response = await promotionsAPI.bundle(effectiveBranchId);
+          if (cancelled) return;
+          setPromotionBundle(response.data);
+          await cachePromotionBundle(effectiveBranchId, response.data);
+          return;
+        } catch (error) {
+          // A failed refresh is not a reason to lose the rules already held.
+          console.error("Promotion bundle refresh failed", error);
+        }
+      }
+      const cached = await getPromotionBundle(effectiveBranchId);
+      if (!cancelled) setPromotionBundle(cached);
+    })();
+    return () => { cancelled = true; };
+  }, [canUseServer, effectiveBranchId]);
 
   const promotionPreviewSignature = useMemo(() => JSON.stringify(cartItems.map((item) => ({
     itemId: item.itemId,
@@ -1442,6 +1483,64 @@ const POS = () => {
     billDiscount: toNonNegativeNumber(billDiscount),
     promotionCode: promotionCode || null,
   }))), [billDiscount, cartItems, customer?.id, promotionCode]);
+
+  // Applies the preview — from the server or from the local engine — to the cart. The two
+  // return the same shape on purpose, so the till renders an offline price exactly as it
+  // renders an online one.
+  const applyPromotionPreview = useCallback((data, fallbackBillDiscount) => {
+    setBillPromotionPreview({
+      billPromotionId: data?.billPromotionId || null,
+      billPromotionName: data?.billPromotionName || "",
+      billPromotionDiscountAmount: Number(data?.billPromotionDiscountAmount || 0),
+      appliedBillDiscountAmount: Number(data?.appliedBillDiscountAmount ?? fallbackBillDiscount),
+      billPromotionApplied: !!data?.billPromotionApplied,
+      codeStatus: data?.codeStatus || null,
+      bundleVersion: data?.bundleVersion || null,
+    });
+
+    const previewItems = Array.isArray(data?.items) ? data.items : [];
+    setCartItems((currentItems) => currentItems.map((item, index) => {
+      const preview = previewItems[index];
+      if (!preview || String(preview.itemId) !== String(item.itemId)) {
+        return item;
+      }
+      return {
+        ...item,
+        effectiveDiscountType: preview.discountType || item.discountType || DISCOUNT_TYPES.NONE,
+        effectiveDiscountValue: Number(preview.discountValue || 0),
+        promotionId: preview.promotionApplied ? preview.promotionId : null,
+        promotionName: preview.promotionApplied ? preview.promotionName : "",
+        promotionDiscountAmount: preview.promotionApplied ? Number(preview.promotionDiscountAmount || 0) : 0,
+        promotionApplied: !!preview.promotionApplied,
+        effectiveLineTotal: Number(preview.finalLineTotal || 0),
+      };
+    }));
+  }, []);
+
+  // Offline pricing runs synchronously off the cached bundle — no debounce, no request. A
+  // promo code cannot be honoured here: validating and consuming one needs the server, and
+  // five disconnected tills would each accept the same single-use code.
+  useEffect(() => {
+    if (canUseServer || queueCartActive || isFreeLocalSalesPlan || !effectiveBranchId || cartItems.length === 0) {
+      return;
+    }
+    const result = previewOffline({
+      bundle: promotionBundle,
+      branchId: effectiveBranchId,
+      customerId: customer ? customer.id : null,
+      cartItems,
+      allItems,
+      billDiscount,
+    });
+    if (result) {
+      applyPromotionPreview(result, billDiscount);
+    } else {
+      setBillPromotionPreview(null);
+    }
+    // allItems is a lookup, not an input to the price: re-running on a catalogue refresh
+    // would rewrite the cart mid-sale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canUseServer, queueCartActive, isFreeLocalSalesPlan, effectiveBranchId, promotionPreviewSignature, promotionBundle]);
 
   useEffect(() => {
     if (!canUseServer || queueCartActive || isFreeLocalSalesPlan || !effectiveBranchId || cartItems.length === 0) {
@@ -1459,34 +1558,8 @@ const POS = () => {
           promotionCode: promotionCode || null,
           items: cartItems.map((item) => createOrderItemPayload(item, false)),
         });
-        const previewItems = Array.isArray(response.data?.items) ? response.data.items : [];
         if (cancelled) return;
-        setBillPromotionPreview({
-          billPromotionId: response.data?.billPromotionId || null,
-          billPromotionName: response.data?.billPromotionName || "",
-          billPromotionDiscountAmount: Number(response.data?.billPromotionDiscountAmount || 0),
-          appliedBillDiscountAmount: Number(response.data?.appliedBillDiscountAmount ?? billDiscount),
-          billPromotionApplied: !!response.data?.billPromotionApplied,
-          codeStatus: response.data?.codeStatus || null,
-        });
-
-        setCartItems((currentItems) => currentItems.map((item, index) => {
-          const preview = previewItems[index];
-          if (!preview || String(preview.itemId) !== String(item.itemId)) {
-            return item;
-          }
-
-          return {
-            ...item,
-            effectiveDiscountType: preview.discountType || item.discountType || DISCOUNT_TYPES.NONE,
-            effectiveDiscountValue: Number(preview.discountValue || 0),
-            promotionId: preview.promotionApplied ? preview.promotionId : null,
-            promotionName: preview.promotionApplied ? preview.promotionName : "",
-            promotionDiscountAmount: preview.promotionApplied ? Number(preview.promotionDiscountAmount || 0) : 0,
-            promotionApplied: !!preview.promotionApplied,
-            effectiveLineTotal: Number(preview.finalLineTotal || 0),
-          };
-        }));
+        applyPromotionPreview(response.data, billDiscount);
       } catch (error) {
         console.error("Promotion preview failed", error);
         setBillPromotionPreview(null);
@@ -1921,6 +1994,15 @@ const POS = () => {
             invoiceNo: offlineInvoiceNo,
             offlineCashierUserId: user?.userId,
             offlineSoldAt: soldAt,
+            // What this till priced with, and what it decided. The server banks the price as
+            // charged and records the attribution rather than re-pricing — see the note on
+            // the offline path in OrderService.
+            promotionBundleVersion: billPromotionPreview?.bundleVersion || promotionBundle?.version || null,
+            billPromotionId: billPromotionPreview?.billPromotionApplied ? billPromotionPreview.billPromotionId : null,
+            billPromotionName: billPromotionPreview?.billPromotionApplied ? billPromotionPreview.billPromotionName : null,
+            billPromotionDiscountAmount: billPromotionPreview?.billPromotionApplied
+              ? Number(billPromotionPreview.billPromotionDiscountAmount || 0)
+              : 0,
             items: cartItems.map((item) => createOrderItemPayload(item, true)),
           },
         });

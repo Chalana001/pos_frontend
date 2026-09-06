@@ -23,6 +23,22 @@ class PosOfflineDatabase extends Dexie {
       offlineSales: "clientSaleId, branchId, cashierUserId, createdAt",
       appMeta: "key",
     });
+
+    // v3 adds the promotion bundle: the running promotions for a branch, as the server's own
+    // engine sees them, so an offline till can price a cart instead of charging list price.
+    // One row per branch, replaced wholesale on each refresh.
+    //
+    // A new store needs its own version — an install still on v2 upgrades cleanly and keeps
+    // every existing row. Never edit a shipped version's stores; add the next one.
+    this.version(3).stores({
+      cachedItems: "[branchId+itemId], branchId, itemId, syncedAt",
+      cachedBranches: "id, active",
+      cachedUsers: "userId, username, lastSyncedAt",
+      cachedReceiptSettings: "[branchId+templateType], branchId, templateType, syncedAt",
+      offlineSales: "clientSaleId, branchId, cashierUserId, createdAt",
+      promotionBundles: "branchId, version, syncedAt",
+      appMeta: "key",
+    });
   }
 }
 
@@ -273,6 +289,28 @@ export const applyOfflineStockUsage = async (branchId, lines) => {
       await offlineDb.cachedItems.put({ ...row, data: nextItem });
     }
   });
+};
+
+/**
+ * Store the promotion bundle for a branch. Replaces whatever was there: the bundle is a
+ * complete picture of what is running, and merging two of them would leave a promotion that
+ * has since been paused still pricing sales.
+ */
+export const cachePromotionBundle = async (branchId, bundle) => {
+  if (!branchId || !bundle) return;
+  await offlineDb.promotionBundles.put({
+    branchId: Number(branchId),
+    version: bundle.version || null,
+    generatedAt: bundle.generatedAt || null,
+    promotions: Array.isArray(bundle.promotions) ? bundle.promotions : [],
+    onlineOnly: Array.isArray(bundle.onlineOnly) ? bundle.onlineOnly : [],
+    syncedAt: new Date().toISOString(),
+  });
+};
+
+export const getPromotionBundle = async (branchId) => {
+  if (!branchId) return null;
+  return (await offlineDb.promotionBundles.get(Number(branchId))) || null;
 };
 
 export const addOfflineSale = async (saleRecord) => {

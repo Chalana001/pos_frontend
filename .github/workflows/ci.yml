@@ -44,6 +44,15 @@ jobs:
       - name: Colour budget
         run: npm run check:colours
 
+      - name: Promotion engine parity
+        # The offline till prices carts with a JS port of the server's pricing engine. This
+        # runs it over the fixture corpus the backend generates from the canonical Java
+        # engine: if the two ever disagree, an offline sale would charge one number and the
+        # server would book another, so a divergence fails the build rather than reaching a
+        # till. Regenerate the corpus in the backend and copy it over with
+        # scripts/sync-promotion-corpus.mjs when the engine changes on purpose.
+        run: npm run test:promotions
+
       - name: Guard the production env
         # An empty VITE_API_URL builds a bundle that talks to nowhere; catch
         # the missing repo variable here with a readable message instead of

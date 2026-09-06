@@ -10,7 +10,8 @@
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:colours": "node scripts/check-colour-budget.mjs",
     "build:check": "npm run check:colours && npm run build && npm run check:bundle",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:promotions": "node --test \"src/offline/__tests__/promotionEngine.corpus.test.mjs\""
   },
   "browserslist": {
     "production": [
