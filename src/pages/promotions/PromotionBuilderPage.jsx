@@ -73,6 +73,7 @@ const INITIAL_FORM = {
   categoryIds: [],
   subCategoryIds: [],
   customerIds: [],
+  segmentIds: [],
 };
 
 const toLocalInput = (value) => (value ? String(value).slice(0, 16) : "");
@@ -96,6 +97,7 @@ const PromotionBuilderPage = () => {
   const [branches, setBranches] = useState([]);
   const [categories, setCategories] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [segments, setSegments] = useState([]);
   const [priceCheck, setPriceCheck] = useState(null);
   const [targetSearch, setTargetSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -110,15 +112,19 @@ const PromotionBuilderPage = () => {
     (async () => {
       try {
         setLoading(true);
-        const [branchRes, categoryRes, customerRes] = await Promise.all([
+        const [branchRes, categoryRes, customerRes, segmentRes] = await Promise.all([
           branchesAPI.getAll(true),
           singleCategoryMode ? categoriesAPI.getSingleCategories() : categoriesAPI.getAll(),
           customersAPI.getList({ activeOnly: true }),
+          // Segments are small and used by one scope only; a failure here must not stop the
+          // rest of the form loading.
+          promotionsAPI.segments().catch(() => ({ data: [] })),
         ]);
         if (cancelled) return;
         setBranches(Array.isArray(branchRes.data) ? branchRes.data : []);
         setCategories(Array.isArray(categoryRes.data) ? categoryRes.data : []);
         setCustomers(Array.isArray(customerRes.data) ? customerRes.data : []);
+        setSegments(Array.isArray(segmentRes.data) ? segmentRes.data : []);
 
         if (!isEdit) return;
 
@@ -169,6 +175,7 @@ const PromotionBuilderPage = () => {
           categoryIds: promotion.categoryIds || [],
           subCategoryIds: promotion.subCategoryIds || [],
           customerIds: promotion.customerIds || [],
+          segmentIds: promotion.segmentIds || [],
         });
 
         const lines = (promotion.items || []).map((line) => ({
@@ -334,6 +341,20 @@ const PromotionBuilderPage = () => {
     });
   };
 
+  const toggleSegment = (segmentId) => {
+    const numeric = Number(segmentId);
+    setForm((prev) => {
+      const current = prev.segmentIds || [];
+      const exists = current.some((value) => Number(value) === numeric);
+      return {
+        ...prev,
+        segmentIds: exists
+          ? current.filter((value) => Number(value) !== numeric)
+          : [...current, numeric],
+      };
+    });
+  };
+
   const changeScope = (scope) => {
     setForm((prev) => ({
       ...prev,
@@ -351,6 +372,7 @@ const PromotionBuilderPage = () => {
       categoryIds: [],
       subCategoryIds: [],
       customerIds: [],
+      segmentIds: [],
     }));
     setItemLines([]);
     setTargetSearch("");
@@ -412,7 +434,10 @@ const PromotionBuilderPage = () => {
     }
     if ((form.scheduleStart === "") !== (form.scheduleEnd === "")) return "Set both a start and an end time, or neither";
     if (form.scope === "ITEM" && itemLines.length === 0) return "Add at least one item";
-    if (form.scope !== "ITEM" && form.scope !== "BILL" && selectedTargetIds.length === 0) {
+    if (form.scope === "CUSTOMER" && selectedTargetIds.length === 0 && form.segmentIds.length === 0) {
+      return "Choose at least one customer or segment";
+    }
+    if (form.scope === "CATEGORY" && selectedTargetIds.length === 0) {
       return "Select at least one target";
     }
     if (!form.allowBelowCost && priceCheck?.belowCostCount > 0) {
@@ -467,6 +492,7 @@ const PromotionBuilderPage = () => {
     categoryIds: form.scope === "CATEGORY" && !singleCategoryMode ? form.categoryIds : [],
     subCategoryIds: form.scope === "CATEGORY" && singleCategoryMode ? form.subCategoryIds : [],
     customerIds: form.scope === "CUSTOMER" ? form.customerIds : [],
+    segmentIds: form.scope === "CUSTOMER" ? form.segmentIds : [],
   });
 
   const save = async (activate) => {
@@ -505,12 +531,15 @@ const PromotionBuilderPage = () => {
       : 0;
     return {
       days,
-      count: form.scope === "ITEM" ? itemLines.length : selectedTargetIds.length,
+      count: form.scope === "ITEM"
+        ? itemLines.length
+        : selectedTargetIds.length + (form.scope === "CUSTOMER" ? form.segmentIds.length : 0),
       avgPercent: priceCheck?.averageDiscountPercent,
       maxLine: priceCheck?.maxLineDiscount,
       belowCost: priceCheck?.belowCostCount || 0,
     };
-  }, [form.startAt, form.endAt, form.scope, itemLines.length, selectedTargetIds.length, priceCheck]);
+  }, [form.startAt, form.endAt, form.scope, itemLines.length, selectedTargetIds.length,
+      form.segmentIds.length, priceCheck]);
 
   if (loading) {
     return <div className="py-16"><LoadingSpinner size="lg" text="Loading…" /></div>;
@@ -779,6 +808,59 @@ const PromotionBuilderPage = () => {
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">
             3 · {form.scope === "CUSTOMER" ? "Customers" : "Categories"} ({selectedTargetIds.length})
           </h2>
+
+          {form.scope === "CUSTOMER" && (
+            <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/40 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-800">
+                  Segments ({form.segmentIds.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate("/promotions/segments")}
+                  className="text-xs font-semibold text-blue-700 hover:underline"
+                >
+                  Manage segments
+                </button>
+              </div>
+              {segments.length === 0 ? (
+                <p className="text-xs text-slate-500">
+                  No segments yet. A segment targets everyone matching a rule — spent over 50,000,
+                  say — instead of a list somebody keeps by hand.
+                </p>
+              ) : (
+                <div className="grid gap-1 md:grid-cols-2">
+                  {segments.filter((segment) => segment.active).map((segment) => {
+                    const checked = form.segmentIds.some((value) => Number(value) === Number(segment.id));
+                    return (
+                      <label
+                        key={segment.id}
+                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${
+                          checked ? "bg-blue-100 text-blue-800" : "hover:bg-white"
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{segment.name}</span>
+                          <span className="block text-xs text-slate-500">
+                            {segment.memberCount} customer{segment.memberCount === 1 ? "" : "s"}
+                            {segment.lastEvaluatedAt
+                              ? ` · as of ${new Date(segment.lastEvaluatedAt).toLocaleDateString()}`
+                              : " · never worked out"}
+                          </span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSegment(segment.id)}
+                          className="h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
           <div className="relative mb-3">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input

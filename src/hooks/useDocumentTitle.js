@@ -49,6 +49,7 @@ const ROUTE_TITLES = [
   ['/warranties', 'Warranties'],
   ['/promotions/new', 'New Promotion'],
   ['/promotions/history', 'Promotion History'],
+  ['/promotions/segments', 'Customer Segments'],
   ['/promotions', 'Promotions'],
   ['/loyalty', 'Loyalty'],
   ['/dining-tables', 'Dining tables'],

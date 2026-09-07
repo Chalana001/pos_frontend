@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { Copy, History, Pencil, Plus, Search, Settings, Tag, Trash2 } from "lucide-react";
+import { Copy, History, Pencil, Plus, Search, Settings, Tag, Trash2, Users } from "lucide-react";
 
 import { branchesAPI } from "../../api/branches.api";
 import { promotionsAPI } from "../../api/promotions.api";
@@ -187,6 +187,9 @@ const PromotionsPage = () => {
               <Settings size={16} />
             </Button>
           )}
+          <Button variant="secondary" onClick={() => navigate("/promotions/segments")}>
+            <Users size={16} className="mr-2" /> Segments
+          </Button>
           <Button variant="secondary" onClick={() => navigate("/promotions/history")}>
             <History size={16} className="mr-2" /> History
           </Button>
