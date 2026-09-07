@@ -50,6 +50,7 @@ const ROUTE_TITLES = [
   ['/promotions/new', 'New Promotion'],
   ['/promotions/history', 'Promotion History'],
   ['/promotions', 'Promotions'],
+  ['/loyalty', 'Loyalty'],
   ['/dining-tables', 'Dining tables'],
 
   // Reports are the screens most likely to be open several at once, so each

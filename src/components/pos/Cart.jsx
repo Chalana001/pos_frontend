@@ -4,6 +4,7 @@ import { formatCurrency } from "../../utils/formatters";
 import { DISCOUNT_TYPES, ItemType } from "../../utils/constants";
 import Button from "../../components/common/Button";
 import CustomSelect from "../../components/common/CustomSelect";
+import LoyaltyPanel from "./LoyaltyPanel";
 
 const Cart = ({
   items,
@@ -25,6 +26,10 @@ const Cart = ({
   promotionCode,
   setPromotionCode,
   codeStatus,
+  loyaltyPoints,
+  setLoyaltyPoints,
+  loyaltyRefreshKey,
+  loyaltyCustomerId,
   focusSearch,
   cartSummary,
   footerActions,
@@ -458,6 +463,17 @@ const Cart = ({
                 </div>
               ) : null}
             </div>
+          )}
+
+          {typeof setLoyaltyPoints === "function" && (
+            <LoyaltyPanel
+              customerId={loyaltyCustomerId}
+              billTotal={computedTotal}
+              points={loyaltyPoints}
+              setPoints={setLoyaltyPoints}
+              refreshKey={loyaltyRefreshKey}
+              focusSearch={focusSearch}
+            />
           )}
         </div>
 

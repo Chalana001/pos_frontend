@@ -21,6 +21,7 @@ const SaleReturnPage = lazy(() => import('../pages/SaleReturnPage'));
 const PromotionsPage = lazy(() => import('../pages/promotions/PromotionsPage'));
 const PromotionBuilderPage = lazy(() => import('../pages/promotions/PromotionBuilderPage'));
 const PromotionHistoryPage = lazy(() => import('../pages/promotions/PromotionHistoryPage'));
+const LoyaltySettingsPage = lazy(() => import('../pages/loyalty/LoyaltySettingsPage'));
 const WarrantiesPage = lazy(() => import('../pages/WarrantiesPage'));
 const WarrantyClaimsPage = lazy(() => import('../pages/WarrantyClaimsPage'));
 const WarrantyDetailsPage = lazy(() => import('../pages/WarrantyDetailsPage'));
@@ -144,6 +145,7 @@ const AppRoutes = () => {
         <Route path="promotions/new" element={<ProtectedRoute permission="MANAGE_PROMOTIONS" requiresOnline>{withSuspense(<PromotionBuilderPage />)}</ProtectedRoute>} />
         <Route path="promotions/:id/edit" element={<ProtectedRoute permission="MANAGE_PROMOTIONS" requiresOnline>{withSuspense(<PromotionBuilderPage />)}</ProtectedRoute>} />
         <Route path="promotions/history" element={<ProtectedRoute permission="VIEW_PROMOTION_HISTORY" requiresOnline>{withSuspense(<PromotionHistoryPage />)}</ProtectedRoute>} />
+        <Route path="loyalty" element={<ProtectedRoute permission="MANAGE_LOYALTY" requiresOnline>{withSuspense(<LoyaltySettingsPage />)}</ProtectedRoute>} />
         <Route path="warranties" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantiesPage />)}</ProtectedRoute>} />
         <Route path="warranties/claims" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantyClaimsPage />)}</ProtectedRoute>} />
         <Route path="warranties/settings" element={<ProtectedRoute permission="MANAGE_WARRANTY_SETTINGS" requiresOnline>{withSuspense(<WarrantySettingsPage />)}</ProtectedRoute>} />

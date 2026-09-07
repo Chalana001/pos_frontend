@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Lock } from "lucide-react";
+import { Lock, Sparkles } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useAppConfiguration } from "../../context/AppConfigurationContext";
@@ -231,6 +231,12 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
       icon: Tag,
       path: "/promotions",
       permission: "MANAGE_PROMOTIONS",
+    },
+    {
+      name: "Loyalty",
+      icon: Sparkles,
+      path: "/loyalty",
+      permission: "MANAGE_LOYALTY",
     },
     {
       name: "Items",

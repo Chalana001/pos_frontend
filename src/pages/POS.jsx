@@ -205,6 +205,11 @@ const POS = () => {
   // The promotion rules this till holds. Refreshed while online, priced from while offline —
   // without it an outage means every customer pays list price.
   const [promotionBundle, setPromotionBundle] = useState(null);
+  // Points the customer is spending on this sale. The server settles them after promotions and
+  // decides the amount; this is a request, not a price.
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  // Bumped after a sale so the panel refetches the balance the sale just changed.
+  const [loyaltyRefreshKey, setLoyaltyRefreshKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -748,6 +753,8 @@ const POS = () => {
     setCartMode(null);
     setBillDiscount(0);
       setPromotionCode("");
+      setLoyaltyPoints(0);
+      setLoyaltyRefreshKey((key) => key + 1);
     setOrderType(ORDER_TYPES.CASH);
     setPaidAmount(0);
     setPaymentMethod("CASH");
@@ -764,6 +771,8 @@ const POS = () => {
     setCartMode(null);
     setBillDiscount(0);
       setPromotionCode("");
+      setLoyaltyPoints(0);
+      setLoyaltyRefreshKey((key) => key + 1);
   };
 
   const mapPendingItemToCartItem = (pendingItem) => {
@@ -1892,6 +1901,9 @@ const POS = () => {
         customerId: customer ? customer.id : null,
         billDiscount,
         promotionCode: promotionCode || null,
+        // Online only — a disconnected till cannot check a balance, and two of them would each
+        // spend the same points.
+        loyaltyPointsToRedeem: canUseServer ? loyaltyPoints : 0,
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
         paymentMethod: orderType === ORDER_TYPES.CASH ? paymentMethod : "CREDIT",
         items: orderItems,
@@ -2521,6 +2533,10 @@ const POS = () => {
             promotionCode={promotionCode}
             setPromotionCode={setPromotionCode}
             codeStatus={billPromotionPreview?.codeStatus || null}
+            loyaltyPoints={loyaltyPoints}
+            setLoyaltyPoints={setLoyaltyPoints}
+            loyaltyRefreshKey={loyaltyRefreshKey}
+            loyaltyCustomerId={canUseServer && customer ? customer.id : null}
             billPromotion={billPromotionPreview}
             onCheckout={handleCheckout}
             loading={loading}

@@ -8,6 +8,7 @@ import Card from "../components/common/Card";
 import CustomSelect from "../components/common/CustomSelect";
 import Modal from "../components/common/Modal";
 import CustomerNotesTab from "../components/customers/CustomerNotesTab";
+import CustomerLoyaltyPanel from "../components/customers/CustomerLoyaltyPanel";
 import CustomerOrdersTab from "../components/customers/CustomerOrdersTab";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
@@ -32,6 +33,7 @@ const CustomerViewPage = () => {
   const [openedTabs, setOpenedTabs] = useState({
     orders: false,
     notes: false,
+    loyalty: false,
   });
 
   useEffect(() => {
@@ -223,6 +225,16 @@ const CustomerViewPage = () => {
               >
                 Notes
               </button>
+
+              <button
+                onClick={() => onTabChange("loyalty")}
+                className={`profile-tab-chip rounded-lg px-4 py-2 text-sm font-medium ${
+                  tab === "loyalty" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                }`}
+                style={{ animationDelay: "200ms" }}
+              >
+                Points
+              </button>
             </div>
 
             {tab === "orders" ? (
@@ -230,6 +242,12 @@ const CustomerViewPage = () => {
                 <CustomerOrdersTab customerId={id} />
               ) : (
                 <div className="text-sm text-slate-500">Open orders tab to load data.</div>
+              )
+            ) : tab === "loyalty" ? (
+              openedTabs.loyalty ? (
+                <CustomerLoyaltyPanel customerId={id} />
+              ) : (
+                <div className="text-sm text-slate-500">Open points tab to load data.</div>
               )
             ) : openedTabs.notes ? (
               <CustomerNotesTab customerId={id} />
