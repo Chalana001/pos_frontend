@@ -1408,6 +1408,7 @@ const POS = () => {
     newItems[index].promotionName = "";
     newItems[index].promotionDiscountAmount = 0;
     newItems[index].promotionApplied = false;
+    newItems[index].promotionDecisions = undefined;
     newItems[index].effectiveLineTotal = undefined;
     setCartItems(newItems);
   };
@@ -1505,6 +1506,9 @@ const POS = () => {
       billPromotionApplied: !!data?.billPromotionApplied,
       codeStatus: data?.codeStatus || null,
       bundleVersion: data?.bundleVersion || null,
+      // Every bill-level promotion considered and what happened to it, so the cart can answer
+      // "why isn't the discount coming off?" instead of only showing the winner.
+      billDecisions: data?.billDecisions || [],
     });
 
     const previewItems = Array.isArray(data?.items) ? data.items : [];
@@ -1522,6 +1526,7 @@ const POS = () => {
         promotionDiscountAmount: preview.promotionApplied ? Number(preview.promotionDiscountAmount || 0) : 0,
         promotionApplied: !!preview.promotionApplied,
         effectiveLineTotal: Number(preview.finalLineTotal || 0),
+        promotionDecisions: preview.decisions || [],
       };
     }));
   }, []);

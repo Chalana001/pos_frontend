@@ -5,6 +5,7 @@ import { DISCOUNT_TYPES, ItemType } from "../../utils/constants";
 import Button from "../../components/common/Button";
 import CustomSelect from "../../components/common/CustomSelect";
 import LoyaltyPanel from "./LoyaltyPanel";
+import PromotionWhyModal, { WhyButton, explainableDecisions } from "./PromotionWhyModal";
 
 const Cart = ({
   items,
@@ -38,6 +39,8 @@ const Cart = ({
   queueMode = false,
 }) => {
   const [editingIndex, setEditingIndex] = useState(null);
+  // { title, decisions } while the "why this price" panel is open.
+  const [whyPanel, setWhyPanel] = useState(null);
   // Stable reference, so the effect below fires when the cart actually changes
   // rather than on every render - otherwise it overwrites its own "previous"
   // snapshot and can miss the change it is meant to chase.
@@ -175,6 +178,12 @@ const Cart = ({
 
   return (
     <div className="flex h-full flex-col bg-white">
+      <PromotionWhyModal
+        isOpen={!!whyPanel}
+        onClose={() => setWhyPanel(null)}
+        title={whyPanel?.title}
+        decisions={whyPanel?.decisions}
+      />
       <div className="page-section-enter flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-3 py-2.5" style={{ animationDelay: "120ms" }}>
         <div className="flex items-center gap-2">
           <div className="bg-blue-600 text-white p-2 rounded-lg">
@@ -277,6 +286,16 @@ const Cart = ({
                       <div className="mt-0.5 max-w-[220px] truncate text-xs font-semibold text-emerald-700">
                         {item.promotionName}
                       </div>
+                    )}
+                    {explainableDecisions(item.promotionDecisions).length > 0 && (
+                      <WhyButton
+                        applied={!!item.promotionApplied}
+                        label={item.promotionApplied ? "Why this price?" : "No offer — why?"}
+                        onClick={() => setWhyPanel({
+                          title: item.name,
+                          decisions: item.promotionDecisions,
+                        })}
+                      />
                     )}
                     {warrantyEnabled ? (
                       <div className="mt-1 max-w-[144px]">
@@ -434,6 +453,18 @@ const Cart = ({
               <span className="shrink-0 font-black">-{formatCurrency(billPromotion.billPromotionDiscountAmount || 0)}</span>
             </div>
           ) : null}
+          {explainableDecisions(billPromotion?.billDecisions).length > 0 && (
+            <div className="flex justify-end">
+              <WhyButton
+                applied={!!billPromotion?.billPromotionApplied}
+                label={billPromotion?.billPromotionApplied ? "Why this bill offer?" : "No bill offer — why?"}
+                onClick={() => setWhyPanel({
+                  title: "Whole bill",
+                  decisions: billPromotion?.billDecisions,
+                })}
+              />
+            </div>
+          )}
           {typeof setPromotionCode === "function" && (
             <div className="space-y-1">
               <div className="flex justify-between items-center text-slate-500 text-sm">
