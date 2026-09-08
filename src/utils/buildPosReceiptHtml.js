@@ -88,9 +88,16 @@ const renderLine = (line, data, items) => {
   }[orderData?.refundMethod] || orderData?.refundMethod || '';
   // A reprint has to say so. Nothing else distinguishes it from the slip it copies, and a
   // second copy of a refund is the one a shop most needs to be able to tell apart.
-  const [originalWord, copyWord] = (line.customText?.trim() || 'ORIGINAL|COPY')
-    .split('|').map((word) => word.trim());
-  const printMark = orderData?.isReprint ? (copyWord || originalWord) : originalWord;
+  //
+  // The shop types one heading and the copy wording is added to it, rather than asking for
+  // both spellings of the same line. Nothing types "(COPY)" by hand.
+  //   (blank)         -> ORIGINAL / COPY
+  //   RETURN RECEIPT  -> RETURN RECEIPT / RETURN RECEIPT (COPY)
+  // Split on '|' first so a heading saved under the older two-part form still reads right.
+  const markHeading = (line.customText?.trim() || '').split('|')[0].trim();
+  const printMark = orderData?.isReprint
+    ? (markHeading ? `${markHeading} (COPY)` : 'COPY')
+    : (markHeading || 'ORIGINAL');
 
   // ── Total discount = bill-level + promotion-level + all per-line discounts ─
   // We compute line discount sum from items so we capture every path

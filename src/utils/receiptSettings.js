@@ -119,8 +119,7 @@ export const RECEIPT_LINE_CUSTOM_TEXT_TYPES = [
   'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
   'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
   'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK',
-  // On PRINT_MARK the text is the two words themselves, e.g. "ORIGINAL|COPY" — one word is
-  // used for both. A shop that prints in Sinhala should not be stuck with an English stamp.
+  // On PRINT_MARK the text is the heading, and a reprint appends the copy wording to it.
   'PRINT_MARK',
   'THANKS_MESSAGE', 'CUSTOM_TEXT',
 ];
@@ -252,8 +251,9 @@ export const buildLegacyReturnTemplateLines = () => {
     mk('ADDRESS',          { id: 'ret-addr',   align: 'center', fontSize: 10 }),
     mk('PHONE',            { id: 'ret-phone',  align: 'center', fontSize: 10 }),
     mk('SEPARATOR',        { id: 'ret-sep1' }),
+    // The heading only. A reprint of this slip prints "RETURN RECEIPT (COPY)" on its own.
     mk('PRINT_MARK',       { id: 'ret-mark',   align: 'center', fontSize: 12, bold: true,
-                             customText: 'RETURN RECEIPT|RETURN RECEIPT (COPY)' }),
+                             customText: 'RETURN RECEIPT' }),
     mk('SEPARATOR',        { id: 'ret-sep2' }),
     mk('RETURN_NO',        { id: 'ret-no',     align: 'split', fontSize: 10, bold: true }),
     mk('ORIGINAL_INVOICE', { id: 'ret-inv',    align: 'split', fontSize: 10 }),
