@@ -3,7 +3,10 @@
  * HTML string renderer for the POS thermal receipt, driven by template lines.
  * Mirrors the GMS buildThermalBillHtml approach.
  */
-import { getActiveTemplateLines } from './receiptSettings';
+import { createReceiptTemplateLine, getActiveTemplateLines } from './receiptSettings';
+
+/** Lines that belong above the stamp: the shop's own letterhead. */
+const HEADER_LINE_TYPES = ['LOGO', 'STORE_NAME', 'BRANCH_NAME', 'ADDRESS', 'PHONE', 'SEPARATOR', 'BLANK'];
 
 const money = (v) => Number(v || 0).toFixed(2);
 
@@ -399,7 +402,22 @@ export const buildPosReceiptHtml = ({
       : Math.max(1, Math.min(10, Number(settings?.printerCopies || 1)));
 
   // Which default layout to fall back on when the shop has not customised this document.
-  const lines = getActiveTemplateLines(settings, templateType);
+  const savedLines = getActiveTemplateLines(settings, templateType);
+
+  // A copy that does not say so is the whole failure this line exists to prevent, so a reprint
+  // is stamped even when the layout has no PRINT_MARK in it — every layout saved before the
+  // line existed has none, which is most of them. It goes under the shop's letterhead, where
+  // it would have been placed by hand.
+  //
+  // Only ever added to a reprint. A shop that leaves ORIGINAL off its slips has decided that;
+  // one whose copies are indistinguishable from originals has not decided anything.
+  const lines = orderData?.isReprint && !savedLines.some((l) => l.type === 'PRINT_MARK')
+    ? (() => {
+        let at = 0;
+        while (at < savedLines.length && HEADER_LINE_TYPES.includes(savedLines[at].type)) at += 1;
+        return [...savedLines.slice(0, at), createReceiptTemplateLine('PRINT_MARK'), ...savedLines.slice(at)];
+      })()
+    : savedLines;
   const dataObj = { settings, branchData, storeName, orderData, customerData };
 
   const billHtml =
