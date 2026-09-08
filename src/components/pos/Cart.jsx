@@ -31,6 +31,8 @@ const Cart = ({
   setLoyaltyPoints,
   loyaltyRefreshKey,
   loyaltyCustomerId,
+  loyaltyDiscount = 0,
+  onLoyaltyValueChange,
   focusSearch,
   cartSummary,
   footerActions,
@@ -158,7 +160,12 @@ const Cart = ({
     lineTotalAfterItemDiscounts,
     Number.isFinite(previewBillDiscount) ? previewBillDiscount : safeBillDiscount
   ));
-  const computedTotal = Math.max(0, lineTotalAfterItemDiscounts - effectiveBillDiscount);
+  // What the bill comes to before points. This is the figure the points panel is allowed to
+  // spend against, and the base the server quotes a redemption from — feeding it the total
+  // *after* points would shrink the ceiling as the cashier typed.
+  const totalBeforePoints = Math.max(0, lineTotalAfterItemDiscounts - effectiveBillDiscount);
+  const pointsDiscount = Math.min(totalBeforePoints, Math.max(0, Number(loyaltyDiscount) || 0));
+  const computedTotal = Math.max(0, totalBeforePoints - pointsDiscount);
 
   const getPriceLabel = (item) => {
     if (item.itemType === ItemType.SERVICE) {
@@ -499,14 +506,22 @@ const Cart = ({
           {typeof setLoyaltyPoints === "function" && (
             <LoyaltyPanel
               customerId={loyaltyCustomerId}
-              billTotal={computedTotal}
+              billTotal={totalBeforePoints}
               points={loyaltyPoints}
               setPoints={setLoyaltyPoints}
               refreshKey={loyaltyRefreshKey}
               focusSearch={focusSearch}
+              onValueChange={onLoyaltyValueChange}
             />
           )}
         </div>
+
+        {pointsDiscount > 0 ? (
+          <div className="flex items-center justify-between rounded-lg bg-violet-50 px-2.5 py-1.5 text-xs text-violet-800">
+            <span className="font-bold">Points</span>
+            <span className="font-black">-{formatCurrency(pointsDiscount)}</span>
+          </div>
+        ) : null}
 
         <div className="pt-2.5 border-t border-slate-200 flex justify-between items-end">
           <span className="font-bold text-slate-800">Total</span>

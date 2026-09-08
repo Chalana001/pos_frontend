@@ -210,6 +210,11 @@ const POS = () => {
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   // Bumped after a sale so the panel refetches the balance the sale just changed.
   const [loyaltyRefreshKey, setLoyaltyRefreshKey] = useState(0);
+  // What the points entered are worth in money, priced by the panel the same way the server
+  // prices them. The bill on screen has to be the bill the customer pays: without this the
+  // cashier reads out a total the points had not come off, takes that much cash, and the
+  // server hands back change nobody counted.
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -655,7 +660,12 @@ const POS = () => {
     });
 
     const normalizedBillDiscount = getEffectiveBillDiscount(total);
-    return roundToRupee(total - normalizedBillDiscount);
+    const afterDiscount = roundToRupee(total - normalizedBillDiscount);
+    // Points only come off a sale the server prices. A sale that ends up in the offline queue
+    // sends loyaltyPointsToRedeem: 0, so taking their value off here would queue a sale short
+    // by the amount, with nothing spent to account for it.
+    if (!canUseServer) return afterDiscount;
+    return Math.max(0, roundToRupee(afterDiscount - (Number(loyaltyDiscount) || 0)));
   };
 
   const getCheckoutCreditAmount = (total = calculateTotal()) => {
@@ -754,6 +764,7 @@ const POS = () => {
     setBillDiscount(0);
       setPromotionCode("");
       setLoyaltyPoints(0);
+      setLoyaltyDiscount(0);
       setLoyaltyRefreshKey((key) => key + 1);
     setOrderType(ORDER_TYPES.CASH);
     setPaidAmount(0);
@@ -772,6 +783,7 @@ const POS = () => {
     setBillDiscount(0);
       setPromotionCode("");
       setLoyaltyPoints(0);
+      setLoyaltyDiscount(0);
       setLoyaltyRefreshKey((key) => key + 1);
   };
 
@@ -1690,6 +1702,12 @@ const POS = () => {
     if (cartItems.length === 0) return toast.error("Cart is empty");
     if (!canSell) return toast.error(canUseServer && !isFreeLocalSalesPlan ? "No active shift. Cannot checkout." : "POS queue mode is not ready.");
     if (saleMode === SALE_MODES.DINE_IN && !selectedTableId) return toast.error("Select a table before checkout");
+    // Points that price at nothing — below the scheme's minimum, or on a bill that cannot
+    // absorb them — are refused by the server, which fails the whole sale. Better to say so
+    // here than to let the cashier take the money and then lose the sale to a 400.
+    if (canUseServer && loyaltyPoints > 0 && loyaltyDiscount <= 0) {
+      return toast.error("Those points cannot be redeemed on this bill. Clear them or enter more.");
+    }
 
     setPaymentError("");
     setPaidAmount(calculateTotal());
@@ -2548,6 +2566,8 @@ const POS = () => {
             setLoyaltyPoints={setLoyaltyPoints}
             loyaltyRefreshKey={loyaltyRefreshKey}
             loyaltyCustomerId={canUseServer && customer ? customer.id : null}
+            loyaltyDiscount={canUseServer ? loyaltyDiscount : 0}
+            onLoyaltyValueChange={setLoyaltyDiscount}
             billPromotion={billPromotionPreview}
             onCheckout={handleCheckout}
             loading={loading}
