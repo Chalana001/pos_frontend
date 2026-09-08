@@ -125,12 +125,20 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
     if (key === "configuration") setOpenConfiguration(true);
   }, [closeAllDropdowns]);
 
-  const toggleDropdown = (key, currentlyOpen) => {
+  const toggleDropdown = (key, currentlyOpen, trigger) => {
     if (currentlyOpen) {
       closeAllDropdowns();
       return;
     }
     openOnlyDropdown(key);
+    // The children render below the row on the next frame. Bring the whole group into
+    // view then, so a group near the bottom does not open under the fold and leave the
+    // user scrolling for the very thing they just asked for. "nearest" moves the list
+    // only as far as it must, so a group already in view does not jump.
+    if (trigger) {
+      requestAnimationFrame(() =>
+        trigger.parentElement?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+    }
   };
 
   const handleSidebarOpen = () => {
@@ -416,7 +424,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("sales", openSales)}
+                    onClick={(event) => toggleDropdown("sales", openSales, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isSalesRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -470,7 +478,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("reports", openReports)}
+                    onClick={(event) => toggleDropdown("reports", openReports, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isReportsRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -638,7 +646,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("warranties", openWarranties)}
+                    onClick={(event) => toggleDropdown("warranties", openWarranties, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isWarrantyRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -691,7 +699,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("configuration", openConfiguration)}
+                    onClick={(event) => toggleDropdown("configuration", openConfiguration, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isConfigurationRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -804,7 +812,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("items", openItems)}
+                    onClick={(event) => toggleDropdown("items", openItems, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isItemsRoute
                         ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -911,7 +919,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("customers", openCustomers)}
+                    onClick={(event) => toggleDropdown("customers", openCustomers, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isCustomersRoute
                         ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -986,7 +994,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("suppliers", openSuppliers)}
+                    onClick={(event) => toggleDropdown("suppliers", openSuppliers, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isSuppliersRoute
                         ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -1047,7 +1055,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("shifts", openShifts)}
+                    onClick={(event) => toggleDropdown("shifts", openShifts, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isShiftsRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -1097,7 +1105,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("expenses", openExpenses)}
+                    onClick={(event) => toggleDropdown("expenses", openExpenses, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isExpensesRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -1144,7 +1152,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("cashdrops", openCashDrops)}
+                    onClick={(event) => toggleDropdown("cashdrops", openCashDrops, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                       isCashDropsRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
@@ -1199,7 +1207,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("stock", openStock)}
+                    onClick={(event) => toggleDropdown("stock", openStock, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isStockRoute
                         ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -1290,7 +1298,7 @@ return (
               return (
                 <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
                   <button
-                    onClick={() => toggleDropdown("purchase", openPurchase)}
+                    onClick={(event) => toggleDropdown("purchase", openPurchase, event.currentTarget)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isPurchaseRoute
                         ? "sidebar-group-active"
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
@@ -1388,7 +1396,80 @@ return (
             );
           })}
         </nav>
-        ) : <div className="flex-1" />}
+        ) : (
+          // The rail. Each top-level entry as its icon alone - the same permission and
+          // module rules as the full list, so nothing appears here that would not appear
+          // there. A page navigates; a group opens the sidebar with that group expanded,
+          // because its children have nowhere to go at 72px wide.
+          <nav
+            className="custom-scrollbar-dark flex-1 overflow-y-auto px-2 py-3 space-y-1"
+            aria-label="Main menu, collapsed"
+          >
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              if (!hasPermission(role, item.permission)) return null;
+              if (item.path === "/users" && !canUseFeature("USER_MANAGEMENT")) return null;
+              const label = t(item.name);
+              const groupKey = item.type?.startsWith("dropdown-")
+                ? item.type.slice("dropdown-".length)
+                : null;
+              const here = location.pathname;
+              const active = here === item.path || here.startsWith(`${item.path}/`)
+                || (groupKey === "purchase" && here.startsWith("/purchases"));
+              const railClass = "flex h-11 w-full items-center justify-center rounded-lg transition-colors";
+              const tone = active
+                ? "sidebar-group-active"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white";
+
+              if (groupKey) {
+                return (
+                  <button
+                    key={item.path}
+                    type="button"
+                    title={label}
+                    aria-label={label}
+                    onClick={() => {
+                      handleSidebarOpen();
+                      openOnlyDropdown(groupKey);
+                    }}
+                    className={`${railClass} ${tone}`}
+                  >
+                    <Icon size={20} />
+                  </button>
+                );
+              }
+
+              if (!canOpenPath(item.path)) {
+                return (
+                  <button
+                    key={item.path}
+                    type="button"
+                    title={label}
+                    aria-label={label}
+                    onClick={() => setLockedModule(moduleForPath(item.path))}
+                    className={`${railClass} text-slate-500 hover:bg-slate-800/60 hover:text-slate-300`}
+                  >
+                    <Icon size={20} />
+                  </button>
+                );
+              }
+
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  title={label}
+                  aria-label={label}
+                  className={({ isActive }) =>
+                    `${railClass} ${isActive ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`
+                  }
+                >
+                  <Icon size={20} />
+                </NavLink>
+              );
+            })}
+          </nav>
+        )}
 
         {!isDesktopCollapsed ? (
         <div className="page-section-enter border-t border-slate-800 p-4" style={{ animationDelay: '520ms' }}>
