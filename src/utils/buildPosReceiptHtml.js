@@ -63,6 +63,18 @@ const renderLine = (line, data, items) => {
   const changeAmt    = Math.max(0, paidAmount - grandTotal);
   const balanceShow  = dueAmount > 0 ? dueAmount : changeAmt;
 
+  // ── Loyalty ───────────────────────────────────────────────────────────────
+  // Every one of these prints nothing when it is zero, so a shop can leave the lines in its
+  // template and a walk-in sale still comes out clean.
+  const pointsEarned   = Math.max(0, Number(orderData?.loyaltyPointsEarned ?? 0));
+  const pointsRedeemed = Math.max(0, Number(orderData?.loyaltyPointsRedeemed ?? 0));
+  const pointsDiscount = Math.max(0, Number(orderData?.loyaltyDiscountAmount ?? 0));
+  // The balance as at this sale, banked on the order — not the customer's balance now, or a
+  // reprint would disagree with the slip it is a copy of.
+  const pointsBalance  = Math.max(0, Number(orderData?.loyaltyPointsBalance ?? 0));
+  const touchedPoints  = pointsEarned > 0 || pointsRedeemed > 0;
+  const pts = (v) => Number(v || 0).toLocaleString();
+
   // ── Total discount = bill-level + promotion-level + all per-line discounts ─
   // We compute line discount sum from items so we capture every path
   // (effectiveDiscountType/Value, lineDiscount, discountAmount, or baseTotal−lineTotal).
@@ -90,7 +102,10 @@ const renderLine = (line, data, items) => {
   // Total discount shown on DISCOUNT line = everything combined
   const totalDiscount = lineDiscountSum + billDiscount + promoDiscount;
   // If totalDiscount doesn't match subTotal-grandTotal due to rounding, trust the arithmetic
-  const inferredDiscount = subTotal > 0 && grandTotal >= 0 ? subTotal - grandTotal : 0;
+  // Points were already taken off grandTotal, and they are not a discount — spending them is
+  // closer to part-payment. Left in, they would be reported on the DISCOUNT line as a price
+  // cut the shop never gave.
+  const inferredDiscount = subTotal > 0 && grandTotal >= 0 ? subTotal - grandTotal - pointsDiscount : 0;
   const displayDiscount = totalDiscount > 0.001 ? totalDiscount : (inferredDiscount > 0.001 ? inferredDiscount : 0);
 
   const logoW   = Math.max(35, Math.min(200, Number(settings?.logoWidthPercent || 78)));
@@ -169,6 +184,20 @@ const renderLine = (line, data, items) => {
       return dueAmount > 0
         ? `<div class="${cls} two-col credit-due" style="${style}"><span>${lbl('Credit Due')}</span><span>${lkr(dueAmount)}</span></div>`
         : '';
+
+    case 'LOYALTY_REDEEMED':
+      return pointsRedeemed > 0 ? two('Points Used', pts(pointsRedeemed)) : '';
+
+    case 'LOYALTY_DISCOUNT':
+      return pointsDiscount > 0.001 ? two('Points Discount', `-${lkr(pointsDiscount)}`) : '';
+
+    case 'LOYALTY_EARNED':
+      return pointsEarned > 0 ? two('Points Earned', pts(pointsEarned)) : '';
+
+    case 'LOYALTY_BALANCE':
+      // Only on a sale that actually moved points: a balance printed beside a walk-in sale
+      // belongs to nobody.
+      return touchedPoints ? two('Points Balance', pts(pointsBalance)) : '';
 
     case 'THANKS_MESSAGE':
       // customText in the line itself is the thanks text (typed directly in the editor).

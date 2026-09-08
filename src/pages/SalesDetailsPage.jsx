@@ -131,7 +131,13 @@ const SalesDetailsPage = () => {
       branchAddress: sale.branchAddress,
       branchPhone: sale.branchPhone,
       branchLogo: sale.branchLogo,
-      createdAt: sale.createdAt
+      createdAt: sale.createdAt,
+      // What this sale did to the customer's points, as it stood then. A reprint has to
+      // match the slip it copies, so the balance comes from the order, not the account.
+      loyaltyPointsEarned: sale.loyaltyPointsEarned,
+      loyaltyPointsRedeemed: sale.loyaltyPointsRedeemed,
+      loyaltyDiscountAmount: sale.loyaltyDiscountAmount,
+      loyaltyPointsBalance: sale.loyaltyPointsBalance,
     };
 
     const cartItems = sale.items.map(item => ({

@@ -2110,6 +2110,12 @@ const POS = () => {
         customerName,
         customerPhone: customer?.phone || "",
         createdAt: response.data.createdAt,
+        // What the sale did to the customer's points. The balance is the server's, as at this
+        // sale, so the slip and a reprint of it never disagree.
+        loyaltyPointsEarned: Number(response.data?.loyaltyPointsEarned || 0),
+        loyaltyPointsRedeemed: Number(response.data?.loyaltyPointsRedeemed || 0),
+        loyaltyDiscountAmount: Number(response.data?.loyaltyDiscountAmount || 0),
+        loyaltyPointsBalance: Number(response.data?.loyaltyPointsBalance || 0),
         branchName,
         branchAddress,
         branchPhone,

@@ -325,6 +325,14 @@ const ReceiptTemplate = ({
   const paidAmount = Number(orderData?.paidAmount ?? 0);
   const dueAmount = Math.max(0, Number(orderData?.dueAmount ?? 0));
   const paymentMethod = (orderData?.paymentMethod || 'CASH').replace('_', ' ');
+  // Loyalty. Points spent came off the grand total already, so the row sits above Net Total
+  // and the arithmetic on the slip adds up; what was earned and what is left are after it,
+  // because they are news rather than money.
+  const pointsEarned = Math.max(0, Number(orderData?.loyaltyPointsEarned ?? 0));
+  const pointsRedeemed = Math.max(0, Number(orderData?.loyaltyPointsRedeemed ?? 0));
+  const pointsDiscount = Math.max(0, Number(orderData?.loyaltyDiscountAmount ?? 0));
+  const pointsBalance = Math.max(0, Number(orderData?.loyaltyPointsBalance ?? 0));
+  const touchedPoints = pointsEarned > 0 || pointsRedeemed > 0;
   const orderType = dueAmount > 0 && paidAmount > 0
     ? `${paymentMethod} + CREDIT`
     : (dueAmount > 0 ? 'CREDIT' : paymentMethod);
@@ -509,6 +517,12 @@ const ReceiptTemplate = ({
                 <span>-{formatCurrency(calculateTotalDiscount(items, billDiscount, orderData?.promotionDiscountTotal ?? orderData?.billPromotionDiscountAmount ?? 0))}</span>
               </div>
             ) : null}
+            {pointsDiscount > 0 ? (
+              <div style={styles.totalRow}>
+                <span>{t('Points Used')}{pointsRedeemed > 0 ? ` (${pointsRedeemed.toLocaleString()})` : ''}</span>
+                <span>-{formatCurrency(pointsDiscount)}</span>
+              </div>
+            ) : null}
             {normalized.showNetTotal ? (
               <div style={styles.netTotalRow}>
                 <span>{t('Net Total')}</span>
@@ -531,6 +545,18 @@ const ReceiptTemplate = ({
               <div style={{ ...styles.totalRow, fontWeight: 700 }}>
                 <span>{t(isPreBill ? 'Amount Due' : 'Credit Due')}</span>
                 <span>{formatCurrency(dueAmount)}</span>
+              </div>
+            ) : null}
+            {pointsEarned > 0 ? (
+              <div style={styles.totalRow}>
+                <span>{t('Points Earned')}</span>
+                <span>{pointsEarned.toLocaleString()}</span>
+              </div>
+            ) : null}
+            {touchedPoints ? (
+              <div style={styles.totalRow}>
+                <span>{t('Points Balance')}</span>
+                <span>{pointsBalance.toLocaleString()}</span>
               </div>
             ) : null}
           </div>

@@ -17,6 +17,10 @@ export const RECEIPT_LINE_TYPES = [
   'PAID',
   'BALANCE',
   'CREDIT_DUE',
+  'LOYALTY_REDEEMED',
+  'LOYALTY_DISCOUNT',
+  'LOYALTY_EARNED',
+  'LOYALTY_BALANCE',
   'THANKS_MESSAGE',
   'CUSTOM_TEXT',
   'SEPARATOR',
@@ -40,6 +44,10 @@ export const RECEIPT_LINE_TYPE_OPTIONS = [
   { value: 'PAID',           label: 'Paid Amount' },
   { value: 'BALANCE',        label: 'Balance' },
   { value: 'CREDIT_DUE',     label: 'Credit Due' },
+  { value: 'LOYALTY_REDEEMED', label: 'Points Used (count)' },
+  { value: 'LOYALTY_DISCOUNT', label: 'Points Discount (value)' },
+  { value: 'LOYALTY_EARNED',   label: 'Points Earned' },
+  { value: 'LOYALTY_BALANCE',  label: 'Points Balance' },
   { value: 'THANKS_MESSAGE', label: 'Thanks Message' },
   { value: 'CUSTOM_TEXT',    label: 'Custom Text' },
   { value: 'SEPARATOR',      label: 'Line / Separator' },
@@ -59,6 +67,7 @@ export const RECEIPT_LINE_FONT_SIZES = Array.from({ length: 17 }, (_, i) => i + 
 export const RECEIPT_LINE_CUSTOM_TEXT_TYPES = [
   'ADDRESS', 'PHONE', 'INVOICE_NO', 'DATE_TIME', 'CASHIER', 'CUSTOMER',
   'SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE', 'CREDIT_DUE',
+  'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
   'THANKS_MESSAGE', 'CUSTOM_TEXT',
 ];
 
@@ -72,7 +81,8 @@ const _createLineId = () =>
  */
 export const createReceiptTemplateLine = (type = 'CUSTOM_TEXT') => {
   const centerAligned = ['LOGO', 'STORE_NAME', 'BRANCH_NAME', 'ADDRESS', 'PHONE', 'INVOICE_NO', 'DATE_TIME', 'CASHIER', 'CUSTOMER', 'CREDIT_DUE', 'THANKS_MESSAGE'];
-  const splitAligned  = ['SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE'];
+  const splitAligned  = ['SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE',
+    'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE'];
   const boldTypes     = ['STORE_NAME', 'INVOICE_NO', 'NET_TOTAL', 'CREDIT_DUE'];
   return {
     id: _createLineId(),
@@ -146,10 +156,18 @@ export const buildLegacyTemplateLines = (settings) => {
   lines.push(mk('SEPARATOR', { id: 'def-sep3' }));
   if (s.showSubtotal)  lines.push(mk('SUBTOTAL',  { id: 'def-sub',  align: 'split' }));
   if (s.showDiscount)  lines.push(mk('DISCOUNT',  { id: 'def-disc', align: 'split', bold: true }));
+  // Points spent came off the grand total already, so the row belongs above it — otherwise
+  // the slip shows a net total the numbers above it do not add up to.
+  lines.push(mk('LOYALTY_DISCOUNT', { id: 'def-lpdisc', align: 'split' }));
   if (s.showNetTotal)  lines.push(mk('NET_TOTAL', { id: 'def-net',  align: 'split', bold: true, fontSize: 14 }));
   if (s.showPaid)      lines.push(mk('PAID',      { id: 'def-paid', align: 'split' }));
   if (s.showBalance)   lines.push(mk('BALANCE',   { id: 'def-bal',  align: 'split' }));
   if (s.showDueAmount) lines.push(mk('CREDIT_DUE', { id: 'def-due', align: 'center', bold: true, fontSize: 12 }));
+
+  // What the sale earned and what is left are news, not money, so they come after the totals.
+  // Neither needs a toggle: a sale that moved no points prints neither.
+  lines.push(mk('LOYALTY_EARNED',   { id: 'def-lpearn', align: 'split' }));
+  lines.push(mk('LOYALTY_BALANCE',  { id: 'def-lpbal',  align: 'split' }));
 
   if (s.showThanksMessage) {
     lines.push(mk('SEPARATOR',      { id: 'def-sep4' }));

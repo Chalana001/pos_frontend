@@ -141,6 +141,11 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType, templateLin
         netTotal: 1350,
         paidAmount: 1000,
         dueAmount: 350,
+        // So the loyalty lines have something to draw in the preview.
+        loyaltyPointsRedeemed: 150,
+        loyaltyDiscountAmount: 150,
+        loyaltyPointsEarned: 13,
+        loyaltyPointsBalance: 1263,
         orderType: 'CASH + CREDIT',
         saleMode: 'TAKEAWAY',
       },
