@@ -72,7 +72,6 @@ export const RECEIPT_LINE_TYPE_OPTIONS = [
   { value: 'TOTAL_SAVINGS',  label: 'You Saved (discounts + points)' },
   { value: 'THANKS_MESSAGE', label: 'Thanks Message' },
   { value: 'CUSTOM_TEXT',    label: 'Custom Text' },
-  { value: 'PRINT_MARK',     label: 'Original / Copy Mark' },
   { value: 'SEPARATOR',      label: 'Line / Separator' },
   { value: 'BLANK',          label: 'Blank Space' },
 ];
@@ -84,7 +83,6 @@ export const RETURN_LINE_TYPE_OPTIONS = [
   { value: 'BRANCH_NAME',      label: 'Branch Name' },
   { value: 'ADDRESS',          label: 'Address' },
   { value: 'PHONE',            label: 'Phone' },
-  { value: 'PRINT_MARK',       label: 'Original / Copy Mark' },
   { value: 'RETURN_NO',        label: 'Return Number' },
   { value: 'ORIGINAL_INVOICE', label: 'Original Invoice' },
   { value: 'DATE_TIME',        label: 'Date & Time' },
@@ -128,8 +126,6 @@ export const RECEIPT_LINE_CUSTOM_TEXT_TYPES = [
   'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
   'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK', 'TOTAL_SAVINGS',
   'RETURN_GOODS_VALUE', 'RETURN_POINTS_VALUE', 'RETURN_DISCOUNT_SHARE',
-  // On PRINT_MARK the text is the heading, and a reprint appends the copy wording to it.
-  'PRINT_MARK',
   'THANKS_MESSAGE', 'CUSTOM_TEXT',
 ];
 
@@ -209,8 +205,6 @@ export const buildLegacyTemplateLines = (settings) => {
   if (s.showInvoiceNumber || s.showDateTime || s.showCashier || s.showCustomer) {
     lines.push(mk('SEPARATOR', { id: 'def-sep1' }));
   }
-  // Which print this is. A reprint is otherwise indistinguishable from the slip it copies.
-  lines.push(mk('PRINT_MARK', { id: 'def-mark', align: 'center', fontSize: 10, bold: true }));
   if (s.showInvoiceNumber) lines.push(mk('INVOICE_NO', { id: 'def-invno', align: 'center', fontSize: 12, bold: true }));
   if (s.showDateTime)      lines.push(mk('DATE_TIME',  { id: 'def-dt',    align: 'center' }));
   if (s.showCashier)       lines.push(mk('CASHIER',    { id: 'def-cash',  align: 'left' }));
@@ -261,8 +255,7 @@ export const buildLegacyReturnTemplateLines = () => {
     mk('ADDRESS',          { id: 'ret-addr',   align: 'center', fontSize: 10 }),
     mk('PHONE',            { id: 'ret-phone',  align: 'center', fontSize: 10 }),
     mk('SEPARATOR',        { id: 'ret-sep1' }),
-    // The heading only. A reprint of this slip prints "RETURN RECEIPT (COPY)" on its own.
-    mk('PRINT_MARK',       { id: 'ret-mark',   align: 'center', fontSize: 12, bold: true,
+    mk('CUSTOM_TEXT',      { id: 'ret-badge',  align: 'center', fontSize: 12, bold: true,
                              customText: 'RETURN RECEIPT' }),
     mk('SEPARATOR',        { id: 'ret-sep2' }),
     mk('RETURN_NO',        { id: 'ret-no',     align: 'split', fontSize: 10, bold: true }),

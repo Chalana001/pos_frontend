@@ -436,13 +436,11 @@ export const buildPosReceiptHtml = ({
   // Which default layout to fall back on when the shop has not customised this document.
   const savedLines = getActiveTemplateLines(settings, templateType);
 
-  // A copy that does not say so is the whole failure this line exists to prevent, so a reprint
-  // is stamped even when the layout has no PRINT_MARK in it — every layout saved before the
-  // line existed has none, which is most of them. It goes under the shop's letterhead, where
-  // it would have been placed by hand.
-  //
-  // Only ever added to a reprint. A shop that leaves ORIGINAL off its slips has decided that;
-  // one whose copies are indistinguishable from originals has not decided anything.
+  // A reprint is stamped COPY under the shop's letterhead, by the renderer, on every layout.
+  // It is not a line a shop places: a copy that does not say so is the whole failure this
+  // exists to prevent, and it must not depend on anyone remembering to add it. Originals
+  // carry no stamp. A layout saved while the mark was still a line keeps working - the
+  // renderer defers to it rather than stamping twice.
   const lines = orderData?.isReprint && !savedLines.some((l) => l.type === 'PRINT_MARK')
     ? (() => {
         let at = 0;
