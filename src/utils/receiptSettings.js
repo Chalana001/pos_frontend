@@ -12,6 +12,7 @@ export const RECEIPT_LINE_TYPES = [
   'CASHIER_NOTE',
   'LOYALTY_TAKEN_BACK',
   'LOYALTY_GIVEN_BACK',
+  'TOTAL_SAVINGS',
   'STORE_NAME',
   'BRANCH_NAME',
   'ADDRESS',
@@ -65,6 +66,7 @@ export const RECEIPT_LINE_TYPE_OPTIONS = [
   { value: 'LOYALTY_DISCOUNT', label: 'Points Discount (value)' },
   { value: 'LOYALTY_EARNED',   label: 'Points Earned' },
   { value: 'LOYALTY_BALANCE',  label: 'Points Balance' },
+  { value: 'TOTAL_SAVINGS',  label: 'You Saved (discounts + points)' },
   { value: 'THANKS_MESSAGE', label: 'Thanks Message' },
   { value: 'CUSTOM_TEXT',    label: 'Custom Text' },
   { value: 'PRINT_MARK',     label: 'Original / Copy Mark' },
@@ -118,7 +120,7 @@ export const RECEIPT_LINE_CUSTOM_TEXT_TYPES = [
   'SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE', 'CREDIT_DUE',
   'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
   'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
-  'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK',
+  'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK', 'TOTAL_SAVINGS',
   // On PRINT_MARK the text is the heading, and a reprint appends the copy wording to it.
   'PRINT_MARK',
   'THANKS_MESSAGE', 'CUSTOM_TEXT',
@@ -137,7 +139,7 @@ export const createReceiptTemplateLine = (type = 'CUSTOM_TEXT') => {
   const splitAligned  = ['SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE',
     'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
     'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
-    'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK'];
+    'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK', 'TOTAL_SAVINGS'];
   const boldTypes     = ['STORE_NAME', 'INVOICE_NO', 'NET_TOTAL', 'CREDIT_DUE', 'PRINT_MARK',
     'TOTAL_REFUND'];
   return {

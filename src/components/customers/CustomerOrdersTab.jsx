@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
 import { customersAPI } from "../../api/customers.api";
@@ -12,6 +13,7 @@ const paymentTypeOptions = [
 ];
 
 const CustomerOrdersTab = ({ customerId }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState([]);
   const [paymentType, setPaymentType] = useState("ALL");
@@ -80,7 +82,21 @@ const CustomerOrdersTab = ({ customerId }) => {
               </thead>
               <tbody className="app-table-body">
                 {orders.map((order) => (
-                  <tr key={order.id} className="app-table-row-clickable border-b last:border-0">
+                  // The row already looked clickable and did nothing. Sales are keyed by
+                  // invoice number everywhere else in the app, so it goes there too.
+                  <tr
+                    key={order.id}
+                    className="app-table-row-clickable border-b last:border-0"
+                    onClick={() => order.invoiceNo && navigate(`/sales/${order.invoiceNo}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if ((event.key === "Enter" || event.key === " ") && order.invoiceNo) {
+                        event.preventDefault();
+                        navigate(`/sales/${order.invoiceNo}`);
+                      }
+                    }}
+                  >
                     <td className="app-table-cell !px-4 font-medium text-slate-800">
                       {order.invoiceNo || `#${order.id}`}
                     </td>

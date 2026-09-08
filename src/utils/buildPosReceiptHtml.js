@@ -258,6 +258,16 @@ const renderLine = (line, data, items) => {
     case 'LOYALTY_GIVEN_BACK':
       return pointsGivenBack > 0 ? two('Points Returned', `+${pts(pointsGivenBack)}`) : '';
 
+    case 'TOTAL_SAVINGS': {
+      // What the customer kept, counting both kinds: the shop's price cuts and the points
+      // they spent. It is a statement, not a step in the sum — the Discount and Points
+      // Discount lines above have each already come off the total, and a line that added
+      // them up again in the same column would leave a receipt that does not add up. So it
+      // belongs below Net Total, where a customer reads it as "you saved this today".
+      const saved = displayDiscount + pointsDiscount;
+      return saved > 0.001 ? two('You Saved', `-${lkr(saved)}`) : '';
+    }
+
     case 'THANKS_MESSAGE':
       // customText in the line itself is the thanks text (typed directly in the editor).
       // Falls back to 'Thank You, Come Again!' if nothing typed.
