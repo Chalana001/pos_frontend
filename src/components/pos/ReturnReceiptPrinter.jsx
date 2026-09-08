@@ -2,7 +2,8 @@
 // Prints a thermal return receipt for a processed partial return.
 // Mirrors ReceiptPrinter.jsx pattern — uses an invisible iframe + browser print.
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import { normalizeReceiptSettings } from '../../utils/receiptSettings';
+import { normalizeReceiptSettings, parseTemplateLines, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
+import { buildPosReceiptHtml } from '../../utils/buildPosReceiptHtml';
 import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
 import toast from 'react-hot-toast';
 
@@ -35,6 +36,44 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
      */
     printReturn: async (returnData, storeName, receiptSettings) => {
       const settings = normalizeReceiptSettings(receiptSettings);
+
+      // ── Template-line based printing ──────────────────────────────────────
+      // The Return tab of Receipt Settings lays this slip out the same way the sale receipt
+      // is laid out. Only reached when a shop has actually saved a layout; the hard-coded
+      // slip below stays as it was for everyone who has not.
+      if (parseTemplateLines(settings.templateLines).length > 0) {
+        const html = buildPosReceiptHtml({
+          settings,
+          branchData: {
+            name: returnData.branchName,
+            address: returnData.branchAddress,
+            phone: returnData.branchPhone,
+            logo: returnData.branchLogo,
+          },
+          storeName,
+          orderData: returnData,
+          items: returnData.items || [],
+          customerData: returnData.customerName ? { name: returnData.customerName } : null,
+          templateType: PRINT_TEMPLATE_TYPES.RETURN,
+        });
+
+        if (settings.directPrintEnabled && settings.printerName) {
+          try {
+            await printerAgentAPI.printReceipt({
+              printerName: settings.printerName,
+              html,
+              paperWidth: getPrintPaperWidth(settings),
+              copies: settings.printerCopies,
+            });
+            return;
+          } catch (err) {
+            toast.error(`${err.message || 'Direct print failed'}. Opening browser print.`);
+          }
+        }
+        printInBrowser(html);
+        return;
+      }
+
       const paperWidthPx = settings.paperSize === '80mm' ? 302 : 226; // 80mm ≈ 302px, 58mm ≈ 226px
 
       const fmt = (n) =>
@@ -123,6 +162,7 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
   <hr class="divider"/>
   <div class="center">
     <div class="badge">RETURN RECEIPT</div>
+    ${returnData.isReprint ? '<div style="font-size:10px;letter-spacing:2px;margin-top:2px;">COPY</div>' : ''}
   </div>
   <hr class="divider"/>
 

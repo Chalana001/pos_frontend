@@ -49,6 +49,8 @@ const SaleReturnPage = () => {
   const [sale, setSale] = useState(null);
   const [existingReturns, setExistingReturns] = useState([]);
   const [receiptSettings, setReceiptSettings] = useState(null);
+  // The return slip has its own layout, saved under its own tab in Receipt Settings.
+  const [returnSettings, setReturnSettings] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // ── form state ────────────────────────────────────────────────────────────
@@ -85,6 +87,10 @@ const SaleReturnPage = () => {
           .getByBranch(saleRes.data.branchId)
           .then((r) => setReceiptSettings(r.data))
           .catch(() => setReceiptSettings(null));
+        receiptSettingsAPI
+          .getByBranch(saleRes.data.branchId, 'RETURN')
+          .then((r) => setReturnSettings(r.data))
+          .catch(() => setReturnSettings(null));
       }
     } catch (err) {
       console.error("Failed to load sale", err);
@@ -180,7 +186,12 @@ const SaleReturnPage = () => {
   };
 
   // ── print return receipt ───────────────────────────────────────────────────
-  const handlePrintReturn = (returnData) => {
+  /**
+   * @param isReprint the slip printed straight after processing the return is the original;
+   *                  anything pulled back out of the list afterwards is a copy, and has to
+   *                  say so — nothing else on the paper tells the two apart.
+   */
+  const handlePrintReturn = (returnData, isReprint = true) => {
     if (!returnData || !returnPrinterRef.current) return;
     const storeName = user?.shopName || BRAND_NAME_UPPER;
     const returnWithBranch = {
@@ -189,8 +200,9 @@ const SaleReturnPage = () => {
       branchAddress: sale?.branchAddress,
       branchPhone: sale?.branchPhone,
       branchLogo: sale?.branchLogo,
+      isReprint,
     };
-    returnPrinterRef.current.printReturn(returnWithBranch, storeName, receiptSettings);
+    returnPrinterRef.current.printReturn(returnWithBranch, storeName, returnSettings || receiptSettings);
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -223,7 +235,7 @@ const SaleReturnPage = () => {
           </Button>
           <Button
             className="bg-slate-800 text-white hover:bg-slate-700 shadow-sm"
-            onClick={() => handlePrintReturn(successReturn)}
+            onClick={() => handlePrintReturn(successReturn, false)}
           >
             <Printer size={18} className="mr-2" /> Print Return Receipt
           </Button>

@@ -49,6 +49,7 @@ const SalesDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [isCanceling, setIsCanceling] = useState(false);
   const [receiptSettings, setReceiptSettings] = useState(null);
+  const [returnSettings, setReturnSettings] = useState(null);
 
   // 🟢 Modal එකට අදාළ States 
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -87,8 +88,13 @@ const SalesDetailsPage = () => {
           console.error("Failed to load receipt settings", settingsError);
           setReceiptSettings(null);
         }
+        receiptSettingsAPI
+          .getByBranch(res.data.branchId, 'RETURN')
+          .then((r) => setReturnSettings(r.data))
+          .catch(() => setReturnSettings(null));
       } else {
         setReceiptSettings(null);
+        setReturnSettings(null);
       }
     } catch (error) {
       console.error("Failed to load Sale details", error);
@@ -108,9 +114,12 @@ const SalesDetailsPage = () => {
         branchAddress: sale.branchAddress,
         branchPhone: sale.branchPhone,
         branchLogo: sale.branchLogo,
+        // Everything printed from here is a copy: the original left the printer when the
+        // return was processed.
+        isReprint: true,
       },
       storeName,
-      receiptSettings
+      returnSettings || receiptSettings
     );
   };
 
@@ -138,6 +147,9 @@ const SalesDetailsPage = () => {
       loyaltyPointsRedeemed: sale.loyaltyPointsRedeemed,
       loyaltyDiscountAmount: sale.loyaltyDiscountAmount,
       loyaltyPointsBalance: sale.loyaltyPointsBalance,
+      // Sales history only ever reprints. The customer's own slip came off the till at
+      // checkout, so this one has to be marked as the copy it is.
+      isReprint: true,
     };
 
     const cartItems = sale.items.map(item => ({

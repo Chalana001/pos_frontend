@@ -2,6 +2,16 @@
 
 export const RECEIPT_LINE_TYPES = [
   'LOGO',
+  'PRINT_MARK',
+  'RETURN_NO',
+  'ORIGINAL_INVOICE',
+  'RETURN_ITEM_TABLE',
+  'TOTAL_REFUND',
+  'REFUND_METHOD',
+  'RETURN_REASON',
+  'CASHIER_NOTE',
+  'LOYALTY_TAKEN_BACK',
+  'LOYALTY_GIVEN_BACK',
   'STORE_NAME',
   'BRANCH_NAME',
   'ADDRESS',
@@ -27,6 +37,13 @@ export const RECEIPT_LINE_TYPES = [
   'BLANK',
 ];
 
+/**
+ * What a sale receipt can be built from.
+ *
+ * <p>Return-only lines are deliberately not in here. A shop laying out its sale slip should not
+ * scroll past "Total Refund" to reach "Net Total" — the two documents share a header and almost
+ * nothing else. `lineTypeOptionsFor` hands the designer the right list for the tab it is on.
+ */
 export const RECEIPT_LINE_TYPE_OPTIONS = [
   { value: 'LOGO',           label: 'Logo' },
   { value: 'STORE_NAME',     label: 'Store Name' },
@@ -50,9 +67,41 @@ export const RECEIPT_LINE_TYPE_OPTIONS = [
   { value: 'LOYALTY_BALANCE',  label: 'Points Balance' },
   { value: 'THANKS_MESSAGE', label: 'Thanks Message' },
   { value: 'CUSTOM_TEXT',    label: 'Custom Text' },
+  { value: 'PRINT_MARK',     label: 'Original / Copy Mark' },
   { value: 'SEPARATOR',      label: 'Line / Separator' },
   { value: 'BLANK',          label: 'Blank Space' },
 ];
+
+/** What a return receipt can be built from. Shares the header lines and nothing about money. */
+export const RETURN_LINE_TYPE_OPTIONS = [
+  { value: 'LOGO',             label: 'Logo' },
+  { value: 'STORE_NAME',       label: 'Store Name' },
+  { value: 'BRANCH_NAME',      label: 'Branch Name' },
+  { value: 'ADDRESS',          label: 'Address' },
+  { value: 'PHONE',            label: 'Phone' },
+  { value: 'PRINT_MARK',       label: 'Original / Copy Mark' },
+  { value: 'RETURN_NO',        label: 'Return Number' },
+  { value: 'ORIGINAL_INVOICE', label: 'Original Invoice' },
+  { value: 'DATE_TIME',        label: 'Date & Time' },
+  { value: 'CASHIER',          label: 'Cashier' },
+  { value: 'CUSTOMER',         label: 'Customer' },
+  { value: 'RETURN_ITEM_TABLE', label: 'Returned Items' },
+  { value: 'TOTAL_REFUND',     label: 'Total Refund' },
+  { value: 'REFUND_METHOD',    label: 'Refund Method' },
+  { value: 'RETURN_REASON',    label: 'Reason' },
+  { value: 'CASHIER_NOTE',     label: 'Cashier Note' },
+  { value: 'LOYALTY_TAKEN_BACK', label: 'Points Taken Back' },
+  { value: 'LOYALTY_GIVEN_BACK', label: 'Points Returned' },
+  { value: 'LOYALTY_BALANCE',  label: 'Points Balance' },
+  { value: 'THANKS_MESSAGE',   label: 'Closing Message' },
+  { value: 'CUSTOM_TEXT',      label: 'Custom Text' },
+  { value: 'SEPARATOR',        label: 'Line / Separator' },
+  { value: 'BLANK',            label: 'Blank Space' },
+];
+
+/** The list the designer offers, for the tab it is on. */
+export const lineTypeOptionsFor = (templateType) =>
+  templateType === 'RETURN' ? RETURN_LINE_TYPE_OPTIONS : RECEIPT_LINE_TYPE_OPTIONS;
 
 export const RECEIPT_LINE_ALIGNMENT_OPTIONS = [
   { value: 'split',  label: 'Amount Right' },
@@ -68,6 +117,11 @@ export const RECEIPT_LINE_CUSTOM_TEXT_TYPES = [
   'ADDRESS', 'PHONE', 'INVOICE_NO', 'DATE_TIME', 'CASHIER', 'CUSTOMER',
   'SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE', 'CREDIT_DUE',
   'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
+  'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
+  'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK',
+  // On PRINT_MARK the text is the two words themselves, e.g. "ORIGINAL|COPY" — one word is
+  // used for both. A shop that prints in Sinhala should not be stuck with an English stamp.
+  'PRINT_MARK',
   'THANKS_MESSAGE', 'CUSTOM_TEXT',
 ];
 
@@ -80,16 +134,19 @@ const _createLineId = () =>
  * Create a new receipt template line with smart defaults.
  */
 export const createReceiptTemplateLine = (type = 'CUSTOM_TEXT') => {
-  const centerAligned = ['LOGO', 'STORE_NAME', 'BRANCH_NAME', 'ADDRESS', 'PHONE', 'INVOICE_NO', 'DATE_TIME', 'CASHIER', 'CUSTOMER', 'CREDIT_DUE', 'THANKS_MESSAGE'];
+  const centerAligned = ['LOGO', 'STORE_NAME', 'BRANCH_NAME', 'ADDRESS', 'PHONE', 'INVOICE_NO', 'DATE_TIME', 'CASHIER', 'CUSTOMER', 'CREDIT_DUE', 'THANKS_MESSAGE', 'PRINT_MARK'];
   const splitAligned  = ['SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE',
-    'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE'];
-  const boldTypes     = ['STORE_NAME', 'INVOICE_NO', 'NET_TOTAL', 'CREDIT_DUE'];
+    'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
+    'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
+    'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK'];
+  const boldTypes     = ['STORE_NAME', 'INVOICE_NO', 'NET_TOTAL', 'CREDIT_DUE', 'PRINT_MARK',
+    'TOTAL_REFUND'];
   return {
     id: _createLineId(),
     type,
     customText: '',
     align: splitAligned.includes(type) ? 'split' : centerAligned.includes(type) ? 'center' : 'left',
-    fontSize: type === 'STORE_NAME' ? 16 : type === 'NET_TOTAL' ? 14 : 11,
+    fontSize: type === 'STORE_NAME' ? 16 : (type === 'NET_TOTAL' || type === 'TOTAL_REFUND') ? 14 : 11,
     bold: boldTypes.includes(type),
     italic: false,
     underline: false,
@@ -143,6 +200,8 @@ export const buildLegacyTemplateLines = (settings) => {
   if (s.showInvoiceNumber || s.showDateTime || s.showCashier || s.showCustomer) {
     lines.push(mk('SEPARATOR', { id: 'def-sep1' }));
   }
+  // Which print this is. A reprint is otherwise indistinguishable from the slip it copies.
+  lines.push(mk('PRINT_MARK', { id: 'def-mark', align: 'center', fontSize: 10, bold: true }));
   if (s.showInvoiceNumber) lines.push(mk('INVOICE_NO', { id: 'def-invno', align: 'center', fontSize: 12, bold: true }));
   if (s.showDateTime)      lines.push(mk('DATE_TIME',  { id: 'def-dt',    align: 'center' }));
   if (s.showCashier)       lines.push(mk('CASHIER',    { id: 'def-cash',  align: 'left' }));
@@ -179,12 +238,53 @@ export const buildLegacyTemplateLines = (settings) => {
 };
 
 /**
- * Resolve the active template lines for a settings object.
- * Configured JSON → parse it. No JSON → build from boolean toggles.
+ * The return slip as it printed before it was customisable.
+ *
+ * <p>A shop that never opens the Return tab gets this, and it reproduces the old hard-coded
+ * layout line for line — so making the receipt customisable changes nothing for anyone who
+ * does not customise it.
  */
-export const getActiveTemplateLines = (settings) => {
+export const buildLegacyReturnTemplateLines = () => {
+  const mk = (type, overrides = {}) => ({ ...createReceiptTemplateLine(type), ...overrides });
+  return [
+    mk('LOGO',             { id: 'ret-logo',   align: 'center' }),
+    mk('BRANCH_NAME',      { id: 'ret-branch', align: 'center', fontSize: 13, bold: true }),
+    mk('ADDRESS',          { id: 'ret-addr',   align: 'center', fontSize: 10 }),
+    mk('PHONE',            { id: 'ret-phone',  align: 'center', fontSize: 10 }),
+    mk('SEPARATOR',        { id: 'ret-sep1' }),
+    mk('PRINT_MARK',       { id: 'ret-mark',   align: 'center', fontSize: 12, bold: true,
+                             customText: 'RETURN RECEIPT|RETURN RECEIPT (COPY)' }),
+    mk('SEPARATOR',        { id: 'ret-sep2' }),
+    mk('RETURN_NO',        { id: 'ret-no',     align: 'split', fontSize: 10, bold: true }),
+    mk('ORIGINAL_INVOICE', { id: 'ret-inv',    align: 'split', fontSize: 10 }),
+    mk('DATE_TIME',        { id: 'ret-dt',     align: 'split', fontSize: 10, customText: 'Date' }),
+    mk('CUSTOMER',         { id: 'ret-cust',   align: 'split', fontSize: 10 }),
+    mk('CASHIER',          { id: 'ret-cash',   align: 'split', fontSize: 10 }),
+    mk('SEPARATOR',        { id: 'ret-sep3' }),
+    mk('RETURN_ITEM_TABLE', { id: 'ret-table' }),
+    mk('TOTAL_REFUND',     { id: 'ret-total',  align: 'split', fontSize: 12, bold: true }),
+    mk('SEPARATOR',        { id: 'ret-sep4' }),
+    mk('REFUND_METHOD',    { id: 'ret-method', align: 'split', fontSize: 10, bold: true }),
+    mk('RETURN_REASON',    { id: 'ret-reason', align: 'split', fontSize: 10 }),
+    mk('CASHIER_NOTE',     { id: 'ret-note',   align: 'split', fontSize: 10 }),
+    // Each of these prints nothing on a return that moved no points.
+    mk('LOYALTY_TAKEN_BACK', { id: 'ret-lpback', align: 'split', fontSize: 10 }),
+    mk('LOYALTY_GIVEN_BACK', { id: 'ret-lpgive', align: 'split', fontSize: 10 }),
+    mk('LOYALTY_BALANCE',  { id: 'ret-lpbal',  align: 'split', fontSize: 10 }),
+    mk('SEPARATOR',        { id: 'ret-sep5' }),
+    mk('THANKS_MESSAGE',   { id: 'ret-thanks', align: 'center', fontSize: 10,
+                             customText: 'Items returned & refund processed. Please retain this receipt.' }),
+  ];
+};
+
+/**
+ * Resolve the active template lines for a settings object.
+ * Configured JSON → parse it. No JSON → the default layout for that document.
+ */
+export const getActiveTemplateLines = (settings, templateType = PRINT_TEMPLATE_TYPES.THERMAL) => {
   const parsed = parseTemplateLines(settings?.templateLines);
   if (parsed.length > 0) return parsed;
+  if (templateType === PRINT_TEMPLATE_TYPES.RETURN) return buildLegacyReturnTemplateLines();
   return buildLegacyTemplateLines(settings);
 };
 
@@ -194,6 +294,7 @@ export const PRINT_TEMPLATE_TYPES = {
   THERMAL: 'THERMAL',
   A4: 'A4',
   KOT: 'KOT',
+  RETURN: 'RETURN',
 };
 
 export const ITEM_NAME_SOURCE_OPTIONS = [

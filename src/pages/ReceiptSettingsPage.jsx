@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ArrowDown, ArrowUp, Barcode, Bold, Building2, ChefHat, FileText, Italic, Layers, Plus, Printer, RefreshCw, Save, Ticket, Trash2, Type, Underline } from 'lucide-react';
+import { ArrowDown, ArrowUp, Barcode, Bold, Building2, ChefHat, FileText, Italic, Layers, Plus, Printer, RefreshCw, Save, Ticket, Trash2, Type, Underline, Undo2 } from 'lucide-react';
 
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -21,7 +21,7 @@ import {
   PRINT_TEMPLATE_TYPES,
   RECEIPT_FONT_OPTIONS,
   RECEIPT_SECTION_FIELDS,
-  RECEIPT_LINE_TYPE_OPTIONS,
+  lineTypeOptionsFor,
   RECEIPT_LINE_ALIGNMENT_OPTIONS,
   RECEIPT_LINE_FONT_SIZES,
   RECEIPT_LINE_CUSTOM_TEXT_TYPES,
@@ -39,6 +39,16 @@ import { barcodeLabelSettingsAPI } from '../api/barcodeLabelSettings.api';
 // Sentinel value for the "Barcode" pill — not part of the backend PrintTemplateType
 // enum (THERMAL/A4/KOT); barcode settings are a separate table/entity/API.
 const BARCODE_TAB = 'BARCODE';
+
+/**
+ * Documents laid out line by line in the editor below.
+ *
+ * <p>The full invoice and the KOT are still built from the visible-sections toggles; these two
+ * are placed by hand. The list exists so adding a third does not mean finding eight separate
+ * comparisons against THERMAL.
+ */
+const supportsLines = (templateType) =>
+  templateType === PRINT_TEMPLATE_TYPES.THERMAL || templateType === PRINT_TEMPLATE_TYPES.RETURN;
 
 // Line types where ALL formatting controls (font-size, align, B/I/U) are irrelevant
 const NO_FORMAT_LINE_TYPES = ['SEPARATOR', 'BLANK'];
@@ -59,7 +69,7 @@ const toSavePayload = (settings, templateType, templateLines) => {
 
   // Serialize templateLines array to JSON string (or null if empty / not thermal)
   let templateLinesJson = null;
-  if (templateType === PRINT_TEMPLATE_TYPES.THERMAL && Array.isArray(templateLines) && templateLines.length > 0) {
+  if (supportsLines(templateType) && Array.isArray(templateLines) && templateLines.length > 0) {
     templateLinesJson = JSON.stringify(templateLines);
   }
 
@@ -110,11 +120,30 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType, templateLin
     paperWidthMm: templateType === PRINT_TEMPLATE_TYPES.A4 ? 210 : settings?.paperWidthMm,
   });
   const isKotPreview = templateType === PRINT_TEMPLATE_TYPES.KOT;
+  const isReturnPreview = templateType === PRINT_TEMPLATE_TYPES.RETURN;
   const isInvoicePreview = templateType === PRINT_TEMPLATE_TYPES.A4;
-  const isThermalWithLines = templateType === PRINT_TEMPLATE_TYPES.THERMAL && Array.isArray(templateLines) && templateLines.length > 0;
+  const isThermalWithLines = supportsLines(templateType) && Array.isArray(templateLines) && templateLines.length > 0;
   const previewPaperWidthPx = Math.round(normalized.paperWidthMm * 3.78);
   const invoicePreviewScale = isInvoicePreview ? Math.min(1, 380 / previewPaperWidthPx) : 1;
-  const previewOrder = useMemo(() => isKotPreview
+  const previewOrder = useMemo(() => isReturnPreview
+    ? {
+        returnNo: 'RET-2026-000042',
+        originalInvoiceNo: 'INV-2026-000321',
+        createdAt: '2026-04-23T15:20:00',
+        cashierName: 'Nadee',
+        customerName: 'Nimal Perera',
+        refundMethod: 'CASH',
+        totalRefundAmount: 420,
+        reason: 'Damaged packaging',
+        cashierNote: 'Approved by manager',
+        // A partial return: what the goods earned comes back off, what the customer spent
+        // stays spent.
+        loyaltyPointsTakenBack: 4,
+        loyaltyPointsBalance: 1259,
+        // The preview is of the original. A reprint stamps COPY in the same place.
+        isReprint: false,
+      }
+    : isKotPreview
     ? {
         invoiceNo: 'KOT-14',
         createdAt: '2026-04-23T10:45:00',
@@ -149,9 +178,13 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType, templateLin
         orderType: 'CASH + CREDIT',
         saleMode: 'TAKEAWAY',
       },
-  [isKotPreview]);
+  [isKotPreview, isReturnPreview]);
 
-  const previewItems = useMemo(() => isKotPreview
+  const previewItems = useMemo(() => isReturnPreview
+    ? [
+        { itemName: 'Coconut Oil 500ml', returnQty: 1, finalUnitPrice: 420, refundLineAmount: 420 },
+      ]
+    : isKotPreview
     ? [
         { name: 'චිකන් ෆ්‍රයිඩ් රයිස්', qty: 2, qtyUnit: 'PCS', unitPrice: 0, lineTotal: 0 },
         { name: 'ෆිෂ් කොත්තු', qty: 1, qtyUnit: 'PCS', unitPrice: 0, lineTotal: 0 },
@@ -162,7 +195,7 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType, templateLin
         { name: 'Coconut Oil 500ml', altName: 'පොල් තෙල් 500ml', qty: 1, qtyUnit: 'BTL', unitPrice: 420, lineDiscount: 50, lineTotal: 370 },
         { name: 'Sugar 1kg',         altName: 'සීනි 1kg',        qty: 3, qtyUnit: 'PKT', unitPrice: 210, lineDiscount: 0,  lineTotal: 630 },
       ],
-  [isKotPreview]);
+  [isKotPreview, isReturnPreview]);
 
   // Thermal + template lines → use iframe driven by buildPosReceiptHtml (live, reflects editor)
   const thermalIframeHtml = useMemo(() => {
@@ -181,9 +214,10 @@ const ReceiptPreview = ({ branch, storeName, settings, templateType, templateLin
       orderData: previewOrder,
       items: previewItems,
       customerData: { name: previewOrder.customerName },
+      templateType,
       options: { includeCopies: false },
     });
-  }, [isThermalWithLines, normalized, templateLines, branch, storeName, previewOrder, previewItems]);
+  }, [isThermalWithLines, normalized, templateLines, branch, storeName, previewOrder, previewItems, templateType]);
 
   // Remount the iframe whenever HTML changes so onLoad fires fresh and height recalculates
   useEffect(() => {
@@ -352,8 +386,8 @@ const ReceiptSettingsPage = () => {
         });
         setForm(normalized);
         // Initialise template lines for the line editor (Thermal only)
-        if (activeTemplate === PRINT_TEMPLATE_TYPES.THERMAL) {
-          setTemplateLines(getActiveTemplateLines(normalized));
+        if (supportsLines(activeTemplate)) {
+          setTemplateLines(getActiveTemplateLines(normalized, activeTemplate));
         } else {
           setTemplateLines(null);
         }
@@ -515,8 +549,8 @@ const ReceiptSettingsPage = () => {
         paperWidthMm: activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 210 : response.data?.paperWidthMm,
       });
       setForm(normalized);
-      if (activeTemplate === PRINT_TEMPLATE_TYPES.THERMAL) {
-        setTemplateLines(getActiveTemplateLines(normalized));
+      if (supportsLines(activeTemplate)) {
+        setTemplateLines(getActiveTemplateLines(normalized, activeTemplate));
       }
       toast.success(activeTemplate === PRINT_TEMPLATE_TYPES.A4 ? 'Invoice layout saved' : 'Receipt layout saved');
     } catch (error) {
@@ -545,8 +579,8 @@ const ReceiptSettingsPage = () => {
 
     const defaults = getReceiptSettingsDefaults(activeTemplate);
     setForm(defaults);
-    if (activeTemplate === PRINT_TEMPLATE_TYPES.THERMAL) {
-      setTemplateLines(getActiveTemplateLines(defaults));
+    if (supportsLines(activeTemplate)) {
+      setTemplateLines(getActiveTemplateLines(defaults, activeTemplate));
     }
   };
 
@@ -703,6 +737,18 @@ const ReceiptSettingsPage = () => {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setActiveTemplate(PRINT_TEMPLATE_TYPES.RETURN)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                    activeTemplate === PRINT_TEMPLATE_TYPES.RETURN
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Undo2 size={16} />
+                  Return
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     if (barcodeFeatureEnabled) setActiveTemplate(BARCODE_TAB);
                   }}
@@ -758,7 +804,7 @@ const ReceiptSettingsPage = () => {
           ) : (
             <>
               {/* Visible Sections only shown when NOT using the line editor (KOT / A4, or Thermal before lines are initialised) */}
-              {activeTemplate === PRINT_TEMPLATE_TYPES.THERMAL && templateLines !== null ? null : (
+              {supportsLines(activeTemplate) && templateLines !== null ? null : (
               <Card className="admin-panel-card" title="Visible Sections" style={{ animationDelay: "130ms" }}>
                 <div className="grid gap-3 md:grid-cols-2">
                   {RECEIPT_SECTION_FIELDS.map((field) => (
@@ -795,7 +841,7 @@ const ReceiptSettingsPage = () => {
               </Card>
               )}
 
-              {activeTemplate === PRINT_TEMPLATE_TYPES.THERMAL ? (
+              {supportsLines(activeTemplate) ? (
                 <Card className="admin-panel-card" title="Item Line Name" style={{ animationDelay: "150ms" }}>
                   <div className="space-y-3">
                     <p className="text-sm text-slate-500">
@@ -811,7 +857,7 @@ const ReceiptSettingsPage = () => {
               ) : null}
 
               {/* ── Line-by-line Template Editor (Thermal only) ─────────────── */}
-              {activeTemplate === PRINT_TEMPLATE_TYPES.THERMAL && templateLines !== null ? (
+              {supportsLines(activeTemplate) && templateLines !== null ? (
                 <Card
                   className="admin-panel-card"
                   title={
@@ -858,7 +904,7 @@ const ReceiptSettingsPage = () => {
                                 onChange={(e) => updateTemplateLine(index, 'type', e.target.value)}
                                 className="h-9 flex-1 min-w-[140px] rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
                               >
-                                {RECEIPT_LINE_TYPE_OPTIONS.map((opt) => (
+                                {lineTypeOptionsFor(activeTemplate).map((opt) => (
                                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}
                               </select>
@@ -1085,7 +1131,7 @@ const ReceiptSettingsPage = () => {
                         onChange={(e) => setAddLineType(e.target.value)}
                         className="h-9 flex-1 rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none"
                       >
-                        {RECEIPT_LINE_TYPE_OPTIONS.map((opt) => (
+                        {lineTypeOptionsFor(activeTemplate).map((opt) => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                       </select>

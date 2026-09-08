@@ -72,8 +72,25 @@ const renderLine = (line, data, items) => {
   // The balance as at this sale, banked on the order — not the customer's balance now, or a
   // reprint would disagree with the slip it is a copy of.
   const pointsBalance  = Math.max(0, Number(orderData?.loyaltyPointsBalance ?? 0));
-  const touchedPoints  = pointsEarned > 0 || pointsRedeemed > 0;
+  // A return moves points too, and its slip wants the same balance line.
+  const pointsTakenBack = Math.max(0, Number(orderData?.loyaltyPointsTakenBack ?? 0));
+  const pointsGivenBack = Math.max(0, Number(orderData?.loyaltyPointsGivenBack ?? 0));
+  const touchedPoints  = pointsEarned > 0 || pointsRedeemed > 0
+    || pointsTakenBack > 0 || pointsGivenBack > 0;
   const pts = (v) => Number(v || 0).toLocaleString();
+
+  // ── Return slip ───────────────────────────────────────────────────────────
+  // The same renderer draws both documents. The line types are disjoint, and every one of
+  // them prints nothing when its field is absent, so a sale never grows a refund line and a
+  // return never grows a net total.
+  const refundMethodLabel = {
+    CASH: 'Cash', BANK: 'Bank Transfer', CARD: 'Card', STORE_CREDIT: 'Store Credit',
+  }[orderData?.refundMethod] || orderData?.refundMethod || '';
+  // A reprint has to say so. Nothing else distinguishes it from the slip it copies, and a
+  // second copy of a refund is the one a shop most needs to be able to tell apart.
+  const [originalWord, copyWord] = (line.customText?.trim() || 'ORIGINAL|COPY')
+    .split('|').map((word) => word.trim());
+  const printMark = orderData?.isReprint ? (copyWord || originalWord) : originalWord;
 
   // ── Total discount = bill-level + promotion-level + all per-line discounts ─
   // We compute line discount sum from items so we capture every path
@@ -199,6 +216,38 @@ const renderLine = (line, data, items) => {
       // belongs to nobody.
       return touchedPoints ? two('Points Balance', pts(pointsBalance)) : '';
 
+    case 'PRINT_MARK':
+      return printMark
+        ? `<div class="${cls} ucase" style="${style}">${esc(printMark)}</div>`
+        : '';
+
+    case 'RETURN_NO':
+      return orderData?.returnNo ? two('Return No', esc(orderData.returnNo)) : '';
+
+    case 'ORIGINAL_INVOICE':
+      return orderData?.originalInvoiceNo ? two('Orig. Invoice', esc(orderData.originalInvoiceNo)) : '';
+
+    case 'RETURN_ITEM_TABLE':
+      return `<table class="items">${buildReturnRows(items, { nameSize: line.fontSize || 11, currency })}</table>`;
+
+    case 'TOTAL_REFUND':
+      return two('Total Refund', lkr(orderData?.totalRefundAmount ?? 0), 'grand');
+
+    case 'REFUND_METHOD':
+      return refundMethodLabel ? two('Refund Method', esc(refundMethodLabel)) : '';
+
+    case 'RETURN_REASON':
+      return orderData?.reason ? two('Reason', esc(orderData.reason)) : '';
+
+    case 'CASHIER_NOTE':
+      return orderData?.cashierNote ? two('Note', esc(orderData.cashierNote)) : '';
+
+    case 'LOYALTY_TAKEN_BACK':
+      return pointsTakenBack > 0 ? two('Points Taken Back', `-${pts(pointsTakenBack)}`) : '';
+
+    case 'LOYALTY_GIVEN_BACK':
+      return pointsGivenBack > 0 ? two('Points Returned', `+${pts(pointsGivenBack)}`) : '';
+
     case 'THANKS_MESSAGE':
       // customText in the line itself is the thanks text (typed directly in the editor).
       // Falls back to 'Thank You, Come Again!' if nothing typed.
@@ -220,6 +269,28 @@ const renderLine = (line, data, items) => {
     default:
       return '';
   }
+};
+
+/**
+ * Returned items: what came back, at what it was actually sold for, and what that refunds.
+ *
+ * <p>Deliberately not buildItemRows with different keys. A sale line carries a list price, a
+ * discount and a promotion to explain; a return line carries none of that — it is the price
+ * charged, the quantity coming back, and the money going out.
+ */
+const buildReturnRows = (items, { nameSize = 11, currency = 'LKR' } = {}) => {
+  const tdStyle = `font-size:${nameSize}px`;
+  return (Array.isArray(items) ? items : []).map((item) => {
+    const qty = Number(item?.returnQty ?? item?.qty ?? 0);
+    const unit = Number(item?.finalUnitPrice ?? item?.unitPrice ?? 0);
+    const amount = Number(item?.refundLineAmount ?? qty * unit);
+    const name = item?.itemName || item?.name || 'Item';
+    return (
+      `<tr><td colspan="3" class="item-name" style="${tdStyle}">${esc(name)}</td></tr>` +
+      `<tr><td class="muted" style="${tdStyle}">${money(unit)} × ${esc(qty)}</td>` +
+      `<td></td><td class="right" style="${tdStyle}">${currency} ${money(amount)}</td></tr>`
+    );
+  }).join('');
 };
 
 const buildItemRows = (items, settings, tableConfig = {}) => {
@@ -310,6 +381,7 @@ export const buildPosReceiptHtml = ({
   orderData = {},
   items = [],
   customerData = null,
+  templateType = 'THERMAL',
   options = {},
 }) => {
   const paperWidth = Math.max(48, Math.min(210, Number(settings?.paperWidthMm || 72)));
@@ -319,7 +391,8 @@ export const buildPosReceiptHtml = ({
       ? 1
       : Math.max(1, Math.min(10, Number(settings?.printerCopies || 1)));
 
-  const lines = getActiveTemplateLines(settings);
+  // Which default layout to fall back on when the shop has not customised this document.
+  const lines = getActiveTemplateLines(settings, templateType);
   const dataObj = { settings, branchData, storeName, orderData, customerData };
 
   const billHtml =

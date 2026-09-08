@@ -290,8 +290,10 @@ const OfflineSalesPage = () => {
         }))
       : [];
 
+    // Anything reprinted from the queue is a copy: the customer's slip printed at the till
+    // when the sale was made, offline or not.
     printRef.current.printOrder(
-      printPayload.orderData || fallbackOrderData,
+      { ...(printPayload.orderData || fallbackOrderData), isReprint: true },
       printPayload.cartItems || fallbackCartItems,
       printPayload.storeName || user?.shopName || BRAND_NAME_UPPER,
       printPayload.shiftData || {

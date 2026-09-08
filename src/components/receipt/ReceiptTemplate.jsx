@@ -369,6 +369,14 @@ const ReceiptTemplate = ({
             ) : null}
           </div>
 
+          {/*
+            Which print this is. A reprint is otherwise indistinguishable from the slip it
+            copies, and two identical-looking bills for one sale is how a refund gets paid
+            twice. A kitchen ticket has no original to be a copy of.
+          */}
+          {!isKot ? (
+            <div style={styles.subtitle}>{orderData?.isReprint ? t('COPY') : t('ORIGINAL')}</div>
+          ) : null}
           {isKot ? <div style={styles.subtitle}>{orderData?.subTitle || t('Kitchen Order Ticket')}</div> : null}
           {!isKot && isPreBill ? <div style={styles.subtitle}>{orderData?.subTitle || t('Unpaid Bill')}</div> : null}
         </div>
