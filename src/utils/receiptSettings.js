@@ -6,6 +6,9 @@ export const RECEIPT_LINE_TYPES = [
   'RETURN_NO',
   'ORIGINAL_INVOICE',
   'RETURN_ITEM_TABLE',
+  'RETURN_GOODS_VALUE',
+  'RETURN_POINTS_VALUE',
+  'RETURN_DISCOUNT_SHARE',
   'TOTAL_REFUND',
   'REFUND_METHOD',
   'RETURN_REASON',
@@ -88,7 +91,10 @@ export const RETURN_LINE_TYPE_OPTIONS = [
   { value: 'CASHIER',          label: 'Cashier' },
   { value: 'CUSTOMER',         label: 'Customer' },
   { value: 'RETURN_ITEM_TABLE', label: 'Returned Items' },
-  { value: 'TOTAL_REFUND',     label: 'Total Refund' },
+  { value: 'RETURN_GOODS_VALUE', label: 'Goods Returned (value)' },
+  { value: 'RETURN_POINTS_VALUE', label: 'Paid with Points (value)' },
+  { value: 'RETURN_DISCOUNT_SHARE', label: 'Bill Discount Share' },
+  { value: 'TOTAL_REFUND',     label: 'Cash Refund' },
   { value: 'REFUND_METHOD',    label: 'Refund Method' },
   { value: 'RETURN_REASON',    label: 'Reason' },
   { value: 'CASHIER_NOTE',     label: 'Cashier Note' },
@@ -121,6 +127,7 @@ export const RECEIPT_LINE_CUSTOM_TEXT_TYPES = [
   'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
   'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
   'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK', 'TOTAL_SAVINGS',
+  'RETURN_GOODS_VALUE', 'RETURN_POINTS_VALUE', 'RETURN_DISCOUNT_SHARE',
   // On PRINT_MARK the text is the heading, and a reprint appends the copy wording to it.
   'PRINT_MARK',
   'THANKS_MESSAGE', 'CUSTOM_TEXT',
@@ -139,7 +146,8 @@ export const createReceiptTemplateLine = (type = 'CUSTOM_TEXT') => {
   const splitAligned  = ['SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE',
     'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
     'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
-    'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK', 'TOTAL_SAVINGS'];
+    'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK', 'TOTAL_SAVINGS',
+    'RETURN_GOODS_VALUE', 'RETURN_POINTS_VALUE', 'RETURN_DISCOUNT_SHARE'];
   const boldTypes     = ['STORE_NAME', 'INVOICE_NO', 'NET_TOTAL', 'CREDIT_DUE', 'PRINT_MARK',
     'TOTAL_REFUND'];
   return {
@@ -264,6 +272,10 @@ export const buildLegacyReturnTemplateLines = () => {
     mk('CASHIER',          { id: 'ret-cash',   align: 'split', fontSize: 10 }),
     mk('SEPARATOR',        { id: 'ret-sep3' }),
     mk('RETURN_ITEM_TABLE', { id: 'ret-table' }),
+    // Why the goods' value and the cash refund differ. Each hides when it is nothing.
+    mk('RETURN_GOODS_VALUE',    { id: 'ret-goods',     align: 'split', fontSize: 10 }),
+    mk('RETURN_POINTS_VALUE',   { id: 'ret-ptsval',    align: 'split', fontSize: 10 }),
+    mk('RETURN_DISCOUNT_SHARE', { id: 'ret-discshare', align: 'split', fontSize: 10 }),
     mk('TOTAL_REFUND',     { id: 'ret-total',  align: 'split', fontSize: 12, bold: true }),
     mk('SEPARATOR',        { id: 'ret-sep4' }),
     mk('REFUND_METHOD',    { id: 'ret-method', align: 'split', fontSize: 10, bold: true }),

@@ -112,6 +112,23 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
   </table>`
         : '';
 
+      // The goods' value, what points had paid of it, and the bill-discount share — the
+      // three figures that turn "goods returned 1,180" into "cash refund 200". Without them
+      // the slip shows lines adding to one number and a refund of another, and the customer
+      // is left to guess which is the mistake.
+      const goodsValue = (returnData.items || [])
+        .reduce((sum, item) => sum + Number(item.returnQty || 0) * Number(item.finalUnitPrice || 0), 0);
+      const pointsValue = Math.max(0, Number(returnData.loyaltyValueReturned || 0));
+      const cashRefund = Math.max(0, Number(returnData.totalRefundAmount || 0));
+      const discountShare = Math.max(0, Math.round((goodsValue - pointsValue - cashRefund) * 100) / 100);
+      const breakdownRow = (label, value) =>
+        `<tr><td colspan="3" style="padding:2px 0;font-size:10px;color:#555;">${label}</td>` +
+        `<td style="padding:2px 0;font-size:10px;text-align:right;">${value}</td></tr>`;
+      const breakdownHtml =
+        (pointsValue > 0 || discountShare > 0 ? breakdownRow('Goods returned', fmt(goodsValue)) : '') +
+        (pointsValue > 0 ? breakdownRow('Paid with points', `-${fmt(pointsValue)}`) : '') +
+        (discountShare > 0 ? breakdownRow('Discount share', `-${fmt(discountShare)}`) : '');
+
       const itemRows = (returnData.items || [])
         .map(
           (item) => `
@@ -119,7 +136,7 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
             <td style="padding:3px 0;font-size:11px;word-break:break-word;">${item.itemName}</td>
             <td style="padding:3px 4px;font-size:11px;text-align:center;">${item.returnQty}</td>
             <td style="padding:3px 0;font-size:11px;text-align:right;">${fmt(item.finalUnitPrice)}</td>
-            <td style="padding:3px 0;font-size:11px;text-align:right;">${fmt(item.refundLineAmount)}</td>
+            <td style="padding:3px 0;font-size:11px;text-align:right;">${fmt(item.returnQty * item.finalUnitPrice)}</td>
           </tr>`
         )
         .join('');
@@ -188,9 +205,10 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
       ${itemRows}
     </tbody>
     <tfoot>
+      ${breakdownHtml}
       <tr class="total-row">
-        <td colspan="3" style="padding-top:6px;border-top:1px solid #000;">TOTAL REFUND</td>
-        <td style="padding-top:6px;border-top:1px solid #000;text-align:right;">${fmt(returnData.totalRefundAmount)} LKR</td>
+        <td colspan="3" style="padding-top:6px;border-top:1px solid #000;">CASH REFUND</td>
+        <td style="padding-top:6px;border-top:1px solid #000;text-align:right;">${fmt(cashRefund)} LKR</td>
       </tr>
     </tfoot>
   </table>

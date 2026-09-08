@@ -138,18 +138,36 @@ const SaleReturnPage = () => {
   };
 
   // ── compute refund preview ─────────────────────────────────────────────────
+  // How the sale was settled, as ratios of its value. A line's ticket price is split the
+  // same way the server splits it: the cash share is refunded in money, the points share
+  // goes back as points, and the remainder is the bill discount that had already come off.
+  // Preview any other figure and the cashier reads out an amount the server will not pay.
+  const settlement = React.useMemo(() => {
+    const saleValue = Number(sale?.subTotal) || 0;
+    if (saleValue <= 0) return { cashShare: 1, pointsShare: 0 };
+    return {
+      cashShare: (Number(sale?.grandTotal) || 0) / saleValue,
+      pointsShare: (Number(sale?.loyaltyDiscountAmount) || 0) / saleValue,
+    };
+  }, [sale]);
+
   const selectedLines = React.useMemo(() => {
     if (!sale) return [];
     return sale.items
       .map((item) => ({
         item,
         returnQty: returnQtys[item.id] || 0,
+        // What the goods sold for.
         refundLine: (returnQtys[item.id] || 0) * item.finalUnitPrice,
       }))
       .filter((l) => l.returnQty > 0);
   }, [sale, returnQtys]);
 
-  const totalRefund = selectedLines.reduce((s, l) => s + l.refundLine, 0);
+  const goodsValue = selectedLines.reduce((s, l) => s + l.refundLine, 0);
+  const round2 = (n) => Math.round(n * 100) / 100;
+  const pointsValueBack = round2(goodsValue * settlement.pointsShare);
+  const totalRefund = round2(goodsValue * settlement.cashShare);
+  const discountShare = Math.max(0, round2(goodsValue - pointsValueBack - totalRefund));
 
   // ── submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -266,7 +284,7 @@ const SaleReturnPage = () => {
                 <tr className="border-b border-slate-100 text-xs text-slate-500">
                   <th className="px-4 py-2 text-left">Item</th>
                   <th className="px-4 py-2 text-center">Qty</th>
-                  <th className="px-4 py-2 text-right">Refund</th>
+                  <th className="px-4 py-2 text-right">Value</th>
                   <th className="px-4 py-2 text-center">Stock</th>
                 </tr>
               </thead>
@@ -276,7 +294,7 @@ const SaleReturnPage = () => {
                     <td className="px-4 py-2 text-slate-700 font-medium">{ri.itemName}</td>
                     <td className="px-4 py-2 text-center text-slate-600">{ri.returnQty}</td>
                     <td className="px-4 py-2 text-right text-slate-700">
-                      {fmt(ri.refundLineAmount)} LKR
+                      {fmt(ri.returnQty * ri.finalUnitPrice)} LKR
                     </td>
                     <td className="px-4 py-2 text-center">
                       {ri.stockReversed ? (
@@ -293,15 +311,38 @@ const SaleReturnPage = () => {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t border-slate-200 bg-slate-50">
-                  <td colSpan={2} className="px-4 py-3 font-bold text-slate-700 text-sm">
-                    Total Refund
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-emerald-700 text-base">
-                    {fmt(successReturn.totalRefundAmount)} LKR
-                  </td>
-                  <td />
-                </tr>
+                {(() => {
+                  const goods = (successReturn.items || [])
+                    .reduce((sum, ri) => sum + ri.returnQty * ri.finalUnitPrice, 0);
+                  const pointsValue = Number(successReturn.loyaltyValueReturned) || 0;
+                  const cash = Number(successReturn.totalRefundAmount) || 0;
+                  const discount = Math.max(0, Math.round((goods - pointsValue - cash) * 100) / 100);
+                  const row = (label, value, cls = "text-slate-600") => (
+                    <tr key={label} className="bg-slate-50 text-sm">
+                      <td colSpan={2} className={`px-4 py-1.5 ${cls}`}>{label}</td>
+                      <td className={`px-4 py-1.5 text-right font-semibold ${cls}`}>{value}</td>
+                      <td />
+                    </tr>
+                  );
+                  return (
+                    <>
+                      {row("Goods returned", `${fmt(goods)} LKR`)}
+                      {pointsValue > 0 && row(
+                        `Paid with points — ${successReturn.loyaltyPointsGivenBack || 0} points returned`,
+                        `-${fmt(pointsValue)} LKR`, "text-violet-800")}
+                      {discount > 0 && row("Bill discount share", `-${fmt(discount)} LKR`)}
+                      <tr className="border-t border-slate-200 bg-slate-50">
+                        <td colSpan={2} className="px-4 py-3 font-bold text-slate-700 text-sm">
+                          Cash Refund
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-emerald-700 text-base">
+                          {fmt(cash)} LKR
+                        </td>
+                        <td />
+                      </tr>
+                    </>
+                  );
+                })()}
               </tfoot>
             </table>
             </div>
@@ -471,7 +512,7 @@ const SaleReturnPage = () => {
                 <th className="p-4 text-center">Max Returnable</th>
                 <th className="p-4 text-right">Unit Price</th>
                 <th className="p-4 text-center w-36">Return Qty</th>
-                <th className="p-4 text-right pr-6">Refund</th>
+                <th className="p-4 text-right pr-6">Value</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -643,9 +684,25 @@ const SaleReturnPage = () => {
                   ))}
                 </div>
 
-                <div className="border-t border-slate-200 pt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-700">Total Refund</span>
+                <div className="border-t border-slate-200 pt-4 space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">Goods returned</span>
+                    <span className="font-semibold text-slate-700">{fmt(goodsValue)} LKR</span>
+                  </div>
+                  {pointsValueBack > 0 && (
+                    <div className="flex items-center justify-between text-sm text-violet-800">
+                      <span>Paid with points — returned as points</span>
+                      <span className="font-semibold">-{fmt(pointsValueBack)} LKR</span>
+                    </div>
+                  )}
+                  {discountShare > 0 && (
+                    <div className="flex items-center justify-between text-sm text-slate-600">
+                      <span>Bill discount share</span>
+                      <span className="font-semibold">-{fmt(discountShare)} LKR</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-sm font-bold text-slate-700">Cash Refund</span>
                     <span className="text-2xl font-bold text-red-600">
                       {fmt(totalRefund)} LKR
                     </span>

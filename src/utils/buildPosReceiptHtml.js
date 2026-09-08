@@ -89,6 +89,14 @@ const renderLine = (line, data, items) => {
   const refundMethodLabel = {
     CASH: 'Cash', BANK: 'Bank Transfer', CARD: 'Card', STORE_CREDIT: 'Store Credit',
   }[orderData?.refundMethod] || orderData?.refundMethod || '';
+  // The goods' value, what points had paid of it, and the bill-discount share — the three
+  // figures that turn "goods returned 1,180" into "cash refund 200" on the slip.
+  const returnGoodsValue = (Array.isArray(items) ? items : []).reduce((sum, item) =>
+    sum + Number(item?.returnQty ?? 0) * Number(item?.finalUnitPrice ?? 0), 0);
+  const returnPointsValue = Math.max(0, Number(orderData?.loyaltyValueReturned ?? 0));
+  const returnCash = Math.max(0, Number(orderData?.totalRefundAmount ?? 0));
+  const returnDiscountShare = Math.max(0,
+    Math.round((returnGoodsValue - returnPointsValue - returnCash) * 100) / 100);
   // A reprint has to say so. Nothing else distinguishes it from the slip it copies, and a
   // second copy of a refund is the one a shop most needs to be able to tell apart.
   //
@@ -240,8 +248,17 @@ const renderLine = (line, data, items) => {
     case 'RETURN_ITEM_TABLE':
       return `<table class="items">${buildReturnRows(items, { nameSize: line.fontSize || 11, currency })}</table>`;
 
+    case 'RETURN_GOODS_VALUE':
+      return returnGoodsValue > 0.001 ? two('Goods Returned', lkr(returnGoodsValue)) : '';
+
+    case 'RETURN_POINTS_VALUE':
+      return returnPointsValue > 0.001 ? two('Paid with Points', `-${lkr(returnPointsValue)}`) : '';
+
+    case 'RETURN_DISCOUNT_SHARE':
+      return returnDiscountShare > 0.001 ? two('Discount Share', `-${lkr(returnDiscountShare)}`) : '';
+
     case 'TOTAL_REFUND':
-      return two('Total Refund', lkr(orderData?.totalRefundAmount ?? 0), 'grand');
+      return two('Cash Refund', lkr(returnCash), 'grand');
 
     case 'REFUND_METHOD':
       return refundMethodLabel ? two('Refund Method', esc(refundMethodLabel)) : '';
@@ -303,7 +320,9 @@ const buildReturnRows = (items, { nameSize = 11, currency = 'LKR' } = {}) => {
   return (Array.isArray(items) ? items : []).map((item) => {
     const qty = Number(item?.returnQty ?? item?.qty ?? 0);
     const unit = Number(item?.finalUnitPrice ?? item?.unitPrice ?? 0);
-    const amount = Number(item?.refundLineAmount ?? qty * unit);
+    // What the goods sold for. The cash share of it is the refund line below the table;
+    // printed here beside the unit price it reads as a mistake, because 800.00 x 1 is not 135.59.
+    const amount = qty * unit;
     const name = item?.itemName || item?.name || 'Item';
     return (
       `<tr><td colspan="3" class="item-name" style="${tdStyle}">${esc(name)}</td></tr>` +
