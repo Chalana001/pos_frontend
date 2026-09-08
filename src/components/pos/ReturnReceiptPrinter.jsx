@@ -29,6 +29,7 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
      * returnData shape (from OrderReturnResponse):
      *   returnNo, originalInvoiceNo, refundMethod, totalRefundAmount,
      *   reason, cashierNote, cashierName, customerName, createdAt,
+     *   loyaltyPointsTakenBack, loyaltyPointsGivenBack, loyaltyPointsBalance,
      *   branchName, branchAddress, branchPhone, branchLogo,
      *   items: [{ itemName, barcode, returnQty, finalUnitPrice, refundLineAmount, stockReversed }]
      */
@@ -49,6 +50,28 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
         CARD: 'Card',
         STORE_CREDIT: 'Store Credit',
       }[returnData.refundMethod] || returnData.refundMethod;
+
+      // What the return did to the customer's points. Two directions rather than one net
+      // figure: a full return takes back what the sale earned *and* hands back what the
+      // customer spent on it, and a single number would print "0" on a return that moved
+      // hundreds each way — which is the receipt someone queries at the counter.
+      const pts = (n) => Number(n || 0).toLocaleString();
+      const pointsTakenBack = Math.max(0, Number(returnData.loyaltyPointsTakenBack || 0));
+      const pointsGivenBack = Math.max(0, Number(returnData.loyaltyPointsGivenBack || 0));
+      const pointsBalance = Math.max(0, Number(returnData.loyaltyPointsBalance || 0));
+      const row = (label, value) =>
+        `<tr><td style="font-size:10px;color:#555;">${label}</td>` +
+        `<td class="right bold" style="font-size:10px;">${value}</td></tr>`;
+      // Nothing at all on a return that moved no points — most of them.
+      const loyaltyHtml = pointsTakenBack > 0 || pointsGivenBack > 0
+        ? `
+  <hr class="divider"/>
+  <table>
+    ${pointsTakenBack > 0 ? row('Points Taken Back', `-${pts(pointsTakenBack)}`) : ''}
+    ${pointsGivenBack > 0 ? row('Points Returned', `+${pts(pointsGivenBack)}`) : ''}
+    ${row('Points Balance', pts(pointsBalance))}
+  </table>`
+        : '';
 
       const itemRows = (returnData.items || [])
         .map(
@@ -138,6 +161,8 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
     <tr><td style="font-size:10px;color:#555;">Reason</td><td class="right" style="font-size:10px;">${returnData.reason || '-'}</td></tr>
     ${returnData.cashierNote ? `<tr><td style="font-size:10px;color:#555;">Note</td><td class="right" style="font-size:10px;font-style:italic;">${returnData.cashierNote}</td></tr>` : ''}
   </table>
+
+${loyaltyHtml}
 
   <hr class="divider"/>
   <div class="center" style="font-size:10px;margin-top:4px;">
