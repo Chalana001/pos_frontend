@@ -249,7 +249,10 @@ const renderLine = (line, data, items) => {
       return `<table class="items">${buildReturnRows(items, { nameSize: line.fontSize || 11, currency })}</table>`;
 
     case 'RETURN_GOODS_VALUE':
-      return returnGoodsValue > 0.001 ? two('Goods Returned', lkr(returnGoodsValue)) : '';
+      // Only when there is something to explain. On a return where the goods' value and the
+      // cash refund are the same number, a row saying so twice is noise.
+      return returnGoodsValue > 0.001 && (returnPointsValue > 0.001 || returnDiscountShare > 0.001)
+        ? two('Goods Returned', lkr(returnGoodsValue)) : '';
 
     case 'RETURN_POINTS_VALUE':
       return returnPointsValue > 0.001 ? two('Paid with Points', `-${lkr(returnPointsValue)}`) : '';
