@@ -6,16 +6,16 @@ export const VERSION_HISTORY = [
     title: "Promotions Rebuilt, Loyalty Points & Receipts You Design",
     releaseDate: "2026-09-08",
     summary:
-      "Promotions grow from a single discount rule into a real campaign tool: every item in a campaign can carry its own offer price, offers can be buy-X-get-Y, tiered, bundled or fixed-price, they can run on chosen days and hours, and a margin guard stops any of them selling below cost. Promo codes, redemption limits and budgets, a second-admin approval gate, a simulator that replays last month's sales, and a full activity trail come with it - and offline tills price the same promotions from a cached rule set that is checked against the server's engine on every build. A new Loyalty module lets customers earn points on what they pay and spend them at the till, with tiers, a points tab on every customer, and the balance printed on the receipt. Receipts themselves are now yours to lay out: the return slip has its own designer tab, every reprint is stamped COPY, and new lines show points, savings and exactly how a refund was worked out.",
+      "Promotions become a real campaign tool, customers can earn and spend loyalty points at the till, and receipts - including the return slip - are now yours to lay out.",
     highlights: [
-      "Promotions rebuilt end to end: per-item offer prices, buy-X-get-Y, tiers, bundles, day-and-hour schedules, stacking rules, a margin guard, promo codes with limits and budgets, approval, a simulator, an audit trail and a history page.",
-      "Loyalty points: customers earn on what they pay and spend at the till; tiers multiply earning; a Points tab on every customer shows the ledger; the receipt prints points earned, used and the balance.",
-      "A \"Why this price?\" button on every cart line and on the bill lists each promotion that was in the running and why it did or did not apply.",
-      "Receipts you design: the return slip gets its own tab in Receipt Settings, every reprint from history is stamped COPY, and new lines show points, what the customer saved, and how a refund breaks down.",
-      "Fixed: a return refunded the full ticket price on a sale that had been paid partly in points - the shop lost money and the customer's points stayed spent. Refunds are now the cash share, and the points come back as points.",
-      "Offline tills price promotions from a cached, versioned rule set; a shared fixture corpus keeps the offline engine identical to the server's on every build.",
-      "Supplier free items on purchases: a GRN line can carry a free quantity that goes into stock and dilutes the unit cost without touching the payable.",
-      "Fixed: purchase returns removed a thousandth of the stock they should have, and refunded G/ML lines at a thousand times the cost.",
+      "Promotions rebuilt: per-item offer prices, buy-X-get-Y, tiers, bundles, schedules, promo codes, approval and a simulator.",
+      "Loyalty points: earn on what is paid, spend at the till, tiers, a Points tab on every customer, balance on the receipt.",
+      "\"Why this price?\" on any cart line shows every promotion considered and why it did or did not apply.",
+      "Receipts you design: a Return tab in Receipt Settings, every reprint stamped COPY, new lines for points and savings.",
+      "Fixed: a return on a points-paid sale refunded the full ticket in cash. Refunds are now the cash share; points come back as points.",
+      "Offline tills price promotions from a cached rule set that is checked against the server's engine on every build.",
+      "Supplier free items on purchases go into stock and dilute unit cost without touching the payable.",
+      "Fixed: purchase returns removed a thousandth of the stock they should have.",
     ],
     sections: [
       {

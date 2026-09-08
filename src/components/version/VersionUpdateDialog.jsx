@@ -63,48 +63,55 @@ const VersionUpdateDialog = () => {
   };
 
   return (
-    <Modal isOpen={open} onClose={closeDialog} title="" size="xl">
-      <div className="space-y-6">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+    <Modal isOpen={open} onClose={closeDialog} title="" size="lg">
+      {/*
+        The Modal scrolls its body and keeps ~140px for its own header, so anything tall
+        enough to scroll takes the footer with it - the Got it button was the first thing
+        to disappear. The copy is kept short enough not to scroll at a normal height, and
+        the footer is sticky so it stays reachable when it does.
+      */}
+      <div className="-m-6 flex flex-col">
+        <div className="space-y-5 px-6 pt-2 pb-5">
           <div className="flex items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <img src={BRAND_MARK} alt={BRAND_NAME} className="sidebar-logo-spin h-12 w-12 object-contain" />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <img src={BRAND_MARK} alt={BRAND_NAME} className="sidebar-logo-spin h-10 w-10 object-contain" />
             </div>
-            <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase text-blue-700">
-                <Sparkles size={14} />
-                New version available
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-blue-700">
+                  <Sparkles size={12} />
+                  What's new
+                </span>
+                <span className="text-xs text-slate-500">{LATEST_VERSION.releaseDate}</span>
               </div>
-              <h2 className="mt-3 text-2xl font-bold text-slate-900">
+              <h2 className="mt-1.5 text-xl font-bold text-slate-900">
                 {BRAND_NAME} v{LATEST_VERSION.version}
+                <span className="ml-2 text-base font-semibold text-slate-500">{LATEST_VERSION.title}</span>
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{LATEST_VERSION.summary}</p>
+              <p className="mt-1.5 text-sm leading-6 text-slate-600">{LATEST_VERSION.summary}</p>
             </div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-            <div className="font-semibold text-slate-900">Release date</div>
-            <div className="mt-1 text-slate-600">{LATEST_VERSION.releaseDate}</div>
-          </div>
+
+          <ul className="space-y-2">
+            {LATEST_VERSION.highlights.slice(0, 6).map((item) => (
+              <li key={item} className="flex gap-3">
+                <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600" size={18} />
+                <p className="text-sm leading-6 text-slate-700">{item}</p>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          {LATEST_VERSION.highlights.slice(0, 6).map((item) => (
-            <div key={item} className="flex gap-3 rounded-lg border border-slate-200 bg-white p-3">
-              <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600" size={18} />
-              <p className="text-sm leading-5 text-slate-700">{item}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="shell-surface sticky bottom-0 flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
           <Link
             to="/version-history"
             onClick={closeDialog}
             className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-800"
           >
             <History size={16} />
-            View full version history
+            Full version history
           </Link>
-          <Button type="button" onClick={closeDialog} className="sm:min-w-[150px]">
+          <Button type="button" onClick={closeDialog} className="min-w-[120px]">
             Got it
           </Button>
         </div>
