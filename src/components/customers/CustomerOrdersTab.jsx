@@ -78,6 +78,7 @@ const CustomerOrdersTab = ({ customerId }) => {
                   <th className="app-table-head-cell !px-4 text-right">Paid</th>
                   <th className="app-table-head-cell !px-4 text-right">Balance</th>
                   <th className="app-table-head-cell !px-4 text-center">Type</th>
+                  <th className="app-table-head-cell !px-4 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="app-table-body">
@@ -115,6 +116,22 @@ const CustomerOrdersTab = ({ customerId }) => {
                         }`}
                       >
                         {order.orderType || "—"}
+                      </span>
+                    </td>
+                    <td className="app-table-cell !px-4 text-center">
+                      {/*
+                        A cancelled sale still shows its original figures, so without this the
+                        row reads as money the shop took. Only two states exist today, so the
+                        completed one stays quiet and the cancelled one does not.
+                      */}
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-medium ${
+                          order.status === "CANCELED"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {order.status === "CANCELED" ? "Cancelled" : "Completed"}
                       </span>
                     </td>
                   </tr>
