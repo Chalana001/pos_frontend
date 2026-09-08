@@ -19,8 +19,12 @@ const parseVersion = (version) => {
 };
 
 const shouldShowUpdateDialog = (seenVersion, currentVersion) => {
+  // No record on this device means this is the first version it has met - so show it.
+  // The record is written only when a popup is dismissed, so returning false here meant a
+  // device that had never shown a popup could never show one: the release notes were
+  // unreachable on every fresh browser, and on most existing ones too.
   if (!seenVersion) {
-    return false;
+    return true;
   }
 
   const seen = parseVersion(seenVersion);
