@@ -683,6 +683,20 @@
     @apply overflow-x-auto custom-scrollbar;
   }
 
+  /* A preview table that scrolls inside the page instead of growing it. Import previews
+     run to hundreds of rows and two thousand pixels wide; without a ceiling the sideways
+     scrollbar sits at the foot of the whole table, and reaching a column on the right means
+     scrolling the page to the bottom first. The header stays put so the columns keep their
+     names while the rows scroll under it - the head's own background is what hides them. */
+  .app-table-wrap-fixed {
+    @apply overflow-auto;
+    max-height: min(70vh, calc(100vh - 260px));
+  }
+
+  .app-table-wrap-fixed thead {
+    @apply sticky top-0 z-10;
+  }
+
   .app-table {
     @apply w-full text-left text-sm leading-5;
   }
