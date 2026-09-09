@@ -65,6 +65,14 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
   const [subCategoryMap, setSubCategoryMap] = useState({});
   const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState("");
+  // Which rows the table shows. The counts above it always count the whole file, so the
+  // filter narrows what you work on without hiding what you have.
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const shownRows = useMemo(
+    () => (statusFilter === "ALL" ? rows : rows.filter((row) => row.status === statusFilter)),
+    [rows, statusFilter]
+  );
+
   // The window of rows on screen. Reset when a fresh file is parsed, not when a row is
   // edited, so correcting row 900 does not throw the operator back to the top.
   const [visibleRowCount, setVisibleRowCount] = useState(ROW_PAGE_SIZE);
@@ -117,14 +125,6 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
       selected: rows.filter((row) => row.selected ?? true).length,
     }),
     [rows]
-  );
-
-  // Which rows the table shows. The counts above it always count the whole file, so the
-  // filter narrows what you work on without hiding what you have.
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const shownRows = useMemo(
-    () => (statusFilter === "ALL" ? rows : rows.filter((row) => row.status === statusFilter)),
-    [rows, statusFilter]
   );
 
   /**

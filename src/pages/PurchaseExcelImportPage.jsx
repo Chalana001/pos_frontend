@@ -107,6 +107,8 @@ const PurchaseExcelImportPage = () => {
 
   // --- File / rows state ---
   const [fileName, setFileName] = useState("");
+
+  const [rows, setRows] = useState([]);
   // The window of rows on screen. Reset when a fresh file is parsed, not when a row is
   // edited, so correcting row 900 does not throw the operator back to the top.
   const [visibleRowCount, setVisibleRowCount] = useState(ROW_PAGE_SIZE);
@@ -132,7 +134,6 @@ const PurchaseExcelImportPage = () => {
     return () => observer.disconnect();
   }, [rows.length, visibleRowCount]);
 
-  const [rows, setRows] = useState([]);
   const [loadingFile, setLoadingFile] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [recheckingRows, setRecheckingRows] = useState(() => new Set());
