@@ -65,8 +65,8 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
   const [subCategoryMap, setSubCategoryMap] = useState({});
   const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState("");
-  // Which rows the table shows. The counts above it always count the whole file, so the
-  // filter narrows what you work on without hiding what you have.
+  // Which rows the table shows. Every tab keeps its own full count, so narrowing the table
+  // never hides how much of the file is left.
   const [statusFilter, setStatusFilter] = useState("ALL");
   const shownRows = useMemo(
     () => (statusFilter === "ALL" ? rows : rows.filter((row) => row.status === statusFilter)),
@@ -126,30 +126,6 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
     }),
     [rows]
   );
-
-  /**
-   * Why the failing rows failed, worst first.
-   *
-   * <p>A bad column fails every row with the same sentence, so scrolling five thousand
-   * identical messages tells you nothing that one line would not. Grouping them turns the
-   * error list into the thing an operator actually needs: what is wrong, and how much of the
-   * file it costs.
-   */
-  const errorReasons = useMemo(() => {
-    const counts = new Map();
-    for (const row of rows) {
-      if (row.status !== "ERROR") continue;
-      const reason = (row.message || "").trim() || "No message";
-      const seen = counts.get(reason);
-      if (seen) {
-        seen.count += 1;
-        if (seen.rows.length < 6) seen.rows.push(row.rowNumber);
-      } else {
-        counts.set(reason, { reason, count: 1, rows: [row.rowNumber] });
-      }
-    }
-    return [...counts.values()].sort((a, b) => b.count - a.count);
-  }, [rows]);
 
   useEffect(() => {
     loadCategories();
@@ -446,73 +422,13 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                 {loadingFile ? "Loading..." : "Upload Excel"}
               </Button>
             </div>
-            {/*
-              The counts double as the filter - the number you want to work on is the thing
-              you click. Selected is not a status, so it stays a plain badge.
-            */}
+            {/* The counts live on the tabs below; selection is not a status, so it stays here. */}
             <div className="flex flex-wrap gap-2 text-xs">
-              {[
-                { key: "ALL", label: `All: ${rows.length}`, on: "border-slate-300 bg-slate-100 text-slate-800", off: "border-slate-200 bg-slate-50 text-slate-600" },
-                { key: "READY", label: `Ready: ${summary.ready}`, on: "border-emerald-300 bg-emerald-100 text-emerald-900", off: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-                { key: "ERROR", label: `Errors: ${summary.error}`, on: "border-red-300 bg-red-100 text-red-900", off: "border-red-200 bg-red-50 text-red-700" },
-                { key: "IMPORTED", label: `Imported: ${summary.imported}`, on: "border-blue-300 bg-blue-100 text-blue-900", off: "border-blue-200 bg-blue-50 text-blue-700" },
-              ].map((chip) => (
-                <button
-                  key={chip.key}
-                  type="button"
-                  aria-pressed={statusFilter === chip.key}
-                  onClick={() => {
-                    setStatusFilter(chip.key);
-                    setVisibleRowCount(ROW_PAGE_SIZE);
-                    if (rowScrollRef.current) rowScrollRef.current.scrollTop = 0;
-                  }}
-                  className={`rounded-full border px-2 py-1 font-medium transition-colors ${
-                    statusFilter === chip.key ? chip.on : `${chip.off} hover:brightness-95`
-                  }`}
-                >
-                  {chip.label}
-                </button>
-              ))}
               <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-medium text-slate-700">Selected: {summary.selected}</span>
             </div>
           </div>
         </div>
       </Card>
-
-      {errorReasons.length > 0 && (
-        <Card className="space-y-2 p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-            <AlertCircle size={16} className="text-red-600" />
-            Why {summary.error} {summary.error === 1 ? "row" : "rows"} cannot import
-          </div>
-          <ul className="space-y-1.5">
-            {errorReasons.map((reason) => (
-              <li key={reason.reason} className="flex items-start justify-between gap-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-900">
-                <span className="min-w-0">
-                  <span className="font-semibold">{reason.reason}</span>
-                  <span className="ml-2 text-red-700">
-                    row {reason.rows.join(", ")}{reason.count > reason.rows.length ? " and more" : ""}
-                  </span>
-                </span>
-                <span className="shrink-0 font-bold">
-                  {reason.count} {reason.count === 1 ? "row" : "rows"}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => {
-              setStatusFilter("ERROR");
-              setVisibleRowCount(ROW_PAGE_SIZE);
-              if (rowScrollRef.current) rowScrollRef.current.scrollTop = 0;
-            }}
-            className="text-xs font-semibold text-blue-700 hover:text-blue-800"
-          >
-            Show only these rows in the table
-          </button>
-        </Card>
-      )}
 
       {rows.length === 0 ? (
         <Card className="p-10 text-center text-sm text-slate-500">
@@ -520,6 +436,37 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
         </Card>
       ) : (
         <Card className="space-y-4 p-4">
+          {/*
+            Status tabs, in the same shape as the Items / Recipe Ingredients tabs above.
+            Fixing a spreadsheet means working the failing rows and nothing else: pick
+            Errors and the table holds only those, so the scroll is as long as the work is.
+            Each tab carries its own count, and Import still sends every selected row in
+            the file, whichever tab is open.
+          */}
+          <div className="inline-flex w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+            {[
+              { key: "ALL", label: "All rows", count: rows.length },
+              { key: "ERROR", label: "Errors", count: summary.error },
+              { key: "READY", label: "Ready", count: summary.ready },
+              { key: "IMPORTED", label: "Imported", count: summary.imported },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => {
+                  setStatusFilter(tab.key);
+                  setVisibleRowCount(ROW_PAGE_SIZE);
+                  if (rowScrollRef.current) rowScrollRef.current.scrollTop = 0;
+                }}
+                className={`h-10 flex-1 rounded-md px-3 text-sm font-medium transition-colors ${
+                  statusFilter === tab.key ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                {tab.label} ({tab.count})
+              </button>
+            ))}
+          </div>
+
           <div ref={rowScrollRef} className="app-table-wrap app-table-wrap-fixed rounded-lg border border-slate-200">
             <table className="min-w-[1780px] w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
