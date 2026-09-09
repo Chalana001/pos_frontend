@@ -169,6 +169,12 @@ const SaleReturnPage = () => {
   const totalRefund = round2(goodsValue * settlement.cashShare);
   const discountShare = Math.max(0, round2(goodsValue - pointsValueBack - totalRefund));
 
+  // One key per return the cashier composes. Minted on the first submit attempt and held
+  // through a retry of that same attempt, so a double-click or a flaky network replays the
+  // one return instead of making two; dropped once a return succeeds, so the next return of
+  // the same sale - even with the same lines and reason - is a new request to the server.
+  const returnIdempotencyKeyRef = useRef(null);
+
   // ── submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (selectedLines.length === 0) {
@@ -190,9 +196,14 @@ const SaleReturnPage = () => {
       })),
     };
 
+    if (!returnIdempotencyKeyRef.current) {
+      returnIdempotencyKeyRef.current = window.crypto.randomUUID();
+    }
+
     try {
       setIsSubmitting(true);
-      const res = await returnsAPI.processReturn(invoiceNo, payload);
+      const res = await returnsAPI.processReturn(invoiceNo, payload, returnIdempotencyKeyRef.current);
+      returnIdempotencyKeyRef.current = null;
       setSuccessReturn(res.data);
       toast.success(`Return ${res.data.returnNo} processed successfully!`);
     } catch (err) {
