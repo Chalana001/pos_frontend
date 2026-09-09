@@ -162,6 +162,13 @@ const CART_MODES = {
 const getCartDraftKey = (userId, branchId) =>
   userId && branchId ? `pos-active-cart-v1:${userId}:${branchId}` : null;
 
+/**
+ * Tiles drawn per step. Four to five per row, so this is roughly three screenfuls: enough
+ * that the grid rarely grows while the cashier is looking at it, small enough that eight
+ * thousand items cost the same first paint as eighty.
+ */
+const ITEM_PAGE_SIZE = 60;
+
 const POS = () => {
   const { user, isOnline, hasOnlineSession, isOfflineSession } = useAuth();
   const { selectedBranchId, branches } = useBranch();
@@ -181,6 +188,14 @@ const POS = () => {
 
   const [allItems, setAllItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
+  // How many tiles are actually in the DOM. A shop with 8,000 items rendered all 8,000 —
+  // roughly eighty thousand nodes, each with its own entry animation — and the till locked
+  // up for seconds on load and on every keystroke. Filtering that many is nothing; drawing
+  // them is everything. So a screenful is drawn, and more follow as the cashier scrolls.
+  // Searching and scanning still run over the whole filtered list, never over this window.
+  const [visibleCount, setVisibleCount] = useState(ITEM_PAGE_SIZE);
+  const gridScrollRef = useRef(null);
+  const gridSentinelRef = useRef(null);
   const [cartItems, setCartItems] = useState([]);
   const [warrantyOptions, setWarrantyOptions] = useState([{ value: "", label: "No Warranty" }]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1050,7 +1065,38 @@ const POS = () => {
       );
     }
     setFilteredItems(result);
+    // A new search or category is a new list: start from the top of it, and put the grid
+    // back to the top too, or the cashier lands mid-way down results they have not seen.
+    setVisibleCount(ITEM_PAGE_SIZE);
+    if (gridScrollRef.current) gridScrollRef.current.scrollTop = 0;
   }, [activeCategory, searchQuery, allItems, singleCategoryMode]);
+
+  // What is on screen. Everything else in this page - the barcode match, the Enter-to-add
+  // shortcut, the counts - keeps reading filteredItems, so the window is a drawing detail
+  // and never changes what a search finds.
+  const visibleItems = useMemo(
+    () => filteredItems.slice(0, visibleCount),
+    [filteredItems, visibleCount]
+  );
+
+  // Draw the next batch when the foot of the grid comes into view. rootMargin starts it a
+  // screen early, so the tiles are already there by the time the cashier reaches them.
+  useEffect(() => {
+    const sentinel = gridSentinelRef.current;
+    const root = gridScrollRef.current;
+    if (!sentinel || !root || visibleCount >= filteredItems.length) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleCount((count) => Math.min(count + ITEM_PAGE_SIZE, filteredItems.length));
+        }
+      },
+      { root, rootMargin: "600px 0px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [filteredItems.length, visibleCount]);
 
   const addToCart = (item) => {
     if (!canSell) {
@@ -2454,7 +2500,7 @@ const POS = () => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-slate-50 p-1.5 custom-scrollbar lg:p-3">
+          <div ref={gridScrollRef} className="flex-1 overflow-y-auto bg-slate-50 p-1.5 custom-scrollbar lg:p-3">
             {!canSell ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-600">
                 <Lock className="mb-2 lg:mb-4 opacity-30 w-8 h-8 lg:w-12 lg:h-12" />
@@ -2469,7 +2515,7 @@ const POS = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 lg:gap-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {filteredItems.map((item, index) => {
+                {visibleItems.map((item, index) => {
                   const unlimitedStockItem = isUnlimitedStockItem(item);
                   const stockQty = getSellableStockBaseQty(item);
                   const isOutOfStock = !unlimitedStockItem && stockQty <= 0;
@@ -2525,6 +2571,13 @@ const POS = () => {
                 })}
               </div>
             )}
+            {/* The foot of the list: what is drawn against what was found, and the marker
+                that pulls in the next batch. Only ever shown when there is more to draw. */}
+            {canSell && visibleCount < filteredItems.length ? (
+              <div ref={gridSentinelRef} className="py-4 text-center text-xs text-slate-500">
+                Showing {visibleItems.length} of {filteredItems.length} items — keep scrolling, or search to narrow
+              </div>
+            ) : null}
           </div>
         </div>
         <PanelResizeHandle
