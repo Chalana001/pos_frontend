@@ -10,6 +10,16 @@ import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { ItemType } from "../utils/constants";
 import RecipeIngredientsImportPage from "./RecipeIngredientsImportPage";
 
+/**
+ * How many preview rows are in the DOM at once.
+ *
+ * <p>A row here is not a line of text: it is ten inputs and selects, so a five-thousand row
+ * spreadsheet was fifty thousand form controls. The browser was slow before anybody typed,
+ * and every keystroke re-rendered all of them. The rest are drawn as the operator scrolls to
+ * them - nothing is dropped, and Import still sends every row.
+ */
+const ROW_PAGE_SIZE = 100;
+
 const rowStatusClasses = {
   READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
   IMPORTED: "border-blue-200 bg-blue-50 text-blue-700",
@@ -55,6 +65,31 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
   const [subCategoryMap, setSubCategoryMap] = useState({});
   const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState("");
+  // The window of rows on screen. Reset when a fresh file is parsed, not when a row is
+  // edited, so correcting row 900 does not throw the operator back to the top.
+  const [visibleRowCount, setVisibleRowCount] = useState(ROW_PAGE_SIZE);
+  const rowScrollRef = useRef(null);
+  const rowSentinelRef = useRef(null);
+  const visibleRows = useMemo(() => rows.slice(0, visibleRowCount), [rows, visibleRowCount]);
+
+  // Draw the next batch when the foot of the table comes into view, a screen early.
+  useEffect(() => {
+    const sentinel = rowSentinelRef.current;
+    const root = rowScrollRef.current;
+    if (!sentinel || !root || visibleRowCount >= rows.length) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleRowCount((count) => Math.min(count + ROW_PAGE_SIZE, rows.length));
+        }
+      },
+      { root, rootMargin: "400px 0px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [rows.length, visibleRowCount]);
+
   const [loadingFile, setLoadingFile] = useState(false);
   const [importing, setImporting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
@@ -141,6 +176,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
     const normalizedRows = Array.isArray(nextRows) ? nextRows : [];
     await ensureSubCategoriesLoaded(normalizedRows);
     setRows(keepImported ? normalizedRows : normalizedRows.filter((row) => row.status !== "IMPORTED"));
+    setVisibleRowCount(ROW_PAGE_SIZE);
   };
 
   const getSubCategoryOptions = (categoryId) =>
@@ -394,7 +430,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
         </Card>
       ) : (
         <Card className="space-y-4 p-4">
-          <div className="app-table-wrap app-table-wrap-fixed rounded-lg border border-slate-200">
+          <div ref={rowScrollRef} className="app-table-wrap app-table-wrap-fixed rounded-lg border border-slate-200">
             <table className="min-w-[1780px] w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr className="text-left">
@@ -420,7 +456,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => {
+                {visibleRows.map((row) => {
                   const subCategoryOptions = getSubCategoryOptions(row.categoryId);
                   const statusClass = rowStatusClasses[row.status] || rowStatusClasses.SKIPPED;
                   return (
@@ -517,6 +553,15 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                     </tr>
                   );
                 })}
+                {visibleRowCount < rows.length && (
+                  <tr>
+                    <td colSpan={singleCategoryMode ? 18 : 19} className="px-3 py-3 text-center text-xs text-slate-500">
+                      <div ref={rowSentinelRef}>
+                        Showing {visibleRowCount} of {rows.length} rows — keep scrolling to load more
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

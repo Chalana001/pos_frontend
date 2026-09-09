@@ -40,6 +40,16 @@ const cashSourceOptions = [
   { value: "CASH_DRAWER", label: "Cash Drawer" },
 ];
 
+/**
+ * How many preview rows are in the DOM at once.
+ *
+ * <p>A row here is not a line of text: it is ten inputs and selects, so a five-thousand row
+ * spreadsheet was fifty thousand form controls. The browser was slow before anybody typed,
+ * and every keystroke re-rendered all of them. The rest are drawn as the operator scrolls to
+ * them - nothing is dropped, and Import still sends every row.
+ */
+const ROW_PAGE_SIZE = 100;
+
 const statusBadgeClass = {
   READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
   NOT_FOUND: "border-red-200 bg-red-50 text-red-700",
@@ -97,6 +107,31 @@ const PurchaseExcelImportPage = () => {
 
   // --- File / rows state ---
   const [fileName, setFileName] = useState("");
+  // The window of rows on screen. Reset when a fresh file is parsed, not when a row is
+  // edited, so correcting row 900 does not throw the operator back to the top.
+  const [visibleRowCount, setVisibleRowCount] = useState(ROW_PAGE_SIZE);
+  const rowScrollRef = useRef(null);
+  const rowSentinelRef = useRef(null);
+  const visibleRows = useMemo(() => rows.slice(0, visibleRowCount), [rows, visibleRowCount]);
+
+  // Draw the next batch when the foot of the table comes into view, a screen early.
+  useEffect(() => {
+    const sentinel = rowSentinelRef.current;
+    const root = rowScrollRef.current;
+    if (!sentinel || !root || visibleRowCount >= rows.length) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleRowCount((count) => Math.min(count + ROW_PAGE_SIZE, rows.length));
+        }
+      },
+      { root, rootMargin: "400px 0px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [rows.length, visibleRowCount]);
+
   const [rows, setRows] = useState([]);
   const [loadingFile, setLoadingFile] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
@@ -173,6 +208,7 @@ const PurchaseExcelImportPage = () => {
         expiry: row.expiry || "",
       }));
       setRows(incoming);
+      setVisibleRowCount(ROW_PAGE_SIZE);
       toast.success(`Loaded ${res.data?.totalRows || 0} rows`);
     } catch (error) {
       setRows([]);
@@ -708,7 +744,7 @@ const PurchaseExcelImportPage = () => {
         </Card>
       ) : (
         <Card className="space-y-4 p-4">
-          <div className="app-table-wrap app-table-wrap-fixed rounded-lg border border-slate-200">
+          <div ref={rowScrollRef} className="app-table-wrap app-table-wrap-fixed rounded-lg border border-slate-200">
             <table className="min-w-[1320px] w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr className="text-left">
@@ -726,7 +762,18 @@ const PurchaseExcelImportPage = () => {
                   <th className="px-3 py-2">Action</th>
                 </tr>
               </thead>
-              <tbody>{rows.map(renderRow)}</tbody>
+              <tbody>
+                {visibleRows.map(renderRow)}
+                {visibleRowCount < rows.length && (
+                  <tr>
+                    <td colSpan={13} className="px-3 py-3 text-center text-xs text-slate-500">
+                      <div ref={rowSentinelRef}>
+                        Showing {visibleRowCount} of {rows.length} rows — keep scrolling to load more
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
             </table>
           </div>
         </Card>

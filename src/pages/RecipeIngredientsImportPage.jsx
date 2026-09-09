@@ -1,9 +1,19 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Download, RefreshCw, Upload } from "lucide-react";
 import Button from "../components/common/Button";
 import Card from "../components/common/Card";
 import { itemsAPI } from "../api/items.api";
+
+/**
+ * How many preview rows are in the DOM at once.
+ *
+ * <p>A row here is not a line of text: it is ten inputs and selects, so a five-thousand row
+ * spreadsheet was fifty thousand form controls. The browser was slow before anybody typed,
+ * and every keystroke re-rendered all of them. The rest are drawn as the operator scrolls to
+ * them - nothing is dropped, and Import still sends every row.
+ */
+const ROW_PAGE_SIZE = 100;
 
 const rowStatusClasses = {
   READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -22,6 +32,31 @@ const toIngredientLabel = (ingredient) => {
 export default function RecipeIngredientsImportPage({ embedded = false }) {
   const fileInputRef = useRef(null);
   const [rows, setRows] = useState([]);
+  // The window of rows on screen. Reset when a fresh file is parsed, not when a row is
+  // edited, so correcting row 900 does not throw the operator back to the top.
+  const [visibleRowCount, setVisibleRowCount] = useState(ROW_PAGE_SIZE);
+  const rowScrollRef = useRef(null);
+  const rowSentinelRef = useRef(null);
+  const visibleRows = useMemo(() => rows.slice(0, visibleRowCount), [rows, visibleRowCount]);
+
+  // Draw the next batch when the foot of the table comes into view, a screen early.
+  useEffect(() => {
+    const sentinel = rowSentinelRef.current;
+    const root = rowScrollRef.current;
+    if (!sentinel || !root || visibleRowCount >= rows.length) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleRowCount((count) => Math.min(count + ROW_PAGE_SIZE, rows.length));
+        }
+      },
+      { root, rootMargin: "400px 0px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [rows.length, visibleRowCount]);
+
   const [fileName, setFileName] = useState("");
   const [loadingFile, setLoadingFile] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -79,6 +114,7 @@ export default function RecipeIngredientsImportPage({ embedded = false }) {
       formData.append("file", file);
       const res = await itemsAPI.previewRecipeIngredientsImport(formData);
       setRows(res.data?.rows || []);
+      setVisibleRowCount(ROW_PAGE_SIZE);
       toast.success(`Loaded ${res.data?.totalRows || 0} recipe rows`);
     } catch (error) {
       setRows([]);
@@ -181,7 +217,7 @@ export default function RecipeIngredientsImportPage({ embedded = false }) {
         </Card>
       ) : (
         <Card className="space-y-4 p-4">
-          <div className="app-table-wrap app-table-wrap-fixed rounded-lg border border-slate-200">
+          <div ref={rowScrollRef} className="app-table-wrap app-table-wrap-fixed rounded-lg border border-slate-200">
             <table className="min-w-[1100px] w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr className="text-left">
@@ -194,7 +230,7 @@ export default function RecipeIngredientsImportPage({ embedded = false }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => {
+                {visibleRows.map((row) => {
                   const statusClass = rowStatusClasses[row.status] || rowStatusClasses.SKIPPED;
                   return (
                     <tr key={row.rowNumber} className="border-t border-slate-200 align-top">
@@ -224,6 +260,15 @@ export default function RecipeIngredientsImportPage({ embedded = false }) {
                     </tr>
                   );
                 })}
+                {visibleRowCount < rows.length && (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-3 text-center text-xs text-slate-500">
+                      <div ref={rowSentinelRef}>
+                        Showing {visibleRowCount} of {rows.length} rows — keep scrolling to load more
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
