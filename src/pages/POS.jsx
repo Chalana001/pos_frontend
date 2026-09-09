@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronLeft, ChevronRight, Printer, WifiOff } from "lucide-react";
@@ -169,6 +169,16 @@ const getCartDraftKey = (userId, branchId) =>
  */
 const ITEM_PAGE_SIZE = 60;
 
+/**
+ * Name, alt name and barcode as one lower-cased string, built once when the items load.
+ *
+ * <p>Searching used to lower-case all three fields of every item on every keystroke -
+ * twenty-four thousand throwaway strings per letter typed on an eight-thousand item shop.
+ * Now a keystroke is one substring test per item.
+ */
+const buildSearchBlob = (item) =>
+  `${item?.name || ""}\n${item?.altName || ""}\n${item?.barcode || ""}`.toLowerCase();
+
 const POS = () => {
   const { user, isOnline, hasOnlineSession, isOfflineSession } = useAuth();
   const { selectedBranchId, branches } = useBranch();
@@ -187,7 +197,6 @@ const POS = () => {
   const [loadingShift, setLoadingShift] = useState(true);
 
   const [allItems, setAllItems] = useState([]);
-  const [filteredItems, setFilteredItems] = useState([]);
   // How many tiles are actually in the DOM. A shop with 8,000 items rendered all 8,000 —
   // roughly eighty thousand nodes, each with its own entry animation — and the till locked
   // up for seconds on load and on every keystroke. Filtering that many is nothing; drawing
@@ -894,7 +903,6 @@ const POS = () => {
             await fetchProducts(fallbackBranchId);
           } else {
             setAllItems([]);
-            setFilteredItems([]);
             setCategories(["All"]);
           }
           return;
@@ -996,7 +1004,6 @@ const POS = () => {
   const fetchProducts = async (branchId) => {
     if (!branchId) {
       setAllItems([]);
-      setFilteredItems([]);
       setCategories(["All"]);
       return;
     }
@@ -1007,7 +1014,12 @@ const POS = () => {
       if (canUseServer) {
         const response = await itemsAPI.searchForPos("", branchId);
         items = Array.isArray(response.data) ? response.data : [];
-        await cacheItemsForBranch(branchId, items);
+        // Not awaited. This is the offline copy, not the screen: writing 8,000 rows to
+        // IndexedDB takes seconds, and awaiting it left the grid empty for all of them -
+        // on every branch change and after every sale, since this runs again each time.
+        // The copy lands moments later, long before a till could go offline and need it.
+        cacheItemsForBranch(branchId, items).catch((error) =>
+          console.error("Failed to cache items for offline use", error));
       } else {
         items = await getCachedItemsForBranch(branchId);
       }
@@ -1021,10 +1033,10 @@ const POS = () => {
       }).map((item) => ({
         ...item,
         stockUnmanaged: isFreeStockUnmanagedPlan && item.itemType !== ItemType.SERVICE && item.itemType !== ItemType.RECIPE,
+        searchBlob: buildSearchBlob(item),
       }));
 
       setAllItems(items);
-      setFilteredItems(items);
 
       const uniqueCats = ["All", ...new Set(items.map((item) => getItemCategoryName(item)).filter(Boolean))];
       setCategories(uniqueCats);
@@ -1037,39 +1049,43 @@ const POS = () => {
           .map((item) => ({
             ...item,
             stockUnmanaged: isFreeStockUnmanagedPlan && item.itemType !== ItemType.SERVICE && item.itemType !== ItemType.RECIPE,
+            searchBlob: buildSearchBlob(item),
           }));
         setAllItems(localItems);
-        setFilteredItems(localItems);
         setCategories(["All", ...new Set(localItems.map((item) => getItemCategoryName(item)).filter(Boolean))]);
         toast.error("Live refresh failed. Using cached items.");
       } else {
         setAllItems([]);
-        setFilteredItems([]);
         setCategories(["All"]);
         toast.error(canUseServer ? "Failed to load products" : "No offline item cache for this branch");
       }
     }
   };
 
-  useEffect(() => {
+  // The list the grid draws from. Derived rather than stored: as state it cost a second
+  // render of this whole page on every keystroke, and could disagree with allItems for a
+  // frame. Deferred so the letters a cashier types appear immediately and the grid catches
+  // up a beat later, instead of the input waiting for eight thousand items to be sifted.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const filteredItems = useMemo(() => {
     let result = allItems;
     if (activeCategory !== "All") {
-      result = result.filter((item) => getItemCategoryName(item) === activeCategory);
-    }
-    if (searchQuery.trim()) {
-      const lowerQuery = searchQuery.toLowerCase();
       result = result.filter((item) =>
-        item.name.toLowerCase().includes(lowerQuery) ||
-        item.altName?.toLowerCase().includes(lowerQuery) ||
-        item.barcode?.toLowerCase().includes(lowerQuery)
-      );
+        (singleCategoryMode ? item.subCategoryName || item.categoryName : item.categoryName) === activeCategory);
     }
-    setFilteredItems(result);
-    // A new search or category is a new list: start from the top of it, and put the grid
-    // back to the top too, or the cashier lands mid-way down results they have not seen.
+    const query = deferredSearchQuery.trim().toLowerCase();
+    if (query) {
+      result = result.filter((item) => (item.searchBlob ?? buildSearchBlob(item)).includes(query));
+    }
+    return result;
+  }, [allItems, activeCategory, deferredSearchQuery, singleCategoryMode]);
+
+  // A new search or category is a new list: start from the top of it, and put the grid back
+  // to the top too, or the cashier lands mid-way down results they have not seen.
+  useEffect(() => {
     setVisibleCount(ITEM_PAGE_SIZE);
     if (gridScrollRef.current) gridScrollRef.current.scrollTop = 0;
-  }, [activeCategory, searchQuery, allItems, singleCategoryMode]);
+  }, [activeCategory, deferredSearchQuery, allItems]);
 
   // What is on screen. Everything else in this page - the barcode match, the Enter-to-add
   // shortcut, the counts - keeps reading filteredItems, so the window is a drawing detail
