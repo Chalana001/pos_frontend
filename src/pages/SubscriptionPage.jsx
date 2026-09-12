@@ -269,7 +269,7 @@ const SubscriptionPage = () => {
               {support?.supportEmail ? (
                 <a
                   href={`mailto:${support.supportEmail}?subject=${encodeURIComponent(
-                    `Package change — ${user?.shopName || 'shop'}`
+                    `Package change, ${user?.shopName || 'shop'}`
                   )}`}
                   className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                 >

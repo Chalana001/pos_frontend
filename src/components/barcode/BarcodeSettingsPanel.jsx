@@ -179,7 +179,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
           type="checkbox"
           checked={el.enabled !== false}
           onChange={(e) => updateElement(index, 'enabled', e.target.checked)}
-          title={el.enabled === false ? 'Hidden — click to show' : 'Visible — click to hide'}
+          title={el.enabled === false ? 'Hidden. Click to show' : 'Visible. Click to hide'}
           className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
         />
 
@@ -331,7 +331,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
               />
             </div>
             <p className="mt-1 text-xs text-slate-600">
-              EAN-13 falls back to Code 128 if a barcode isn't a valid 12–13 digit number.
+              EAN-13 falls back to Code 128 if a barcode isn't a valid 12-13 digit number.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -362,7 +362,7 @@ export const BarcodePreview = ({ settings, shopName }) => (
       <BarcodeLabel item={PREVIEW_ITEM} settings={settings} shopName={shopName} />
     </div>
     <p className="mt-4 text-center text-xs text-slate-500">
-      {settings.labelWidthMm}mm × {settings.labelHeightMm}mm label — actual print size may vary slightly by printer.
+      {settings.labelWidthMm}mm × {settings.labelHeightMm}mm label. Actual print size may vary slightly by printer.
     </p>
   </div>
 );
@@ -569,7 +569,7 @@ const BarcodeSettingsPanel = ({
           <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
             <span>
-              The templates below are starting points, not verified vendor specs — every scale/label-printer
+              The templates below are starting points, not verified vendor specs. Every scale/label-printer
               brand differs. Confirm the digit layout against your own device's manual (or scan a real label
               and check the numbers below match) before relying on this in the shop.
             </span>
@@ -652,7 +652,7 @@ const BarcodeSettingsPanel = ({
           <p className="text-xs text-slate-600">
             <BarcodeIcon size={12} className="mr-1 inline" />
             Only applies to items priced by weight. A scan that decodes but doesn't match a weighed item is
-            treated as a normal barcode lookup — no special handling needed.
+            treated as a normal barcode lookup. No special handling needed.
           </p>
         </div>
       </Card>

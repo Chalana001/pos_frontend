@@ -439,7 +439,7 @@ const PurchaseExcelImportPage = () => {
               {row.qtyUnit ? <div className="text-slate-600">Unit: {row.qtyUnit}</div> : null}
             </div>
           ) : (
-            <span className="text-slate-600">—</span>
+            <span className="text-slate-600">-</span>
           )}
         </td>
         <td className="px-3 py-3">
@@ -480,7 +480,7 @@ const PurchaseExcelImportPage = () => {
           />
         </td>
         <td className="px-3 py-3 text-right font-semibold text-slate-700">
-          {row.status === "READY" ? formatCurrency(lineTotal) : "—"}
+          {row.status === "READY" ? formatCurrency(lineTotal) : "-"}
         </td>
         <td className="px-3 py-3">
           <div
@@ -684,7 +684,7 @@ const PurchaseExcelImportPage = () => {
               <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">sellPrice</code>,{" "}
               <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">qty</code>,{" "}
               <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">expiry</code>{" "}
-              <span className="text-xs text-slate-500">(barcode or name — at least one per row)</span>
+              <span className="text-xs text-slate-500">(barcode or name. At least one per row)</span>
             </div>
             {fileName ? (
               <div className="text-xs font-medium text-slate-800">File: {fileName}</div>
@@ -769,7 +769,7 @@ const PurchaseExcelImportPage = () => {
                   <tr>
                     <td colSpan={13} className="px-3 py-3 text-center text-xs text-slate-500">
                       <div ref={rowSentinelRef}>
-                        Showing {visibleRowCount} of {rows.length} rows — keep scrolling to load more
+                        Showing {visibleRowCount} of {rows.length} rows. Keep scrolling to load more
                       </div>
                     </td>
                   </tr>

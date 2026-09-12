@@ -46,7 +46,7 @@ export const seriesColor = (index) => SERIES[index] ?? SERIES[MAX_SERIES - 1];
 // neighbours. Only the first three slots clear the floors under that harder test.
 export const SCATTER_SAFE_SERIES = SERIES.slice(0, 3);
 
-const OTHER_COLOR = '#94a3b8'; // slate-400 — deliberately outside the series set
+const OTHER_COLOR = '#94a3b8'; // slate-400. Deliberately outside the series set
 
 export const OTHER_SLICE = { label: 'Other', color: OTHER_COLOR };
 
@@ -103,7 +103,7 @@ export const ordinalRamp = (count) => {
 
 export const DIVERGING = {
   negative: '#e34948', // red
-  midpoint: '#f0efec', // neutral gray — must read as "nothing"
+  midpoint: '#f0efec', // neutral gray. Must read as "nothing"
   positive: '#2a78d6', // blue
 };
 
@@ -121,9 +121,9 @@ export const STATUS = {
 
 // Semantic money colours, used for figures rather than marks.
 export const MONEY = {
-  positive: '#047857', // emerald-700 — profit, inflow
-  negative: '#b91c1c', // red-700     — loss, refund, outflow
-  neutral: '#334155',  // slate-700   — everything else
+  positive: '#047857', // emerald-700. Profit, inflow
+  negative: '#b91c1c', // red-700. Loss, refund, outflow
+  neutral: '#334155',  // slate-700. Everything else
 };
 
 // ---------------------------------------------------------------------------

@@ -247,7 +247,7 @@ const ShiftHistory = () => {
                     </td>
                     <td className="p-4">
                       <p className="text-xs text-slate-500 italic max-w-[120px] truncate" title={s.closeNote || s.openNote}>
-                        {s.closeNote || s.openNote || "—"}
+                        {s.closeNote || s.openNote || "-"}
                       </p>
                     </td>
                     <td className="p-4 text-right text-slate-600">

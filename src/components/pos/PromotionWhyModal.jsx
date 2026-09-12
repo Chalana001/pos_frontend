@@ -56,7 +56,7 @@ const PromotionWhyModal = ({ isOpen, onClose, title, decisions }) => {
     <Modal isOpen={isOpen} onClose={onClose} title={title || "Why this price"} size="md">
       {rows.length === 0 ? (
         <p className="py-4 text-sm text-slate-500">
-          No promotion was in the running for this — nothing is set up that covers it.
+          No promotion was in the running for this. Nothing is set up that covers it.
         </p>
       ) : (
         <ul className="space-y-2">

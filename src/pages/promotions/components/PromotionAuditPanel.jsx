@@ -60,13 +60,13 @@ const PromotionAuditPanel = ({ promotionId }) => {
           {rows.map((row) => (
             <li key={row.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
               <span className="w-36 shrink-0 text-xs text-slate-500">
-                {row.at ? new Date(row.at).toLocaleString() : "—"}
+                {row.at ? new Date(row.at).toLocaleString() : "-"}
               </span>
               <span className={`font-semibold ${TONES[row.action] || "text-slate-800"}`}>
                 {LABELS[row.action] || row.action}
               </span>
-              <span className="text-slate-600">by {row.username || "—"}</span>
-              {row.note && <span className="text-slate-500">— {row.note}</span>}
+              <span className="text-slate-600">by {row.username || "-"}</span>
+              {row.note && <span className="text-slate-500">, {row.note}</span>}
             </li>
           ))}
         </ol>

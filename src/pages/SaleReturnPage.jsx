@@ -339,7 +339,7 @@ const SaleReturnPage = () => {
                     <>
                       {row("Goods returned", `${fmt(goods)} LKR`)}
                       {pointsValue > 0 && row(
-                        `Paid with points — ${successReturn.loyaltyPointsGivenBack || 0} points returned`,
+                        `Paid with points, ${successReturn.loyaltyPointsGivenBack || 0} points returned`,
                         `-${fmt(pointsValue)} LKR`, "text-violet-800")}
                       {discount > 0 && row("Bill discount share", `-${fmt(discount)} LKR`)}
                       <tr className="border-t border-slate-200 bg-slate-50">
@@ -559,7 +559,7 @@ const SaleReturnPage = () => {
                       {already > 0 ? (
                         <span className="text-orange-600 font-semibold">{already}</span>
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-slate-600">-</span>
                       )}
                     </td>
                     <td className="p-4 text-center font-semibold text-slate-700">{maxRet}</td>
@@ -568,7 +568,7 @@ const SaleReturnPage = () => {
                     </td>
                     <td className="p-4 text-center">
                       {fullyReturned || isCanceled ? (
-                        <span className="text-slate-600 text-sm">—</span>
+                        <span className="text-slate-600 text-sm">-</span>
                       ) : (
                         <input aria-label="Return quantity"
                           type="number"
@@ -591,7 +591,7 @@ const SaleReturnPage = () => {
                           -{fmt(refundLine)}
                         </span>
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-slate-600">-</span>
                       )}
                     </td>
                   </tr>
@@ -702,7 +702,7 @@ const SaleReturnPage = () => {
                   </div>
                   {pointsValueBack > 0 && (
                     <div className="flex items-center justify-between text-sm text-violet-800">
-                      <span>Paid with points — returned as points</span>
+                      <span>Paid with points. Returned as points</span>
                       <span className="font-semibold">-{fmt(pointsValueBack)} LKR</span>
                     </div>
                   )}

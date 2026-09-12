@@ -197,7 +197,7 @@ const LoyaltySettingsPage = () => {
           {returnRate != null && (
             <p className={`rounded-lg px-3 py-2 text-sm ${returnRate >= 10 ? "bg-amber-50 text-amber-900" : "bg-slate-50 text-slate-700"}`}>
               This gives back <strong>{returnRate.toFixed(1)}%</strong> of what customers spend.
-              {returnRate >= 10 && " That is a large scheme — check it is what you meant."}
+              {returnRate >= 10 && " That is a large scheme. Check it is what you meant."}
             </p>
           )}
 
@@ -248,7 +248,7 @@ const LoyaltySettingsPage = () => {
         <div className="space-y-4">
           <p className="text-xs text-slate-500">
             A customer is on the highest tier their <strong>lifetime</strong> points have reached, and
-            its multiplier applies to what they earn next. Lifetime, not the current balance — so
+            its multiplier applies to what they earn next. Lifetime, not the current balance. So
             spending points never demotes anyone.
           </p>
           {tiers.length === 0 && !newTier && (

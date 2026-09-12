@@ -93,7 +93,7 @@ const PromotionHistoryPage = () => {
   const duplicate = async (campaign) => {
     try {
       const response = await promotionsAPI.duplicate(campaign.id);
-      toast.success("Copy created — set the dates and activate it");
+      toast.success("Copy created. Set the dates and activate it");
       navigate(`/promotions/${response.data.id}/edit`);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to duplicate promotion");
@@ -235,9 +235,9 @@ const PromotionHistoryPage = () => {
                       </div>
                     </td>
                     <td className="app-table-cell text-xs text-slate-600">
-                      {campaign.startAt ? new Date(campaign.startAt).toLocaleDateString() : "—"}
-                      {" – "}
-                      {campaign.endAt ? new Date(campaign.endAt).toLocaleDateString() : "—"}
+                      {campaign.startAt ? new Date(campaign.startAt).toLocaleDateString() : "-"}
+                      {"-"}
+                      {campaign.endAt ? new Date(campaign.endAt).toLocaleDateString() : "-"}
                     </td>
                     <td className="app-table-cell text-center">
                       <PromotionStatusBadge status={campaign.status} />
@@ -281,17 +281,17 @@ const PromotionHistoryPage = () => {
                 ) : redemptions.map((row, index) => (
                   <tr key={`${row.orderId}-${row.level}-${row.itemId ?? index}`}>
                     <td className="app-table-cell text-xs text-slate-600">
-                      {row.soldAt ? new Date(row.soldAt).toLocaleString() : "—"}
+                      {row.soldAt ? new Date(row.soldAt).toLocaleString() : "-"}
                     </td>
-                    <td className="app-table-cell font-medium text-slate-700">{row.invoiceNo || "—"}</td>
+                    <td className="app-table-cell font-medium text-slate-700">{row.invoiceNo || "-"}</td>
                     <td className="app-table-cell text-slate-600">
-                      {branchNameById.get(Number(row.branchId)) || row.branchId || "—"}
+                      {branchNameById.get(Number(row.branchId)) || row.branchId || "-"}
                     </td>
                     <td className="app-table-cell">
-                      <div className="text-slate-800">{row.promotionName || "—"}</div>
+                      <div className="text-slate-800">{row.promotionName || "-"}</div>
                       <div className="text-xs text-slate-500">{row.level === "BILL" ? "Whole bill" : "Line"}</div>
                     </td>
-                    <td className="app-table-cell text-slate-600">{row.itemName || "—"}</td>
+                    <td className="app-table-cell text-slate-600">{row.itemName || "-"}</td>
                     <td className="app-table-cell text-right font-semibold text-slate-800">
                       {formatCurrency(row.discountAmount)}
                     </td>

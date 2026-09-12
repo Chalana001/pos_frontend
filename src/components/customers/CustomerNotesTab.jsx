@@ -153,7 +153,7 @@ const CustomerNotesTab = ({ customerId }) => {
                         </span>
                       )}
                       <span className="text-xs text-slate-500">
-                        {n.createdAt ? new Date(n.createdAt).toLocaleString() : "—"}
+                        {n.createdAt ? new Date(n.createdAt).toLocaleString() : "-"}
                       </span>
                     </div>
 

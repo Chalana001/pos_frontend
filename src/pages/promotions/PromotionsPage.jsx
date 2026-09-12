@@ -132,7 +132,7 @@ const PromotionsPage = () => {
   const duplicate = async (promotion) => {
     try {
       const response = await promotionsAPI.duplicate(promotion.id);
-      toast.success("Copy created — set the dates and activate it");
+      toast.success("Copy created. Set the dates and activate it");
       navigate(`/promotions/${response.data.id}/edit`);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to duplicate promotion");
@@ -289,9 +289,9 @@ const PromotionsPage = () => {
                     </td>
                     <td className="app-table-cell font-medium text-slate-700">{discountLabel(promotion)}</td>
                     <td className="app-table-cell text-xs text-slate-600">
-                      {promotion.startAt ? new Date(promotion.startAt).toLocaleDateString() : "—"}
-                      {" – "}
-                      {promotion.endAt ? new Date(promotion.endAt).toLocaleDateString() : "—"}
+                      {promotion.startAt ? new Date(promotion.startAt).toLocaleDateString() : "-"}
+                      {"-"}
+                      {promotion.endAt ? new Date(promotion.endAt).toLocaleDateString() : "-"}
                     </td>
                     <td className="app-table-cell text-center">
                       <PromotionStatusBadge promotion={promotion} />

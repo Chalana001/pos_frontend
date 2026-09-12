@@ -124,7 +124,7 @@ const PromotionCodesPanel = ({ promotionId }) => {
           <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">6 · Promo codes</h2>
           <p className="mt-1 text-xs text-slate-500">
             {codes.length === 0
-              ? "No codes — this promotion applies automatically. Add one and it will only apply when a code is presented."
+              ? "No codes. This promotion applies automatically. Add one and it will only apply when a code is presented."
               : `${codes.length} code${codes.length === 1 ? "" : "s"}, ${totals.active} active, used ${totals.used} time${totals.used === 1 ? "" : "s"}. This promotion only applies when one is presented.`}
           </p>
         </div>
@@ -196,7 +196,7 @@ const PromotionCodesPanel = ({ promotionId }) => {
                 onChange={(event) => update("codeType", event.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               >
-                {CODE_TYPES.map((type) => <option key={type.key} value={type.key}>{type.label} — {type.hint}</option>)}
+                {CODE_TYPES.map((type) => <option key={type.key} value={type.key}>{type.label}, {type.hint}</option>)}
               </select>
             </label>
             <label>
@@ -273,7 +273,7 @@ const PromotionCodesPanel = ({ promotionId }) => {
                     </td>
                     <td className="app-table-cell text-xs text-slate-500">
                       {row.validFrom || row.validTo
-                        ? `${row.validFrom ? new Date(row.validFrom).toLocaleDateString() : "—"} – ${row.validTo ? new Date(row.validTo).toLocaleDateString() : "—"}`
+                        ? `${row.validFrom ? new Date(row.validFrom).toLocaleDateString() : "-"}, ${row.validTo ? new Date(row.validTo).toLocaleDateString() : "-"}`
                         : "Always"}
                     </td>
                     <td className="app-table-cell text-center">

@@ -297,7 +297,7 @@ const Cart = ({
                     {explainableDecisions(item.promotionDecisions).length > 0 && (
                       <WhyButton
                         applied={!!item.promotionApplied}
-                        label={item.promotionApplied ? "Why this price?" : "No offer — why?"}
+                        label={item.promotionApplied ? "Why this price?" : "No offer. Why?"}
                         onClick={() => setWhyPanel({
                           title: item.name,
                           decisions: item.promotionDecisions,
@@ -464,7 +464,7 @@ const Cart = ({
             <div className="flex justify-end">
               <WhyButton
                 applied={!!billPromotion?.billPromotionApplied}
-                label={billPromotion?.billPromotionApplied ? "Why this bill offer?" : "No bill offer — why?"}
+                label={billPromotion?.billPromotionApplied ? "Why this bill offer?" : "No bill offer. Why?"}
                 onClick={() => setWhyPanel({
                   title: "Whole bill",
                   decisions: billPromotion?.billDecisions,

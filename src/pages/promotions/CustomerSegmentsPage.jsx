@@ -126,7 +126,7 @@ const CustomerSegmentsPage = () => {
     if (segment.minAvgOrderValue) parts.push(`avg ${formatCurrency(segment.minAvgOrderValue)}+`);
     if (segment.purchasedWithinDays) parts.push(`bought in ${segment.purchasedWithinDays} days`);
     if (segment.inactiveForDays) parts.push(`quiet ${segment.inactiveForDays}+ days`);
-    return parts.length ? parts.join(" · ") : "—";
+    return parts.length ? parts.join(" · ") : "-";
   };
 
   return (
@@ -220,7 +220,7 @@ const CustomerSegmentsPage = () => {
       </Card>
 
       <p className="text-xs text-slate-500">
-        Membership is worked out when you save or refresh, not on every sale — the rules add up
+        Membership is worked out when you save or refresh, not on every sale. The rules add up
         every completed order, which is too much to do at a till. A customer who crosses a
         threshold joins at the next refresh.
       </p>
@@ -300,7 +300,7 @@ const CustomerSegmentsPage = () => {
               </div>
               <p className="mt-3 text-xs text-slate-500">
                 &quot;Bought within&quot; and &quot;not bought for&quot; can be combined to find someone
-                who is still shopping but has gone quiet lately — the quiet window has to be the
+                who is still shopping but has gone quiet lately. The quiet window has to be the
                 shorter of the two, or nobody could ever match.
               </p>
             </div>

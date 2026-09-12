@@ -133,8 +133,8 @@ const CustomerViewPage = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-xs text-slate-500">Customer ID: {id}</div>
-                    <div className="mt-1 text-2xl font-bold text-slate-800">{customer?.name || "—"}</div>
-                    <div className="mt-1 text-sm text-slate-600">{customer?.phone || "—"}</div>
+                    <div className="mt-1 text-2xl font-bold text-slate-800">{customer?.name || "-"}</div>
+                    <div className="mt-1 text-sm text-slate-600">{customer?.phone || "-"}</div>
                   </div>
 
                   <div>
@@ -151,7 +151,7 @@ const CustomerViewPage = () => {
                 <div className="mt-4 text-sm text-slate-700">
                   <div className="mb-1 text-xs text-slate-500">Address</div>
                   <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                    {customer?.address || "—"}
+                    {customer?.address || "-"}
                   </div>
                 </div>
 

@@ -91,7 +91,7 @@ const CustomerLoyaltyPanel = ({ customerId }) => {
         </div>
         <div className="rounded-xl border border-slate-200 p-4">
           <p className="text-xs font-bold uppercase text-slate-500">Tier</p>
-          <p className="mt-2 text-2xl font-black text-slate-800">{account.tierName || "—"}</p>
+          <p className="mt-2 text-2xl font-black text-slate-800">{account.tierName || "-"}</p>
           {account.earnMultiplier && Number(account.earnMultiplier) !== 1 && (
             <p className="text-xs text-slate-500">earns {Number(account.earnMultiplier)}×</p>
           )}
@@ -127,7 +127,7 @@ const CustomerLoyaltyPanel = ({ customerId }) => {
               ) : history.map((row) => (
                 <tr key={row.id} className={row.reversed ? "opacity-50" : undefined}>
                   <td className="app-table-cell text-xs text-slate-600">
-                    {row.at ? new Date(row.at).toLocaleString() : "—"}
+                    {row.at ? new Date(row.at).toLocaleString() : "-"}
                   </td>
                   <td className="app-table-cell">
                     {TYPE_LABELS[row.type] || row.type}
@@ -137,7 +137,7 @@ const CustomerLoyaltyPanel = ({ customerId }) => {
                     {row.points > 0 ? `+${row.points}` : row.points}
                   </td>
                   <td className="app-table-cell text-right text-slate-600">{row.balanceAfter}</td>
-                  <td className="app-table-cell text-xs text-slate-500">{row.note || "—"}</td>
+                  <td className="app-table-cell text-xs text-slate-500">{row.note || "-"}</td>
                 </tr>
               ))}
             </tbody>

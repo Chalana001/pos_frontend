@@ -56,7 +56,7 @@ const SupportSessionBanner = () => {
     >
       <ShieldAlert size={16} className="shrink-0" />
       <span className="font-semibold">
-        Support session{session?.impersonatedBy ? ` — ${session.impersonatedBy}` : ""}
+        Support session{session?.impersonatedBy ? `, ${session.impersonatedBy}` : ""}
       </span>
       <span className="inline-flex items-center gap-1 rounded bg-white/20 px-1.5 py-0.5 text-xs font-medium">
         {readOnly ? <Eye size={12} /> : <Pencil size={12} />}

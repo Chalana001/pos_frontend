@@ -870,7 +870,7 @@ const ReceiptSettingsPage = () => {
                 >
                   <div className="space-y-4">
                     <p className="text-sm text-slate-500">
-                      Customize each line of the receipt — add, remove, reorder, and style every section. The live preview updates as you edit.
+                      Customize each line of the receipt. Add, remove, reorder, and style every section. The live preview updates as you edit.
                     </p>
 
                     {/* Line rows */}
@@ -1146,7 +1146,7 @@ const ReceiptSettingsPage = () => {
                     </div>
 
                     <p className="text-xs text-slate-600">
-                      Live preview updates on the right panel as you edit each line. Use the <strong>Thanks Message</strong> line type to add a footer message — type the text directly in the custom text field.
+                      Live preview updates on the right panel as you edit each line. Use the <strong>Thanks Message</strong> line type to add a footer message. Type the text directly in the custom text field.
                     </p>
                   </div>
                 </Card>

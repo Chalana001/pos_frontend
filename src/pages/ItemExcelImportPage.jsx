@@ -594,7 +594,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                   <tr>
                     <td colSpan={singleCategoryMode ? 18 : 19} className="px-3 py-3 text-center text-xs text-slate-500">
                       <div ref={rowSentinelRef}>
-                        Showing {visibleRowCount} of {shownRows.length} rows — keep scrolling to load more
+                        Showing {visibleRowCount} of {shownRows.length} rows. Keep scrolling to load more
                       </div>
                     </td>
                   </tr>

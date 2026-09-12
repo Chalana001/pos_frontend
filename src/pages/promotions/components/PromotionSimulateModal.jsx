@@ -95,7 +95,7 @@ const PromotionSimulateModal = ({ isOpen, onClose, payload, branchId }) => {
               />
               <Stat
                 label="Margin erosion"
-                value={result.marginErosionPercent != null ? `${result.marginErosionPercent}%` : "—"}
+                value={result.marginErosionPercent != null ? `${result.marginErosionPercent}%` : "-"}
                 tone={result.marginErosionPercent != null && Number(result.marginErosionPercent) > 50 ? "text-red-600" : undefined}
               />
             </div>

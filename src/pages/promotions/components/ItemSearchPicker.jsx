@@ -116,7 +116,7 @@ const ItemSearchPicker = ({ branchId, excludedIds = [], onSelect, placeholder = 
       )}
 
       {query.trim().length === 1 && (
-        <p className="mt-1 text-xs text-slate-500">Keep typing — search starts at two characters.</p>
+        <p className="mt-1 text-xs text-slate-500">Keep typing. Search starts at two characters.</p>
       )}
     </div>
   );

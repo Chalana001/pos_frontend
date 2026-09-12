@@ -41,7 +41,7 @@ const Section = ({ title, items, totalCount, emptyText, renderRow, sumValue, sum
           {items.map(renderRow)}
           {totalCount > items.length && (
             <p className="py-2 text-xs text-center text-slate-600">
-              +{totalCount - items.length} more — see full shift history for the rest
+              +{totalCount - items.length} more. See full shift history for the rest
             </p>
           )}
         </div>

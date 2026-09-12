@@ -235,7 +235,7 @@ const BarcodePrintPage = () => {
         return;
       } catch (err) {
         console.error(err);
-        toast.error(err.message || "Direct print failed — falling back to browser print");
+        toast.error(err.message || "Direct print failed. Falling back to browser print");
       } finally {
         setDirectPrinting(false);
       }

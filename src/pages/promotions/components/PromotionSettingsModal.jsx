@@ -76,7 +76,7 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
             <span>
               <span className="block text-sm font-bold text-slate-800">Require approval for deep discounts</span>
               <span className="block text-xs text-slate-500">
-                A promotion at or over the threshold waits for a second admin — someone other than whoever submitted it.
+                A promotion at or over the threshold waits for a second admin. Someone other than whoever submitted it.
               </span>
             </span>
             <input

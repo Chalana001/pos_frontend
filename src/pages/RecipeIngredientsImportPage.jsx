@@ -264,7 +264,7 @@ export default function RecipeIngredientsImportPage({ embedded = false }) {
                   <tr>
                     <td colSpan={6} className="px-3 py-3 text-center text-xs text-slate-500">
                       <div ref={rowSentinelRef}>
-                        Showing {visibleRowCount} of {rows.length} rows — keep scrolling to load more
+                        Showing {visibleRowCount} of {rows.length} rows. Keep scrolling to load more
                       </div>
                     </td>
                   </tr>

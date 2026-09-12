@@ -199,7 +199,7 @@ const ItemPriceTable = ({
                           max="100"
                           step="0.1"
                           value={percentOf(line)}
-                          placeholder="—"
+                          placeholder="-"
                           aria-label={`Percent off for ${item?.name || line.id}`}
                           onChange={(event) => setPercent(line, event.target.value)}
                           className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm"

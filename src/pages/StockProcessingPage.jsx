@@ -528,10 +528,10 @@ const StockProcessingPage = () => {
                           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 md:hidden">Est. Cost</div>
                           <div className="flex h-[42px] items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-blue-700">
                             {output.waste
-                              ? <span className="text-slate-600">—</span>
+                              ? <span className="text-slate-600">-</span>
                               : costPreview.costs[index] != null
                                 ? formatCurrency(costPreview.costs[index])
-                                : <span className="text-slate-600">—</span>
+                                : <span className="text-slate-600">-</span>
                             }
                           </div>
                         </div>

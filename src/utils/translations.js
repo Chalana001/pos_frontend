@@ -529,7 +529,7 @@ const exactTranslations = {
     'Primary Name': 'ප්‍රධාන නාමය',
     'Alt Name (e.g. Sinhala)': 'විකල්ප නාමය (සිංහල)',
     'Choose which name to print on the item line. If Alt Name is empty for an item, the Primary Name is used.': 'භාණ්ඩ පේළියේ මුද්‍රණය කළ යුතු නාමය තෝරන්න. Alt Name හිස් නම් Primary Name භාවිතා වේ.',
-    'Optional — used on receipts when set to Alt Name.': 'විකල්පිත — Alt Name ලෙස සැකසූ විට රිසිට්පතේ භාවිතා වේ.',
+    'Optional. Used on receipts when set to Alt Name.': 'විකල්පිත. Alt Name ලෙස සැකසූ විට රිසිට්පතේ භාවිතා වේ.',
     "Used on receipts when the design's name source is set to Alt Name.": "Alt Name ලෙස සැකසූ රිසිට් සැලසුමේ භාවිතා වේ.",
     'Item Type:': 'භාණ්ඩ වර්ගය:',
     'Items List': 'භාණ්ඩ ලැයිස්තුව',
@@ -906,6 +906,12 @@ const exactTranslations = {
     'Warranty Settings': 'වගකීම් සැකසුම්',
     'Warranty record not found.': 'වගකීම් වාර්තාව හමු නොවීය.',
     Waste: 'අපද්‍රව්‍ය',
+
+    // Draft recovery.
+    'last edited': 'අවසන් වරට සංස්කරණය කළේ',
+    Restore: 'ප්‍රතිස්ථාපනය කරන්න',
+    Discard: 'ඉවත ලන්න',
+
   },
 };
 

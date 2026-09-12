@@ -139,9 +139,9 @@ const BankAccountDetailsPage = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="text-xs text-slate-500">Account ID: {id}</div>
-                    <div className="mt-1 text-2xl font-bold text-slate-800">{account?.name || "—"}</div>
+                    <div className="mt-1 text-2xl font-bold text-slate-800">{account?.name || "-"}</div>
                     <div className="mt-1 text-sm text-slate-600">
-                      {account?.bankName || "—"}
+                      {account?.bankName || "-"}
                       {account?.accountNumber ? ` · ${account.accountNumber}` : ""}
                     </div>
                   </div>

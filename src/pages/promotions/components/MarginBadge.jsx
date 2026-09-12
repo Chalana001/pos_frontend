@@ -18,7 +18,7 @@ const MarginBadge = ({ status, marginPercent, message }) => {
       title={message || undefined}
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${style.className}`}
     >
-      {Number.isFinite(Number(marginPercent)) ? `${Number(marginPercent).toFixed(0)}%` : "—"}
+      {Number.isFinite(Number(marginPercent)) ? `${Number(marginPercent).toFixed(0)}%` : "-"}
       <span className="font-semibold opacity-80">{style.label}</span>
     </span>
   );

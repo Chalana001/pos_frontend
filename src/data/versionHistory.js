@@ -125,13 +125,13 @@ export const VERSION_HISTORY = [
     title: "Demand Forecasting, Procurement Planning & Scheduled Report Exports",
     releaseDate: "2026-08-19",
     summary:
-      "Reports now cover the full planning cycle, not just history: a Demand Forecast report predicts what each item will need with a tracked accuracy score, and a new Procurement Planning workspace turns that forecast into a reorder plan you can submit, approve, and convert straight into purchase drafts. Reports can also run as background jobs — stored locally or in S3, and optionally emailed on a schedule — instead of blocking the screen while they generate. Underneath, the Reports page and Dashboard were rebuilt into separate, reusable pieces, which fixed the flicker and lost-page bugs that came from the old single-file version, and a database-level fix now stops double-clicking from ever creating two open shifts at once.",
+      "Reports now cover the full planning cycle, not just history: a Demand Forecast report predicts what each item will need with a tracked accuracy score, and a new Procurement Planning workspace turns that forecast into a reorder plan you can submit, approve, and convert straight into purchase drafts. Reports can also run as background jobs. Stored locally or in S3, and optionally emailed on a schedule. Instead of blocking the screen while they generate. Underneath, the Reports page and Dashboard were rebuilt into separate, reusable pieces, which fixed the flicker and lost-page bugs that came from the old single-file version, and a database-level fix now stops double-clicking from ever creating two open shifts at once.",
     highlights: [
-      "New Demand Forecast report — confidence-labelled predictions per item, with accuracy tracked against what actually sold.",
-      "New Procurement Planning workspace — build a reorder plan from stock and demand data, submit it, get admin approval, and generate purchase drafts from the approved lines.",
-      "Reports can now export as background jobs — stored to local disk or S3, downloadable when ready, with optional recurring email delivery on a schedule.",
+      "New Demand Forecast report. Confidence-labelled predictions per item, with accuracy tracked against what actually sold.",
+      "New Procurement Planning workspace. Build a reorder plan from stock and demand data, submit it, get admin approval, and generate purchase drafts from the approved lines.",
+      "Reports can now export as background jobs. Stored to local disk or S3, downloadable when ready, with optional recurring email delivery on a schedule.",
       "13 new report views added: Inventory Valuation, Stock Health, Cash Flow, Profit & Loss, Credit Aging, Supplier Payables, Stock Movement, Stock Transfers, Customer Behavior, Performance Comparison, Commercial Intelligence, Exception Center, and GRN/Purchases.",
-      "Switching a report's filter or date range no longer flashes a spinner and drops you back to page 1 — your place is held while it refreshes.",
+      "Switching a report's filter or date range no longer flashes a spinner and drops you back to page 1. Your place is held while it refreshes.",
       "Fixed a bug where double-clicking Open Shift (a common habit on Windows) could create two open shifts for the same cashier and branch; now blocked at the database level, not just in the app.",
       "Dashboard and Reports now share one color and chart system across every tile and chart, and a fabricated \"+12.5%\" growth figure that was shown on every Dashboard load regardless of the real numbers has been removed.",
       "New Animation Level setting so each user can turn interface motion up or down.",
@@ -142,22 +142,22 @@ export const VERSION_HISTORY = [
         items: [
           "Demand Forecast report with confidence-labelled forecasts per item, backed by forecast snapshots that are compared against realized sales to keep an accuracy score visible over time.",
           "Procurement Planning workspace: create a reorder plan, submit it for approval, have an Admin or Super Admin approve or reject it, generate purchase drafts from the approved lines, and mark the plan converted once handed off to a real purchase.",
-          "Report export jobs — generate a report in the background and download it when ready, instead of waiting on the request. Configurable storage backend (local disk or S3), automatic retry on failure, and scheduled cleanup of old exports.",
+          "Report export jobs. Generate a report in the background and download it when ready, instead of waiting on the request. Configurable storage backend (local disk or S3), automatic retry on failure, and scheduled cleanup of old exports.",
           "Recurring report schedules with optional email delivery once SMTP is configured.",
           "13 new report pages: Inventory Valuation, Stock Health, Cash Flow, Profit & Loss, Credit Aging, Supplier Payables, Stock Movement, Stock Transfers (with a transfer details drill-down), Customer Behavior, Performance Comparison, Commercial Intelligence, Exception Center, and GRN/Purchases.",
           "Owner Command Center summary card on the reports dashboard.",
           "Per-user Animation Level setting controlling how much motion the interface uses.",
           "A shared chart color and theme system used consistently across every report chart and the Dashboard.",
-          "9 new database migrations (V19–V27) supporting report export jobs, forecast accuracy snapshots, reorder plans, and the duplicate-shift-prevention constraint below.",
+          "9 new database migrations (V19 V27) supporting report export jobs, forecast accuracy snapshots, reorder plans, and the duplicate-shift-prevention constraint below.",
         ],
       },
       {
         label: "Improved",
         items: [
-          "The Reports page was broken apart from a single 2,264-line file into one component per report — the underlying cause of switching a filter or tab silently unmounting the whole report and losing table pagination and scroll position.",
+          "The Reports page was broken apart from a single 2,264-line file into one component per report. The underlying cause of switching a filter or tab silently unmounting the whole report and losing table pagination and scroll position.",
           "Changing a filter or date on the report you're already viewing now keeps your data on screen (dimmed, with an \"Updating…\" indicator) instead of flashing a full spinner and resetting the table to page 1.",
           "Switching between report tabs no longer flashes the previous report's data under the new title, then an empty state, then a blank chart area before the real numbers land.",
-          "Currency formatting is now consistent everywhere — no more charts mixing \"LKR\" and \"Rs.\" on the same axis.",
+          "Currency formatting is now consistent everywhere. No more charts mixing \"LKR\" and \"Rs.\" on the same axis.",
           "Report tables now paginate instead of rendering unbounded datasets in one page.",
           "Report metric labels clarified after an internal audit: \"Returns\" is now \"Return txns\" (it counts return transactions, not units), and the Return Rate and Inventory Valuation potential labels now state what they actually measure.",
           "Procurement demand sources and units are now shown on the Procurement Planning and Forecast reports instead of being hidden.",
@@ -168,8 +168,8 @@ export const VERSION_HISTORY = [
       {
         label: "Fixed",
         items: [
-          "Double-clicking Open Shift could create two open shifts for the same branch and cashier before the first request finished. Now closed with a request-deduplication filter plus a real database unique constraint, so it can no longer happen even under a race — and any duplicates the old bug had already created are cleaned up automatically.",
-          "Removed a fabricated \"+12.5%\" growth figure shown on every Dashboard load next to Today's Sales, regardless of the actual numbers — including next to LKR 0.00.",
+          "Double-clicking Open Shift could create two open shifts for the same branch and cashier before the first request finished. Now closed with a request-deduplication filter plus a real database unique constraint, so it can no longer happen even under a race. And any duplicates the old bug had already created are cleaned up automatically.",
+          "Removed a fabricated \"+12.5%\" growth figure shown on every Dashboard load next to Today's Sales, regardless of the actual numbers. Including next to LKR 0.00.",
           "Fixed low-contrast text across all report pages and chart legend labels that were inheriting their series color instead of using readable text color.",
           "The Dashboard's third Quick Action was labelled \"Add User\" but actually opened Add Customer; relabeled to match what it does.",
         ],
@@ -208,9 +208,9 @@ export const VERSION_HISTORY = [
     title: "Barcode Label Designer, Direct Printing & Print Fixes",
     releaseDate: "2026-07-22",
     summary:
-      "Barcode labels now have a full per-branch designer that works just like the receipt layout designer — reorder every element, add custom text lines, and style each line with its own font size, bold/italic/underline, and alignment. Direct and browser printing were made reliable, and the bugs that caused barcodes to disappear on label paper sizes are fixed.",
+      "Barcode labels now have a full per-branch designer that works just like the receipt layout designer. Reorder every element, add custom text lines, and style each line with its own font size, bold/italic/underline, and alignment. Direct and browser printing were made reliable, and the bugs that caused barcodes to disappear on label paper sizes are fixed.",
     highlights: [
-      "New per-branch Barcode Label Designer — reorder Shop Name, Item Name, Barcode, Price, Expiry, and Footer, show/hide any element, and rename its text.",
+      "New per-branch Barcode Label Designer. Reorder Shop Name, Item Name, Barcode, Price, Expiry, and Footer, show/hide any element, and rename its text.",
       "Add unlimited custom text lines (warranty, weight, made-in, etc.) anywhere on the label.",
       "Each label element now has its own font size, bold, italic, underline, and left/center/right alignment.",
       "Barcodes that were printing blank on smaller label paper sizes now print reliably.",
@@ -221,7 +221,7 @@ export const VERSION_HISTORY = [
       {
         label: "Added",
         items: [
-          "Barcode Label Designer with a reorderable element list (up/down), per-element show/hide, rename, font size, bold/italic/underline, and alignment — mirroring the receipt layout designer.",
+          "Barcode Label Designer with a reorderable element list (up/down), per-element show/hide, rename, font size, bold/italic/underline, and alignment. Mirroring the receipt layout designer.",
           "Custom text lines on labels that can be placed anywhere in the label order.",
           "Per-branch label layout stored as JSON, with automatic fallback to the previous fixed layout for branches that have not customized yet.",
           "Label size presets plus custom width/height with mm and inch entry.",
@@ -253,7 +253,7 @@ export const VERSION_HISTORY = [
           "Open Receipt Design and switch to the Barcode tab for a selected branch.",
           "Reorder, show/hide, rename, and style each label element, or add custom text lines.",
           "Watch the live preview update as you edit, then Save.",
-          "Print from the Print Barcodes page — labels print with your saved layout.",
+          "Print from the Print Barcodes page. Labels print with your saved layout.",
         ],
       },
     ],
@@ -265,10 +265,10 @@ export const VERSION_HISTORY = [
     summary:
       "Stock processing cost allocation now uses the sales value method so each output part receives a cost share proportional to its expected selling revenue, not its weight. Items can now carry an alternative name for multilingual receipt printing, and a bug that blocked super admin login after a session expired has been fixed.",
     highlights: [
-      "Stock processing cost is now allocated by selling price × quantity ratio — a chicken leg gets a bigger cost share than bones because it sells for more, not just because it weighs more.",
+      "Stock processing cost is now allocated by selling price × quantity ratio. A chicken leg gets a bigger cost share than bones because it sells for more, not just because it weighs more.",
       "A default selling price per processing output can be saved on the item setup form so the right ratio is pre-filled every time stock is processed.",
       "The processing modal now shows a live estimated cost, expected revenue, and margin preview before you confirm.",
-      "Items can now store an alternative name — useful for Sinhala or Tamil names alongside the primary English name.",
+      "Items can now store an alternative name. Useful for Sinhala or Tamil names alongside the primary English name.",
       "Receipt template settings now let you choose whether to print the primary item name or the alternative name on customer receipts.",
       "Super admin panel login no longer fails with a token expiry error when the previous session had already expired.",
     ],
@@ -276,7 +276,7 @@ export const VERSION_HISTORY = [
       {
         label: "Added",
         items: [
-          "Sales Value Method for stock processing cost allocation — allocated cost = source cost × (output qty × selling price) / total expected revenue.",
+          "Sales Value Method for stock processing cost allocation. Allocated cost = source cost × (output qty × selling price) / total expected revenue.",
           "Default selling price field per processing output link on the item setup form.",
           "Real-time estimated cost, expected revenue, and margin preview per output row in the New Processing modal.",
           "alt_name column on items for storing a secondary item name (e.g. Sinhala or Tamil).",
@@ -288,7 +288,7 @@ export const VERSION_HISTORY = [
       {
         label: "Improved",
         items: [
-          "Stock processing cost allocation is now revenue-aware — output parts with higher market value absorb proportionally more of the source cost.",
+          "Stock processing cost allocation is now revenue-aware. Output parts with higher market value absorb proportionally more of the source cost.",
           "Waste outputs continue to receive zero cost allocation; only usable outputs participate in the ratio.",
           "Rounding drift is absorbed by the last non-waste output row so the sum of all allocated costs always equals the exact source cost.",
           "Selling price priority in processing: request override → link default → item selling price.",
@@ -325,16 +325,16 @@ export const VERSION_HISTORY = [
   },
   {
     version: "2.0.0",
-    title: "Multi-DB Architecture — Per-Tenant Isolated Databases",
+    title: "Multi-DB Architecture. Per-Tenant Isolated Databases",
     releaseDate: "2026-06-19",
     summary:
       "Each shop now runs in its own dedicated database (pos_<slug>) instead of sharing a single database with all other tenants. This eliminates cross-tenant data risk, improves query performance, and lays the foundation for per-tenant backups and scaling.",
     highlights: [
-      "Every shop's data is now stored in a fully isolated database — no shared tables with other tenants.",
+      "Every shop's data is now stored in a fully isolated database. No shared tables with other tenants.",
       "Tenant routing is handled automatically at the connection level; no changes are required in the app workflow.",
       "The legacy shared database (pos_db) is preserved as a read-only rollback anchor and is no longer written to.",
       "New shops onboarded via the SaaS admin panel get their own database provisioned instantly with Flyway.",
-      "All queries are faster — no tenant_id filter predicate on every table scan.",
+      "All queries are faster. No tenant_id filter predicate on every table scan.",
       "The migration runner copies existing tenant data with row-count verification per table before cutover.",
     ],
     sections: [
@@ -352,8 +352,8 @@ export const VERSION_HISTORY = [
       {
         label: "Improved",
         items: [
-          "Query performance across all tenant-scoped tables — tenant_id predicate removed from every query.",
-          "Unique constraints are now tighter — e.g. barcode is unique per shop DB, not per (barcode, tenant_id) composite.",
+          "Query performance across all tenant-scoped tables. Tenant_id predicate removed from every query.",
+          "Unique constraints are now tighter. E.g. barcode is unique per shop DB, not per (barcode, tenant_id) composite.",
           "TenantProvisioningService now uses Flyway migrate instead of schema LIKE clone, so new DBs always match the current baseline.",
           "MasterFlywayRunner and MasterDataCopyRunner are profile-guarded and handle empty legacy DB gracefully.",
         ],
@@ -361,10 +361,10 @@ export const VERSION_HISTORY = [
       {
         label: "Changed",
         items: [
-          "TenantEntity is now an empty @MappedSuperclass — tenant_id column removed from all 45 per-tenant tables.",
+          "TenantEntity is now an empty @MappedSuperclass. Tenant_id column removed from all 45 per-tenant tables.",
           "All repository native queries rewritten to drop tenant_id predicate (DashboardRepository, ReportRepository, and others).",
-          "TenantFilterAspect deleted — Hibernate session filter is no longer needed with per-DB isolation.",
-          "allow-legacy-fallback is now false in production — all tenants must be MIGRATED before deploy.",
+          "TenantFilterAspect deleted. Hibernate session filter is no longer needed with per-DB isolation.",
+          "allow-legacy-fallback is now false in production. All tenants must be MIGRATED before deploy.",
         ],
       },
       {

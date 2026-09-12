@@ -192,7 +192,7 @@ const PurchaseReturnPage = () => {
   const isCanceled = purchase.status === "CANCELED";
   const grnOptions = (purchase.grnList || []).map((g) => ({
     value: g.id,
-    label: `${g.grnNo} — ${g.branchName}`,
+    label: `${g.grnNo}, ${g.branchName}`,
   }));
 
   // ── SUCCESS SCREEN ───────────────────────────────────────────────────────────
@@ -406,7 +406,7 @@ const PurchaseReturnPage = () => {
                 <div className="flex items-center gap-2">
                   <Package size={15} className="text-slate-500" />
                   <span className="text-sm font-semibold text-slate-700">
-                    Select Items to Return — {selectedGrn.grnNo} ({selectedGrn.branchName})
+                    Select Items to Return, {selectedGrn.grnNo} ({selectedGrn.branchName})
                   </span>
                 </div>
                 <button className="text-xs text-blue-600 hover:underline font-medium" onClick={toggleSelectAll}>
@@ -458,13 +458,13 @@ const PurchaseReturnPage = () => {
                           <td className="p-4 text-center">
                             {already > 0
                               ? <span className="text-blue-600 font-semibold">{already}</span>
-                              : <span className="text-slate-600">—</span>}
+                              : <span className="text-slate-600">-</span>}
                           </td>
                           <td className="p-4 text-center font-semibold text-slate-700">{maxRet}</td>
                           <td className="p-4 text-right text-slate-600">{fmt(item.costPrice)}</td>
                           <td className="p-4 text-center">
                             {fullyReturned ? (
-                              <span className="text-slate-600 text-sm">—</span>
+                              <span className="text-slate-600 text-sm">-</span>
                             ) : (
                               <input aria-label="Return quantity"
                                 type="number"
@@ -484,7 +484,7 @@ const PurchaseReturnPage = () => {
                           <td className="p-4 text-right pr-6">
                             {currentQty > 0
                               ? <span className="font-bold text-red-600">-{fmt(returnLine)}</span>
-                              : <span className="text-slate-600">—</span>}
+                              : <span className="text-slate-600">-</span>}
                           </td>
                         </tr>
                       );

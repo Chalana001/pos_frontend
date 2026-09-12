@@ -77,7 +77,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
 
   const emailHref = support?.supportEmail
     ? `mailto:${support.supportEmail}?subject=${encodeURIComponent(
-        `Adding ${featureName} — ${user?.shopName || "shop"}`
+        `Adding ${featureName}, ${user?.shopName || "shop"}`
       )}`
     : null;
 

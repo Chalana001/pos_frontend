@@ -367,7 +367,7 @@ const CashDrops = () => {
     {
       header: "Bank Account",
       render: (drop) => (
-        <span className="text-slate-600">{drop.bankAccountName || "—"}</span>
+        <span className="text-slate-600">{drop.bankAccountName || "-"}</span>
       ),
     },
     {
@@ -619,7 +619,7 @@ const CashDrops = () => {
         <form onSubmit={handleOutsideSubmit} className="space-y-4">
           <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
             <p className="text-xs text-blue-800">
-              For cash that's already out of a till — e.g. banking the day's collected cash after every
+              For cash that's already out of a till. E.g. banking the day's collected cash after every
               shift is closed. This is just a record; it does not change any shift's expected cash.
             </p>
           </div>

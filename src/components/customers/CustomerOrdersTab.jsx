@@ -102,7 +102,7 @@ const CustomerOrdersTab = ({ customerId }) => {
                       {order.invoiceNo || `#${order.id}`}
                     </td>
                     <td className="app-table-cell !px-4 text-slate-600">
-                      {order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}
+                      {order.createdAt ? new Date(order.createdAt).toLocaleString() : "-"}
                     </td>
                     <td className="app-table-cell !px-4 text-right">{formatCurrency(order.grandTotal || 0)}</td>
                     <td className="app-table-cell !px-4 text-right">{formatCurrency(order.paidAmount || 0)}</td>
@@ -115,7 +115,7 @@ const CustomerOrdersTab = ({ customerId }) => {
                             : "bg-emerald-100 text-emerald-800"
                         }`}
                       >
-                        {order.orderType || "—"}
+                        {order.orderType || "-"}
                       </span>
                     </td>
                     <td className="app-table-cell !px-4 text-center">
