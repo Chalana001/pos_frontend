@@ -452,7 +452,7 @@ const PurchaseReturnPage = () => {
                           <td className="p-4 text-center text-slate-600">
                             {item.qty}
                             {Number(item.freeQty) > 0 && (
-                              <span className="ml-1 text-xs font-semibold text-sky-600">+{item.freeQty} free</span>
+                              <span className="ml-1 text-xs font-semibold text-cyan-600">+{item.freeQty} free</span>
                             )}
                           </td>
                           <td className="p-4 text-center">

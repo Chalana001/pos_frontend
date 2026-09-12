@@ -2123,7 +2123,8 @@ html[data-animation-level="balanced"] #root table tbody tr {
 :root[data-theme="dark"] :is(
   .bg-blue-500, .bg-blue-600, .bg-blue-700,
   .bg-orange-500, .bg-orange-600,
-  .bg-purple-600, .bg-purple-700
+  .bg-purple-600, .bg-purple-700,
+  .bg-violet-600
 ):not(.always-dark *) {
   background-color: rgb(var(--c-slate-900));
   color: rgb(var(--c-slate-50));
@@ -2135,7 +2136,8 @@ html[data-animation-level="balanced"] #root table tbody tr {
 :root[data-theme="dark"] :is(
   .bg-blue-500, .bg-blue-600, .bg-blue-700,
   .bg-orange-500, .bg-orange-600,
-  .bg-purple-600, .bg-purple-700
+  .bg-purple-600, .bg-purple-700,
+  .bg-violet-600
 ) :is([class*="text-white"], [class*="text-blue-"]) {
   color: rgb(var(--c-slate-50));
 }

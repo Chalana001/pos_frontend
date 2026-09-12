@@ -973,7 +973,7 @@ const PurchaseFormPage = () => {
                                 <input aria-label="Free qty"
                                   type="number"
                                   step={weightItem ? "0.1" : "1"}
-                                  className={`input h-9 w-full min-w-[80px] px-2 text-center text-sm font-bold ${inputs.free > 0 ? 'border-sky-500 bg-sky-50' : ''}`}
+                                  className={`input h-9 w-full min-w-[80px] px-2 text-center text-sm font-bold ${inputs.free > 0 ? 'border-cyan-500 bg-cyan-50' : ''}`}
                                   placeholder="Free"
                                   title="Free-of-charge units from the supplier (not billed)"
                                   value={inputs.free}
@@ -1094,7 +1094,7 @@ const PurchaseFormPage = () => {
                           {item.weightItem ? item.qty.toFixed(2) : item.qty}
                           {item.qtyUnit && <span className="text-xs text-slate-500 ml-1">{item.qtyUnit}</span>}
                           {item.freeQty > 0 && (
-                            <div className="text-xs font-semibold text-sky-600">
+                            <div className="text-xs font-semibold text-cyan-600">
                               +{item.weightItem ? item.freeQty.toFixed(2) : item.freeQty} free
                             </div>
                           )}

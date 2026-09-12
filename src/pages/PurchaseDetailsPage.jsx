@@ -541,7 +541,7 @@ const PurchaseDetailsPage = () => {
                                                             {item.qty}
                                                         </span>
                                                         {Number(item.freeQty) > 0 && (
-                                                            <span className="ml-1 bg-sky-100 px-2 py-1 rounded text-xs font-bold text-sky-700">
+                                                            <span className="ml-1 bg-cyan-100 px-2 py-1 rounded text-xs font-bold text-cyan-700">
                                                                 +{item.freeQty} free
                                                             </span>
                                                         )}
