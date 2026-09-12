@@ -5,25 +5,13 @@ import ReceiptTemplate from '../receipt/ReceiptTemplate';
 import { normalizeReceiptSettings, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
 import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
 import { useLanguage } from '../../context/LanguageContext';
+import { printHtmlInFrame } from '../../utils/printFrame';
 
 const KotPrinter = forwardRef((props, ref) => {
   const { language } = useLanguage();
   const printFrameRef = useRef(null);
 
-  const printInBrowser = (html) => {
-    const frame = printFrameRef.current;
-    if (!frame) return;
-
-    const doc = frame.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-
-    setTimeout(() => {
-      frame.contentWindow.focus();
-      frame.contentWindow.print();
-    }, 500);
-  };
+  const printInBrowser = (html) => printHtmlInFrame(printFrameRef.current, html);
 
   useImperativeHandle(ref, () => ({
     printKot: async (orderMeta, items, storeName, shiftData, receiptSettings) => {

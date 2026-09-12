@@ -6,22 +6,12 @@ import { normalizeReceiptSettings, parseTemplateLines, PRINT_TEMPLATE_TYPES } fr
 import { buildPosReceiptHtml } from '../../utils/buildPosReceiptHtml';
 import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
 import toast from 'react-hot-toast';
+import { printHtmlInFrame } from '../../utils/printFrame';
 
 const ReturnReceiptPrinter = forwardRef((props, ref) => {
   const printFrameRef = useRef(null);
 
-  const printInBrowser = (html) => {
-    const frame = printFrameRef.current;
-    if (!frame) return;
-    const doc = frame.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    setTimeout(() => {
-      frame.contentWindow.focus();
-      frame.contentWindow.print();
-    }, 500);
-  };
+  const printInBrowser = (html) => printHtmlInFrame(printFrameRef.current, html);
 
   useImperativeHandle(ref, () => ({
     /**
@@ -224,7 +214,7 @@ ${loyaltyHtml}
 
   <hr class="divider"/>
   <div class="center" style="font-size:10px;margin-top:4px;">
-    Thank you — Items returned &amp; refund processed.<br/>
+    Thank you. Items returned &amp; refund processed.<br/>
     Please retain this receipt for your records.
   </div>
 </body>

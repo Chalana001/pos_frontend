@@ -4,22 +4,12 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { normalizeReceiptSettings } from '../../utils/receiptSettings';
 import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
 import toast from 'react-hot-toast';
+import { printHtmlInFrame } from '../../utils/printFrame';
 
 const DebitNotePrinter = forwardRef((props, ref) => {
   const printFrameRef = useRef(null);
 
-  const printInBrowser = (html) => {
-    const frame = printFrameRef.current;
-    if (!frame) return;
-    const doc = frame.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    setTimeout(() => {
-      frame.contentWindow.focus();
-      frame.contentWindow.print();
-    }, 500);
-  };
+  const printInBrowser = (html) => printHtmlInFrame(printFrameRef.current, html);
 
   useImperativeHandle(ref, () => ({
     /**

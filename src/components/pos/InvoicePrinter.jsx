@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import InvoiceTemplate from '../invoice/InvoiceTemplate';
 import { getReceiptSettingsDefaults, normalizeReceiptSettings, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
 import { useLanguage } from '../../context/LanguageContext';
+import { printHtmlInFrame } from '../../utils/printFrame';
 
 const InvoicePrinter = forwardRef((props, ref) => {
   const { language } = useLanguage();
@@ -26,9 +27,6 @@ const InvoicePrinter = forwardRef((props, ref) => {
         logo: orderData?.branchLogo || shiftData?.branchLogo || '',
         cashierName: orderData?.cashierName || shiftData?.cashierName || 'Cashier',
       };
-
-      const doc = frame.contentWindow.document;
-      doc.open();
 
       const html = renderToStaticMarkup(
         <InvoiceTemplate
@@ -82,13 +80,7 @@ const InvoicePrinter = forwardRef((props, ref) => {
         </html>
       `;
 
-      doc.write(documentHtml);
-      doc.close();
-
-      setTimeout(() => {
-        frame.contentWindow.focus();
-        frame.contentWindow.print();
-      }, 500);
+      printHtmlInFrame(frame, documentHtml);
     },
   }));
 

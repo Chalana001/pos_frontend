@@ -6,25 +6,13 @@ import { normalizeReceiptSettings, PRINT_TEMPLATE_TYPES, parseTemplateLines } fr
 import { buildPosReceiptHtml } from '../../utils/buildPosReceiptHtml';
 import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
 import { useLanguage } from '../../context/LanguageContext';
+import { printHtmlInFrame } from '../../utils/printFrame';
 
 const ReceiptPrinter = forwardRef((props, ref) => {
   const { language } = useLanguage();
   const printFrameRef = useRef(null);
 
-  const printInBrowser = (html) => {
-    const frame = printFrameRef.current;
-    if (!frame) return;
-
-    const doc = frame.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-
-    setTimeout(() => {
-      frame.contentWindow.focus();
-      frame.contentWindow.print();
-    }, 500);
-  };
+  const printInBrowser = (html) => printHtmlInFrame(printFrameRef.current, html);
 
   useImperativeHandle(ref, () => ({
     printOrder: async (orderData, cartItems, storeName, shiftData, customerData, receiptSettings) => {

@@ -430,6 +430,18 @@ const POS = () => {
     }
   }, [showPayment, orderType, customer?.id, cartItems, billDiscount, paidAmount]);
 
+  // Warm the server-reachability probe while the cashier is still entering the
+  // payment. A success is cached for 10 seconds, so by the time Confirm is
+  // clicked the probe inside handlePlaceOrder answers from cache instead of
+  // spending a serial /auth/me round-trip on the checkout's critical path. A
+  // failure here changes nothing: the confirm-time probe still does the real
+  // work, exactly as before.
+  useEffect(() => {
+    if (showPayment && shouldUseServerForCheckout) {
+      isServerReachable();
+    }
+  }, [showPayment, shouldUseServerForCheckout]);
+
   useEffect(() => {
     if (!isFreeLocalSalesPlan) {
       setFreeLocalSalesSummary({ count: 0, total: 0 });
@@ -548,7 +560,13 @@ const POS = () => {
       resizeFrameRef.current = requestAnimationFrame(() => {
         resizeFrameRef.current = null;
         if (cartPanelRef.current) {
-          cartPanelRef.current.style.width = `min(100%, ${resizeStateRef.current.nextWidth}px)`;
+          // Write the same custom property the element is styled from, so a drag stays a
+          // desktop-only measurement rather than pinning a hard width the stacked layout
+          // would then inherit.
+          cartPanelRef.current.style.setProperty(
+            "--cart-w",
+            `min(100%, ${resizeStateRef.current.nextWidth}px)`
+          );
         }
       });
     };
@@ -1296,7 +1314,7 @@ const POS = () => {
     ]);
 
     setSearchQuery("");
-    toast.success(`Scale label scanned: ${formatStockQuantity(qty)} ${unit} — ${formatCurrency(amount)} added`);
+    toast.success(`Scale label scanned: ${formatStockQuantity(qty)} ${unit}, ${formatCurrency(amount)} added`);
   };
 
   // A barcode fetched via the server ID lookup (fallback path below) — either
@@ -1974,7 +1992,7 @@ const POS = () => {
           failCheckout("Cannot reach the server. Only fully paid cash takeaway sales can be saved offline.");
           return;
         }
-        toast("Server unreachable — saving this sale to the offline queue.");
+        toast("Server unreachable. Saving this sale to the offline queue.");
       }
 
       const orderItems = cartItems.map((item) => createOrderItemPayload(item, true));
@@ -2242,7 +2260,11 @@ const POS = () => {
         setSelectedTableId(null);
       }
 
-      await fetchProducts(effectiveBranchId);
+      // Refresh the grid's stock counts in the background. The sale is already
+      // banked and the receipt is on its way to the printer; awaiting this held
+      // the cart open for the length of a product reload, and a failed refresh
+      // surfaced as a "Failed" toast on a sale that had in fact succeeded.
+      fetchProducts(effectiveBranchId).catch(() => {});
 
       // The order is banked — the next checkout is a genuinely new one. The offline
       // number is cleared too: a checkout that queued a number and then completed
@@ -2301,7 +2323,7 @@ const POS = () => {
         <div className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 lg:rounded-2xl lg:px-4">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
             <WifiOff size={14} />
-            {isFreeLocalSalesPlan ? "Local mode" : "Offline — queue mode"}
+            {isFreeLocalSalesPlan ? "Local mode" : "Offline. Queue mode"}
           </span>
           <span className="text-xs font-medium">
             {isFreeLocalSalesPlan
@@ -2333,7 +2355,7 @@ const POS = () => {
             {queuePressure.ageHours >= 1
               ? `, oldest ${Math.floor(queuePressure.ageHours)}h ago`
               : ""}
-            . These exist only on this PC until they reach the server — reconnect soon, or
+            . These exist only on this PC until they reach the server. Reconnect soon, or
             export them from the queue page.
           </span>
           <Link
@@ -2591,7 +2613,7 @@ const POS = () => {
                 that pulls in the next batch. Only ever shown when there is more to draw. */}
             {canSell && visibleCount < filteredItems.length ? (
               <div ref={gridSentinelRef} className="py-4 text-center text-xs text-slate-500">
-                Showing {visibleItems.length} of {filteredItems.length} items — keep scrolling, or search to narrow
+                Showing {visibleItems.length} of {filteredItems.length} items. Keep scrolling, or search to narrow
               </div>
             ) : null}
           </div>
@@ -2609,10 +2631,15 @@ const POS = () => {
           title="The cart stopped responding"
           description="Nothing has been charged. Load the cart again to carry on with this sale."
         >
+        {/* The dragged width is a DESKTOP measurement: it sizes the cart as a side panel
+            next to the item grid. Below lg the two stack, and applying it there left the
+            cart 470px wide under a full-width grid — visibly mismatched, with dead space
+            beside it. Carried as a custom property so the cap only lands at lg and up,
+            where the resize handle it comes from actually exists (hidden below that). */}
         <div
           ref={cartPanelRef}
-          className={`sales-surface sales-panel-enter w-full min-w-0 flex-shrink-0 flex-col h-max rounded-xl transition-opacity duration-300 lg:h-full lg:overflow-hidden lg:rounded-2xl ${!canSell ? "pointer-events-none opacity-50 grayscale" : ""}`}
-          style={{ width: `min(100%, ${cartPanelWidth}px)`, animationDelay: "130ms" }}
+          className={`sales-surface sales-panel-enter w-full min-w-0 flex-shrink-0 flex-col h-max rounded-xl transition-opacity duration-300 lg:h-full lg:w-[var(--cart-w)] lg:overflow-hidden lg:rounded-2xl ${!canSell ? "pointer-events-none opacity-50 grayscale" : ""}`}
+          style={{ "--cart-w": `min(100%, ${cartPanelWidth}px)`, animationDelay: "130ms" }}
         >
           <Cart
             items={cartItems}
