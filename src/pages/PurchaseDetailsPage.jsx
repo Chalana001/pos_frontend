@@ -12,10 +12,11 @@ import PurchaseA4Print from "../components/purchase/PurchaseA4Print";
 import { useAuth } from "../context/AuthContext"; 
 import {
   ArrowLeft, Printer, Calendar, FileText,
-  Truck, ChevronDown, ChevronUp, MapPin, Package, Ban, Wallet, RotateCcw, Barcode
+  Truck, ChevronDown, ChevronUp, MapPin, Package, Ban, Wallet, RotateCcw, Barcode, RefreshCw, Link2
 } from "lucide-react";
 import { hasPermission } from "../utils/permissions";
 import { hasPlanFeature } from "../utils/subscriptionFeatures";
+import { hasModule } from "../utils/moduleAccess";
 import { BRAND_NAME_UPPER } from "../utils/branding";
 import { toast } from "react-hot-toast"; 
 import { formatCurrency } from "../utils/formatters";
@@ -33,6 +34,23 @@ const cashSourceOptions = [
   { value: "CASH_DRAWER", label: "Cash Drawer" },
   { value: "BANK", label: "Bank" },
 ];
+
+/**
+ * How to name the other bill in a supersede chain.
+ *
+ * Not by invoice number. A replacement keeps the SUPPLIER's invoice number — that is the
+ * entire point of the feature, the number is printed on their paper — so both halves of
+ * every chain share it, and labelling the link with it produced the nonsense
+ * "ZZ-UI-412241 — Replaces ZZ-UI-412241". The system id is the only thing that tells the
+ * two apart, and the page already calls it that ("System ID: #67").
+ *
+ * The number is still worth showing in the one case where it genuinely differs: an operator
+ * may correct a mistyped invoice number as part of the rebuild.
+ */
+const chainLabel = (otherId, otherInvoiceNo, thisInvoiceNo) => {
+  const id = `#${otherId}`;
+  return otherInvoiceNo && otherInvoiceNo !== thisInvoiceNo ? `${id} · ${otherInvoiceNo}` : id;
+};
 
 const formatCashSource = (value) => {
   if (value === "CASH_DRAWER") return "Cash Drawer";
@@ -58,6 +76,7 @@ const PurchaseDetailsPage = () => {
 
   // Modal States
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showCancelChoice, setShowCancelChoice] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
@@ -187,6 +206,22 @@ const PurchaseDetailsPage = () => {
     hasPlanFeature(user?.planName, "PURCHASE_RETURNS");
   const purchaseDue = Number(purchase.dueAmount || 0);
   const canPaySupplier = user?.role !== 'CASHIER' && !isCanceled && purchaseDue > 0;
+
+  // Cancel & rebuild. The server decides whether it is possible and says why not, because
+  // every reason is server-side state — has any of this stock moved, is the drawer shift
+  // still open, have supplier payments been allocated. Guessing here is how an operator
+  // ends up re-typing forty lines only to be told the original cannot be voided.
+  const amendModuleOn = hasModule("PURCHASES_AMEND") !== false;
+  const showRebuild =
+    !isCanceled && amendModuleOn && hasPermission(user?.role, "AMEND_PURCHASE");
+
+  // Both paths out of here — a plain cancel and a rebuild — void this bill, and the server
+  // answers for them with one and the same check. So a reason that blocks one blocks the
+  // other, and the honest place to say so is the button, before anyone types a cancellation
+  // reason only to be refused. (The field is named for replace because that is the flow that
+  // needed it first; what it reports is whether this bill can be voided at all.)
+  const voidBlockedReason = purchase.replaceBlockedReason;
+  const canVoid = purchase.canReplace !== false;
   const purchaseBranchOptions = [...new Map((purchase.grnList || [])
     .filter((grn) => grn.branchId)
     .map((grn) => [String(grn.branchId), { value: String(grn.branchId), label: grn.branchName || `Branch ${grn.branchId}` }])
@@ -198,12 +233,15 @@ const PurchaseDetailsPage = () => {
       <PurchaseA4Print ref={printRef} />
       <DebitNotePrinter ref={debitNotePrinterRef} />
 
-      <div className="page-section-enter print:hidden flex items-center justify-between" style={{ animationDelay: "40ms" }}>
-        <Button variant="secondary" onClick={() => navigate("/purchases")}>
+      {/* Back and the actions are different things, so they do not compete for one line.
+          Below sm the actions drop to their own row and align left instead of wrapping into
+          a ragged right-aligned pile. */}
+      <div className="page-section-enter print:hidden flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style={{ animationDelay: "40ms" }}>
+        <Button variant="secondary" className="self-start" onClick={() => navigate("/purchases")}>
           <ArrowLeft size={18} className="mr-2" /> Back to History
         </Button>
-        
-        <div className="flex gap-3 flex-wrap">
+
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           <Button
             variant="secondary"
             onClick={() => {
@@ -255,14 +293,20 @@ const PurchaseDetailsPage = () => {
             </Button>
           )}
 
+
+
           {/* 🟢 Cancel Button එකේ රතු පාට අයින් කරලා Clean Slate පාටක් දුන්නා */}
+          {/* One button, not two. "Cancel" and "Cancel & Rebuild" both begin the same way —
+              this bill is wrong — so asking which of the two they meant belongs in a dialog,
+              not in a second button competing for the same intent. */}
           {canCancel && (
-            <Button 
-              className="bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm" 
-              onClick={handleCancelClick}
-              disabled={isCanceling}
+            <Button
+              className="bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm disabled:opacity-50"
+              onClick={() => (showRebuild ? setShowCancelChoice(true) : handleCancelClick())}
+              disabled={isCanceling || !canVoid}
+              title={canVoid ? undefined : `Cannot cancel: ${voidBlockedReason}`}
             >
-              <Ban size={18} className="mr-2 text-slate-500" /> 
+              <Ban size={18} className="mr-2 text-slate-500" />
               {isCanceling ? "Canceling..." : "Cancel Purchase"}
             </Button>
           )}
@@ -306,11 +350,61 @@ const PurchaseDetailsPage = () => {
             </div>
 
             {/* 🟢 Cancel වෙලා තියෙනකොට පෙන්වන මැසේජ් එකත් රතු පාට වෙනුවට Slate පාට කළා */}
-            {isCanceled && purchase.cancelReason && (
-              <div className="mt-4 text-sm text-slate-700 bg-slate-100 p-3 rounded-lg border border-slate-200 inline-block">
-                <p><strong>Canceled At:</strong> {new Date(purchase.canceledAt).toLocaleString()}</p>
-                <p className="mt-1"><strong>Reason:</strong> {purchase.cancelReason}</p>
+            {/* One block for the whole cancellation: when, who, why, and what replaced it.
+                These were three separate boxes stacked down the column and it read as
+                clutter — they are all answers to the same question. */}
+            {isCanceled && (
+              <div className="mt-4 max-w-md rounded-lg border border-slate-200 bg-slate-100 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <p className="flex flex-wrap items-baseline gap-x-1.5">
+                  <Ban size={14} className="shrink-0 translate-y-0.5 text-slate-500" />
+                  <span className="font-semibold">Cancelled</span>
+                  <span>{new Date(purchase.canceledAt).toLocaleString()}</span>
+                  {/* Null on bills cancelled before this was recorded — say nothing rather
+                      than guess at a name. */}
+                  {purchase.canceledByUsername && <span>by {purchase.canceledByUsername}</span>}
+                </p>
+                {/* On a supersede the reason is our own generated "Superseded by …", which the
+                    link below says better and in the reader's own terms. Show the reason only
+                    when it is one a person actually wrote. */}
+                {purchase.cancelReason && !purchase.replacedByPurchaseId && (
+                  <p className="mt-1.5 text-slate-600 dark:text-slate-300">{purchase.cancelReason}</p>
+                )}
+                {purchase.replacedByPurchaseId && (
+                  <p className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-slate-200 pt-2 dark:border-slate-700">
+                    <Link2 size={14} className="shrink-0 text-slate-500" />
+                    A corrected bill was entered in its place.
+                    <button
+                      type="button"
+                      className="font-semibold underline underline-offset-2"
+                      onClick={() => navigate(`/purchases/${purchase.replacedByPurchaseId}`)}
+                    >
+                      Open {chainLabel(purchase.replacedByPurchaseId, purchase.replacedByInvoiceNo, purchase.invoiceNo)}
+                    </button>
+                  </p>
+                )}
               </div>
+            )}
+
+            {/* The other direction, on the live bill. A line rather than a panel: it is one
+                fact, and the bill it points at is the cancelled one. */}
+            {purchase.replacesPurchaseId && (
+              <p className="mt-3 flex flex-wrap items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+                <Link2 size={14} className="shrink-0 text-slate-400" />
+                This is a corrected version of
+                <button
+                  type="button"
+                  className="font-semibold underline underline-offset-2"
+                  onClick={() => navigate(`/purchases/${purchase.replacesPurchaseId}`)}
+                >
+                  {chainLabel(purchase.replacesPurchaseId, purchase.replacesInvoiceNo, purchase.invoiceNo)}
+                </button>
+              </p>
+            )}
+
+            {canCancel && !canVoid && voidBlockedReason && (
+              <p className="mt-3 text-xs text-slate-500">
+                This bill cannot be cancelled because {voidBlockedReason}.
+              </p>
             )}
           </div>
 
@@ -605,7 +699,64 @@ const PurchaseDetailsPage = () => {
             </div>
       </Modal>
 
-      <ConfirmDialog
+      <Modal
+            isOpen={showCancelChoice}
+            onClose={() => setShowCancelChoice(false)}
+            title="Cancel this purchase"
+            size="md"
+          >
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              {purchase.invoiceNo} is being cancelled. Do you want to enter a corrected bill
+              in its place?
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {/* Correcting is the reason most people arrive here, so it leads — but it is
+                  only offered when the server says this bill can actually be rebuilt. */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCancelChoice(false);
+                  navigate(`/purchases/new?replaces=${purchase.purchaseId}`);
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+              >
+                <span className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">
+                  <RefreshCw size={16} className="shrink-0 text-slate-500" />
+                  Cancel &amp; rebuild
+                </span>
+                <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                  Opens a new purchase filled in from this one. Correct it, save, and this
+                  bill is cancelled for you. Both are kept and linked.
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCancelChoice(false);
+                  handleCancelClick();
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+              >
+                <span className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">
+                  <Ban size={16} className="shrink-0 text-slate-500" />
+                  Just cancel it
+                </span>
+                <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                  Void the bill and put the stock back. You will be asked for a reason.
+                </span>
+              </button>
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <Button variant="secondary" onClick={() => setShowCancelChoice(false)}>
+                Go Back
+              </Button>
+            </div>
+          </Modal>
+
+          <ConfirmDialog
             isOpen={showCancelModal}
             onClose={() => setShowCancelModal(false)}
             onConfirm={executeCancelPurchase}

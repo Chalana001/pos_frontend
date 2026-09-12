@@ -2,6 +2,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { getToken, clearAuth, notifyAuthExpired } from '../utils/auth';
 import { clearSupportSession, isSupportSession } from '../utils/supportSession';
+import { SERVER_UNREACHABLE_EVENT } from '../utils/networkEvents';
 
 let isHandlingUnauthorized = false;
 const BACKEND_CONNECTION_ERROR_MESSAGE = 'Backend connection failed. Please check whether the server is running.';
@@ -162,6 +163,18 @@ api.interceptors.response.use(
           message: BACKEND_CONNECTION_ERROR_MESSAGE,
         },
       };
+      // A request that died with no response at all is the strongest hint the app gets
+      // that the server is gone, and it is the case navigator.onLine misses completely —
+      // a live router with a dead ISP or VPS reads as fully online. Announced as an event
+      // rather than an import so this module keeps no dependency on the network store,
+      // which reaches back here through the reachability probe.
+      //
+      // Only a suspicion: utils/networkStatus.js confirms with the server before it
+      // changes anything. Background requests count too — the reachability probe itself
+      // is excluded there by its own guard, not here.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(SERVER_UNREACHABLE_EVENT));
+      }
       if (!isBackgroundRequest) {
         toast.error(BACKEND_CONNECTION_ERROR_MESSAGE, { id: 'backend-connection-error' });
       }
@@ -186,7 +199,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
     if (code === 'SUPPORT_SESSION_READ_ONLY') {
-      toast.error('Read-only support session — this change was not saved.');
+      toast.error('Read-only support session. This change was not saved.');
       return Promise.reject(error);
     }
 

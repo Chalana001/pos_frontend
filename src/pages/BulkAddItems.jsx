@@ -12,7 +12,13 @@ import { useAuth } from "../context/AuthContext";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { Plus, Search, Trash2 } from "lucide-react";
 import ResizableSplit from "../components/common/ResizableSplit";
+import DraftRestoreBar from "../components/common/DraftRestoreBar";
+import useUnsavedWork from "../hooks/useUnsavedWork";
 import { ItemType, ItemTypeLabels, OVERHEAD_COST_MODES } from "../utils/constants"; // 🟢 Constant එක Import කළා
+
+// Bump when the saved shape below changes, so an older draft is dropped rather than loaded
+// into a form that can no longer read it.
+const BULK_ITEMS_DRAFT_SCHEMA_VERSION = 1;
 
 const uuid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -175,6 +181,34 @@ export default function BulkAddItems() {
   const [showSubCatModal, setShowSubCatModal] = useState(false);
   const [newSubCatName, setNewSubCatName] = useState("");
   const [savingSubCat, setSavingSubCat] = useState(false);
+
+  // --- DRAFT RECOVERY ---
+  //
+  // The queued list plus the row still being composed — both are typed work and a dropped
+  // connection used to take the lot. Deliberately absent: `categories`, `subCategories` and
+  // the two search-result maps (server data, re-fetched on mount), the accordion open flags
+  // and the category modals (transient UI).
+  const draftPayload = useMemo(() => ({ cart, draft }), [cart, draft]);
+
+  // An untouched composer is the empty draft the page opens with, so only a non-empty cart
+  // or a named item counts as work worth offering back.
+  const isDraftDirty = cart.length > 0 || !!String(draft?.name || "").trim();
+
+  const { pendingDraft, discardDraft, clearDraft } = useUnsavedWork({
+    kind: "bulk-items",
+    schemaVersion: BULK_ITEMS_DRAFT_SCHEMA_VERSION,
+    isDirty: isDraftDirty,
+    payload: draftPayload,
+  });
+
+  const restoreDraft = () => {
+    const saved = pendingDraft?.payload;
+    if (!saved) return;
+    setCart(Array.isArray(saved.cart) ? saved.cart : []);
+    if (saved.draft) setDraft(saved.draft);
+    discardDraft();
+    toast.success("Draft restored");
+  };
 
   const branches = useMemo(
     () => availableBranches.filter((branch) => Number(branch.id) !== 0),
@@ -874,6 +908,9 @@ export default function BulkAddItems() {
 
       await itemsAPI.createBulk(payload);
 
+      // Saved for real — the draft would otherwise be offered back next visit and re-create
+      // everything that just went in.
+      await clearDraft();
       toast.success(`Saved ${cart.length} items successfully ✅`);
       setCart([]);
     } catch (e) {
@@ -887,6 +924,14 @@ export default function BulkAddItems() {
 
   return (
     <div className="page-enter space-y-5 p-6">
+      <DraftRestoreBar
+        draft={pendingDraft}
+        label={`Unsaved item list${pendingDraft?.payload?.cart?.length
+          ? ` (${pendingDraft.payload.cart.length} item${pendingDraft.payload.cart.length === 1 ? "" : "s"})`
+          : ""}`}
+        onRestore={restoreDraft}
+        onDiscard={discardDraft}
+      />
       <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "80ms" }}>
         <h1 className="text-2xl font-semibold">Bulk Add Items</h1>
 
@@ -978,7 +1023,7 @@ export default function BulkAddItems() {
               <div className="space-y-2">
                 <label htmlFor="bulkadditems-alt-name-sinhala-optional-used-on-receip" className="text-sm font-medium">
                   Alt Name (Sinhala)
-                  <span className="ml-2 text-xs text-slate-600 font-normal">Optional — used on receipts when set to Alt Name.</span>
+                  <span className="ml-2 text-xs text-slate-600 font-normal">Optional. Used on receipts when set to Alt Name.</span>
                 </label>
                 <input id="bulkadditems-alt-name-sinhala-optional-used-on-receip"
                   className="w-full border rounded-lg px-3 py-2"

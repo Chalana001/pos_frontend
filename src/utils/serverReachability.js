@@ -47,3 +47,42 @@ export const isServerReachable = async () => {
     window.clearTimeout(timer);
   }
 };
+
+/**
+ * Is the SERVER up — a different question from the one above, and the one navigation needs.
+ *
+ * `isServerReachable` deliberately folds "not authenticated" into "unreachable", because for
+ * a checkout those are the same answer: queue the sale either way. That is the wrong
+ * question for the online/offline flag, which has to stay correct on the login screen and
+ * for a session that has expired. Asking /auth/me there gets a 401 or 403 from a perfectly
+ * healthy server, and treating that as "down" latches the whole app offline until reload.
+ *
+ * So this asks /health, and — the important part — counts ANY HTTP reply as proof of life.
+ * A 401, a 403, even a 500 means something answered. Only a request that dies with no
+ * response at all, or one that outlives the timeout, means the server is genuinely gone.
+ *
+ * Deliberately does not read or write the reachability cache above: that cache is the
+ * till's, and its meaning is not this one.
+ */
+export const isServerResponding = async () => {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+
+  try {
+    await api.get("/health", { signal: controller.signal, meta: { background: true } });
+    // NOT markServerReachable(). /health answering proves the server is up, but it proves
+    // nothing about this browser's session — and the till reads that cache to decide it can
+    // skip its own probe before a checkout. Marking here would let a checkout on an expired
+    // session go to the server, fail, and lose the sale instead of queueing it, which is the
+    // exact failure isServerReachable was written to prevent.
+    return true;
+  } catch (error) {
+    // A response of any status proves the server answered.
+    if (error?.response && error.response.status !== 0) {
+      return true;
+    }
+    return false;
+  } finally {
+    window.clearTimeout(timer);
+  }
+};

@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/common/Card";
+import DraftRestoreBar from "../components/common/DraftRestoreBar";
+import useUnsavedWork from "../hooks/useUnsavedWork";
 import Button from "../components/common/Button";
 import SupplierQuickAddModal from "../components/purchase/SupplierQuickAddModal";
 import Modal from "../components/common/Modal";
@@ -25,6 +27,10 @@ import {
   getPrimaryStockUnit,
   isMeasuredStockItem,
 } from "../utils/stockQuantity";
+
+// Bump when the draft payload below changes shape, so a draft written by an older build is
+// discarded instead of being loaded into a form that can no longer read it.
+const PURCHASE_DRAFT_SCHEMA_VERSION = 1;
 
 const isMeasuredItem = (item) =>
   isMeasuredStockItem(item);
@@ -122,6 +128,84 @@ const PurchaseFormPage = () => {
   // --- CART STATE ---
   const [cartItems, setCartItems] = useState([]);
 
+  // --- CANCEL & REBUILD ---
+  //
+  // Arriving with ?replaces=<id> means this form is correcting an existing bill: it loads
+  // that bill's lines, and saving cancels the original and issues this one in a single
+  // server-side transaction. The original is never edited — an auditable system voids and
+  // reissues instead, and the two bills stay linked.
+  const [searchParams] = useSearchParams();
+  const replacesId = searchParams.get("replaces");
+  const [replacing, setReplacing] = useState(null);
+
+  // --- DRAFT RECOVERY ---
+  //
+  // Only what the user typed. Deliberately absent: `branches`, `suppliers` and
+  // `searchResults` (server data, re-fetched on mount — a restored draft must not carry
+  // yesterday's prices or a supplier deleted since), `search` and `selectedItem`
+  // (transient), `selectionPanelWidth` (a device preference, already in localStorage), and
+  // `branchInputs`, which is the quantity block being typed for whichever item is selected
+  // right now and would restore orphaned from the item it belongs to.
+  const draftPayload = useMemo(
+    () => ({
+      supplierId,
+      invoiceNo,
+      date,
+      discountAmount,
+      paidAmount,
+      paymentMethod,
+      cashSource,
+      cashSourceBranchId,
+      cartItems,
+    }),
+    [
+      supplierId,
+      invoiceNo,
+      date,
+      discountAmount,
+      paidAmount,
+      paymentMethod,
+      cashSource,
+      cashSourceBranchId,
+      cartItems,
+    ]
+  );
+
+  // A date alone is not work — it defaults to today on every mount. Anything else means
+  // the user has started building a bill.
+  const isDraftDirty =
+    cartItems.length > 0 ||
+    !!supplierId ||
+    !!invoiceNo.trim() ||
+    Number(discountAmount || 0) > 0 ||
+    Number(paidAmount || 0) > 0;
+
+  const { pendingDraft, discardDraft, clearDraft } = useUnsavedWork({
+    kind: "purchase",
+    // A rebuild of bill 42 and a blank new purchase are different pieces of work and must
+    // not be offered to each other.
+    entityId: replacesId ?? null,
+    schemaVersion: PURCHASE_DRAFT_SCHEMA_VERSION,
+    isDirty: isDraftDirty,
+    payload: draftPayload,
+  });
+
+  const restoreDraft = () => {
+    const saved = pendingDraft?.payload;
+    if (!saved) return;
+    setSupplierId(saved.supplierId ?? "");
+    setInvoiceNo(saved.invoiceNo ?? "");
+    setDate(saved.date ?? getLocalDateString());
+    setDiscountAmount(saved.discountAmount ?? "");
+    setPaidAmount(saved.paidAmount ?? "");
+    setPaymentMethod(saved.paymentMethod ?? "CASH");
+    setCashSource(saved.cashSource ?? "BRANCH_CASH");
+    setCashSourceBranchId(saved.cashSourceBranchId ?? "");
+    setCartItems(Array.isArray(saved.cartItems) ? saved.cartItems : []);
+    discardDraft();
+    toast.success("Draft restored");
+  };
+
   const formatStockQty = (item) => {
     if (item.batches && item.batches.length > 0) {
       const totalDisplayQty = item.batches.reduce(
@@ -137,6 +221,77 @@ const PurchaseFormPage = () => {
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  // Pull the bill being corrected into the form. Runs after branches load so each line can
+  // carry its branch name, and only once — a re-run would duplicate every line.
+  useEffect(() => {
+    if (!replacesId || branches.length === 0 || replacing) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await purchasesAPI.getById(replacesId);
+        if (cancelled) return;
+
+        if (data.status === "CANCELED") {
+          toast.error("That purchase is already canceled.");
+          navigate(`/purchases/${replacesId}`);
+          return;
+        }
+        if (data.canReplace === false) {
+          toast.error(`Cannot rebuild this purchase because ${data.replaceBlockedReason}.`);
+          navigate(`/purchases/${replacesId}`);
+          return;
+        }
+
+        setReplacing(data);
+        setSupplierId(String(data.supplierId ?? ""));
+        // The supplier's own invoice number carries over unchanged — a replacement for
+        // INV-8821 is still INV-8821. That is the whole reason the uniqueness rule had to
+        // be narrowed to live bills only.
+        setInvoiceNo(data.invoiceNo ?? "");
+        setDiscountAmount(data.discountAmount ? String(data.discountAmount) : "");
+        setPaidAmount(data.paidAmount ? String(data.paidAmount) : "");
+        setPaymentMethod(data.paymentMethod ?? "CASH");
+        setCashSource(data.cashSource && data.cashSource !== "NONE" ? data.cashSource : "BRANCH_CASH");
+        setCashSourceBranchId(data.cashSourceBranchId ? String(data.cashSourceBranchId) : "");
+
+        const rows = [];
+        (data.grnList || []).forEach((grn) => {
+          const branch = branches.find((b) => b.id === grn.branchId);
+          (grn.items || []).forEach((line) => {
+            const measured = !!line.qtyUnit;
+            rows.push({
+              uniqueId: `${grn.id}-${line.id}`,
+              itemId: line.itemId,
+              name: line.itemName,
+              barcode: line.barcode,
+              branchId: Number(grn.branchId),
+              branchName: branch?.name || grn.branchName || "Unknown",
+              qty: Number(line.qty || 0),
+              freeQty: Number(line.freeQty || 0),
+              qtyUnit: measured ? line.qtyUnit : undefined,
+              weightItem: measured,
+              costPrice: Number(line.costPrice || 0),
+              sellingPrice: Number(line.sellingPrice || 0),
+              // Only carried where the original line mapped to exactly one stock batch;
+              // the server leaves it out rather than guess. Re-check before saving.
+              expiryDate: line.expiryDate || null,
+              zeroNegativeStock: false,
+              lineTotal: Number(line.lineTotal || 0),
+            });
+          });
+        });
+        setCartItems(rows);
+      } catch (error) {
+        console.error("Failed to load the purchase being replaced", error);
+        toast.error(error.response?.data?.message || "Could not load that purchase.");
+        navigate("/purchases");
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [replacesId, branches, replacing, navigate]);
 
   useEffect(() => {
     const setDefaultPanelWidth = () => {
@@ -461,9 +616,17 @@ const PurchaseFormPage = () => {
     };
 
     try {
-      await purchasesAPI.create(payload);
-      toast.success("Purchase saved successfully!");
-      navigate("/purchases");
+      // One call, not two. Cancelling and creating as separate requests would leave the
+      // shop with the original's stock deleted and no replacement whenever the second one
+      // is the request that fails.
+      const saved = replacesId
+        ? await purchasesAPI.replace(replacesId, payload)
+        : await purchasesAPI.create(payload);
+      // The bill is banked; the draft has done its job. Clear it before navigating, or the
+      // next visit to this screen offers back a purchase that already exists.
+      await clearDraft();
+      toast.success(replacesId ? "Purchase rebuilt. The old bill is canceled." : "Purchase saved successfully!");
+      navigate(replacesId && saved?.data?.purchaseId ? `/purchases/${saved.data.purchaseId}` : "/purchases");
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Failed to save purchase.");
@@ -509,9 +672,31 @@ const PurchaseFormPage = () => {
 
   return (
     <div className="page-enter space-y-6 pb-10">
+      <DraftRestoreBar
+        draft={pendingDraft}
+        label={`Unsaved purchase${pendingDraft?.payload?.cartItems?.length
+          ? ` (${pendingDraft.payload.cartItems.length} item${pendingDraft.payload.cartItems.length === 1 ? "" : "s"})`
+          : ""}`}
+        onRestore={restoreDraft}
+        onDiscard={discardDraft}
+      />
+      {replacing && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          <p className="font-semibold">
+            Replacing {replacing.invoiceNo}. The old bill is canceled when you save.
+          </p>
+          <p className="mt-1 text-blue-800">
+            Both bills are kept and linked, so the original stays in the audit trail. Check
+            expiry dates before saving. They only carry over where a line matched exactly
+            one stock batch.
+          </p>
+        </div>
+      )}
       <div className="page-section-enter flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ animationDelay: "40ms" }}>
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">New Purchase</h1>
+          <h1 className="text-3xl font-bold text-slate-800">
+            {replacesId ? "Rebuild Purchase" : "New Purchase"}
+          </h1>
           <p className="mt-1 text-sm text-slate-500">Add supplier invoice items and distribute stock by branch.</p>
         </div>
         <div className="purchase-summary-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white px-5 py-3 text-right shadow-sm" style={{ animationDelay: "90ms" }}>

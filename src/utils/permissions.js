@@ -48,6 +48,10 @@ export const PERMISSIONS = {
   // --- Purchases ---
   VIEW_PURCHASES: [ROLES.MANAGER, ROLES.ADMIN],
   NEW_PURCHASE: [ROLES.MANAGER, ROLES.ADMIN],
+  // Cancel-and-rebuild does the work of a cancel plus a create, so it is held by exactly
+  // the roles that hold both. Must stay in step with PurchaseController's @PreAuthorize on
+  // /purchases/{id}/replace, or the button renders and then 403s.
+  AMEND_PURCHASE: [ROLES.MANAGER, ROLES.ADMIN],
   PROCESS_PURCHASE_RETURNS: [ROLES.MANAGER, ROLES.ADMIN],
   
   // --- Shifts ---

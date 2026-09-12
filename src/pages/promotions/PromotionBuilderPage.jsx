@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { ArrowLeft, FlaskConical, Save, Search } from "lucide-react";
@@ -9,7 +9,9 @@ import { customersAPI } from "../../api/customers.api";
 import { itemsAPI } from "../../api/items.api";
 import { promotionsAPI } from "../../api/promotions.api";
 import Button from "../../components/common/Button";
+import DraftRestoreBar from "../../components/common/DraftRestoreBar";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import useUnsavedWork from "../../hooks/useUnsavedWork";
 import { useAppConfiguration } from "../../context/AppConfigurationContext";
 import { DISCOUNT_TYPES } from "../../utils/constants";
 import { formatCurrency } from "../../utils/formatters";
@@ -19,6 +21,10 @@ import PromotionAuditPanel from "./components/PromotionAuditPanel";
 import PromotionSimulateModal from "./components/PromotionSimulateModal";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
 import ScopePicker from "./components/ScopePicker";
+
+// Bump when the saved payload shape changes, so an older draft is discarded rather than
+// loaded into a form that can no longer read it.
+const PROMOTION_DRAFT_SCHEMA_VERSION = 1;
 
 const EFFECT_TYPES = [
   { key: "DISCOUNT", label: "Discount", hint: "A percentage or amount off" },
@@ -508,12 +514,14 @@ const PromotionBuilderPage = () => {
         : await promotionsAPI.create(buildPayload(activate));
       const status = response.data?.status;
       if (status === "PENDING_APPROVAL") {
-        toast.success("Saved — waiting for another admin to approve it");
+        toast.success("Saved. Waiting for another admin to approve it");
       } else if (status === "DRAFT") {
         toast.success("Saved as a draft");
       } else {
         toast.success(isEdit ? "Promotion updated" : "Promotion created");
       }
+      // Banked — otherwise the next visit offers back changes that are already live.
+      await clearDraft();
       navigate("/promotions");
     } catch (error) {
       console.error("Failed to save promotion", error);
@@ -541,12 +549,56 @@ const PromotionBuilderPage = () => {
   }, [form.startAt, form.endAt, form.scope, itemLines.length, selectedTargetIds.length,
       form.segmentIds.length, priceCheck]);
 
+  // --- DRAFT RECOVERY ---
+  //
+  // Only the typed promotion. Deliberately absent: `branches`, `categories`, `customers`,
+  // `segments` and `itemsById` (server data, re-fetched on mount — and itemsById is a Map,
+  // which does not survive a round trip anyway), plus `targetSearch`, `check`, `priceCheck`
+  // and the simulate modal, all transient.
+  const draftPayload = useMemo(() => ({ form, itemLines }), [form, itemLines]);
+  const serializedDraft = useMemo(() => JSON.stringify(draftPayload), [draftPayload]);
+
+  // In edit mode the form arrives already full, so "has content" would mean "dirty" the
+  // instant it loads and every visit would offer a draft of changes nobody made. Compare
+  // against the state as loaded instead, and only count real edits.
+  const baselineRef = useRef(null);
+  useEffect(() => {
+    if (!loading && baselineRef.current === null) {
+      baselineRef.current = serializedDraft;
+    }
+  }, [loading, serializedDraft]);
+
+  const isDraftDirty = baselineRef.current !== null && serializedDraft !== baselineRef.current;
+
+  const { pendingDraft, discardDraft, clearDraft } = useUnsavedWork({
+    kind: "promotion",
+    entityId: id ?? null,
+    schemaVersion: PROMOTION_DRAFT_SCHEMA_VERSION,
+    isDirty: isDraftDirty,
+    payload: draftPayload,
+  });
+
+  const restoreDraft = () => {
+    const saved = pendingDraft?.payload;
+    if (!saved) return;
+    if (saved.form) setForm(saved.form);
+    setItemLines(Array.isArray(saved.itemLines) ? saved.itemLines : []);
+    discardDraft();
+    toast.success("Draft restored");
+  };
+
   if (loading) {
     return <div className="py-16"><LoadingSpinner size="lg" text="Loading…" /></div>;
   }
 
   return (
     <div className="page-enter space-y-6 pb-24">
+      <DraftRestoreBar
+        draft={pendingDraft}
+        label={isEdit ? "Unsaved changes to this promotion" : "Unsaved promotion"}
+        onRestore={restoreDraft}
+        onDiscard={discardDraft}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="secondary" size="sm" onClick={() => navigate("/promotions")}>
@@ -825,8 +877,8 @@ const PromotionBuilderPage = () => {
               </div>
               {segments.length === 0 ? (
                 <p className="text-xs text-slate-500">
-                  No segments yet. A segment targets everyone matching a rule — spent over 50,000,
-                  say — instead of a list somebody keeps by hand.
+                  No segments yet. A segment targets everyone matching a rule. Spent over 50,000,
+                  say. Instead of a list somebody keeps by hand.
                 </p>
               ) : (
                 <div className="grid gap-1 md:grid-cols-2">
@@ -966,7 +1018,7 @@ const PromotionBuilderPage = () => {
           </label>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          Leave the times empty for all day. An end before the start runs overnight — 22:00 to 02:00.
+          Leave the times empty for all day. An end before the start runs overnight 22:00 to 02:00.
         </p>
       </section>
 
@@ -1013,7 +1065,7 @@ const PromotionBuilderPage = () => {
           </label>
         </div>
         <p className="mt-3 text-xs text-slate-500">
-          A cap limits what this promotion takes off a single line — the safety net for a
+          A cap limits what this promotion takes off a single line. The safety net for a
           mistyped offer price. Below-cost pricing is refused unless you allow it here.
         </p>
 
@@ -1047,7 +1099,7 @@ const PromotionBuilderPage = () => {
           </label>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          The promotion stops applying once any of these is reached — the total number of sales,
+          The promotion stops applying once any of these is reached. The total number of sales,
           sales per customer, or the total discount given. Per-customer needs a customer on the sale.
         </p>
 
@@ -1091,7 +1143,7 @@ const PromotionBuilderPage = () => {
         <PromotionCodesPanel promotionId={Number(id)} />
       ) : (
         <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
-          <span className="font-bold text-slate-600">6 · Promo codes</span> — save the promotion first, then add
+          <span className="font-bold text-slate-600">6 · Promo codes</span>. Save the promotion first, then add
           codes here. With no codes it applies automatically; with any, only when one is presented.
         </section>
       )}

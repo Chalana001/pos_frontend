@@ -99,7 +99,7 @@ export default function BasicOverviewView({
               <h2 className="mt-1 text-xl font-black">Current period versus previous period</h2>
             </div>
             <p className="text-xs font-semibold text-slate-600">
-              Compared to {ownerSummary.comparisonPeriod.from} — {ownerSummary.comparisonPeriod.to}
+              Compared to {ownerSummary.comparisonPeriod.from} to {ownerSummary.comparisonPeriod.to}
             </p>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

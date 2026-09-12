@@ -8,7 +8,7 @@ import { canOpenPath, moduleForPath } from '../utils/moduleAccess';
 import LockedFeatureDialog from '../components/common/LockedFeatureDialog';
 
 const ProtectedRoute = ({ children, permission, feature, requiresOnline = false, skipModuleGate = false }) => {
-  const { user, isAuthenticated, loading, planLoading, isOnline, hasOnlineSession } = useAuth();
+  const { user, isAuthenticated, loading, planLoading, hasOnlineSession } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
 
@@ -32,7 +32,17 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false,
     return candidates.find((path) => canOpenPath(path)) ?? '/items';
   }, [user?.role]);
 
-  if (loading || planLoading) {
+  // The spinner belongs to the FIRST load only.
+  //
+  // planLoading goes true again every time the subscription is re-fetched, and reconnecting
+  // re-fetches it. Blanking the whole route for that swapped the rendered page out for a
+  // spinner and back, which unmounts it — so coming back online destroyed a half-typed
+  // purchase just as surely as the old redirect did, only a few seconds later and without
+  // anything on screen to explain it.
+  //
+  // A refresh keeps the plan name it already had, so the gate below still has an answer to
+  // work with. Only the genuine cold start — no plan known yet — has to wait.
+  if (loading || (planLoading && !user?.planName)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -44,19 +54,35 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false,
     return <Navigate to="/login" replace />;
   }
 
-  // An online-only page reached while offline. Anyone who can sell is sent to the POS,
-  // which keeps working offline — the message below used to be a dead end with no link
-  // and no button, which is exactly the wrong thing to show a cashier mid-outage.
-  // /pos is not an online-only route, so this cannot loop.
-  if (requiresOnline && (!isOnline || !hasOnlineSession)) {
+  // Online-only pages gate on having a SESSION, never on the network being up.
+  //
+  // Losing the connection deliberately changes nothing here. The page the user is on stays
+  // exactly as it is — no redirect, no banner, no dialog — and the failure surfaces the way
+  // every other failure in the app does: the axios interceptor's "Backend connection failed"
+  // toast, once, deduplicated. A page that is already rendered keeps its state and its
+  // contents; a cart, its quantities and its prices are local anyway. The POS is entered by
+  // the user clicking POS, which is the only time offline mode should begin.
+  //
+  // This used to redirect to /pos on `!isOnline`, which put a manager reading a report
+  // behind the till because the wifi blinked, and destroyed any half-typed form on the way.
+  // Later attempts to soften it — a modal, then a banner — were the same mistake in smaller
+  // clothes: they interrupted someone who had asked for nothing. Do not add another.
+  //
+  // `!hasOnlineSession` is a genuinely different state and still belongs here: an offline
+  // PIN unlock has no token at all, these pages were never available to it, and no amount of
+  // waiting or retrying will open them. The till is the only thing that works, so that is
+  // where it goes.
+  if (requiresOnline && !hasOnlineSession) {
     if (hasPermission(user?.role, 'ACCESS_POS')) {
-      return <Navigate to="/pos" replace />;
+      // Deliberately not `replace`: leaving the entry in history means Back is a way out of
+      // an unwanted bounce, rather than a dead key.
+      return <Navigate to="/pos" />;
     }
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-slate-800 mb-3">{t("Online Connection Required")}</h1>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">{t("Online Connection Required")}</h1>
           <p className="text-slate-600">{t("This page only works with an active online session.")}</p>
         </div>
       </div>

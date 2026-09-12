@@ -39,6 +39,28 @@ class PosOfflineDatabase extends Dexie {
       promotionBundles: "branchId, version, syncedAt",
       appMeta: "key",
     });
+
+    // v4 adds form drafts: the half-finished purchase, bulk item grid or promotion a user
+    // is in the middle of typing. A connection blip used to unmount those screens and throw
+    // the work away; now the page keeps its own state on disk and can offer it back.
+    //
+    // Drafts are per user, not per device-holder: shop PCs are shared, and cashier B must
+    // never open the purchase form onto cashier A's half-typed supplier bill. The
+    // [kind+userId] index is what makes "this user's drafts" a cheap lookup.
+    //
+    // Every field the server mirror will eventually need (deviceId, deviceLabel, syncState)
+    // is written from this version on, even though nothing reads them yet, so adding that
+    // mirror later needs no further version — a Dexie bump is the risky part of the change.
+    this.version(4).stores({
+      cachedItems: "[branchId+itemId], branchId, itemId, syncedAt",
+      cachedBranches: "id, active",
+      cachedUsers: "userId, username, lastSyncedAt",
+      cachedReceiptSettings: "[branchId+templateType], branchId, templateType, syncedAt",
+      offlineSales: "clientSaleId, branchId, cashierUserId, createdAt",
+      promotionBundles: "branchId, version, syncedAt",
+      formDrafts: "draftId, [kind+userId], kind, userId, updatedAt",
+      appMeta: "key",
+    });
   }
 }
 
@@ -136,6 +158,27 @@ const createDeviceId = () =>
     window.crypto.getRandomValues(new Uint8Array(4)),
     (byte) => DEVICE_ID_ALPHABET[byte % DEVICE_ID_ALPHABET.length]
   ).join("");
+
+/**
+ * This terminal's id, minted once and kept for the life of the browser profile.
+ *
+ * Shared with the offline invoice series below rather than minted separately: a terminal
+ * has one identity, and two ids for the same machine would eventually disagree about which
+ * device a draft or a sale came from.
+ */
+export const getOrCreateDeviceId = async () => {
+  let deviceId = null;
+
+  await offlineDb.transaction("rw", offlineDb.appMeta, async () => {
+    const row = await offlineDb.appMeta.get(OFFLINE_DEVICE_ID_KEY);
+    deviceId = row?.value || createDeviceId();
+    if (!row?.value) {
+      await offlineDb.appMeta.put({ key: OFFLINE_DEVICE_ID_KEY, value: deviceId });
+    }
+  });
+
+  return deviceId;
+};
 
 /**
  * Allocate the invoice number an offline sale is printed with — and keeps.
@@ -404,3 +447,81 @@ export const deleteOfflineSale = async (clientSaleId) => {
   emitOfflineSalesChanged();
 };
 
+
+// ---------------------------------------------------------------------------- Form drafts
+//
+// A draft is one screen's in-progress state, keyed so that two different things a user
+// could be editing never collide:
+//
+//   `${kind}:${userId}:${entityId ?? 'new'}`
+//
+// entityId matters because /promotions/:id/edit and the purchase rebuild flow each edit a
+// specific record — without it, opening promotion 7 would be offered promotion 5's draft.
+// A "new" form and an "edit 12" form of the same kind are different drafts.
+//
+// branchId is deliberately NOT part of the key. The purchase form is multi-branch: it holds
+// one quantity block per branch, so no single branch owns the draft. Branch selection lives
+// inside the payload like any other typed value.
+
+/** How long an untouched draft survives before the sweep collects it. */
+const DRAFT_TTL_DAYS = 7;
+
+export const buildDraftId = (kind, userId, entityId = null) =>
+  `${kind}:${userId}:${entityId ?? "new"}`;
+
+/**
+ * Write (or overwrite) a draft.
+ *
+ * Callers pass the payload and identity; the timestamp is stamped here so every writer
+ * agrees on what "newest" means. syncState starts at "local" and stays there until the
+ * server mirror exists to move it on.
+ */
+export const saveFormDraft = async ({
+  draftId,
+  kind,
+  entityId = null,
+  userId,
+  deviceId,
+  deviceLabel,
+  schemaVersion,
+  payload,
+}) => {
+  await offlineDb.formDrafts.put({
+    draftId,
+    kind,
+    entityId,
+    userId,
+    deviceId,
+    deviceLabel,
+    schemaVersion,
+    payload,
+    updatedAt: new Date().toISOString(),
+    syncState: "local",
+  });
+};
+
+export const getFormDraft = async (draftId) => offlineDb.formDrafts.get(draftId);
+
+export const deleteFormDraft = async (draftId) => {
+  await offlineDb.formDrafts.delete(draftId);
+};
+
+/** Every draft belonging to one user, newest first. */
+export const listFormDraftsForUser = async (userId) => {
+  if (userId === null || userId === undefined) return [];
+  const rows = await offlineDb.formDrafts.where("userId").equals(userId).toArray();
+  return rows.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+};
+
+/**
+ * Drop drafts nobody came back for.
+ *
+ * Shop PCs run for months and a draft is dead weight once its author has moved on, but the
+ * sweep is by age alone — never by "this user logged out". Logging out must not destroy
+ * work, because signing back in is the normal way a shift ends and resumes, and the 24h
+ * login token expiring mid-form is one of the very cases drafts exist to survive.
+ */
+export const purgeExpiredFormDrafts = async (ttlDays = DRAFT_TTL_DAYS) => {
+  const cutoff = new Date(Date.now() - ttlDays * 24 * 60 * 60 * 1000).toISOString();
+  await offlineDb.formDrafts.where("updatedAt").below(cutoff).delete();
+};
