@@ -272,13 +272,22 @@ const PurchaseFormPage = () => {
               freeQty: Number(line.freeQty || 0),
               qtyUnit: measured ? line.qtyUnit : undefined,
               weightItem: measured,
-              costPrice: Number(line.costPrice || 0),
+              // The GROSS cost, not line.costPrice. costPrice is the effective cost, already
+              // net of this line's share of the bill discount, and the form sends
+              // discountAmount again on save. Pre-filling the net figure applied the
+              // discount a second time and quietly moved a 104,446.95 bill to 100,095.12.
+              costPrice: Number(line.grossCostPrice ?? line.costPrice ?? 0),
               sellingPrice: Number(line.sellingPrice || 0),
               // Only carried where the original line mapped to exactly one stock batch;
               // the server leaves it out rather than guess. Re-check before saving.
               expiryDate: line.expiryDate || null,
               zeroNegativeStock: false,
-              lineTotal: Number(line.lineTotal || 0),
+              lineTotal: calculateMeasuredLineTotal(
+                Number(line.qty || 0),
+                line.qtyUnit,
+                Number(line.grossCostPrice ?? line.costPrice ?? 0),
+                measured
+              ),
             });
           });
         });
