@@ -1,15 +1,11 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import toast from 'react-hot-toast';
-import ReceiptTemplate from '../receipt/ReceiptTemplate';
-import { normalizeReceiptSettings, PRINT_TEMPLATE_TYPES, parseTemplateLines } from '../../utils/receiptSettings';
+import { normalizeReceiptSettings } from '../../utils/receiptSettings';
 import { buildPosReceiptHtml } from '../../utils/buildPosReceiptHtml';
 import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
-import { useLanguage } from '../../context/LanguageContext';
 import { printHtmlInFrame } from '../../utils/printFrame';
 
 const ReceiptPrinter = forwardRef((props, ref) => {
-  const { language } = useLanguage();
   const printFrameRef = useRef(null);
 
   const printInBrowser = (html) => printHtmlInFrame(printFrameRef.current, html);
@@ -25,74 +21,20 @@ const ReceiptPrinter = forwardRef((props, ref) => {
         cashierName: orderData?.cashierName || shiftData?.cashierName || 'Cashier',
       };
 
-      const itemList = Array.isArray(cartItems) ? cartItems : [];
-
-      // ── Template-line based printing ──────────────────────────────────────
-      // If the branch has configured a line-by-line template, use the HTML
-      // string renderer (buildPosReceiptHtml) which respects the template design.
-      const configuredLines = parseTemplateLines(settings.templateLines);
-      if (configuredLines.length > 0) {
-        const receiptHtml = buildPosReceiptHtml({
-          settings,
-          branchData,
-          storeName,
-          orderData,
-          items: itemList,
-          customerData,
-          options: { includeCopies: true },
-        });
-
-        if (settings.directPrintEnabled && settings.printerName) {
-          try {
-            await printerAgentAPI.printReceipt({
-              printerName: settings.printerName,
-              html: receiptHtml,
-              paperWidth: getPrintPaperWidth(settings),
-              copies: settings.printerCopies,
-            });
-            return;
-          } catch (error) {
-            toast.error(`${error.message || 'Direct print failed'}. Opening browser print.`);
-          }
-        }
-        printInBrowser(receiptHtml);
-        return;
-      }
-
-      // ── Legacy React-component based printing (fallback) ──────────────────
-      // Thermal roll paper is continuous — one receipt, height driven by content.
-      const pagesHtml = renderToStaticMarkup(
-        <ReceiptTemplate
-          templateType={PRINT_TEMPLATE_TYPES.THERMAL}
-          settings={settings}
-          branchData={branchData}
-          storeName={storeName}
-          orderData={orderData}
-          items={itemList}
-          customerData={customerData}
-          pageNumber={1}
-          totalPages={1}
-          showTotals
-          showCredits
-          showContinued={false}
-          mode="print"
-          language={language}
-        />
-      );
-
-      const receiptHtml = `
-        <!DOCTYPE html>
-        <html lang="${language === 'si' ? 'si' : 'en'}">
-        <head>
-          <style>
-            @page { size: ${settings.paperWidthMm}mm auto; margin: 0; }
-            html, body { margin: 0; padding: 0; background-color: #ffffff; }
-            body { margin: 0; padding: 0; background-color: #ffffff; }
-          </style>
-        </head>
-        <body>${pagesHtml}</body>
-        </html>
-      `;
+      // One renderer, the same one the Receipt Design preview draws with. A branch that has
+      // never saved a layout gets the default lines from getActiveTemplateLines — the same
+      // default the preview shows it — so the slip on the printer is the slip on screen.
+      // There used to be a second, older renderer for the unsaved case, and it printed a
+      // different table: that is how the preview and the print came to disagree.
+      const receiptHtml = buildPosReceiptHtml({
+        settings,
+        branchData,
+        storeName,
+        orderData,
+        items: Array.isArray(cartItems) ? cartItems : [],
+        customerData,
+        options: { includeCopies: true },
+      });
 
       if (settings.directPrintEnabled && settings.printerName) {
         try {
@@ -107,7 +49,6 @@ const ReceiptPrinter = forwardRef((props, ref) => {
           toast.error(`${error.message || 'Direct print failed'}. Opening browser print.`);
         }
       }
-
       printInBrowser(receiptHtml);
     },
   }));

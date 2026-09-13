@@ -129,6 +129,71 @@ export const RECEIPT_LINE_CUSTOM_TEXT_TYPES = [
   'THANKS_MESSAGE', 'CUSTOM_TEXT',
 ];
 
+/**
+ * How the ITEM_TABLE line draws each sale line. Stored as JSON in the line's customText, so a
+ * layout saved before an option existed reads as the default for it.
+ *
+ * <p>Column headings are free text rather than a language switch: a shop that prints in
+ * Sinhala types the Sinhala words once and every till prints them the same way.
+ */
+export const ITEM_TABLE_LAYOUTS = [
+  { value: 'COLUMNS', label: 'Name row, then Normal Price | Our Price | Qty | Total columns' },
+  { value: 'STACKED', label: 'Name row, then price × qty and amount' },
+];
+
+export const ITEM_TABLE_CONFIG_DEFAULTS = {
+  // COLUMNS, the default: the name, then four figures under a heading row — normal price,
+  // our price, quantity, total — the way the supermarket slips print, with the normal price
+  // struck through where it was cut. STACKED: the name, then "price × qty" and the amount.
+  layout: 'COLUMNS',
+  showHeader: true,
+  labelItem: 'ITEM',
+  labelQty: 'QTY',
+  labelAmount: 'AMOUNT',
+  showUnitPrice: true,
+  // Words in front of the unit price: the shelf price on a plain line, and the price
+  // actually charged on a discounted one ("Our Price"). Blank means no label.
+  labelPrice: 'Normal Price',
+  labelOurPrice: 'Our Price',
+  showQty: true,
+  showStrike: true,
+  showQtyUnit: false,
+  showDiscountLine: false,
+  labelDiscount: 'Discount',
+  // Heading over the total column in the COLUMNS layout; labelAmount is the STACKED one.
+  labelTotal: 'Total',
+};
+
+export const parseItemTableConfig = (customText) => {
+  let raw = {};
+  try { raw = customText ? JSON.parse(customText) : {}; } catch { raw = {}; }
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) raw = {};
+  const flag = (key) => (raw[key] === undefined ? ITEM_TABLE_CONFIG_DEFAULTS[key] : !!raw[key]);
+  const text = (key) => (typeof raw[key] === 'string' && raw[key].trim()
+    ? raw[key].trim().slice(0, 30)
+    : ITEM_TABLE_CONFIG_DEFAULTS[key]);
+  // A label the shop may clear: absent reads as the default, blank stays blank.
+  const optText = (key) => (typeof raw[key] === 'string'
+    ? raw[key].trim().slice(0, 30)
+    : ITEM_TABLE_CONFIG_DEFAULTS[key]);
+  return {
+    layout: ITEM_TABLE_LAYOUTS.some((o) => o.value === raw.layout) ? raw.layout : ITEM_TABLE_CONFIG_DEFAULTS.layout,
+    showHeader: flag('showHeader'),
+    labelItem: text('labelItem'),
+    labelQty: text('labelQty'),
+    labelAmount: text('labelAmount'),
+    showUnitPrice: flag('showUnitPrice'),
+    labelPrice: optText('labelPrice'),
+    labelOurPrice: optText('labelOurPrice'),
+    showQty: flag('showQty'),
+    showStrike: flag('showStrike'),
+    showQtyUnit: flag('showQtyUnit'),
+    showDiscountLine: flag('showDiscountLine'),
+    labelDiscount: text('labelDiscount'),
+    labelTotal: text('labelTotal'),
+  };
+};
+
 const _createLineId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()

@@ -2,8 +2,18 @@
  * buildPosReceiptHtml.js
  * HTML string renderer for the POS thermal receipt, driven by template lines.
  * Mirrors the GMS buildThermalBillHtml approach.
+ *
+ * This is the one renderer for the thermal sale slip: the designer's live preview and the
+ * till's print both come through here, so what the shop sees while laying the slip out is
+ * what comes off the printer.
  */
-import { createReceiptTemplateLine, getActiveTemplateLines } from './receiptSettings';
+import {
+  createReceiptTemplateLine,
+  getActiveTemplateLines,
+  parseItemTableConfig,
+} from './receiptSettings';
+import { formatQuantityWithUnit } from './formatters';
+import { STOCK_BASE_UNITS_PER_UNIT } from './stockQuantity';
 
 /** Lines that belong above the stamp: the shop's own letterhead. */
 const HEADER_LINE_TYPES = ['LOGO', 'STORE_NAME', 'BRANCH_NAME', 'ADDRESS', 'PHONE', 'SEPARATOR', 'BLANK'];
@@ -18,18 +28,82 @@ const esc = (v) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
+// Sinhala faces sit after the chosen font so Latin text keeps that font and only the glyphs
+// it lacks fall through — an alt name in Sinhala must not print as boxes on the shop's PC.
+const SINHALA_FALLBACK = "'Iskoola Pota', 'Noto Sans Sinhala', 'Nirmala UI'";
+
 const getFontFamily = (key) => {
   switch (key) {
     case 'ARIAL':
-      return 'Arial, Helvetica, sans-serif';
+      return `Arial, Helvetica, ${SINHALA_FALLBACK}, sans-serif`;
     case 'VERDANA':
-      return 'Verdana, Geneva, sans-serif';
+      return `Verdana, Geneva, ${SINHALA_FALLBACK}, sans-serif`;
     case 'TAHOMA':
-      return 'Tahoma, Geneva, sans-serif';
+      return `Tahoma, Geneva, ${SINHALA_FALLBACK}, sans-serif`;
     case 'COURIER_NEW':
     default:
-      return "'Courier New', Courier, monospace";
+      return `'Courier New', Courier, ${SINHALA_FALLBACK}, monospace`;
   }
+};
+
+// ── Per-line arithmetic ──────────────────────────────────────────────────────
+// Shared by the item table and the DISCOUNT total so the two never disagree about what a
+// line's discount was.
+
+/**
+ * The line before any discount. A weight item is priced per kilo but sold in grams, so its
+ * base is qty × the per-gram price, not qty × the shelf price — that product is a thousand
+ * times too large and would read as a discount on every gram sold.
+ */
+const lineBaseTotal = (item) => {
+  const qty = Number(item?.qty || 0);
+  const unitPrice = Number(item?.unitPrice || 0);
+  const unit = String(item?.qtyUnit || '').toUpperCase();
+  if (unit === 'G' || unit === 'ML') {
+    const perSmall = Number(item?.perSmallUnitPrice ?? item?.perGramPrice);
+    return qty * (Number.isFinite(perSmall) ? perSmall : unitPrice / STOCK_BASE_UNITS_PER_UNIT);
+  }
+  return qty * unitPrice;
+};
+
+/** What the line actually came to. Explicit when the caller priced it; else the base. */
+const lineFinalTotal = (item) => {
+  const explicit = Number(item?.lineTotal ?? item?.effectiveLineTotal);
+  return Number.isFinite(explicit) && explicit >= 0 ? explicit : lineBaseTotal(item);
+};
+
+const lineDiscountType = (item) => item?.effectiveDiscountType || item?.discountType || null;
+const lineDiscountValue = (item) => Number(item?.effectiveDiscountValue ?? item?.discountValue ?? 0);
+
+/**
+ * Rupees taken off this line, from whichever field the caller filled in.
+ *
+ * <p>Base minus the explicit line total comes first because it is the only figure that
+ * captures every cut at once — a line discount and a promotion on the same item. The typed
+ * discount is the fallback for callers that hand over no line total.
+ */
+const lineDiscountAmount = (item) => {
+  const baseTotal = lineBaseTotal(item);
+  let disc = 0;
+  if (Number(item?.lineDiscount || 0) > 0) {
+    disc = Number(item.lineDiscount);
+  } else if (Number(item?.discountAmount || 0) > 0) {
+    disc = Number(item.discountAmount);
+  } else if (Number.isFinite(Number(item?.lineTotal ?? item?.effectiveLineTotal)) && baseTotal > 0) {
+    disc = baseTotal - lineFinalTotal(item);
+  } else {
+    const type = lineDiscountType(item);
+    if (type === 'FIXED') disc = lineDiscountValue(item);
+    else if (type === 'PERCENT') disc = (baseTotal * lineDiscountValue(item)) / 100;
+    disc += Number(item?.promotionDiscountAmount || 0);
+  }
+  return Math.max(0, Math.round(disc * 100) / 100);
+};
+
+const fmtQty = (qty) => {
+  const n = Number(qty || 0);
+  if (!Number.isFinite(n)) return String(qty ?? '');
+  return Number.isInteger(n) ? String(n) : n.toFixed(3).replace(/\.?0+$/, '');
 };
 
 const renderLine = (line, data, items) => {
@@ -48,11 +122,17 @@ const renderLine = (line, data, items) => {
     .join(' ');
   const style = `font-size:${line.fontSize}px;`;
 
+  // A label and a figure as a two-column table, not a flex row: the label may wrap inside
+  // its own cell when the shop picks a big font or types a long Sinhala label, and the
+  // figure keeps its column and stays on one line. Nothing ever runs into its neighbour.
   const two = (label, val, extraCls) => {
     const allCls = [cls, 'two-col', extraCls].filter(Boolean).join(' ');
-    return `<div class="${allCls}" style="${style}"><span>${lbl(label)}</span><span>${val}</span></div>`;
+    return `<table class="${allCls}" style="${style}"><tr><td class="lbl">${lbl(label)}</td><td class="val">${val}</td></tr></table>`;
   };
 
+  // A pre-bill is the unpaid table bill handed over before payment. Nothing has been paid,
+  // so the money lines that describe a payment print nothing rather than "Paid 0.00".
+  const isPreBill = orderData?.documentType === 'PRE_BILL';
   const invoiceValue = orderData?.invoiceNo || orderData?.orderId || 'INV-2026-000001';
   const dateStr = orderData?.createdAt
     ? new Date(orderData.createdAt).toLocaleString()
@@ -111,26 +191,9 @@ const renderLine = (line, data, items) => {
     : (markHeading || 'ORIGINAL');
 
   // ── Total discount = bill-level + promotion-level + all per-line discounts ─
-  // We compute line discount sum from items so we capture every path
-  // (effectiveDiscountType/Value, lineDiscount, discountAmount, or baseTotal−lineTotal).
-  const lineDiscountSum = (items || []).reduce((sum, item) => {
-    const qty       = Number(item.qty || 0);
-    const unitPrice = Number(item.unitPrice || 0);
-    const baseTotal = qty * unitPrice;
-    const lineTotal = Number(item.lineTotal ?? item.effectiveLineTotal ?? baseTotal);
-    let disc = 0;
-    if (Number(item.lineDiscount || 0) > 0)          disc = Number(item.lineDiscount);
-    else if (Number(item.discountAmount || 0) > 0)   disc = Number(item.discountAmount);
-    else if (item.discountType === 'FIXED' || item.effectiveDiscountType === 'FIXED')
-      disc = Number(item.effectiveDiscountValue ?? item.discountValue ?? 0);
-    else if (item.discountType === 'PERCENT' || item.effectiveDiscountType === 'PERCENT') {
-      const pct = Number(item.effectiveDiscountValue ?? item.discountValue ?? 0);
-      disc = (baseTotal * pct) / 100;
-    } else if (baseTotal > 0 && lineTotal < baseTotal) {
-      disc = baseTotal - lineTotal;
-    }
-    return sum + Math.max(0, disc);
-  }, 0);
+  // Per-line figures come from the same helper the item table prints from, so the DISCOUNT
+  // total is always the sum of what the lines above it say.
+  const lineDiscountSum = (items || []).reduce((sum, item) => sum + lineDiscountAmount(item), 0);
 
   const billDiscount  = Number(orderData?.billDiscount ?? 0);
   const promoDiscount = Number(orderData?.promotionDiscountTotal ?? 0);
@@ -178,7 +241,8 @@ const renderLine = (line, data, items) => {
         : '';
 
     case 'INVOICE_NO':
-      return `<div class="${cls}" style="${style}">${lbl('Invoice')} - ${esc(invoiceValue)}</div>`;
+      // An unpaid bill has no invoice number yet; what it carries is the table or "CURRENT BILL".
+      return `<div class="${cls}" style="${style}">${lbl(isPreBill ? 'Order' : 'Invoice')} - ${esc(invoiceValue)}</div>`;
 
     case 'DATE_TIME':
       return `<div class="${cls}" style="${style}">${line.customText?.trim() ? `<b>${lbl('Date')}:</b> ` : ''}${esc(dateStr)}</div>`;
@@ -189,16 +253,14 @@ const renderLine = (line, data, items) => {
     case 'CUSTOMER':
       return `<div class="${cls}" style="${style}"><b>${lbl('Customer')}:</b> ${esc(customerName || 'Walk-in')}</div>`;
 
-    case 'ITEM_TABLE': {
-      let cfg;
-      try { cfg = JSON.parse(line.customText || '{}'); } catch { cfg = {}; }
-      return `<table class="items">${buildItemRows(items, settings, {
-        nameSize:    line.fontSize || 11,
-        showStrike:  cfg.showStrike !== false,
-        showQtyUnit: !!cfg.showQtyUnit,
-        currency,
+    case 'ITEM_TABLE':
+      return `<table class="items">${buildItemRows(items, settings, parseItemTableConfig(line.customText), {
+        nameSize: line.fontSize || 11,
+        lkr,
+        // In a cell the number stays whole but the currency may drop to its own line, so a
+        // big font wraps "LKR / 480.00" cleanly instead of pushing the column off the paper.
+        amt: (v) => `${esc(currency)} <span class="nowrap">${money(v)}</span>`,
       })}</table>`;
-    }
 
     case 'SUBTOTAL':
       return two('Sub Total', lkr(subTotal));
@@ -210,15 +272,13 @@ const renderLine = (line, data, items) => {
       return two('Net Total', lkr(grandTotal), 'grand');
 
     case 'PAID':
-      return two('Paid', lkr(paidAmount));
+      return isPreBill ? '' : two('Paid', lkr(paidAmount));
 
     case 'BALANCE':
-      return balanceShow > 0 ? two('Balance', lkr(balanceShow)) : '';
+      return !isPreBill && balanceShow > 0 ? two('Balance', lkr(balanceShow)) : '';
 
     case 'CREDIT_DUE':
-      return dueAmount > 0
-        ? `<div class="${cls} two-col credit-due" style="${style}"><span>${lbl('Credit Due')}</span><span>${lkr(dueAmount)}</span></div>`
-        : '';
+      return dueAmount > 0 ? two(isPreBill ? 'Amount Due' : 'Credit Due', lkr(dueAmount), 'credit-due') : '';
 
     case 'LOYALTY_REDEEMED':
       return pointsRedeemed > 0 ? two('Points Used', pts(pointsRedeemed)) : '';
@@ -335,72 +395,154 @@ const buildReturnRows = (items, { nameSize = 11, currency = 'LKR' } = {}) => {
   }).join('');
 };
 
-const buildItemRows = (items, settings, tableConfig = {}) => {
+/**
+ * The sale lines, laid out the way the ITEM_TABLE line's config asks.
+ *
+ * <p>Two layouts. COLUMNS, the default, is the supermarket slip: a heading row, the name,
+ * then normal price / our price / qty / total in four columns. STACKED is below:
+ *
+ * <p>Three columns — price, quantity, amount — under an optional heading row, with the item
+ * name on its own row above them so a long name never squeezes the figures. A discounted
+ * line shows the shelf price struck through beside the price actually charged, the way a
+ * customer expects to read "was / now"; the amount the cut is worth is a separate optional
+ * row for shops that want it spelled out.
+ *
+ * <p>When neither the unit price nor the quantity is wanted the name and amount share one
+ * row: a shop that switched both off asked for a compact slip, not for an empty second row.
+ */
+const buildItemRows = (items, settings, cfg, { nameSize = 11, lkr, amt = lkr } = {}) => {
   const src = settings?.itemNameSource;
-  const {
-    nameSize    = 11,
-    showStrike  = true,
-    showQtyUnit = false,
-    currency    = 'LKR',
-  } = tableConfig;
+  const showWarranty = settings?.showWarranty !== false;
+  const tdStyle = `font-size:${nameSize}px`;
+  const smallStyle = `font-size:${Math.max(7, nameSize - 2)}px`;
+  const compact = !cfg.showUnitPrice && !cfg.showQty;
 
-  // Both name and price rows use the same font size (controlled by line.fontSize)
-  const tdStyle    = `font-size:${nameSize}px`;
-  // Strikethrough original price: slightly smaller than the row font
-  const strikeSize = Math.max(7, nameSize - 2);
+  const resolveName = (item) => {
+    const primaryName = item.name || item.itemName || 'Item';
+    return src === 'ALT' && item.altName?.trim() ? item.altName : primaryName;
+  };
+  const warrantyHtml = (item) => (showWarranty && item.warrantyLabel
+    ? `<div class="muted item-sub" style="${smallStyle}">Warranty: ${esc(item.warrantyLabel)}` +
+      (item.warrantyPeriodValue && item.warrantyPeriodUnit
+        ? ` (${esc(item.warrantyPeriodValue)} ${esc(item.warrantyPeriodUnit)})`
+        : '') +
+      `</div>`
+    : '');
+  const qtyText = (item, qty) => (cfg.showQtyUnit && item.qtyUnit
+    ? esc(formatQuantityWithUnit(qty, item.qtyUnit))
+    : esc(fmtQty(qty)));
+  // Named after the promotion when one gave the cut, else the shop's own label; a percent
+  // discount says what percent so the figure beside it is explained.
+  const discountRowHtml = (item, discount, span) => {
+    if (!cfg.showDiscountLine || !(discount > 0.001)) return '';
+    let label = cfg.labelDiscount;
+    if (Number(item.promotionDiscountAmount || 0) > 0 && item.promotionName) {
+      label = item.promotionName;
+    } else if (lineDiscountType(item) === 'PERCENT' && lineDiscountValue(item) > 0) {
+      label = `${fmtQty(lineDiscountValue(item))}% ${cfg.labelDiscount}`;
+    }
+    return `<tr><td colspan="${span}" class="muted itl item-disc" style="${smallStyle}">${esc(label)}: -${lkr(discount)}</td></tr>`;
+  };
 
-  return (items || [])
-    .map((item) => {
-      const primaryName = item.name || item.itemName || 'Item';
-      const displayName =
-        src === 'ALT' && item.altName?.trim() ? item.altName : primaryName;
+  if (cfg.layout === 'COLUMNS') {
+    // Normal price | our price | qty | total, each figure under its heading. The first
+    // column sits on the paper's left edge, the rest hang right, so the row reads from
+    // margin to margin like the supermarket slips do. The normal price is struck only
+    // where it was cut; on a plain line both prices print the same
+    // number rather than leaving a hole in the column. Currency goes on the total alone —
+    // four figures across a 72mm roll leave no room to repeat it.
+    const span = cfg.showQty ? 4 : 3;
+    // Column widths are declared, not left to the words in the headings: without them the
+    // browser sizes the first column to fit "Normal Price" on one line and squeezes the
+    // total until "LKR 480.00" breaks in two. With them a heading wraps inside its own
+    // column and the figures keep theirs.
+    const colgroup = cfg.showQty
+      ? '<colgroup><col style="width:25%"><col style="width:25%"><col style="width:14%"><col style="width:36%"></colgroup>'
+      : '<colgroup><col style="width:29%"><col style="width:29%"><col style="width:42%"></colgroup>';
+    // A point smaller than the rows, and free to wrap.
+    const thStyle = `font-size:${Math.max(7, nameSize - 1)}px`;
+    const header = cfg.showHeader
+      ? `<tr class="items-head"><th style="${thStyle}">${esc(cfg.labelPrice)}</th>` +
+        `<th class="right" style="${thStyle}">${esc(cfg.labelOurPrice)}</th>` +
+        (cfg.showQty ? `<th class="center" style="${thStyle}">${esc(cfg.labelQty)}</th>` : '') +
+        `<th class="right" style="${thStyle}">${esc(cfg.labelTotal)}</th></tr>`
+      : '';
+    const rows = (items || []).map((item) => {
       const qty       = Number(item.qty || 0);
       const unitPrice = Number(item.unitPrice || 0);
-      const baseTotal = qty * unitPrice;
-
-      // Resolve the post-discount line total — prefer explicit field, fall back to calculation
-      const lineTotal = Number(
-        item.lineTotal ??
-        item.effectiveLineTotal ??
-        baseTotal
-      );
-
-      // Resolve the actual discount amount in rupees for this line
-      // Priority: explicit lineDiscount / discountAmount → derive from discountType+discountValue → derive from baseTotal−lineTotal
-      let lineDiscountAmt = 0;
-      if (Number(item.lineDiscount || 0) > 0) {
-        lineDiscountAmt = Number(item.lineDiscount);
-      } else if (Number(item.discountAmount || 0) > 0) {
-        lineDiscountAmt = Number(item.discountAmount);
-      } else if (item.discountType === 'FIXED' || item.effectiveDiscountType === 'FIXED') {
-        lineDiscountAmt = Number(item.effectiveDiscountValue ?? item.discountValue ?? 0);
-      } else if (item.discountType === 'PERCENT' || item.effectiveDiscountType === 'PERCENT') {
-        const pct = Number(item.effectiveDiscountValue ?? item.discountValue ?? 0);
-        lineDiscountAmt = (baseTotal * pct) / 100;
-      } else if (baseTotal > 0 && lineTotal < baseTotal) {
-        // Last resort: infer from base vs actual line total
-        lineDiscountAmt = baseTotal - lineTotal;
-      }
-
-      const hasDiscount = showStrike && lineDiscountAmt > 0.001 && unitPrice > 0 && qty > 0;
-      // Effective unit price after discount
-      const effUnit = hasDiscount ? lineTotal / qty : unitPrice;
-
-      const qtyStr = showQtyUnit && item.qtyUnit
-        ? `${esc(qty)} ${esc(item.qtyUnit)}`
-        : `${esc(qty)}`;
-
-      const strikeHtml = `<s style="color:#999;font-size:${strikeSize}px;text-decoration:line-through;margin-right:3px">${money(unitPrice)}</s>`;
-      const priceCell = hasDiscount
-        ? `${strikeHtml}${money(effUnit)} × ${qtyStr}`
-        : `${money(unitPrice)} × ${qtyStr}`;
-
+      const baseTotal = lineBaseTotal(item);
+      const lineTotal = lineFinalTotal(item);
+      const discount  = lineDiscountAmount(item);
+      const hasDiscount = discount > 0.001 && baseTotal > 0 && qty > 0;
+      const effUnit = hasDiscount ? unitPrice * (lineTotal / baseTotal) : unitPrice;
+      const marked = hasDiscount && cfg.showStrike
+        ? `<s style="${smallStyle}">${money(unitPrice)}</s>`
+        : money(unitPrice);
       return (
-        `<tr><td colspan="3" class="item-name" style="${tdStyle}">${esc(displayName)}</td></tr>` +
-        `<tr><td class="muted" style="${tdStyle}">${priceCell}</td><td></td><td class="right" style="${tdStyle}">${currency} ${money(lineTotal)}</td></tr>`
+        `<tr><td colspan="${span}" class="item-name" style="${tdStyle}">${esc(resolveName(item))}${warrantyHtml(item)}</td></tr>` +
+        `<tr><td class="muted nowrap" style="${tdStyle}">${marked}</td>` +
+        `<td class="right nowrap" style="${tdStyle}">${money(effUnit)}</td>` +
+        (cfg.showQty ? `<td class="center nowrap" style="${tdStyle}">${qtyText(item, qty)}</td>` : '') +
+        `<td class="right" style="${tdStyle}">${amt(lineTotal)}</td></tr>` +
+        discountRowHtml(item, discount, span)
+      );
+    }).join('');
+    return colgroup + header + rows;
+  }
+
+  const colgroup = '<colgroup><col style="width:50%"><col style="width:16%"><col style="width:34%"></colgroup>';
+  const header = cfg.showHeader
+    ? `<tr class="items-head"><th style="${tdStyle}">${esc(cfg.labelItem)}</th>` +
+      `<th class="center" style="${tdStyle}">${cfg.showQty ? esc(cfg.labelQty) : ''}</th>` +
+      `<th class="right" style="${tdStyle}">${esc(cfg.labelAmount)}</th></tr>`
+    : '';
+
+  const rows = (items || [])
+    .map((item) => {
+      const qty       = Number(item.qty || 0);
+      const unitPrice = Number(item.unitPrice || 0);
+      const baseTotal = lineBaseTotal(item);
+      const lineTotal = lineFinalTotal(item);
+      const discount  = lineDiscountAmount(item);
+      const hasDiscount = discount > 0.001 && baseTotal > 0 && qty > 0;
+
+      // The price per unit actually charged: the shelf price scaled by the cut. Scaling keeps
+      // the unit — a per-kilo price stays per kilo even when the line was sold in grams.
+      const effUnit = hasDiscount ? unitPrice * (lineTotal / baseTotal) : unitPrice;
+
+      // "Price: 480.00" on a plain line; on a discounted one the shelf price struck through
+      // and the charged price named as the shop's own — "480.00 Our Price: 450.00" — which
+      // is how a customer reads "was / now" without a column heading to explain it.
+      // Label and figure stay on one line; if the cell must wrap it breaks after the
+      // struck price, never between "Our Price:" and the number it names.
+      const withLabel = (label, value) =>
+        `<span class="nowrap">${label ? `${esc(label)}: ` : ''}${value}</span>`;
+      const priceCell = !cfg.showUnitPrice
+        ? ''
+        : hasDiscount && cfg.showStrike
+          ? `<s style="${smallStyle}">${money(unitPrice)}</s> ${withLabel(cfg.labelOurPrice, money(effUnit))}`
+          : withLabel(cfg.labelPrice, money(unitPrice));
+
+      const nameHtml = `${esc(resolveName(item))}${warrantyHtml(item)}`;
+      const discountRow = discountRowHtml(item, discount, 3);
+      if (compact) {
+        return (
+          `<tr><td colspan="2" class="item-name" style="${tdStyle}">${nameHtml}</td>` +
+          `<td class="right item-amt" style="${tdStyle}">${amt(lineTotal)}</td></tr>` +
+          discountRow
+        );
+      }
+      return (
+        `<tr><td colspan="3" class="item-name" style="${tdStyle}">${nameHtml}</td></tr>` +
+        `<tr><td class="muted" style="${tdStyle}">${priceCell}</td>` +
+        `<td class="center nowrap" style="${tdStyle}">${cfg.showQty ? qtyText(item, qty) : ''}</td>` +
+        `<td class="right" style="${tdStyle}">${amt(lineTotal)}</td></tr>` +
+        discountRow
       );
     })
     .join('');
+
+  return colgroup + header + rows;
 };
 
 /**
@@ -436,16 +578,30 @@ export const buildPosReceiptHtml = ({
   // Which default layout to fall back on when the shop has not customised this document.
   const savedLines = getActiveTemplateLines(settings, templateType);
 
-  // A reprint is stamped COPY under the shop's letterhead, by the renderer, on every layout.
-  // It is not a line a shop places: a copy that does not say so is the whole failure this
-  // exists to prevent, and it must not depend on anyone remembering to add it. Originals
-  // carry no stamp. A layout saved while the mark was still a line keeps working - the
-  // renderer defers to it rather than stamping twice.
-  const lines = orderData?.isReprint && !savedLines.some((l) => l.type === 'PRINT_MARK')
+  // Two documents are stamped under the shop's letterhead by the renderer, on every layout,
+  // because neither may depend on anyone remembering to add a line:
+  //   - a reprint is stamped COPY. Nothing else distinguishes it from the slip it copies.
+  //     Originals carry no stamp. A layout saved while the mark was still a line keeps
+  //     working - the renderer defers to it rather than stamping twice.
+  //   - an unpaid table bill is stamped as one. It looks like a receipt and is not, and a
+  //     customer holding it must not be able to mistake it for proof of payment.
+  let stamp = null;
+  if (orderData?.isReprint && !savedLines.some((l) => l.type === 'PRINT_MARK')) {
+    stamp = createReceiptTemplateLine('PRINT_MARK');
+  } else if (orderData?.documentType === 'PRE_BILL') {
+    stamp = {
+      ...createReceiptTemplateLine('CUSTOM_TEXT'),
+      align: 'center',
+      bold: true,
+      fontSize: 12,
+      customText: `${String(orderData.subTitle || 'Unpaid Bill').toUpperCase()} - NOT A RECEIPT`,
+    };
+  }
+  const lines = stamp
     ? (() => {
         let at = 0;
         while (at < savedLines.length && HEADER_LINE_TYPES.includes(savedLines[at].type)) at += 1;
-        return [...savedLines.slice(0, at), createReceiptTemplateLine('PRINT_MARK'), ...savedLines.slice(at)];
+        return [...savedLines.slice(0, at), stamp, ...savedLines.slice(at)];
       })()
     : savedLines;
   const dataObj = { settings, branchData, storeName, orderData, customerData };
@@ -472,16 +628,28 @@ export const buildPosReceiptHtml = ({
     `.al-center{text-align:center}.al-right{text-align:right}.al-left{text-align:left}.al-split{text-align:left}` +
     `.muted{color:#444}.ucase{text-transform:uppercase}.bld{font-weight:800}.itl{font-style:italic}.uln{text-decoration:underline}` +
     `.logo{display:block;margin-bottom:3mm;max-width:100%;height:auto}` +
-    `.two-col{display:flex;justify-content:space-between;gap:8px}` +
+    `table.two-col{width:100%;border-collapse:collapse;table-layout:auto}` +
+    `table.two-col td{padding:0;vertical-align:top}` +
+    `table.two-col .lbl{text-align:left;padding-right:8px;word-break:break-word}` +
+    `table.two-col .val{text-align:right;white-space:nowrap;width:1%}` +
     `.grand{border-top:1px dashed #111;padding-top:5px}` +
     `.credit-due{padding-top:6px}` +
     `.sep{border-top:1px dashed #111;margin:8px 0}` +
     `.sep-solid{border-top-style:solid}` +
     `.blank{height:8px}` +
-    `table.items{width:100%;border-collapse:collapse}` +
+    `table.items{width:100%;max-width:100%;border-collapse:collapse}` +
     `table.items td{padding:2px 0;vertical-align:top}` +
-    `.item-name{font-weight:700;padding-top:5px}` +
-    `.right{text-align:right}` +
+    `table.items th{padding:2px 0 3px;text-align:left;font-weight:700;border-bottom:1px dashed #111;vertical-align:bottom}` +
+    // Heading and figure share an edge. Written at the th's own specificity, or the
+    // left-align above wins and every heading sits a column's width from its number.
+    `table.items td.center,table.items th.center{text-align:center;padding-left:6px;padding-right:6px}` +
+    `table.items td.right,table.items th.right{text-align:right;padding-left:6px}` +
+    `table.items s{color:#888;margin-right:4px}` +
+    `.item-name{font-weight:700;padding-top:5px;word-break:break-word}` +
+    `.item-amt{padding-top:5px}` +
+    `.item-sub{font-weight:400}` +
+    `.item-disc{padding-left:8px}` +
+    `.right{text-align:right}.center{text-align:center}.nowrap{white-space:nowrap}` +
     `.credits{margin-top:4px;text-align:center;font-size:9px;color:#666;line-height:1.5}` +
     `</style></head><body>${bills}</body></html>`
   );

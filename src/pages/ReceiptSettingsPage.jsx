@@ -27,6 +27,8 @@ import {
   RECEIPT_LINE_CUSTOM_TEXT_TYPES,
   createReceiptTemplateLine,
   getActiveTemplateLines,
+  parseItemTableConfig,
+  ITEM_TABLE_LAYOUTS,
 } from '../utils/receiptSettings';
 import {
   DEFAULT_BARCODE_LABEL_SETTINGS,
@@ -52,6 +54,40 @@ const supportsLines = (templateType) =>
 
 // Line types where ALL formatting controls (font-size, align, B/I/U) are irrelevant
 const NO_FORMAT_LINE_TYPES = ['SEPARATOR', 'BLANK'];
+
+const RECEIPT_LINE_FONT_SIZE_OPTIONS = RECEIPT_LINE_FONT_SIZES.map((sz) => ({ value: sz, label: `${sz}px` }));
+const PAPER_WIDTH_OPTIONS = [58, 72, 76, 80, 104].map((mm) => ({ value: mm, label: `${mm} mm` }));
+
+// What the ITEM_TABLE line can show on each sale line. One shop wants a column heading
+// and the unit price under every name, the next wants name and amount only — so each is
+// a switch, and the preview redraws as they flip.
+const ITEM_TABLE_TOGGLES = [
+  { key: 'showHeader',       label: 'Column headings row' },
+  { key: 'showUnitPrice',    label: 'Unit price under the item name' },
+  { key: 'showQty',          label: 'Quantity column' },
+  { key: 'showQtyUnit',      label: 'Unit label (e.g. PKT, BTL, KG) after qty' },
+  { key: 'showStrike',       label: 'Strike the original price and show the discounted price' },
+  { key: 'showDiscountLine', label: 'Discount amount line under a discounted item' },
+];
+const ITEM_TABLE_PRICE_LABELS = [
+  { key: 'labelPrice',    label: 'Normal price label (e.g. Normal Price / සඳහන් මිල)' },
+  { key: 'labelOurPrice', label: 'Discounted price label (e.g. Our Price / අපේ මිල)' },
+];
+// Heading labels differ by layout: STACKED heads the three columns it draws, COLUMNS heads
+// its four. The price labels are shared with the inline "Price:" / "Our Price:" words.
+const ITEM_TABLE_HEADER_LABELS = {
+  STACKED: [
+    { key: 'labelItem',   label: 'Item column' },
+    { key: 'labelQty',    label: 'Qty column' },
+    { key: 'labelAmount', label: 'Amount column' },
+  ],
+  COLUMNS: [
+    { key: 'labelPrice',    label: 'Normal price column' },
+    { key: 'labelOurPrice', label: 'Our price column' },
+    { key: 'labelQty',      label: 'Qty column' },
+    { key: 'labelTotal',    label: 'Total column' },
+  ],
+};
 
 // Alignment options for the LOGO line (no "Amount Right" split option)
 const LOGO_ALIGN_OPTIONS = [
@@ -881,11 +917,9 @@ const ReceiptSettingsPage = () => {
                         const isItemTable  = line.type === 'ITEM_TABLE';
                         const isNoFormat   = NO_FORMAT_LINE_TYPES.includes(line.type);
 
-                        // Parse ITEM_TABLE config stored in customText as JSON
-                        let itemTableCfg = {};
-                        if (isItemTable) {
-                          try { itemTableCfg = JSON.parse(line.customText || '{}'); } catch { itemTableCfg = {}; }
-                        }
+                        // ITEM_TABLE config lives in customText as JSON; parsed with defaults so
+                        // a layout saved before an option existed still shows a definite state.
+                        const itemTableCfg = isItemTable ? parseItemTableConfig(line.customText) : null;
                         const updateItemTableCfg = (key, val) => {
                           const next = { ...itemTableCfg, [key]: val };
                           updateTemplateLine(index, 'customText', JSON.stringify(next));
@@ -899,40 +933,34 @@ const ReceiptSettingsPage = () => {
                             {/* Row 1: type selector + move + remove */}
                             <div className="flex flex-wrap items-center gap-2">
                               {/* Field type */}
-                              <select
+                              <CustomSelect
                                 value={line.type}
-                                onChange={(e) => updateTemplateLine(index, 'type', e.target.value)}
-                                className="h-9 flex-1 min-w-[140px] rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
-                              >
-                                {lineTypeOptionsFor(activeTemplate).map((opt) => (
-                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                              </select>
+                                onChange={(v) => updateTemplateLine(index, 'type', v)}
+                                options={lineTypeOptionsFor(activeTemplate)}
+                                className="flex-1 min-w-[140px]"
+                                buttonClassName="h-9 py-0"
+                              />
 
                               {/* Font size — hidden for LOGO, SEPARATOR, BLANK, ITEM_TABLE */}
                               {!isNoFormat && !isLogoLine ? (
-                                <select
+                                <CustomSelect
                                   value={line.fontSize}
-                                  onChange={(e) => updateTemplateLine(index, 'fontSize', Number(e.target.value))}
-                                  className="h-9 w-16 rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none"
-                                >
-                                  {RECEIPT_LINE_FONT_SIZES.map((sz) => (
-                                    <option key={sz} value={sz}>{sz}px</option>
-                                  ))}
-                                </select>
+                                  onChange={(v) => updateTemplateLine(index, 'fontSize', Number(v))}
+                                  options={RECEIPT_LINE_FONT_SIZE_OPTIONS}
+                                  className="w-[76px]"
+                                  buttonClassName="h-9 py-0 px-2"
+                                />
                               ) : null}
 
                               {/* Alignment — hidden for no-format types, ITEM_TABLE; LOGO uses L/C/R only */}
                               {!isNoFormat && !isItemTable ? (
-                                <select
+                                <CustomSelect
                                   value={isLogoLine && line.align === 'split' ? 'center' : line.align}
-                                  onChange={(e) => updateTemplateLine(index, 'align', e.target.value)}
-                                  className="h-9 w-[118px] rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none"
-                                >
-                                  {(isLogoLine ? LOGO_ALIGN_OPTIONS : RECEIPT_LINE_ALIGNMENT_OPTIONS).map((opt) => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                  ))}
-                                </select>
+                                  onChange={(v) => updateTemplateLine(index, 'align', v)}
+                                  options={isLogoLine ? LOGO_ALIGN_OPTIONS : RECEIPT_LINE_ALIGNMENT_OPTIONS}
+                                  className="w-[130px]"
+                                  buttonClassName="h-9 py-0 px-2"
+                                />
                               ) : null}
 
                               {/* Bold / Italic / Underline — text lines only, not for ITEM_TABLE */}
@@ -1093,30 +1121,80 @@ const ReceiptSettingsPage = () => {
                               </div>
                             ) : null}
 
-                            {/* Row 2d: ITEM_TABLE controls — strikethrough, qty unit */}
+                            {/* Row 2d: ITEM_TABLE controls — what each sale line shows */}
                             {isItemTable ? (
                               <div className="mt-2 space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                                {/* Strikethrough toggle */}
-                                <label className="flex cursor-pointer items-center justify-between gap-3">
-                                  <span className="text-xs text-slate-600">Show original price with strikethrough when discounted</span>
-                                  <input
-                                    type="checkbox"
-                                    checked={itemTableCfg.showStrike !== false}
-                                    onChange={(e) => updateItemTableCfg('showStrike', e.target.checked)}
-                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                <label className="block">
+                                  <span className="mb-1 block text-[11px] font-medium text-slate-500">Row layout</span>
+                                  <CustomSelect
+                                    value={itemTableCfg.layout}
+                                    onChange={(v) => updateItemTableCfg('layout', v)}
+                                    options={ITEM_TABLE_LAYOUTS}
+                                    buttonClassName="h-8 py-0"
                                   />
                                 </label>
 
-                                {/* Qty unit toggle */}
-                                <label className="flex cursor-pointer items-center justify-between gap-3">
-                                  <span className="text-xs text-slate-600">Show unit label (e.g. PKT, BTL, KG) after qty</span>
-                                  <input
-                                    type="checkbox"
-                                    checked={!!itemTableCfg.showQtyUnit}
-                                    onChange={(e) => updateItemTableCfg('showQtyUnit', e.target.checked)}
-                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                  />
-                                </label>
+                                {ITEM_TABLE_TOGGLES.filter((toggle) => !(itemTableCfg.layout === 'COLUMNS' && toggle.key === 'showUnitPrice')).map((toggle) => (
+                                  <label key={toggle.key} className="flex cursor-pointer items-center justify-between gap-3">
+                                    <span className="text-xs text-slate-600">{toggle.label}</span>
+                                    <input
+                                      type="checkbox"
+                                      checked={itemTableCfg[toggle.key]}
+                                      onChange={(e) => updateItemTableCfg(toggle.key, e.target.checked)}
+                                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                  </label>
+                                ))}
+
+                                {/* Column headings — free text so a shop can print them in Sinhala */}
+                                {itemTableCfg.showHeader ? (
+                                  <div className="grid grid-cols-2 gap-2 border-t border-slate-200 pt-3">
+                                    {ITEM_TABLE_HEADER_LABELS[itemTableCfg.layout].map((field) => (
+                                      <label key={field.key} className="block">
+                                        <span className="mb-1 block text-[11px] font-medium text-slate-500">{field.label}</span>
+                                        <input
+                                          type="text"
+                                          maxLength={30}
+                                          value={itemTableCfg[field.key]}
+                                          onChange={(e) => updateItemTableCfg(field.key, e.target.value)}
+                                          className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                                        />
+                                      </label>
+                                    ))}
+                                  </div>
+                                ) : null}
+
+                                {/* Words before the unit price — "Price" on a plain line, "Our Price" beside a struck one */}
+                                {itemTableCfg.layout === 'STACKED' && itemTableCfg.showUnitPrice ? (
+                                  <div className="grid grid-cols-2 gap-2 border-t border-slate-200 pt-3">
+                                    {ITEM_TABLE_PRICE_LABELS.map((field) => (
+                                      <label key={field.key} className="block">
+                                        <span className="mb-1 block text-[11px] font-medium text-slate-500">{field.label}</span>
+                                        <input
+                                          type="text"
+                                          maxLength={30}
+                                          placeholder="(none)"
+                                          value={itemTableCfg[field.key]}
+                                          onChange={(e) => updateItemTableCfg(field.key, e.target.value)}
+                                          className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                                        />
+                                      </label>
+                                    ))}
+                                  </div>
+                                ) : null}
+
+                                {itemTableCfg.showDiscountLine ? (
+                                  <label className="block border-t border-slate-200 pt-3">
+                                    <span className="mb-1 block text-[11px] font-medium text-slate-500">Discount line label</span>
+                                    <input
+                                      type="text"
+                                      maxLength={30}
+                                      value={itemTableCfg.labelDiscount}
+                                      onChange={(e) => updateItemTableCfg('labelDiscount', e.target.value)}
+                                      className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                                    />
+                                  </label>
+                                ) : null}
                               </div>
                             ) : null}
                           </div>
@@ -1126,15 +1204,13 @@ const ReceiptSettingsPage = () => {
 
                     {/* Add line button */}
                     <div className="flex items-center gap-3">
-                      <select
+                      <CustomSelect
                         value={addLineType}
-                        onChange={(e) => setAddLineType(e.target.value)}
-                        className="h-9 flex-1 rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none"
-                      >
-                        {lineTypeOptionsFor(activeTemplate).map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
+                        onChange={setAddLineType}
+                        options={lineTypeOptionsFor(activeTemplate)}
+                        className="flex-1"
+                        buttonClassName="h-9 py-0"
+                      />
                       <button
                         type="button"
                         onClick={() => addTemplateLine(addLineType)}
@@ -1210,17 +1286,12 @@ const ReceiptSettingsPage = () => {
                     ) : (
                       <div>
                         <label className="text-sm font-medium text-slate-700">Paper Width</label>
-                        <select
+                        <CustomSelect
                           value={form.paperWidthMm}
-                          onChange={(event) => updateField('paperWidthMm', Number(event.target.value))}
-                          className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                        >
-                          <option value={58}>58 mm</option>
-                          <option value={72}>72 mm</option>
-                          <option value={76}>76 mm</option>
-                          <option value={80}>80 mm</option>
-                          <option value={104}>104 mm</option>
-                        </select>
+                          onChange={(v) => updateField('paperWidthMm', Number(v))}
+                          options={PAPER_WIDTH_OPTIONS}
+                          className="mt-1 w-full"
+                        />
                         <p className="mt-2 text-xs text-slate-500">
                           Match this to the actual paper roll width in your printer.
                         </p>
