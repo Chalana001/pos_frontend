@@ -64,7 +64,7 @@ import BasicOverviewView from "../components/reports/BasicOverviewView";
 const PAGE_SIZE = 10;
 const defaultFilters = { sortDirection: "DESC", salesSortBy: "DATE", productSortBy: "REVENUE", customerSortBy: "TOTAL_SPENT", supplierSortBy: "TOTAL_PURCHASED", itemType: "ALL", orderType: "ALL" };
 const BASIC_CHART_SIZE = 8;
-// Colours come from src/utils/chartTheme.js — do not add raw hex values here.
+// Colours come from src/utils/chartTheme.js. Do not add raw hex values here.
 // seriesColor() clamps instead of cycling: a 9th category must be folded into
 // "Other" rather than handed a repeated hue.
 
@@ -239,8 +239,8 @@ const Reports = ({ mode = "basic" }) => {
     const visibleIds = tabsByMode[mode] || tabsByMode.basic;
     return allTabs.filter((tab) => visibleIds.includes(tab.id));
   }, [mode]);
-  // visibleTabs is never empty — tabsByMode falls back to `basic` for an unknown
-  // mode — so this default is belt-and-braces only.
+  // visibleTabs is never empty, tabsByMode falls back to `basic` for an unknown
+  // mode, so this default is belt-and-braces only.
   const defaultTab = visibleTabs[0]?.id || "overview";
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [loading, setLoading] = useState(false);
@@ -497,7 +497,7 @@ const Reports = ({ mode = "basic" }) => {
   };
 
   const generateReport = async (type) => {
-    // Refreshing the tab you are already on — a date change, a filter — keeps the
+    // Refreshing the tab you are already on, a date change, a filter, keeps the
     // previous payload on screen while the new one loads. Clearing it here is what
     // made the content area flash to a spinner, which unmounted the report and took
     // its pagination and scroll position with it.
@@ -508,7 +508,7 @@ const Reports = ({ mode = "basic" }) => {
     //
     // A BRANCH change clears too, and that is not the same call as a date change.
     // The heading and the branch selector update immediately, so holding the old
-    // payload puts branch 1's figures under a branch 2 label — readable, and wrong.
+    // payload puts branch 1's figures under a branch 2 label, readable, and wrong.
     const isSameTabRefresh = loadedTab === type && loadedBranchId === selectedBranchId;
 
     setLoading(true);
@@ -680,7 +680,7 @@ const Reports = ({ mode = "basic" }) => {
   useEffect(() => {
     // Mark busy the moment a fetch is scheduled, not 250ms later when it starts.
     // The reset effects clear loadedTab immediately, so without this the debounce
-    // window painted "no data, not loading" — a quarter-second flash of the
+    // window painted "no data, not loading", a quarter-second flash of the
     // "Choose a report type" empty state on every tab change. generateReport's
     // finally clears the flag, and this effect always schedules a run, so the
     // spinner cannot be left stranded.
@@ -1014,7 +1014,7 @@ const Reports = ({ mode = "basic" }) => {
   // in the same render, with no extra state.
   const loadedTabInCurrentMode = visibleTabs.some((tab) => tab.id === loadedTab);
   const hasActiveReportData = loadedTab === activeTab && loadedTabInCurrentMode;
-  // Data is loaded, but for a report that is no longer on screen — we are between
+  // Data is loaded, but for a report that is no longer on screen. We are between
   // routes. Show the spinner rather than the "choose a report type" empty state,
   // which would otherwise flash instead.
   const isSwitchingReport = loadedTab !== null && !loadedTabInCurrentMode;
@@ -1139,7 +1139,7 @@ const Reports = ({ mode = "basic" }) => {
       )}
 
       <div className="min-h-[500px]">
-        {/* A spinner only when there is genuinely nothing to show — first load of
+        {/* A spinner only when there is genuinely nothing to show, first load of
             a tab. On a refresh of the tab you are already viewing, the previous
             render is held at reduced opacity instead, so the layout does not jump
             and the report is not unmounted mid-fetch. */}
@@ -1248,7 +1248,7 @@ const Reports = ({ mode = "basic" }) => {
               </div>
 
               {/* Charts mount on an idle callback so they do not block the first
-                  paint. That leaves up to 400ms with nothing in the body — an
+                  paint. That leaves up to 400ms with nothing in the body, an
                   empty box read as a third loading state after the spinner had
                   already gone. Hold the spinner until the content is real. */}
               <div className="p-4 sm:p-5">

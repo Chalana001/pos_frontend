@@ -404,7 +404,7 @@ return (
               item.type !== "dropdown-configuration"
             ) {
               if (!hasPermission(role, item.permission)) return null;
-              // Note: modules the shop has NOT bought are deliberately still listed —
+              // Note: modules the shop has NOT bought are deliberately still listed,
               // hiding them means nobody ever discovers the feature, and this nav is the
               // only place they would. They render locked and open an explanation.
               if (item.path === "/reports" && !canUseFeature("ADVANCED_REPORTS")) return null;
@@ -1361,7 +1361,7 @@ return (
               );
             }
 
-            // ✅ normal item — locked ones render dimmed and explain themselves
+            // ✅ normal item, locked ones render dimmed and explain themselves
             if (!canOpenPath(item.path)) {
               return (
                 <button

@@ -16,7 +16,7 @@ const formatWhen = (isoString) => {
  * Offers a draft back; never applies one on its own.
  *
  * Restoring silently would surprise people and can resurrect something they deliberately
- * walked away from — the same form reopened an hour later would quietly refill itself with
+ * walked away from, the same form reopened an hour later would quietly refill itself with
  * abandoned work and the user would not know where it came from. So this is an offer with
  * both answers on it, and doing nothing leaves the form empty.
  */

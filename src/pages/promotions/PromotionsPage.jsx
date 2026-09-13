@@ -29,7 +29,7 @@ const STATUS_FILTERS = [
 ];
 
 /**
- * The campaign list. Filterable, and it says what each promotion is actually doing — the old
+ * The campaign list. Filterable, and it says what each promotion is actually doing, the old
  * list printed the stored `active` flag as a green pill, so a campaign that finished in March
  * still read as Active with its dates in a neighbouring column for the reader to compare.
  */

@@ -3,8 +3,8 @@
 // Inventory valuation: capital tied up in stock, capital by category, immediate
 // valuation risks, and the per-item detail table.
 //
-// Lifted out of the Reports render body. This one holds hook state —
-// useClientPagination — so the remount cost was not merely wasted work: every
+// Lifted out of the Reports render body. This one holds hook state,
+// useClientPagination, so the remount cost was not merely wasted work: every
 // parent render produced a new component identity, React unmounted the subtree,
 // and the current page was discarded. At module scope the identity is stable and
 // the hook keeps its state across parent renders.
@@ -13,7 +13,7 @@
 // content area on `loading` (Reports.jsx, `{loading ? <LoadingSpinner/> : …}`),
 // which unmounts this component while data is in flight, so changing a filter or
 // date preset still returns the table to page 1. Fixing that means holding the
-// previous render at reduced opacity instead of swapping in a spinner — a
+// previous render at reduced opacity instead of swapping in a spinner, a
 // separate change affecting every report view.
 
 import { BarChart3, DollarSign, Package, ShoppingCart, TrendingUp } from "lucide-react";
@@ -69,7 +69,7 @@ export default function InventoryValuationReportView({ inventorySummary, singleC
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {/* Five of these are plain valuations — only the stocked-items count can
+        {/* Five of these are plain valuations, only the stocked-items count can
             signal a problem, so it is the only tile that changes colour. */}
         <SummaryMetric title="Stock Cost Value" value={inventorySummary?.totalStockValue || 0} helper="Capital currently in stock" icon={DollarSign} accent="accent" />
         <SummaryMetric title="Priced Stock Value" value={inventorySummary?.pricedStockValue || 0} helper="Stock with a selling price" icon={ShoppingCart} accent="neutral" />
@@ -137,7 +137,7 @@ export default function InventoryValuationReportView({ inventorySummary, singleC
           <h2 className="mt-1 text-lg font-black text-slate-900">Immediate valuation risks</h2>
           <div className="mt-5 space-y-3">
             {/* These four are ordered by severity, and the surfaces carry that
-                order — this is one of the places colour genuinely means something. */}
+                order. This is one of the places colour genuinely means something. */}
             <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4">
               <span className="font-bold text-slate-800">Zero-stock items</span>
               <span className="text-xl font-black text-red-700">{zeroStockItems}</span>

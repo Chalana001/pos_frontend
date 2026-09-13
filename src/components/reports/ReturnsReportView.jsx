@@ -3,8 +3,8 @@
 // The returns report: KPI row, return trend, top returned items, and reason
 // breakdowns for both sale and purchase returns.
 //
-// Moved out of the Reports render body. It was already fully prop-driven — it
-// reads nothing from parent scope — so this is a straight lift.
+// Moved out of the Reports render body. It was already fully prop-driven. It
+// reads nothing from parent scope, so this is a straight lift.
 
 import {
   Bar,
@@ -43,7 +43,7 @@ const itemColumns = [
       </div>
     ),
   },
-  // returnCount is COUNT(DISTINCT return id) per item — the number of return
+  // returnCount is COUNT(DISTINCT return id) per item, the number of return
   // transactions that included this item, NOT units returned. Units are the
   // "Qty returned" column.
   { header: "Return txns", render: (i) => <span className="font-semibold text-slate-900">{i.returnCount}×</span> },
@@ -80,7 +80,7 @@ export default function ReturnsReportView({ data }) {
           <StatCard label="Net Revenue" value={formatCurrency(summary.netRevenue)} sub={`Gross: ${formatCurrency(summary.grossSales)}`} />
           {/* Returns raised in this period are divided by orders placed in this
               period. A return can belong to an order from an earlier period, so
-              this is an activity indicator, not a like-for-like rate — it can
+              this is an activity indicator, not a like-for-like rate. It can
               exceed 100% in a quiet month. */}
           <StatCard
             label="Return Rate"

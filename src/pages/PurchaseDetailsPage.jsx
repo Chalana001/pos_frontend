@@ -38,10 +38,10 @@ const cashSourceOptions = [
 /**
  * How to name the other bill in a supersede chain.
  *
- * Not by invoice number. A replacement keeps the SUPPLIER's invoice number — that is the
- * entire point of the feature, the number is printed on their paper — so both halves of
+ * Not by invoice number. A replacement keeps the SUPPLIER's invoice number. That is the
+ * entire point of the feature, the number is printed on their paper, so both halves of
  * every chain share it, and labelling the link with it produced the nonsense
- * "ZZ-UI-412241 — Replaces ZZ-UI-412241". The system id is the only thing that tells the
+ * "ZZ-UI-412241, Replaces ZZ-UI-412241". The system id is the only thing that tells the
  * two apart, and the page already calls it that ("System ID: #67").
  *
  * The number is still worth showing in the one case where it genuinely differs: an operator
@@ -208,14 +208,14 @@ const PurchaseDetailsPage = () => {
   const canPaySupplier = user?.role !== 'CASHIER' && !isCanceled && purchaseDue > 0;
 
   // Cancel & rebuild. The server decides whether it is possible and says why not, because
-  // every reason is server-side state — has any of this stock moved, is the drawer shift
+  // every reason is server-side state, has any of this stock moved, is the drawer shift
   // still open, have supplier payments been allocated. Guessing here is how an operator
   // ends up re-typing forty lines only to be told the original cannot be voided.
   const amendModuleOn = hasModule("PURCHASES_AMEND") !== false;
   const showRebuild =
     !isCanceled && amendModuleOn && hasPermission(user?.role, "AMEND_PURCHASE");
 
-  // Both paths out of here — a plain cancel and a rebuild — void this bill, and the server
+  // Both paths out of here, a plain cancel and a rebuild, void this bill, and the server
   // answers for them with one and the same check. So a reason that blocks one blocks the
   // other, and the honest place to say so is the button, before anyone types a cancellation
   // reason only to be refused. (The field is named for replace because that is the flow that
@@ -296,8 +296,8 @@ const PurchaseDetailsPage = () => {
 
 
           {/* 🟢 Cancel Button එකේ රතු පාට අයින් කරලා Clean Slate පාටක් දුන්නා */}
-          {/* One button, not two. "Cancel" and "Cancel & Rebuild" both begin the same way —
-              this bill is wrong — so asking which of the two they meant belongs in a dialog,
+          {/* One button, not two. "Cancel" and "Cancel & Rebuild" both begin the same way,
+              this bill is wrong, so asking which of the two they meant belongs in a dialog,
               not in a second button competing for the same intent. */}
           {canCancel && (
             <Button
@@ -352,14 +352,14 @@ const PurchaseDetailsPage = () => {
             {/* 🟢 Cancel වෙලා තියෙනකොට පෙන්වන මැසේජ් එකත් රතු පාට වෙනුවට Slate පාට කළා */}
             {/* One block for the whole cancellation: when, who, why, and what replaced it.
                 These were three separate boxes stacked down the column and it read as
-                clutter — they are all answers to the same question. */}
+                clutter. They are all answers to the same question. */}
             {isCanceled && (
               <div className="mt-4 max-w-md rounded-lg border border-slate-200 bg-slate-100 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 <p className="flex flex-wrap items-baseline gap-x-1.5">
                   <Ban size={14} className="shrink-0 translate-y-0.5 text-slate-500" />
                   <span className="font-semibold">Cancelled</span>
                   <span>{new Date(purchase.canceledAt).toLocaleString()}</span>
-                  {/* Null on bills cancelled before this was recorded — say nothing rather
+                  {/* Null on bills cancelled before this was recorded, say nothing rather
                       than guess at a name. */}
                   {purchase.canceledByUsername && <span>by {purchase.canceledByUsername}</span>}
                 </p>
@@ -711,7 +711,7 @@ const PurchaseDetailsPage = () => {
             </p>
 
             <div className="mt-4 space-y-3">
-              {/* Correcting is the reason most people arrive here, so it leads — but it is
+              {/* Correcting is the reason most people arrive here, so it leads, but it is
                   only offered when the server says this bill can actually be rebuilt. */}
               <button
                 type="button"

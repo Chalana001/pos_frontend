@@ -16,7 +16,7 @@ import { formatCurrency } from "../../utils/formatters";
  * Outcomes worth showing, in plain words.
  *
  * <p>Two are deliberately absent. WRONG_SCOPE and NO_TARGET_MATCH mean "this promotion has
- * nothing to do with this line" — on a shop running twenty promotions they would be eighteen
+ * nothing to do with this line", on a shop running twenty promotions they would be eighteen
  * of the twenty rows, and burying the one useful reason in noise is the same as showing
  * nothing. What is left is the set of near misses a cashier can act on, or explain.
  */

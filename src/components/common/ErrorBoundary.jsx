@@ -7,9 +7,9 @@ import { AlertTriangle, RefreshCw, RotateCcw } from 'lucide-react';
  * React unmounts the entire tree on an uncaught render error. Without a boundary
  * that means a white screen mid-sale. Two variants:
  *
- *   variant="screen"  — wraps the router; keeps the browser on a real page and
+ *   variant="screen", wraps the router; keeps the browser on a real page and
  *                       offers a reload.
- *   variant="section" — wraps one panel (the cart, a report); the rest of the
+ *   variant="section", wraps one panel (the cart, a report); the rest of the
  *                       screen keeps working and only the panel is replaced.
  *
  * Queued offline sales live in IndexedDB and survive both paths. The in-memory

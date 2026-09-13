@@ -38,7 +38,7 @@ import {
 } from '../utils/barcodeLabelSettings';
 import { barcodeLabelSettingsAPI } from '../api/barcodeLabelSettings.api';
 
-// Sentinel value for the "Barcode" pill — not part of the backend PrintTemplateType
+// Sentinel value for the "Barcode" pill, not part of the backend PrintTemplateType
 // enum (THERMAL/A4/KOT); barcode settings are a separate table/entity/API.
 const BARCODE_TAB = 'BARCODE';
 
@@ -59,7 +59,7 @@ const RECEIPT_LINE_FONT_SIZE_OPTIONS = RECEIPT_LINE_FONT_SIZES.map((sz) => ({ va
 const PAPER_WIDTH_OPTIONS = [58, 72, 76, 80, 104].map((mm) => ({ value: mm, label: `${mm} mm` }));
 
 // What the ITEM_TABLE line can show on each sale line. One shop wants a column heading
-// and the unit price under every name, the next wants name and amount only — so each is
+// and the unit price under every name, the next wants name and amount only, so each is
 // a switch, and the preview redraws as they flip.
 const ITEM_TABLE_TOGGLES = [
   { key: 'showHeader',       label: 'Column headings row' },
@@ -384,14 +384,14 @@ const ReceiptSettingsPage = () => {
   const [printAgentOnline, setPrintAgentOnline] = useState(false);
   const [printerOptions, setPrinterOptions] = useState([]);
 
-  // Barcode label settings — separate domain/table/API from receipt settings above.
+  // Barcode label settings, separate domain/table/API from receipt settings above.
   const [barcodeForm, setBarcodeForm] = useState(DEFAULT_BARCODE_LABEL_SETTINGS);
   // barcodeElements: the live ordered element array for the Label Layout Designer.
   const [barcodeElements, setBarcodeElements] = useState(() => getActiveLabelElements(DEFAULT_BARCODE_LABEL_SETTINGS));
   const [barcodeLoading, setBarcodeLoading] = useState(true);
   const [barcodeSaving, setBarcodeSaving] = useState(false);
 
-  // Scale-barcode starting templates — same list for every branch, fetched
+  // Scale-barcode starting templates, same list for every branch, fetched
   // lazily the first time the Barcode tab is opened and cached thereafter.
   const [scalePresets, setScalePresets] = useState([]);
   const [scalePresetsLoading, setScalePresetsLoading] = useState(false);
@@ -941,7 +941,7 @@ const ReceiptSettingsPage = () => {
                                 buttonClassName="h-9 py-0"
                               />
 
-                              {/* Font size — hidden for LOGO, SEPARATOR, BLANK, ITEM_TABLE */}
+                              {/* Font size, hidden for LOGO, SEPARATOR, BLANK, ITEM_TABLE */}
                               {!isNoFormat && !isLogoLine ? (
                                 <CustomSelect
                                   value={line.fontSize}
@@ -952,7 +952,7 @@ const ReceiptSettingsPage = () => {
                                 />
                               ) : null}
 
-                              {/* Alignment — hidden for no-format types, ITEM_TABLE; LOGO uses L/C/R only */}
+                              {/* Alignment, hidden for no-format types, ITEM_TABLE; LOGO uses L/C/R only */}
                               {!isNoFormat && !isItemTable ? (
                                 <CustomSelect
                                   value={isLogoLine && line.align === 'split' ? 'center' : line.align}
@@ -963,7 +963,7 @@ const ReceiptSettingsPage = () => {
                                 />
                               ) : null}
 
-                              {/* Bold / Italic / Underline — text lines only, not for ITEM_TABLE */}
+                              {/* Bold / Italic / Underline, text lines only, not for ITEM_TABLE */}
                               {!isNoFormat && !isLogoLine && !isItemTable ? (
                                 <>
                                   <button aria-label="Bold"
@@ -1056,7 +1056,7 @@ const ReceiptSettingsPage = () => {
                               </div>
                             ) : null}
 
-                            {/* Row 2b: LOGO controls — width % + top spacing */}
+                            {/* Row 2b: LOGO controls, width % + top spacing */}
                             {line.type === 'LOGO' ? (
                               <div className="mt-2 space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
                                 <div>
@@ -1121,7 +1121,7 @@ const ReceiptSettingsPage = () => {
                               </div>
                             ) : null}
 
-                            {/* Row 2d: ITEM_TABLE controls — what each sale line shows */}
+                            {/* Row 2d: ITEM_TABLE controls, what each sale line shows */}
                             {isItemTable ? (
                               <div className="mt-2 space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
                                 <label className="block">
@@ -1146,7 +1146,7 @@ const ReceiptSettingsPage = () => {
                                   </label>
                                 ))}
 
-                                {/* Column headings — free text so a shop can print them in Sinhala */}
+                                {/* Column headings, free text so a shop can print them in Sinhala */}
                                 {itemTableCfg.showHeader ? (
                                   <div className="grid grid-cols-2 gap-2 border-t border-slate-200 pt-3">
                                     {ITEM_TABLE_HEADER_LABELS[itemTableCfg.layout].map((field) => (
@@ -1164,7 +1164,7 @@ const ReceiptSettingsPage = () => {
                                   </div>
                                 ) : null}
 
-                                {/* Words before the unit price — "Price" on a plain line, "Our Price" beside a struck one */}
+                                {/* Words before the unit price, "Price" on a plain line, "Our Price" beside a struck one */}
                                 {itemTableCfg.layout === 'STACKED' && itemTableCfg.showUnitPrice ? (
                                   <div className="grid grid-cols-2 gap-2 border-t border-slate-200 pt-3">
                                     {ITEM_TABLE_PRICE_LABELS.map((field) => (
@@ -1231,7 +1231,7 @@ const ReceiptSettingsPage = () => {
               <div className="grid gap-6 lg:grid-cols-2">
                 <Card className="admin-panel-card" title="Paper & Font" style={{ animationDelay: "170ms" }}>
                   <div className="space-y-5">
-                    {/* Receipt font — thermal + KOT only */}
+                    {/* Receipt font, thermal + KOT only */}
                     {activeTemplate !== PRINT_TEMPLATE_TYPES.A4 ? (
                       <div>
                         <label className="text-sm font-medium text-slate-700">Receipt Font</label>
@@ -1298,7 +1298,7 @@ const ReceiptSettingsPage = () => {
                       </div>
                     )}
 
-                    {/* Currency symbol — thermal / KOT only */}
+                    {/* Currency symbol, thermal / KOT only */}
                     {activeTemplate !== PRINT_TEMPLATE_TYPES.A4 ? (
                       <div>
                         <label className="text-sm font-medium text-slate-700">Currency Symbol</label>

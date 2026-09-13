@@ -28,7 +28,7 @@ class PosOfflineDatabase extends Dexie {
     // engine sees them, so an offline till can price a cart instead of charging list price.
     // One row per branch, replaced wholesale on each refresh.
     //
-    // A new store needs its own version — an install still on v2 upgrades cleanly and keeps
+    // A new store needs its own version, an install still on v2 upgrades cleanly and keeps
     // every existing row. Never edit a shipped version's stores; add the next one.
     this.version(3).stores({
       cachedItems: "[branchId+itemId], branchId, itemId, syncedAt",
@@ -50,7 +50,7 @@ class PosOfflineDatabase extends Dexie {
     //
     // Every field the server mirror will eventually need (deviceId, deviceLabel, syncState)
     // is written from this version on, even though nothing reads them yet, so adding that
-    // mirror later needs no further version — a Dexie bump is the risky part of the change.
+    // mirror later needs no further version, a Dexie bump is the risky part of the change.
     this.version(4).stores({
       cachedItems: "[branchId+itemId], branchId, itemId, syncedAt",
       cachedBranches: "id, active",
@@ -149,7 +149,7 @@ export const getCachedReceiptSettings = async (branchId, templateType) => {
 const OFFLINE_DEVICE_ID_KEY = "offlineDeviceId";
 const OFFLINE_INVOICE_SEQ_KEY = "offlineInvoiceSeq";
 
-// No I, O, 0 or 1 — an invoice number gets read off a receipt over the phone, and
+// No I, O, 0 or 1, an invoice number gets read off a receipt over the phone, and
 // those are the characters that get misheard.
 const DEVICE_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
@@ -181,15 +181,15 @@ export const getOrCreateDeviceId = async () => {
 };
 
 /**
- * Allocate the invoice number an offline sale is printed with — and keeps.
+ * Allocate the invoice number an offline sale is printed with, and keeps.
  *
  * The old number was derived from the sale's UUID (OFF-A1B2C3D4) and thrown away at
  * import, where the server generated an unrelated INV-… instead. A customer returning
  * with an offline receipt held a number that existed nowhere in the system.
  *
  * OFF-B3-K7M2-0042: branch, a per-device id minted once, and a per-device counter.
- * The device id makes it unique across terminals without any server coordination —
- * which matters because the terminal is offline when it needs the number — and the
+ * The device id makes it unique across terminals without any server coordination,
+ * which matters because the terminal is offline when it needs the number, and the
  * counter makes the series sequential, so a missing sale is visible as a gap.
  */
 export const nextOfflineInvoiceNo = async (branchId) => {
@@ -232,7 +232,7 @@ export const getCachedUserById = async (userId) => {
  * Every user who can unlock THIS device.
  *
  * appMeta.lastOfflineUserId holds a single id, so a shared counter PC could only ever be
- * unlocked by whoever synced most recently — the other cashiers' records were sitting in
+ * unlocked by whoever synced most recently, the other cashiers' records were sitting in
  * cachedUsers with nothing pointing at them. A PIN record only exists on the device where
  * that PIN was set, which is why this is the list of who enrolled here, not who exists.
  */
@@ -283,8 +283,8 @@ const subtractQuantityFields = (entity, consumedBaseQty, itemContext) => {
  * exactly the stock the first one saw and a branch with three units on hand will happily
  * sell thirty. The conflict only surfaced at import, with the receipts already printed.
  *
- * The consumption mirrors what simulateRowStockValidation replays at import time —
- * explicit batch if one was chosen, FIFO by ascending batchId otherwise — so what the
+ * The consumption mirrors what simulateRowStockValidation replays at import time,
+ * explicit batch if one was chosen, FIFO by ascending batchId otherwise, so what the
  * cashier sees offline and what the queue page reports later agree.
  *
  * This makes one terminal honest, not the whole shop: two browsers cannot see each
@@ -401,7 +401,7 @@ export const clearFreeLocalSalesIfNewDay = async () => {
 /**
  * How long the queue has been carrying unsynced sales, and how many.
  *
- * Offline mode is a bounded promise — cash takeaway sales through a short outage, on one
+ * Offline mode is a bounded promise, cash takeaway sales through a short outage, on one
  * terminal, stored in one browser profile that nothing backs up. Once the numbers get
  * large the honest thing is to say so out loud rather than let it look fine.
  */
@@ -456,7 +456,7 @@ export const deleteOfflineSale = async (clientSaleId) => {
 //   `${kind}:${userId}:${entityId ?? 'new'}`
 //
 // entityId matters because /promotions/:id/edit and the purchase rebuild flow each edit a
-// specific record — without it, opening promotion 7 would be offered promotion 5's draft.
+// specific record, without it, opening promotion 7 would be offered promotion 5's draft.
 // A "new" form and an "edit 12" form of the same kind are different drafts.
 //
 // branchId is deliberately NOT part of the key. The purchase form is multi-branch: it holds
@@ -517,7 +517,7 @@ export const listFormDraftsForUser = async (userId) => {
  * Drop drafts nobody came back for.
  *
  * Shop PCs run for months and a draft is dead weight once its author has moved on, but the
- * sweep is by age alone — never by "this user logged out". Logging out must not destroy
+ * sweep is by age alone, never by "this user logged out". Logging out must not destroy
  * work, because signing back in is the normal way a shift ends and resumes, and the 24h
  * login token expiring mid-form is one of the very cases drafts exist to survive.
  */

@@ -1,6 +1,6 @@
 /**
  * What a promotion is doing right now, derived from its dates and flags rather than the
- * stored `active` boolean alone — which said nothing about the dates, so a campaign that
+ * stored `active` boolean alone, which said nothing about the dates, so a campaign that
  * ended in March still rendered as a green "Active" pill today.
  *
  * <p>Mirrors `PromotionService.lifecycleStatus` on the backend. The history endpoint sends its

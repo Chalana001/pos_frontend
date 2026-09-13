@@ -14,12 +14,12 @@ import { getModuleState } from "../../utils/moduleAccess";
  * they tapped something they cannot have yet. Closing it leaves them where they were.
  *
  * The sidebar deliberately still lists locked modules, so for most shops this dialog is the
- * first time they learn the feature exists. That makes it a sales page, not an error — it
+ * first time they learn the feature exists. That makes it a sales page, not an error. It
  * leads with the problem the module solves and names outcomes in the owner's own terms.
  * The copy comes from the server so it can be corrected without shipping a new build.
  *
  * Role decides the ending. An owner can buy, so they get the package, the price and a way to
- * reach us. A cashier cannot, so prices would be noise — they are told whose call it is.
+ * reach us. A cashier cannot, so prices would be noise. They are told whose call it is.
  */
 const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
   const { user } = useAuth();
@@ -38,7 +38,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
       siblings: found
         ? entries.filter((entry) => entry.category === found.category && !entry.parentKey)
         : [],
-      // Its own sub-features, named — the concrete list under the emotional pitch.
+      // Its own sub-features, named, the concrete list under the emotional pitch.
       capabilities: entries.filter((entry) => entry.parentKey === moduleKey),
     };
   }, [moduleKey]);

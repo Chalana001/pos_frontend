@@ -24,7 +24,7 @@ export const LABEL_SIZE_PRESETS = [
 ];
 
 // Sentinel option shown in the size dropdown when the current width/height
-// don't match any preset above — lets the dropdown read as "actively selected"
+// don't match any preset above, lets the dropdown read as "actively selected"
 // instead of a blank placeholder while the user free-types a custom size.
 export const CUSTOM_SIZE_OPTION = { value: 'CUSTOM', label: 'Custom Size' };
 
@@ -38,7 +38,7 @@ export const EXPIRY_DATE_FORMAT_OPTIONS = [
   { value: 'yyyy-MM-dd', label: 'YYYY-MM-DD' },
 ];
 
-// What the numeric "value" segment embedded in a scale barcode represents —
+// What the numeric "value" segment embedded in a scale barcode represents,
 // mirrors backend entity.ScaleBarcodeValueType.
 export const SCALE_BARCODE_VALUE_TYPE_OPTIONS = [
   { value: 'WEIGHT_GRAMS', label: 'Weight (grams)' },

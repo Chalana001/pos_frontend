@@ -14,7 +14,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
   const [loading, setLoading] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
   // BUG-11 FIX: AbortController ref to cancel stale in-flight requests when the
-  // search term changes rapidly (race condition — later response arriving before earlier one).
+  // search term changes rapidly (race condition, later response arriving before earlier one).
   const abortRef = useRef(null);
   const visibleItems = items.slice(0, 50);
 

@@ -16,7 +16,7 @@
   The dark ramp is designed, not inverted. Mirroring was tried first and looked
   wrong: bg-blue-50 is a 6%-saturated wash in light, and its mirror is a
   73%-saturated navy slab, so every quiet badge in the app turned into a block
-  of colour — 73-96% saturation across the families. Instead the low steps are
+  of colour, 73-96% saturation across the families. Instead the low steps are
   the page ground nudged toward the hue (8/14/22/34%), and the high steps are
   the light scale's bright end. Quiet surfaces, bright solids, which is how
   Radix and Supabase build their dark scales too. Slate is hand-authored,
@@ -508,7 +508,7 @@
 /*
   Semantic tokens point at the ramp rather than restating it, so they follow the
   theme with no second definition. --accent is blue-600, which the mirror turns
-  into blue-400 on a dark ground — lifted exactly as it should be.
+  into blue-400 on a dark ground, lifted exactly as it should be.
 */
 :root {
   --bg:            var(--c-slate-50);
@@ -552,7 +552,7 @@
    grey shadow is invisible, so it has to go darker and deeper.
 
    The accent goes monochrome here too: a primary action on a black screen does
-   not need a hue to be the loudest thing on it — a white fill with black text
+   not need a hue to be the loudest thing on it, a white fill with black text
    already is. This carries .btn-primary with it. */
 :root[data-theme="dark"] {
   --accent:       var(--c-slate-900);
@@ -1105,7 +1105,7 @@ html[data-animation-level="balanced"] .custom-select-option {
 /* Chart legend text.
    Recharts writes the series colour inline onto .recharts-legend-item-text, so a
    legend label inherits whatever hue its series uses. Several of those sit below
-   4.5:1 on white — slot-2 orange measures 3.2 — and a label is text, not a mark.
+   4.5:1 on white, slot-2 orange measures 3.2, and a label is text, not a mark.
    Text wears text tokens; the coloured dot beside it carries the identity. The
    inline style means this needs !important to win. */
 .recharts-legend-item-text {
@@ -1115,7 +1115,7 @@ html[data-animation-level="balanced"] .custom-select-option {
 /* Opt-in dark surface for a Card.
    .shell-panel sets `background` (the shorthand), which resets background-color
    to transparent and paints a near-white gradient. That silently defeats a
-   Tailwind `bg-slate-900` on the same element — the card renders white and any
+   Tailwind `bg-slate-900` on the same element, the card renders white and any
    white text on it becomes invisible. A card that wants a dark surface must
    override the gradient here rather than relying on a bg-* utility. */
 .shell-panel.surface-inverted {
@@ -1139,8 +1139,8 @@ html[data-animation-level="balanced"] .custom-select-option {
   box-shadow: 0 10px 24px rgb(37 99 235 / 0.10);
 }
 
-/* The sign-in splash keeps the brand hues in both themes — navy into blue into
-   teal — but at dark-mode luminance. Left bright, it framed a near-black card
+/* The sign-in splash keeps the brand hues in both themes, navy into blue into
+   teal, but at dark-mode luminance. Left bright, it framed a near-black card
    with a glaring blue field and the two fought each other. */
 :root[data-theme="dark"] .auth-screen {
   /* True black-and-white, the same budget as the rest of dark. The two
@@ -1161,7 +1161,7 @@ html[data-animation-level="balanced"] .custom-select-option {
 }
 
 /* The chip carries text-blue-900, which is correct on its pale light-mode
-   plate and invisible on a dark one — so the dark plate brings its own text
+   plate and invisible on a dark one, so the dark plate brings its own text
    colour rather than relying on the utility. */
 :root[data-theme="dark"] .shell-chip {
   border-color: rgb(255 255 255 / 0.25);
@@ -1198,7 +1198,7 @@ html[data-animation-level="balanced"] .custom-select-option {
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 0.22);
   /* The sign-in card sits on the branded dark screen, but its own face follows
-     the theme — hardcoded white here left light text on a white card in dark. */
+     the theme, hardcoded white here left light text on a white card in dark. */
   background: linear-gradient(
     180deg,
     rgb(var(--c-surface) / 0.98) 0%,
@@ -1574,7 +1574,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
   }
 }
 
-/* Barcode canvas shrinks to fit its sticker regardless of label size — fixes
+/* Barcode canvas shrinks to fit its sticker regardless of label size, fixes
    the barcode being clipped/invisible on smaller label presets, since the
    canvas's own drawn resolution (from barcodeWidth/barcodeHeight settings)
    doesn't otherwise scale down to match a small labelWidthMm/labelHeightMm. */
@@ -1789,7 +1789,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
 
 /* Surfaces that are dark in both themes.
    The sidebar shell and the sign-in splash carry their own darkness and were
-   designed against the light ramp — pale steps used as text on navy. Pinning
+   designed against the light ramp, pale steps used as text on navy. Pinning
    the light values inside them keeps that text light, whatever the theme is
    doing outside. */
 :root[data-theme="dark"] .always-dark {
@@ -1955,7 +1955,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
 
 /* The glossy sweep across cards and panels is a light-mode flourish. Left at
    full strength it reads as a pale smear on a dark plate, so it is dialled
-   right down rather than removed — the movement still registers. */
+   right down rather than removed, the movement still registers. */
 :root[data-theme="dark"] .shell-surface::before,
 :root[data-theme="dark"] .dashboard-premium-card::before,
 :root[data-theme="dark"] .auth-card::before {
@@ -1968,7 +1968,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
    blue slab was the one loud thing left in an otherwise restrained shell, so
    the marker becomes plain contrast instead of colour. The sidebar pins the
    light ramp (.always-dark), so slate-50 here is the pale end and slate-900
-   the dark one — a white pill with navy text. */
+   the dark one, a white pill with navy text. */
 .sidebar-group-active {
   background-color: rgb(var(--c-blue-600));
   color: #ffffff;
@@ -1981,8 +1981,8 @@ html[data-animation-level="balanced"] #root table tbody tr {
 
 
 /* Colour only where something has to be noticed.
-   In dark, blue used as a FOREGROUND — stat-card icons, quick-action glyphs,
-   link text — carries no meaning that white does not, so it goes neutral. Blue
+   In dark, blue used as a FOREGROUND, stat-card icons, quick-action glyphs,
+   link text, carries no meaning that white does not, so it goes neutral. Blue
    used as a FILL is left alone: the primary button is the one thing on a screen
    that should pull the eye, and it is the only place the accent survives.
    Red, amber and green keep their hue everywhere, because those say something
@@ -2005,15 +2005,15 @@ html[data-animation-level="balanced"] #root table tbody tr {
    reason. Every one of these marks something that already names itself: the
    chip that reads VOLUME, the line that reads Service Item, a status badge with
    its status written in it. The colour was saying a second time what the label
-   already said. Where a hue sits on a bare value instead — an amount due, a
-   stock count — it stays, because a number on its own says nothing.
+   already said. Where a hue sits on a bare value instead, an amount due, a
+   stock count. It stays, because a number on its own says nothing.
 
    Orange and rose join them here rather than in the rename, because renaming
    would have been wrong: orange is a "return" theme on two pages whose buttons
    already read Process Return and Previous Returns, and rose marks RECIPE items
    on a chip that has RECIPE written in it. Both name themselves; neither is a
-   state. Where rose really did mean a state — the REJECTED badge in procurement
-   and warranties — it was renamed to red instead, because that one is danger. */
+   state. Where rose really did mean a state, the REJECTED badge in procurement
+   and warranties. It was renamed to red instead, because that one is danger. */
 :root[data-theme="dark"] :is(
   .bg-blue-50, .bg-blue-100,
   .bg-cyan-50, .bg-cyan-100,
@@ -2131,7 +2131,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
 }
 
 /* Setting colour on the plate is not enough: a child carrying its own
-   text-white or text-blue-100 wins on its own specificity and stays light —
+   text-white or text-blue-100 wins on its own specificity and stays light,
    which left the Finalize Sale total as white text on a white card. */
 :root[data-theme="dark"] :is(
   .bg-blue-500, .bg-blue-600, .bg-blue-700,
@@ -2153,7 +2153,7 @@ html[data-animation-level="balanced"] #root table tbody tr {
 
 /* Finalize Sale scales to the height it is given.
    The panel is header + scrolling body + pinned footer, and on a short window
-   the body ran out of room and made the cashier scroll to reach Confirm — the
+   the body ran out of room and made the cashier scroll to reach Confirm, the
    one control that matters. Width breakpoints could not help, because what runs
    short here is height. Every vertical dimension is a clamp against vh instead,
    so the panel keeps shrinking smoothly and only scrolls when a screen is

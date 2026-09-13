@@ -45,7 +45,7 @@ export const RECEIPT_LINE_TYPES = [
  * What a sale receipt can be built from.
  *
  * <p>Return-only lines are deliberately not in here. A shop laying out its sale slip should not
- * scroll past "Total Refund" to reach "Net Total" — the two documents share a header and almost
+ * scroll past "Total Refund" to reach "Net Total", the two documents share a header and almost
  * nothing else. `lineTypeOptionsFor` hands the designer the right list for the tab it is on.
  */
 export const RECEIPT_LINE_TYPE_OPTIONS = [
@@ -142,8 +142,8 @@ export const ITEM_TABLE_LAYOUTS = [
 ];
 
 export const ITEM_TABLE_CONFIG_DEFAULTS = {
-  // COLUMNS, the default: the name, then four figures under a heading row — normal price,
-  // our price, quantity, total — the way the supermarket slips print, with the normal price
+  // COLUMNS, the default: the name, then four figures under a heading row, normal price,
+  // our price, quantity, total, the way the supermarket slips print, with the normal price
   // struck through where it was cut. STACKED: the name, then "price × qty" and the amount.
   layout: 'COLUMNS',
   showHeader: true,
@@ -283,7 +283,7 @@ export const buildLegacyTemplateLines = (settings) => {
   lines.push(mk('SEPARATOR', { id: 'def-sep3' }));
   if (s.showSubtotal)  lines.push(mk('SUBTOTAL',  { id: 'def-sub',  align: 'split' }));
   if (s.showDiscount)  lines.push(mk('DISCOUNT',  { id: 'def-disc', align: 'split', bold: true }));
-  // Points spent came off the grand total already, so the row belongs above it — otherwise
+  // Points spent came off the grand total already, so the row belongs above it; otherwise
   // the slip shows a net total the numbers above it do not add up to.
   lines.push(mk('LOYALTY_DISCOUNT', { id: 'def-lpdisc', align: 'split' }));
   if (s.showNetTotal)  lines.push(mk('NET_TOTAL', { id: 'def-net',  align: 'split', bold: true, fontSize: 14 }));
@@ -298,7 +298,7 @@ export const buildLegacyTemplateLines = (settings) => {
 
   if (s.showThanksMessage) {
     lines.push(mk('SEPARATOR',      { id: 'def-sep4' }));
-    // customText intentionally empty — renderer uses settings.thanksMessage so the field stays live
+    // customText intentionally empty, renderer uses settings.thanksMessage so the field stays live
     lines.push(mk('THANKS_MESSAGE', { id: 'def-thanks', align: 'center', fontSize: 10, customText: '' }));
   }
 
@@ -309,7 +309,7 @@ export const buildLegacyTemplateLines = (settings) => {
  * The return slip as it printed before it was customisable.
  *
  * <p>A shop that never opens the Return tab gets this, and it reproduces the old hard-coded
- * layout line for line — so making the receipt customisable changes nothing for anyone who
+ * layout line for line, so making the receipt customisable changes nothing for anyone who
  * does not customise it.
  */
 export const buildLegacyReturnTemplateLines = () => {

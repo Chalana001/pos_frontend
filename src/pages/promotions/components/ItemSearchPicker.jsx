@@ -8,7 +8,7 @@ import { formatCurrency } from "../../../utils/formatters";
  * Finds items to put in a promotion by asking the server.
  *
  * <p>The old picker loaded the 300 most recently created items and filtered that array in the
- * browser, so a shop with 5,000 items could only ever promote the newest 300 — everything
+ * browser, so a shop with 5,000 items could only ever promote the newest 300, everything
  * older returned nothing, with no message saying why. `/items/search` already existed and was
  * already used by the till; this simply calls it.
  *

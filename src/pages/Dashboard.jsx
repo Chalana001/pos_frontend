@@ -38,7 +38,7 @@ const getChartDateRange = (mode = "daily") => {
 };
 
 // "Add User" was the previous label on the third action, but the route it opens
-// is the customer list with the add form — it creates a customer, not a user.
+// is the customer list with the add form. It creates a customer, not a user.
 const quickActions = [
   { label: "New Sale", path: "/pos", icon: ShoppingCart },
   { label: "Stock Adjust", path: "/stock", icon: Package },
@@ -228,13 +228,13 @@ const Dashboard = () => {
   }
 
   // Eight tiles, eight saturated fills, is the "rainbow" problem the report
-  // screens had — see utils/chartTheme.js. A tile's value is ink; colour is
+  // screens had. See utils/chartTheme.js. A tile's value is ink; colour is
   // reserved for the two figures that mean "needs attention", and one accent
   // leads the row.
   //
   // The Today's Sales tile used to carry a hardcoded change: "+12.5%", rendered
   // in green on every load regardless of the number beside it. DashboardKpiResponse
-  // has no comparison field, so no real figure was ever available — it was a
+  // has no comparison field, so no real figure was ever available. It was a
   // placeholder that shipped. Removed rather than faked; see the note in
   // dashboardAPI about what adding a real one would take.
   const stats = [
@@ -347,7 +347,7 @@ const Dashboard = () => {
         <div className="dashboard-card-in lg:col-span-1" style={{ animationDelay: "860ms" }}>
           <Card title="Quick Actions" className="h-full dashboard-premium-card shell-panel-hover">
             {/* Four destinations with no ordering between them, so they share one
-                surface. The blue icon marks "this is an action" — that is the only
+                surface. The blue icon marks "this is an action". That is the only
                 distinction colour is carrying here. */}
             <div className="grid grid-cols-2 gap-4 mt-2">
               {quickActions.map((action, index) => {

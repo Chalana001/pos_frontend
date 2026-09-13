@@ -61,7 +61,7 @@ const ELEMENT_TYPE_LABELS = BARCODE_ELEMENT_TYPE_OPTIONS.reduce((acc, o) => {
   return acc;
 }, {});
 
-// Generic number input with a local typing buffer — clamping/normalization only
+// Generic number input with a local typing buffer, clamping/normalization only
 // happens onBlur (via onCommit), so partial/multi-digit input never gets fought
 // mid-keystroke by the min/max clamp (e.g. typing "40" into a min-20 field used
 // to jump to 20 after the first digit).
@@ -188,7 +188,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
           {ELEMENT_TYPE_LABELS[el.type] || el.type}
         </span>
 
-        {/* Font size — hidden for BARCODE (has its own number font size) */}
+        {/* Font size, hidden for BARCODE (has its own number font size) */}
         {!isBarcode ? (
           <CustomSelect
             value={el.fontSize}
@@ -199,7 +199,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
           />
         ) : null}
 
-        {/* Alignment — applies to every element (text-align / barcode justify) */}
+        {/* Alignment, applies to every element (text-align / barcode justify) */}
         <CustomSelect
           value={el.align}
           onChange={(v) => updateElement(index, 'align', v)}
@@ -208,7 +208,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
           buttonClassName="h-9 py-0 px-2"
         />
 
-        {/* Bold / Italic / Underline — text elements only */}
+        {/* Bold / Italic / Underline, text elements only */}
         {!isBarcode ? (
           <>
             <ToggleButton active={el.bold} onClick={() => updateElement(index, 'bold', !el.bold)} title="Bold">
@@ -268,7 +268,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
         </div>
       ) : null}
 
-      {/* Row 2b: Item Name — max chars + name source */}
+      {/* Row 2b: Item Name, max chars + name source */}
       {isItemName ? (
         <div className="mt-2 grid gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3 sm:grid-cols-2">
           <div>
@@ -296,7 +296,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
         </div>
       ) : null}
 
-      {/* Row 2c: Expiry — date format */}
+      {/* Row 2c: Expiry, date format */}
       {isExpiry ? (
         <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 p-3">
           <label className="text-xs font-medium text-slate-500">Date Format</label>
@@ -314,7 +314,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
         </div>
       ) : null}
 
-      {/* Row 2d: Barcode — format, dimensions, number */}
+      {/* Row 2d: Barcode, format, dimensions, number */}
       {isBarcode ? (
         <div className="mt-2 space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
           <div>
@@ -389,7 +389,7 @@ const BarcodeSettingsPanel = ({
   const selectedScalePreset = scalePresets.find((preset) => preset.key === form.scaleBarcodePresetKey) || null;
 
   // Applying a preset pre-fills every field below from the chosen starting
-  // template (including "Custom", which ships its own neutral defaults) — the
+  // template (including "Custom", which ships its own neutral defaults), the
   // admin still needs to confirm/adjust the values against their own device.
   const applyScalePreset = (key) => {
     const preset = scalePresets.find((p) => p.key === key);

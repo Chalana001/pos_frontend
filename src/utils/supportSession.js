@@ -46,7 +46,7 @@ export const consumeSupportSessionFromUrl = () => {
   try {
     sessionStorage.setItem(SUPPORT_KEY, JSON.stringify(session));
   } catch {
-    // Private mode with storage blocked — the in-memory return value still works
+    // Private mode with storage blocked, the in-memory return value still works
     // for this tab, it just will not survive a reload.
   }
   return session;

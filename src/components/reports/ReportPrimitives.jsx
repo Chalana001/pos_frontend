@@ -5,7 +5,7 @@
 // These previously lived inside the body of the Reports component. Defining a
 // component inside another component's render means React sees a brand-new
 // component type on every parent render, so it unmounts and remounts the entire
-// subtree instead of updating it — losing internal state, re-firing effects and
+// subtree instead of updating it, losing internal state, re-firing effects and
 // re-mounting charts. Reports holds 32 pieces of state, so that was happening on
 // every filter change, tab switch and keystroke.
 //

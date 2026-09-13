@@ -9,8 +9,8 @@ const catalogWarmedBranchIds = new Set();
  * over.
  *
  * Routes are lazily imported and the service worker is network-first, so a chunk only
- * reaches the runtime cache after someone has opened that page online. /offline-sales —
- * the one screen an outage actually requires — is the least likely to have been visited
+ * reaches the runtime cache after someone has opened that page online. /offline-sales,
+ * the one screen an outage actually requires, is the least likely to have been visited
  * before it is needed, which is precisely when it can no longer be fetched.
  *
  * Importing the same specifiers AppRoutes uses means Vite serves the same chunks, so this
@@ -39,7 +39,7 @@ export const prefetchOfflineRoutes = () => {
  * new terminal, a cleared profile, or an admin switching to a branch they had not visited
  * all landed on an empty grid the moment the connection dropped.
  *
- * Only fills an EMPTY cache — a populated one is refreshed by the POS screen itself on
+ * Only fills an EMPTY cache, a populated one is refreshed by the POS screen itself on
  * every online load, and re-pulling the whole catalogue here would be a heavy request for
  * no benefit.
  */

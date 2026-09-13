@@ -1,6 +1,6 @@
 // src/components/pos/ReturnReceiptPrinter.jsx
 // Prints a thermal return receipt for a processed partial return.
-// Mirrors ReceiptPrinter.jsx pattern — uses an invisible iframe + browser print.
+// Mirrors ReceiptPrinter.jsx pattern, uses an invisible iframe + browser print.
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { normalizeReceiptSettings, parseTemplateLines, PRINT_TEMPLATE_TYPES } from '../../utils/receiptSettings';
 import { buildPosReceiptHtml } from '../../utils/buildPosReceiptHtml';
@@ -83,7 +83,7 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
       // What the return did to the customer's points. Two directions rather than one net
       // figure: a full return takes back what the sale earned *and* hands back what the
       // customer spent on it, and a single number would print "0" on a return that moved
-      // hundreds each way — which is the receipt someone queries at the counter.
+      // hundreds each way, which is the receipt someone queries at the counter.
       const pts = (n) => Number(n || 0).toLocaleString();
       const pointsTakenBack = Math.max(0, Number(returnData.loyaltyPointsTakenBack || 0));
       const pointsGivenBack = Math.max(0, Number(returnData.loyaltyPointsGivenBack || 0));
@@ -91,7 +91,7 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
       const row = (label, value) =>
         `<tr><td style="font-size:10px;color:#555;">${label}</td>` +
         `<td class="right bold" style="font-size:10px;">${value}</td></tr>`;
-      // Nothing at all on a return that moved no points — most of them.
+      // Nothing at all on a return that moved no points, most of them.
       const loyaltyHtml = pointsTakenBack > 0 || pointsGivenBack > 0
         ? `
   <hr class="divider"/>
@@ -102,7 +102,7 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
   </table>`
         : '';
 
-      // The goods' value, what points had paid of it, and the bill-discount share — the
+      // The goods' value, what points had paid of it, and the bill-discount share, the
       // three figures that turn "goods returned 1,180" into "cash refund 200". Without them
       // the slip shows lines adding to one number and a refund of another, and the customer
       // is left to guess which is the mistake.

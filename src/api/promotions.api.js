@@ -35,7 +35,7 @@ export const promotionsAPI = {
   resume: (id) => api.post(`/promotions/${id}/resume`),
   audit: (id) => api.get(`/promotions/${id}/audit`),
 
-  // Rule-based customer segments — what a promotion means by "our best customers".
+  // Rule-based customer segments, what a promotion means by "our best customers".
   segments: () => api.get("/customer-segments"),
   createSegment: (payload) => api.post("/customer-segments", payload),
   updateSegment: (id, payload) => api.put(`/customer-segments/${id}`, payload),

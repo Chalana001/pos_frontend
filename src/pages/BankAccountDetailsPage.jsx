@@ -14,7 +14,7 @@ import { formatCurrency, formatDateTime } from "../utils/formatters";
 const PAGE_SIZE = 15;
 
 /**
- * A bank account's own profile page — same shape as CustomerViewPage:
+ * A bank account's own profile page, same shape as CustomerViewPage:
  * identity + at-a-glance stats up top, transaction history below.
  * "History" here is every cash drop (in-shift or outside-shift) that named
  * this account, reusing the same /cash-drops list the main Cash Drops page

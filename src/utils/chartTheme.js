@@ -2,10 +2,10 @@
 //
 // Single source of truth for every colour and chrome value used by a chart or a
 // report tile. Nothing in src/pages/Reports.jsx or src/components/reports/ should
-// contain a raw hex — import from here instead.
+// contain a raw hex, import from here instead.
 //
 // The categorical palette below is validated, not eyeballed. Against this app's
-// chart surface (#ffffff, light mode only — the app has no dark mode):
+// chart surface (#ffffff, light mode only, the app has no dark mode):
 //
 //   Lightness band      PASS  all 8 inside OKLCH L 0.43–0.77
 //   Chroma floor        PASS  all 8 >= 0.10
@@ -15,14 +15,14 @@
 //
 // The contrast WARN is discharged by the "relief rule": every chart in this app is
 // accompanied by a data table, so no value is reachable by colour alone. Keep it
-// that way — if you add a chart with no table twin, use only slots 1, 2, 6 or 8.
+// that way, if you add a chart with no table twin, use only slots 1, 2, 6 or 8.
 
 // ---------------------------------------------------------------------------
-// Categorical — series identity
+// Categorical, series identity
 // ---------------------------------------------------------------------------
 
 // Fixed order. This ordering IS the colourblind-safety mechanism, not a style
-// choice — adjacent slots are the pairs that touch in a stack, bar group or line
+// choice, adjacent slots are the pairs that touch in a stack, bar group or line
 // chart. Do not reorder, do not append a 9th colour.
 export const SERIES = [
   '#00b4c8', // 1 cyan - sampled from the ZenSys mark's glow, so the lead series wears the brand
@@ -37,7 +37,7 @@ export const SERIES = [
 
 export const MAX_SERIES = SERIES.length;
 
-// Assign by position, never by rank — a filter that removes a series must not
+// Assign by position, never by rank, a filter that removes a series must not
 // repaint the survivors. Past slot 8 we clamp rather than cycle; use foldSeries()
 // to collapse the tail instead of relying on this.
 export const seriesColor = (index) => SERIES[index] ?? SERIES[MAX_SERIES - 1];
@@ -69,7 +69,7 @@ export const foldSeries = (items, getValue, max = MAX_SERIES) => {
 };
 
 // ---------------------------------------------------------------------------
-// Sequential — magnitude. One hue, light to dark. Never a multi-hue gradient.
+// Sequential, magnitude. One hue, light to dark. Never a multi-hue gradient.
 // ---------------------------------------------------------------------------
 
 export const SEQUENTIAL_BLUE = [
@@ -79,16 +79,16 @@ export const SEQUENTIAL_BLUE = [
 ];
 
 // For discrete ordered marks (tiers, buckets, funnel stages) the lightest step
-// must still be visible against white — start at index 3, not 0.
+// must still be visible against white, start at index 3, not 0.
 export const ORDINAL_BLUE_START = 3;
 
 /**
- * Evenly-spaced steps for an ORDERED set of categories — aging buckets, size
+ * Evenly-spaced steps for an ORDERED set of categories, aging buckets, size
  * tiers, funnel stages. The reader sees the order in the colour.
  *
  * Only use this where reordering the categories would change their meaning. For
  * unordered categories (products, branches, cashiers) use a single series colour
- * for all bars — colouring those by value double-encodes what bar length shows.
+ * for all bars, colouring those by value double-encodes what bar length shows.
  */
 export const ordinalRamp = (count) => {
   const usable = SEQUENTIAL_BLUE.slice(ORDINAL_BLUE_START);
@@ -98,7 +98,7 @@ export const ordinalRamp = (count) => {
 };
 
 // ---------------------------------------------------------------------------
-// Diverging — polarity around a baseline. Warm/cool poles, neutral midpoint.
+// Diverging, polarity around a baseline. Warm/cool poles, neutral midpoint.
 // ---------------------------------------------------------------------------
 
 export const DIVERGING = {
@@ -108,7 +108,7 @@ export const DIVERGING = {
 };
 
 // ---------------------------------------------------------------------------
-// Status — reserved meaning. Never reuse these for "series 4", and never render
+// Status, reserved meaning. Never reuse these for "series 4", and never render
 // one without an accompanying icon or text label.
 // ---------------------------------------------------------------------------
 
@@ -151,7 +151,7 @@ export const TILE = {
 
 // Older code passed a raw hue name ("indigo", "violet", "cyan"…). Map those onto
 // the semantic roles so no caller has to change shape. Hues that never carried
-// meaning collapse to neutral — that collapse IS the cleanup.
+// meaning collapse to neutral. That collapse IS the cleanup.
 const TILE_ALIASES = {
   neutral: 'neutral', slate: 'neutral', gray: 'neutral',
   indigo: 'neutral', violet: 'neutral', purple: 'neutral',
@@ -165,7 +165,7 @@ const TILE_ALIASES = {
 export const tileTone = (name) => TILE[TILE_ALIASES[name] || 'neutral'];
 
 // ---------------------------------------------------------------------------
-// Chrome — themed to sit with the app's Tailwind UI in both light and dark.
+// Chrome, themed to sit with the app's Tailwind UI in both light and dark.
 // Grid and axes must stay recessive: solid hairlines, one shade off the surface.
 // ---------------------------------------------------------------------------
 
@@ -182,12 +182,12 @@ export const CHROME = {
 };
 
 // ---------------------------------------------------------------------------
-// Recharts prop bundles. Spread these so every chart shares identical chrome —
-// this is what stops the charts looking like they came from different apps.
+// Recharts prop bundles. Spread these so every chart shares identical chrome.
+// This is what stops the charts looking like they came from different apps.
 // ---------------------------------------------------------------------------
 
 export const gridProps = {
-  // Solid, not dashed. Horizontal only — vertical rules add noise without helping.
+  // Solid, not dashed. Horizontal only, vertical rules add noise without helping.
   stroke: CHROME.grid,
   strokeWidth: 1,
   vertical: false,

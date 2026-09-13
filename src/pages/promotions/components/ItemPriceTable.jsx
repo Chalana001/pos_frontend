@@ -190,7 +190,7 @@ const ItemPriceTable = ({
   };
 
   // Matches on barcode and reports what it could not place, rather than rejecting the whole
-  // file — a 200-row seasonal list with three unknown barcodes is still worth importing.
+  // file, a 200-row seasonal list with three unknown barcodes is still worth importing.
   const importCsv = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -278,7 +278,7 @@ const ItemPriceTable = ({
 
       {/*
         One tab per category present, so a fifty-nine item promotion is reviewed an aisle at a
-        time. The X clears that whole category — the counterpart of the bulk add that put it
+        time. The X clears that whole category, the counterpart of the bulk add that put it
         there, and the reason adding a category by mistake is not expensive.
       */}
       {groups.length > 1 ? (

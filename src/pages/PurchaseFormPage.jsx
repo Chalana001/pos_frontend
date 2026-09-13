@@ -132,7 +132,7 @@ const PurchaseFormPage = () => {
   //
   // Arriving with ?replaces=<id> means this form is correcting an existing bill: it loads
   // that bill's lines, and saving cancels the original and issues this one in a single
-  // server-side transaction. The original is never edited — an auditable system voids and
+  // server-side transaction. The original is never edited, an auditable system voids and
   // reissues instead, and the two bills stay linked.
   const [searchParams] = useSearchParams();
   const replacesId = searchParams.get("replaces");
@@ -141,7 +141,7 @@ const PurchaseFormPage = () => {
   // --- DRAFT RECOVERY ---
   //
   // Only what the user typed. Deliberately absent: `branches`, `suppliers` and
-  // `searchResults` (server data, re-fetched on mount — a restored draft must not carry
+  // `searchResults` (server data, re-fetched on mount, a restored draft must not carry
   // yesterday's prices or a supplier deleted since), `search` and `selectedItem`
   // (transient), `selectionPanelWidth` (a device preference, already in localStorage), and
   // `branchInputs`, which is the quantity block being typed for whichever item is selected
@@ -171,7 +171,7 @@ const PurchaseFormPage = () => {
     ]
   );
 
-  // A date alone is not work — it defaults to today on every mount. Anything else means
+  // A date alone is not work. It defaults to today on every mount. Anything else means
   // the user has started building a bill.
   const isDraftDirty =
     cartItems.length > 0 ||
@@ -223,7 +223,7 @@ const PurchaseFormPage = () => {
   }, []);
 
   // Pull the bill being corrected into the form. Runs after branches load so each line can
-  // carry its branch name, and only once — a re-run would duplicate every line.
+  // carry its branch name, and only once, a re-run would duplicate every line.
   useEffect(() => {
     if (!replacesId || branches.length === 0 || replacing) return;
 
@@ -246,7 +246,7 @@ const PurchaseFormPage = () => {
 
         setReplacing(data);
         setSupplierId(String(data.supplierId ?? ""));
-        // The supplier's own invoice number carries over unchanged — a replacement for
+        // The supplier's own invoice number carries over unchanged, a replacement for
         // INV-8821 is still INV-8821. That is the whole reason the uniqueness rule had to
         // be narrowed to live bills only.
         setInvoiceNo(data.invoiceNo ?? "");
@@ -419,7 +419,7 @@ const PurchaseFormPage = () => {
     const q = search.trim();
     if (!q) return;
 
-    // Results already loaded — select from dropdown (manual typing case)
+    // Results already loaded, select from dropdown (manual typing case)
     if (searchResults.length > 0) {
       const exactMatch = searchResults.find(
         (item) => item.barcode?.toLowerCase() === q.toLowerCase()
@@ -428,7 +428,7 @@ const PurchaseFormPage = () => {
       return;
     }
 
-    // No results yet — barcode endpoint (handles barcode reader race condition)
+    // No results yet, barcode endpoint (handles barcode reader race condition)
     currentSearchRef.current = "__ENTER__";
 
     try {

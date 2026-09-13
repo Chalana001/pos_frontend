@@ -3,8 +3,8 @@
 // The default /reports screen: owner command centre, action centre, executive
 // summary tiles, payment mix, sales trend, and the four snapshot charts.
 //
-// Last of the sections lifted out of the Reports render body. Purely derived —
-// it computes its view model from the payloads it is given and holds no state.
+// Last of the sections lifted out of the Reports render body. Purely derived.
+// It computes its view model from the payloads it is given and holds no state.
 
 import {
   AlertCircle,
@@ -105,7 +105,7 @@ export default function BasicOverviewView({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {/* Every tile here already shows a ±% delta that is green when up and
                 red when down. Colouring the icon chip as well would encode the same
-                thing twice, in a second vocabulary — so the chips stay neutral. */}
+                thing twice, in a second vocabulary, so the chips stay neutral. */}
             <ComparisonMetric title="Sales Growth" current={ownerSummary.current.totalSales} previous={ownerSummary.comparison.totalSales} icon={TrendingUp} accent="accent" />
             <ComparisonMetric title="Net Profit" current={ownerSummary.current.netProfit} previous={ownerSummary.comparison.netProfit} icon={DollarSign} accent="neutral" />
             <ComparisonMetric title="Average Order" current={ownerSummary.current.averageOrderValue} previous={ownerSummary.comparison.averageOrderValue} icon={ShoppingCart} accent="neutral" />
@@ -129,7 +129,7 @@ export default function BasicOverviewView({
               Inventory is current; credit is outstanding balance; returns use selected period.
             </p>
           </div>
-          {/* These four surfaces DO change with state — that is the point of an
+          {/* These four surfaces DO change with state. That is the point of an
               action centre, so the conditional red/amber stays. */}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className={`rounded-xl border p-4 ${risks.outOfStockItems > 0 ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`}>
@@ -186,7 +186,7 @@ export default function BasicOverviewView({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {/* One accent tile leads the row; the rest are neutral. Amber is reserved
-              for the two tiles that actually mean "needs attention" — money owed
+              for the two tiles that actually mean "needs attention", money owed
               and stock below reorder. */}
           <SummaryMetric title="Total Sales" value={salesSummary.totalSales || 0} helper={`${salesSummary.totalOrders || 0} orders`} icon={TrendingUp} accent="accent" />
           <SummaryMetric title="Net Profit" value={profitSummary?.netProfit || 0} helper={`Gross ${formatCurrency(profitSummary?.grossProfit || 0)}`} icon={DollarSign} accent="neutral" />

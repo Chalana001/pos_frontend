@@ -17,7 +17,7 @@ export const forgetServerReachable = () => {
 };
 
 /**
- * Does the SERVER answer — not merely, is a network cable plugged in.
+ * Does the SERVER answer, not merely, is a network cable plugged in.
  *
  * `navigator.onLine` reports whether the machine has a network interface up, which is a
  * different question. A shop whose router is fine but whose ISP, DNS or VPS is down reads
@@ -25,7 +25,7 @@ export const forgetServerReachable = () => {
  * toast instead of being queued. This is the check that tells those two states apart.
  *
  * Marked background so a 401 here cannot redirect a cashier to the login screen and a
- * failure cannot raise a connection-error toast — the caller decides what to do.
+ * failure cannot raise a connection-error toast, the caller decides what to do.
  */
 export const isServerReachable = async () => {
   if (Date.now() - lastReachableAt < REACHABLE_CACHE_MS) {
@@ -49,7 +49,7 @@ export const isServerReachable = async () => {
 };
 
 /**
- * Is the SERVER up — a different question from the one above, and the one navigation needs.
+ * Is the SERVER up, a different question from the one above, and the one navigation needs.
  *
  * `isServerReachable` deliberately folds "not authenticated" into "unreachable", because for
  * a checkout those are the same answer: queue the sale either way. That is the wrong
@@ -57,7 +57,7 @@ export const isServerReachable = async () => {
  * for a session that has expired. Asking /auth/me there gets a 401 or 403 from a perfectly
  * healthy server, and treating that as "down" latches the whole app offline until reload.
  *
- * So this asks /health, and — the important part — counts ANY HTTP reply as proof of life.
+ * So this asks /health, and, the important part, counts ANY HTTP reply as proof of life.
  * A 401, a 403, even a 500 means something answered. Only a request that dies with no
  * response at all, or one that outlives the timeout, means the server is genuinely gone.
  *
@@ -71,7 +71,7 @@ export const isServerResponding = async () => {
   try {
     await api.get("/health", { signal: controller.signal, meta: { background: true } });
     // NOT markServerReachable(). /health answering proves the server is up, but it proves
-    // nothing about this browser's session — and the till reads that cache to decide it can
+    // nothing about this browser's session, and the till reads that cache to decide it can
     // skip its own probe before a checkout. Marking here would let a checkout on an expired
     // session go to the server, fail, and lose the sale instead of queueing it, which is the
     // exact failure isServerReachable was written to prevent.

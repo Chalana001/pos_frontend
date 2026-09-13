@@ -76,7 +76,7 @@ const INITIAL_FORM = {
   endAt: "",
   branchId: "",
   // Not a stored column. Whether a promotion is code-gated is decided by whether it has any
-  // codes — see PromotionGate.codeGated — so this only carries the intent of a campaign that
+  // codes, see PromotionGate.codeGated, so this only carries the intent of a campaign that
   // has none yet, and is never sent to the server.
   requiresCode: false,
   active: true,
@@ -99,7 +99,7 @@ const toLocalInput = (value) => (value ? String(value).slice(0, 16) : "");
  * Create or edit one campaign, full width.
  *
  * <p>The previous screen packed this into a 440px column beside the list, which is what made a
- * price table impossible — the feature this page exists for needs the horizontal room.
+ * price table impossible, the feature this page exists for needs the horizontal room.
  */
 const PromotionBuilderPage = () => {
   const { id } = useParams();
@@ -130,7 +130,7 @@ const PromotionBuilderPage = () => {
    *
    * <p>A campaign runs at one branch. Two shops rarely want the same price, the items offered
    * have to be items that branch actually stocks, and the margin guard is only meaningful
-   * against the batches the selling branch holds — a promotion covering everywhere is judged
+   * against the batches the selling branch holds, a promotion covering everywhere is judged
    * on the worst batch anywhere, which is a number nobody set out to pick. So the branch is
    * not asked for a second time: it is the one already chosen in the top bar.
    *
@@ -148,7 +148,7 @@ const PromotionBuilderPage = () => {
    *
    * <p>There is no column for it: a promotion applies automatically until it has a code, and
    * from the first code on it applies only when one is presented. That rule already lives in
-   * PromotionGate and is the only truth — repeating it in a flag would let the two disagree.
+   * PromotionGate and is the only truth, repeating it in a flag would let the two disagree.
    * So while codes exist the choice is settled and shown, not asked; before then it records
    * what the campaign is meant to be, which is what decides whether it may go live yet.
    */
@@ -296,7 +296,7 @@ const PromotionBuilderPage = () => {
           marginFloorPercent: form.marginFloorPercent === "" ? null : Number(form.marginFloorPercent),
           // Only a profit share prices from cost, so the preview has to know the mechanic.
           effectType: form.effectType,
-          // Whose batches to price against — the branch that will be selling these items.
+          // Whose batches to price against, the branch that will be selling these items.
           branchId: activeBranchId,
         });
         setPriceCheck(response.data);
@@ -607,7 +607,7 @@ const PromotionBuilderPage = () => {
       return;
     }
     // A draft is fine without codes; going live is not. With none, "only with a code" is not
-    // a restriction the till can enforce — it would simply apply to every matching sale.
+    // a restriction the till can enforce. It would simply apply to every matching sale.
     if (activate && needsItsFirstCode) {
       toast.error("Add a promo code first. With none, this would apply to every sale");
       return;
@@ -625,7 +625,7 @@ const PromotionBuilderPage = () => {
       } else {
         toast.success(isEdit ? "Promotion updated" : "Promotion created");
       }
-      // Banked — otherwise the next visit offers back changes that are already live.
+      // Banked; otherwise the next visit offers back changes that are already live.
       await clearDraft();
       navigate("/promotions");
     } catch (error) {
@@ -657,7 +657,7 @@ const PromotionBuilderPage = () => {
   // --- DRAFT RECOVERY ---
   //
   // Only the typed promotion. Deliberately absent: `branches`, `categories`, `customers`,
-  // `segments` and `itemsById` (server data, re-fetched on mount — and itemsById is a Map,
+  // `segments` and `itemsById` (server data, re-fetched on mount, and itemsById is a Map,
   // which does not survive a round trip anyway), plus `targetSearch`, `check`, `priceCheck`
   // and the simulate modal, all transient.
   const draftPayload = useMemo(() => ({ form, itemLines }), [form, itemLines]);

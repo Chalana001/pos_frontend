@@ -4,7 +4,7 @@
 // legend rail, and a ranked bar chart with a top-4 rail.
 //
 // Like ReportPrimitives, these were declared inside the Reports render body and
-// so were remounted — charts and all — on every parent state change. They are
+// so were remounted, charts and all, on every parent state change. They are
 // pure: props in, JSX out.
 
 import {
@@ -135,7 +135,7 @@ export const OverviewBarChart = ({ title, subtitle, data, nameKey, valueKey, for
                   />
                   <YAxis {...axisProps} tickFormatter={shortCurrency} />
                   <Tooltip formatter={(value) => formatter(value)} {...tooltipProps} />
-                  {/* These are nominal categories (products, customers, suppliers) — one
+                  {/* These are nominal categories (products, customers, suppliers), one
                       measure, so one hue. Bar length already encodes the value; giving each
                       bar its own colour spends the identity channel on nothing. The leader
                       is emphasised with a darker step of the same hue, not a different one. */}

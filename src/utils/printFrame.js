@@ -2,10 +2,10 @@
 // invoice, return receipt, debit note).
 //
 // Printing used to sit behind a fixed 500ms setTimeout between writing the
-// document and calling print() — every print paid the full half second even
+// document and calling print(), every print paid the full half second even
 // when the frame was ready in 50ms, while a logo that took longer than 500ms
 // still lost the race and printed as a broken image. Wait instead for what
-// actually gates a complete print — images decoded and fonts loaded — and
+// actually gates a complete print, images decoded and fonts loaded, and
 // print the moment they are done. The timeout is only a safety net for an
 // image that never fires load/error; it is not the normal path.
 const PRINT_READY_TIMEOUT_MS = 1500;

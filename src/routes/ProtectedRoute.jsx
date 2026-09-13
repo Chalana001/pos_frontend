@@ -14,12 +14,12 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false,
 
   // Which locked path the reader has already dismissed. Stored as the path rather than a
   // boolean so walking to a *different* locked page shows the dialog again instead of
-  // silently redirecting — and so no effect is needed to reset it.
+  // silently redirecting, and so no effect is needed to reset it.
   const [dismissedPath, setDismissedPath] = useState(null);
 
   // Somewhere this user can actually go once they close the dialog. Checked against both
   // role and module, because either can rule a page out, and falling back to "/" would
-  // bounce through HomeRedirect straight into /dashboard — which may be the very module
+  // bounce through HomeRedirect straight into /dashboard, which may be the very module
   // they just got blocked on.
   const fallbackPath = useMemo(() => {
     const candidates = [
@@ -36,12 +36,12 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false,
   //
   // planLoading goes true again every time the subscription is re-fetched, and reconnecting
   // re-fetches it. Blanking the whole route for that swapped the rendered page out for a
-  // spinner and back, which unmounts it — so coming back online destroyed a half-typed
+  // spinner and back, which unmounts it, so coming back online destroyed a half-typed
   // purchase just as surely as the old redirect did, only a few seconds later and without
   // anything on screen to explain it.
   //
   // A refresh keeps the plan name it already had, so the gate below still has an answer to
-  // work with. Only the genuine cold start — no plan known yet — has to wait.
+  // work with. Only the genuine cold start, no plan known yet, has to wait.
   if (loading || (planLoading && !user?.planName)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -57,7 +57,7 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false,
   // Online-only pages gate on having a SESSION, never on the network being up.
   //
   // Losing the connection deliberately changes nothing here. The page the user is on stays
-  // exactly as it is — no redirect, no banner, no dialog — and the failure surfaces the way
+  // exactly as it is, no redirect, no banner, no dialog, and the failure surfaces the way
   // every other failure in the app does: the axios interceptor's "Backend connection failed"
   // toast, once, deduplicated. A page that is already rendered keeps its state and its
   // contents; a cart, its quantities and its prices are local anyway. The POS is entered by
@@ -65,7 +65,7 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false,
   //
   // This used to redirect to /pos on `!isOnline`, which put a manager reading a report
   // behind the till because the wifi blinked, and destroyed any half-typed form on the way.
-  // Later attempts to soften it — a modal, then a banner — were the same mistake in smaller
+  // Later attempts to soften it, a modal, then a banner, were the same mistake in smaller
   // clothes: they interrupted someone who had asked for nothing. Do not add another.
   //
   // `!hasOnlineSession` is a genuinely different state and still belongs here: an offline
@@ -114,20 +114,20 @@ const ProtectedRoute = ({ children, permission, feature, requiresOnline = false,
   // Gate on the module that owns this route.
   //
   // The `feature` prop above only covers the handful of keys the old plan matrix knew
-  // about — it has no key for the POS screen or the dashboard, so those pages stayed
+  // about. It has no key for the POS screen or the dashboard, so those pages stayed
   // reachable even with their module switched off. This asks the server's own route map
   // instead, so every page the catalog claims is covered without a prop per route.
   //
   // skipModuleGate is set on the instance that wraps <Layout />. That one guards the shell,
-  // not a page, but it still sees the child's pathname — so without this it would match
+  // not a page, but it still sees the child's pathname, so without this it would match
   // /dashboard, decide "blocked", and render the message INSTEAD of the whole app,
   // sidebar included. The per-page instance below it is the one that should answer.
   if (!skipModuleGate && !canOpenPath(location.pathname)) {
-    // Someone reached this by typing the URL or following an old link — the sidebar
+    // Someone reached this by typing the URL or following an old link, the sidebar
     // marks these locked rather than letting them through.
     //
     // Closing goes to a page they can use, with replace, so the locked URL leaves the
-    // history: navigate(-1) was wrong twice over — it does nothing at all when they
+    // history: navigate(-1) was wrong twice over. It does nothing at all when they
     // arrived by typing the URL, leaving the modal up with the sidebar unclickable
     // behind its backdrop, and when it did work it could land them on another locked
     // page or outside the app entirely.

@@ -197,8 +197,8 @@ const POS = () => {
   const [loadingShift, setLoadingShift] = useState(true);
 
   const [allItems, setAllItems] = useState([]);
-  // How many tiles are actually in the DOM. A shop with 8,000 items rendered all 8,000 —
-  // roughly eighty thousand nodes, each with its own entry animation — and the till locked
+  // How many tiles are actually in the DOM. A shop with 8,000 items rendered all 8,000,
+  // roughly eighty thousand nodes, each with its own entry animation, and the till locked
   // up for seconds on load and on every keystroke. Filtering that many is nothing; drawing
   // them is everything. So a screenful is drawn, and more follow as the cashier scrolls.
   // Searching and scanning still run over the whole filtered list, never over this window.
@@ -226,7 +226,7 @@ const POS = () => {
   // One promo code per cart. Validated by the preview as it is typed, consumed only inside
   // the sale transaction, cleared with the cart.
   const [promotionCode, setPromotionCode] = useState("");
-  // The promotion rules this till holds. Refreshed while online, priced from while offline —
+  // The promotion rules this till holds. Refreshed while online, priced from while offline,
   // without it an outage means every customer pays list price.
   const [promotionBundle, setPromotionBundle] = useState(null);
   // Points the customer is spending on this sale. The server settles them after promotions and
@@ -1240,7 +1240,7 @@ const POS = () => {
   // Adds an item to the cart with an exact quantity/amount already resolved
   // server-side (from a decoded scale barcode), instead of the usual
   // qty=1-then-adjust flow. Mirrors processAddToCart's weight-item cart line
-  // shape so downstream cart total / order-submit code needs no changes —
+  // shape so downstream cart total / order-submit code needs no changes,
   // only the price-per-unit is derived from the server's resolvedAmount
   // (rather than item.sellingPrice) so the cart total matches exactly what
   // the scale label encoded even if sellingPrice has moved since printing.
@@ -1255,7 +1255,7 @@ const POS = () => {
     const unit = String(resolvedUnit || item.defaultUnit || "PCS").toUpperCase();
 
     if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(amount) || amount < 0) {
-      // Malformed resolution — fall back to the normal add-to-cart flow.
+      // Malformed resolution, fall back to the normal add-to-cart flow.
       addToCart(item);
       return;
     }
@@ -1306,7 +1306,7 @@ const POS = () => {
         stockUnmanaged: !!item.stockUnmanaged,
         image: item.imageUrl,
         isKotEnabled: !!item.isKotEnabled,
-        // UI-only cue (never sent to the backend — createOrderItemPayload
+        // UI-only cue (never sent to the backend, createOrderItemPayload
         // whitelists fields) so the cart can show why a decimal weight/price
         // appeared without the cashier typing it.
         scaleResolved: true,
@@ -1317,7 +1317,7 @@ const POS = () => {
     toast.success(`Scale label scanned: ${formatStockQuantity(qty)} ${unit}, ${formatCurrency(amount)} added`);
   };
 
-  // A barcode fetched via the server ID lookup (fallback path below) — either
+  // A barcode fetched via the server ID lookup (fallback path below), either
   // a plain exact match or one decoded from a scale barcode for this branch.
   const addResolvedBarcodeItemToCart = (resolvedItem) => {
     const annotatedItem = {
@@ -1354,7 +1354,7 @@ const POS = () => {
     }
 
     if (filteredItems.length === 0) {
-      // No fast client-side match (exact or fuzzy) against allItems — fall
+      // No fast client-side match (exact or fuzzy) against allItems, fall
       // back to the server barcode lookup, which also decodes scale barcodes
       // (weight/price embedded in the digits) per this branch's settings.
       // Strictly a fallback: any barcode that already resolves client-side
@@ -1586,7 +1586,7 @@ const POS = () => {
     promotionCode: promotionCode || null,
   }))), [billDiscount, cartItems, customer?.id, promotionCode]);
 
-  // Applies the preview — from the server or from the local engine — to the cart. The two
+  // Applies the preview, from the server or from the local engine, to the cart. The two
   // return the same shape on purpose, so the till renders an offline price exactly as it
   // renders an online one.
   const applyPromotionPreview = useCallback((data, fallbackBillDiscount) => {
@@ -1623,7 +1623,7 @@ const POS = () => {
     }));
   }, []);
 
-  // Offline pricing runs synchronously off the cached bundle — no debounce, no request. A
+  // Offline pricing runs synchronously off the cached bundle, no debounce, no request. A
   // promo code cannot be honoured here: validating and consuming one needs the server, and
   // five disconnected tills would each accept the same single-use code.
   useEffect(() => {
@@ -1681,7 +1681,7 @@ const POS = () => {
 
   // A held table stores the cashier's own discount and nothing else. Resuming one copies what
   // is stored back into the line's manual discount, so a saved effective discount would be
-  // read as a second cut on top of the promotion when the table is finally settled — and the
+  // read as a second cut on top of the promotion when the table is finally settled, and the
   // promotion is re-priced at that moment anyway, which is right: it may have ended since.
   const createPendingOrderPayload = (items = cartItems) => ({
     customerId: customer ? customer.id : null,
@@ -1786,8 +1786,8 @@ const POS = () => {
     if (cartItems.length === 0) return toast.error("Cart is empty");
     if (!canSell) return toast.error(canUseServer && !isFreeLocalSalesPlan ? "No active shift. Cannot checkout." : "POS queue mode is not ready.");
     if (saleMode === SALE_MODES.DINE_IN && !selectedTableId) return toast.error("Select a table before checkout");
-    // Points that price at nothing — below the scheme's minimum, or on a bill that cannot
-    // absorb them — are refused by the server, which fails the whole sale. Better to say so
+    // Points that price at nothing, below the scheme's minimum, or on a bill that cannot
+    // absorb them, are refused by the server, which fails the whole sale. Better to say so
     // here than to let the cashier take the money and then lose the sale to a 400.
     if (canUseServer && loyaltyPoints > 0 && loyaltyDiscount <= 0) {
       return toast.error("Those points cannot be redeemed on this bill. Clear them or enter more.");
@@ -1971,8 +1971,8 @@ const POS = () => {
     setLoading(true);
     try {
       // One key per checkout attempt, held until the sale is actually banked.
-      // Every retry of this checkout — a second click, a stock override, a
-      // resend after a lost reply — carries the same key, so the sale is
+      // Every retry of this checkout, a second click, a stock override, a
+      // resend after a lost reply, carries the same key, so the sale is
       // recorded once and replayed for the rest. setLoading() cannot do this
       // job: React state is asynchronous, so a fast double-click runs this
       // handler twice before the button re-renders as disabled.
@@ -1982,7 +1982,7 @@ const POS = () => {
       const checkoutIdempotencyKey = checkoutIdempotencyKeyRef.current;
 
       // navigator.onLine only reports that a network interface is up. Confirm the SERVER
-      // answers before committing the sale to it — a shop with a live router and a dead
+      // answers before committing the sale to it, a shop with a live router and a dead
       // ISP reads as fully online, so checkout went out, failed, and the sale died in a
       // toast instead of going to the queue that exists for exactly this.
       let useServerForThisCheckout = shouldUseServerForCheckout;
@@ -2003,7 +2003,7 @@ const POS = () => {
       //
       // Online the server prices the sale itself, from the same engine the preview used: it
       // takes the cashier's own discount off and then stacks the promotion on top. Handing it
-      // the effective discount — which already has the promotion inside it — makes it take the
+      // the effective discount, which already has the promotion inside it, makes it take the
       // promotion off a second time, so the till charges 90 on a 100 line and the books record
       // 81. Offline is the opposite case: the till priced the sale, the customer has paid and
       // holds the receipt, and the server records that price as given rather than re-deriving
@@ -2019,7 +2019,7 @@ const POS = () => {
         customerId: customer ? customer.id : null,
         billDiscount,
         promotionCode: promotionCode || null,
-        // Online only — a disconnected till cannot check a balance, and two of them would each
+        // Online only, a disconnected till cannot check a balance, and two of them would each
         // spend the same points.
         loyaltyPointsToRedeem: canUseServer ? loyaltyPoints : 0,
         paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
@@ -2125,7 +2125,7 @@ const POS = () => {
             offlineCashierUserId: user?.userId,
             offlineSoldAt: soldAt,
             // What this till priced with, and what it decided. The server banks the price as
-            // charged and records the attribution rather than re-pricing — see the note on
+            // charged and records the attribution rather than re-pricing. See the note on
             // the offline path in OrderService.
             promotionBundleVersion: billPromotionPreview?.bundleVersion || promotionBundle?.version || null,
             billPromotionId: billPromotionPreview?.billPromotionApplied ? billPromotionPreview.billPromotionId : null,
@@ -2164,7 +2164,7 @@ const POS = () => {
         }
 
         toast.success(isFreeLocalSalesPlan ? "Sale saved locally" : "Sale saved to offline queue");
-        // The sale is banked — the next checkout is a genuinely new one.
+        // The sale is banked, the next checkout is a genuinely new one.
         checkoutIdempotencyKeyRef.current = null;
         offlineInvoiceNoRef.current = null;
         clearCartState();
@@ -2281,7 +2281,7 @@ const POS = () => {
       // surfaced as a "Failed" toast on a sale that had in fact succeeded.
       fetchProducts(effectiveBranchId).catch(() => {});
 
-      // The order is banked — the next checkout is a genuinely new one. The offline
+      // The order is banked, the next checkout is a genuinely new one. The offline
       // number is cleared too: a checkout that queued a number and then completed
       // online must not leave it behind for a later sale to reuse.
       checkoutIdempotencyKeyRef.current = null;
@@ -2331,8 +2331,8 @@ const POS = () => {
     <div className="page-enter flex h-full flex-col gap-1 overflow-y-auto bg-slate-100 p-1 font-sans text-slate-800 custom-scrollbar lg:gap-2 lg:overflow-hidden lg:p-2">
 
       {/* The offline state has to be unmissable. The two indicators that existed before
-          both hid themselves below a breakpoint — the queue-mode line inside `hidden
-          sm:block`, the header pill inside `hidden md:inline-flex` — so a tablet-width
+          both hid themselves below a breakpoint, the queue-mode line inside `hidden
+          sm:block`, the header pill inside `hidden md:inline-flex`, so a tablet-width
           terminal showed nothing at all while queueing sales. This banner is always on. */}
       {!shouldUseServerForCheckout ? (
         <div className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 lg:rounded-2xl lg:px-4">
@@ -2639,7 +2639,7 @@ const POS = () => {
           minHeightClassName="min-h-full"
         />
         {/* The cart lines live in this page's state, not in <Cart>. Boxing the panel
-            off means a render fault here is recoverable — "Try again" remounts the
+            off means a render fault here is recoverable, "Try again" remounts the
             cart with the sale intact instead of losing it to a full reload. */}
         <ErrorBoundary
           variant="section"
@@ -2648,7 +2648,7 @@ const POS = () => {
         >
         {/* The dragged width is a DESKTOP measurement: it sizes the cart as a side panel
             next to the item grid. Below lg the two stack, and applying it there left the
-            cart 470px wide under a full-width grid — visibly mismatched, with dead space
+            cart 470px wide under a full-width grid, visibly mismatched, with dead space
             beside it. Carried as a custom property so the cap only lands at lg and up,
             where the resize handle it comes from actually exists (hidden below that). */}
         <div

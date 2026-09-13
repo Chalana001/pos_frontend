@@ -2,7 +2,7 @@
  * Event names shared between the axios interceptor and the network-status store.
  *
  * Deliberately a module with no imports of its own. The store reaches the server through
- * the reachability probe, which goes through axios — so if axios imported the store
+ * the reachability probe, which goes through axios, so if axios imported the store
  * directly the three would form a cycle. Keeping the bare string here breaks it.
  */
 

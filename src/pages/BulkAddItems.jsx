@@ -184,7 +184,7 @@ export default function BulkAddItems() {
 
   // --- DRAFT RECOVERY ---
   //
-  // The queued list plus the row still being composed — both are typed work and a dropped
+  // The queued list plus the row still being composed, both are typed work and a dropped
   // connection used to take the lot. Deliberately absent: `categories`, `subCategories` and
   // the two search-result maps (server data, re-fetched on mount), the accordion open flags
   // and the category modals (transient UI).
@@ -908,7 +908,7 @@ export default function BulkAddItems() {
 
       await itemsAPI.createBulk(payload);
 
-      // Saved for real — the draft would otherwise be offered back next visit and re-create
+      // Saved for real, the draft would otherwise be offered back next visit and re-create
       // everything that just went in.
       await clearDraft();
       toast.success(`Saved ${cart.length} items successfully ✅`);

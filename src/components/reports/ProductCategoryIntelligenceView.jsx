@@ -36,7 +36,7 @@ export default function ProductCategoryIntelligenceView({ data, intelligenceData
   });
   const coverage = Number(totalElements || 0) > intelligenceRows.length ? `Top ${intelligenceRows.length} products` : "All products in period";
   const missingCostCount = intelligenceRows.filter((row) => Number(row.revenue || 0) > 0 && Number(row.cost || 0) <= 0).length;
-  // Four figures, none of which mean good or bad — so they are ink, and only the
+  // Four figures, none of which mean good or bad, so they are ink, and only the
   // headline gets a tinted icon chip.
   const metrics = [["Product Revenue", totals.revenue, `${coverage}; before bill discounts`, DollarSign, "accent"], ["Gross Profit", totals.profit, `${coverage}; stored line cost`, TrendingUp, "neutral"], ["Gross Margin", totals.revenue ? totals.profit / totals.revenue * 100 : 0, coverage, BarChart3, "neutral"], ["Products", totalElements || rows.length, `${rows.length} shown on this page`, Package, "neutral"]];
   return <div className="space-y-6">

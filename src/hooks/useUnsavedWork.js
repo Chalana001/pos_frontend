@@ -18,13 +18,13 @@ import { hasModule } from "../utils/moduleAccess";
  * state lives inside its own useState hooks and nothing above it can reach in and serialise
  * `cartItems` or `branchInputs`. Serialising DOM inputs would not rebuild those arrays, and
  * lifting every long form's state into a shared store is a rewrite of three files of ~1000
- * lines each. Opt-in also lets each page choose what a draft *is* — see the payload note.
+ * lines each. Opt-in also lets each page choose what a draft *is*. See the payload note.
  *
  * The page supplies the payload; this hook owns when it is written and when it is offered
  * back.
  *
  * What the payload must NOT contain: search text, dropdown or modal open state, panel
- * widths, validation errors, and above all fetched reference data — supplier and branch
+ * widths, validation errors, and above all fetched reference data, supplier and branch
  * lists, search results. Store ids and typed values, and let the page re-fetch reference
  * data on restore, or a resumed draft shows a supplier deleted yesterday at yesterday's
  * prices.
@@ -95,7 +95,7 @@ const useUnsavedWork = ({ kind, entityId = null, schemaVersion = 1, isDirty, pay
     }
   }, [draftId]);
 
-  /** Called by the page once it has saved successfully — the draft has served its purpose. */
+  /** Called by the page once it has saved successfully, the draft has served its purpose. */
   const clearDraft = useCallback(async () => {
     setPendingDraft(null);
     setLastSavedAt(null);
@@ -179,7 +179,7 @@ const useUnsavedWork = ({ kind, entityId = null, schemaVersion = 1, isDirty, pay
   }, [enabled, saveNow]);
 
   // Layer 4: the browser's own confirmation for a tab close or a refresh. Independent of
-  // drafts — it fires whether or not the module is on, because losing work to a stray
+  // drafts. It fires whether or not the module is on, because losing work to a stray
   // Ctrl+W has nothing to do with whether the shop bought draft recovery.
   useEffect(() => {
     if (!isDirty) return undefined;

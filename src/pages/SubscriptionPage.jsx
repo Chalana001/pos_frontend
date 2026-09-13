@@ -11,7 +11,7 @@ import { getModuleState } from '../utils/moduleAccess';
  * The packages page a shop owner sees.
  *
  * The comparison is generated from the module catalog the server sends, not from a
- * hand-written feature list — so it can never advertise something the API would refuse.
+ * hand-written feature list, so it can never advertise something the API would refuse.
  * Rows where every package agrees are hidden by default: eleven identical ticks tell the
  * reader nothing, and burying the four rows that actually differ is what makes a pricing
  * table useless.

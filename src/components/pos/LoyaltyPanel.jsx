@@ -8,7 +8,7 @@ import { formatCurrency } from "../../utils/formatters";
  * Points at the till: what the customer has, and spending some of it on this sale.
  *
  * <p>Shows nothing at all unless there is a customer on the sale, the scheme is on, and they
- * have a balance — the cashier should not be offered a redemption the backend will refuse, and
+ * have a balance, the cashier should not be offered a redemption the backend will refuse, and
  * a shop that does not run loyalty should never see this.
  *
  * <p>Points are settled by the server after promotions, so what is entered here is a request,
@@ -54,7 +54,7 @@ const LoyaltyPanel = ({ customerId, billTotal, points, setPoints, refreshKey, fo
   const maxSpendable = useMemo(() => {
     if (!account?.enabled || !account.pointsBalance) return 0;
     if (perPoint <= 0) return account.pointsBalance;
-    // Never offer more than the sale can absorb — the server would clamp it and the cashier
+    // Never offer more than the sale can absorb, the server would clamp it and the cashier
     // would be left explaining why fewer points came off than they typed.
     return Math.min(account.pointsBalance, Math.floor(spendableCash / perPoint));
   }, [account, perPoint, spendableCash]);

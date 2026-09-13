@@ -18,7 +18,7 @@ import {
  * The offline queue's sync engine.
  *
  * This used to live inside OfflineSalesPage as component state, which meant it only
- * existed while that page was open — so nothing could push the queue in the background.
+ * existed while that page was open, so nothing could push the queue in the background.
  * It lives here so the page and the automatic sync agent share one implementation of the
  * eligibility rules. If those rules were written twice they would drift, and a row
  * blocked in one place would go through in the other.
@@ -270,7 +270,7 @@ const simulateRowStockValidation = (queueRows, itemLookupByBranch) => {
       inventoryItem.aggregateQty -= requiredQty;
     });
 
-    // Warnings, not a gate. These rows are completed, paid, receipted sales — refusing
+    // Warnings, not a gate. These rows are completed, paid, receipted sales, refusing
     // to import one does not un-sell the goods, it just keeps real revenue off the books
     // and strands the transaction here forever. The server absorbs the shortfall, lets
     // stock go negative and audits it, so the operator is told what will go short and
@@ -333,7 +333,7 @@ export const resolveShiftReadiness = async ({ branchIds, isAdminOrManager, activ
 export const rowHasOpenShift = (row, shiftMap, currentUserId) => {
   const openCashierIds = shiftMap[Number(row.branchId)] || [];
   // A row queued before the cashier was recorded sends no cashier id, and the server
-  // falls back to whoever is importing — so that is the shift to check for it.
+  // falls back to whoever is importing, so that is the shift to check for it.
   const cashierId = Number(row.cashierUserId) || Number(currentUserId);
   if (!cashierId) return false;
   return openCashierIds.includes(cashierId);
@@ -342,7 +342,7 @@ export const rowHasOpenShift = (row, shiftMap, currentUserId) => {
 /**
  * Everything a caller needs to decide what can be pushed right now.
  *
- * `online` is the caller's answer to "can I reach the server" — the page reads its auth
+ * `online` is the caller's answer to "can I reach the server", the page reads its auth
  * context, the sync agent runs a reachability probe. Offline, this still returns the
  * rows so the queue stays visible; nothing is ready to push.
  */
@@ -378,7 +378,7 @@ export const evaluateQueue = async ({ online, isAdminOrManager, activeShift, cur
 };
 
 // Only one push may be in flight at a time. Correctness is already guaranteed by
-// clientSaleId and the server's "Already imported" replay — this is about not firing the
+// clientSaleId and the server's "Already imported" replay. This is about not firing the
 // same work twice when the page and the sync agent both decide to act.
 let inFlightPush = null;
 

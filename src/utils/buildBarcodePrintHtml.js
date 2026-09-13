@@ -1,7 +1,7 @@
 // Wraps an already-rendered `.print-container` DOM subtree (captured via a ref
 // in BarcodePrintPage) in a standalone HTML document for the local print-agent.
-// Reuses the exact markup BarcodeLabel already rendered — no parallel/duplicate
-// layout logic — so direct print always matches the on-screen preview.
+// Reuses the exact markup BarcodeLabel already rendered, no parallel/duplicate
+// layout logic, so direct print always matches the on-screen preview.
 export const buildBarcodePrintHtml = (containerOuterHtml, settings) => {
   const pageWidth = Number(settings?.labelWidthMm) || 40;
   const pageHeight = Number(settings?.labelHeightMm) || 25;

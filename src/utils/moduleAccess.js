@@ -48,7 +48,7 @@ export const hydrateModulesFromCache = (tenantId) => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const parsed = JSON.parse(raw);
-    // A cache from a different shop must never be applied — a shared device that
+    // A cache from a different shop must never be applied, a shared device that
     // switched tenants would otherwise inherit the previous shop's package.
     if (tenantId && parsed.tenantId && parsed.tenantId !== tenantId) {
       return false;
@@ -84,7 +84,7 @@ export const setModules = (payload) => {
       cachedAt: new Date().toISOString(),
     }));
   } catch {
-    // Storage full or blocked — the in-memory set still works for this session.
+    // Storage full or blocked, the in-memory set still works for this session.
   }
 
   notify();
@@ -129,7 +129,7 @@ export const moduleForRoute = (path) => state.routeModule?.[path] ?? null;
  * The module owning a concrete URL, e.g. "/sales/1042/return" -> SALES_RETURNS.
  *
  * The server sends patterns ("/sales", "/sales/:id/return"), so this turns each into a
- * regex and keeps the LONGEST match — otherwise "/sales" would win over
+ * regex and keeps the LONGEST match; otherwise "/sales" would win over
  * "/sales/:id/return" and a shop without returns would still reach the returns screen.
  */
 export const moduleForPath = (path) => {
@@ -156,7 +156,7 @@ export const moduleForPath = (path) => {
 /**
  * Whether the shop may open a given POS route.
  *
- * Returns true when nothing is known yet or no module claims the path — the server is the
+ * Returns true when nothing is known yet or no module claims the path, the server is the
  * real gate, and hiding the whole app because a lookup came back empty would be worse than
  * showing a page that then returns 403.
  */

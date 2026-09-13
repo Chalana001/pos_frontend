@@ -1,8 +1,8 @@
 const encoder = new TextEncoder();
 
 // OWASP's floor for PBKDF2-HMAC-SHA256. A four-digit PIN is only 10,000 candidates, so
-// stretching is the only thing standing between an attacker who can read IndexedDB — which
-// is anyone with the Windows account — and the PIN itself. One round of SHA-256, which
+// stretching is the only thing standing between an attacker who can read IndexedDB, which
+// is anyone with the Windows account, and the PIN itself. One round of SHA-256, which
 // this replaces, made that search instant. This does not make a 4-digit PIN strong; it
 // makes brute-forcing it cost hours per device instead of milliseconds.
 const PBKDF2_ITERATIONS = 210000;
@@ -57,7 +57,7 @@ export const createLocalPinRecord = async (pin) => {
 
 /**
  * A record written before the PBKDF2 upgrade. Those still verify, so nobody is locked out
- * of a device by shipping this — but the caller should re-derive on the next successful
+ * of a device by shipping this, but the caller should re-derive on the next successful
  * unlock, which is the one moment the plaintext PIN is available to do it with.
  */
 export const isLegacyPinRecord = (pinRecord) =>

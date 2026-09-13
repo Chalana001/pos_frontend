@@ -41,7 +41,7 @@ export default function CashFlowReportView({ data: reportData }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {/* Inflows and outflows are both normal business activity — neither is a
+        {/* Inflows and outflows are both normal business activity, neither is a
             "good" or "critical" state, so the chips stay neutral. Only a negative
             net movement is a condition worth flagging. */}
         <SummaryMetric title="Cash Inflows" value={data.totalInflows || 0} helper="Sales and credit collections" icon={TrendingUp} accent="neutral" />

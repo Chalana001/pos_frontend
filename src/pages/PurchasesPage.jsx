@@ -1,4 +1,4 @@
-// BUG-12: THIS FILE IS DEAD CODE — not imported anywhere, not routed in AppRoutes.jsx.
+// BUG-12: THIS FILE IS DEAD CODE, not imported anywhere, not routed in AppRoutes.jsx.
 // The active purchase list page is PurchaseListPage.jsx (which AppRoutes.jsx imports as "Purchases").
 // This file can be safely deleted. Kept here only as reference until confirmed.
 

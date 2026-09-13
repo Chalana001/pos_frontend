@@ -33,7 +33,7 @@ const PurchaseReturnPage = () => {
   const [receiptSettings, setReceiptSettings] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // form — per GRN selection
+  // form, per GRN selection
   const [selectedGrnId, setSelectedGrnId] = useState(null);
   // returnQtys: { [grnItemId]: number }
   const [returnQtys, setReturnQtys] = useState({});

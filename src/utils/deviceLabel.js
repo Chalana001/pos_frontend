@@ -1,7 +1,7 @@
 /**
  * A human name for this terminal, e.g. "Windows PC" or "Android tablet".
  *
- * The device id stored in appMeta is four random characters — fine for telling terminals
+ * The device id stored in appMeta is four random characters, fine for telling terminals
  * apart in code, useless to the person being asked "which of these two drafts do you
  * want?". What actually settles that question in a shop is the back-office PC versus the
  * tablet on the floor, and the user agent is enough to say which is which without adding a

@@ -1,7 +1,7 @@
 import { SERVER_UNREACHABLE_EVENT } from "./networkEvents";
 import { isServerResponding } from "./serverReachability";
 
-// Is the SERVER answering — as opposed to "is a network interface up", which is the only
+// Is the SERVER answering, as opposed to "is a network interface up", which is the only
 // question navigator.onLine can answer.
 //
 // navigator.onLine flips to false on a Wi-Fi roam between access points, a cable reseat, a
@@ -10,7 +10,7 @@ import { isServerResponding } from "./serverReachability";
 // ISP or the VPS is down. Treating it as the verdict is what once threw a cashier off a
 // half-typed 40-line purchase and onto /pos, with the form unmounted and its state gone.
 //
-// Here it is only ever a SUSPICION. So is a request that died with no response — which is
+// Here it is only ever a SUSPICION. So is a request that died with no response, which is
 // the case navigator misses entirely, and the stronger signal of the two.
 //
 //   suspicion -> probe -> (fail) -> wait -> probe -> (fail) -> offline   ~10s
@@ -20,7 +20,7 @@ import { isServerResponding } from "./serverReachability";
 // timer because a single 2.5s-timeout probe can fail on a link that is slow but alive.
 //
 // Deliberately NOT the check the till uses. POS.jsx calls isServerReachable() itself at the
-// moment of checkout and must not wait on this grace window — a sale needs the answer now,
+// moment of checkout and must not wait on this grace window, a sale needs the answer now,
 // and queueing beats losing it. This flag is only an indicator: the Offline chip in the
 // header, and the POS deciding to queue. It never moves anyone off a page or interrupts
 // them, so being ten seconds late costs nothing. Keep the two separate.
@@ -89,7 +89,7 @@ const setOnline = (next) => {
  *
  * Uses isServerResponding, NOT isServerReachable. The latter answers "can this browser bank
  * a sale right now" and deliberately reports an unauthenticated or expired session as
- * unreachable — correct for the till, wrong here. Asking it on the login screen gets a 403
+ * unreachable, correct for the till, wrong here. Asking it on the login screen gets a 403
  * from a perfectly healthy server, and the app latches offline for the whole session with
  * no way back short of a reload. Any HTTP reply at all is proof of life for this flag.
  */
@@ -123,7 +123,7 @@ export const suspectOffline = async () => {
 
   if (await probe()) return;
 
-  // Still online as far as the app is concerned — one failure is not enough.
+  // Still online as far as the app is concerned, one failure is not enough.
   confirmTimer = window.setTimeout(async () => {
     confirmTimer = null;
     if (await probe()) return;

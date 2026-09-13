@@ -5,7 +5,7 @@ import Table from "../common/Table";
 import { formatCurrency, shortCurrency } from "../../utils/formatters";
 import { axisProps, gridProps, tooltipProps, BAR_RADIUS, ordinalRamp, tileTone } from "../../utils/chartTheme";
 
-// Aging buckets are ordered age bands, so they take a one-hue ramp — the reader
+// Aging buckets are ordered age bands, so they take a one-hue ramp, the reader
 // sees severity increase in the colour itself, not in four unrelated hues.
 const BUCKET_COLORS = ordinalRamp(4);
 

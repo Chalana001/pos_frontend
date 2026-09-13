@@ -5,7 +5,7 @@ import { cashDropsAPI } from "../../api/cashDrops.api";
 import { formatCurrency, formatDateTime } from "../../utils/formatters";
 import LoadingSpinner from "../common/LoadingSpinner";
 
-// A shift is a single work session, not the whole business — this comfortably
+// A shift is a single work session, not the whole business. This comfortably
 // covers a real shift's activity in one request per category, no pagination
 // needed inside the modal. If a shift ever exceeds this, the section footer
 // says so rather than silently hiding the rest.
@@ -60,7 +60,7 @@ const Section = ({ title, items, totalCount, emptyText, renderRow, sumValue, sum
  *
  * Why purchases are here at all: a purchase paid from the shift's cash drawer
  * already reduces Expected Cash (folded into the shift's totalExpenses by
- * PurchaseService.applyDrawerCashOutIfNeeded on the backend) — but until now
+ * PurchaseService.applyDrawerCashOutIfNeeded on the backend), but until now
  * that was invisible, just a bigger "Expenses" number with no explanation.
  * This section shows exactly which purchases account for it.
  */

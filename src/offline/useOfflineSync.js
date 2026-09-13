@@ -7,7 +7,7 @@ import { getOfflineSalesCount, OFFLINE_EVENTS } from "./db";
 import { evaluateQueue, pushRows } from "./sync";
 
 // The browser fires `online` when a network interface comes up, not when the server is
-// reachable — DHCP, DNS and VPN are still settling for seconds after a router reboot.
+// reachable, DHCP, DNS and VPN are still settling for seconds after a router reboot.
 // Attempting inside that window stamps every row with a lastError and hands the cashier
 // a queue full of red text for a problem that fixed itself.
 const SETTLE_AFTER_RECONNECT_MS = 15000;
@@ -20,7 +20,7 @@ const BACKOFF_STEPS_MS = [30000, 60000, 120000, 300000];
  * Pushes the offline queue on its own, so nobody has to remember to.
  *
  * Queued sales used to sit in IndexedDB until a human opened /offline-sales and pressed a
- * button — and those rows are the only copy of themselves, so the longer they sit the
+ * button, and those rows are the only copy of themselves, so the longer they sit the
  * more chances there are to lose them.
  *
  * Deliberately conservative about what it sends: only rows that are ready, and never one

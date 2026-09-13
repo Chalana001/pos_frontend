@@ -6,7 +6,7 @@ import { useOfflineSync } from "../../offline/useOfflineSync";
 
 /**
  * Renders nothing; exists so everything that keeps the app usable offline has somewhere
- * to live — pushing the queue, and getting the pieces onto the device before they are
+ * to live, pushing the queue, and getting the pieces onto the device before they are
  * needed.
  *
  * Mounted from Layout because that sits inside the Branch, AppConfiguration and Shift

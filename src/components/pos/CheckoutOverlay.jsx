@@ -74,7 +74,7 @@ const CheckoutOverlay = ({
     const natural = fit.scrollHeight;
 
     // clientHeight counts the body's own padding, which sits outside the element
-    // being scaled — comparing against it left a constant overflow the size of
+    // being scaled, comparing against it left a constant overflow the size of
     // that padding, whatever the ratio worked out to.
     const style = getComputedStyle(body);
     // The 2px absorbs sub-pixel rounding; without it the fit lands a pixel over

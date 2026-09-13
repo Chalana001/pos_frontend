@@ -1,5 +1,5 @@
 // src/pages/SaleReturnPage.jsx
-// Phase 3 — Full partial return/refund UI
+// Phase 3, Full partial return/refund UI
 // Route: /sales/:id/return  (id = invoiceNo)
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -54,7 +54,7 @@ const SaleReturnPage = () => {
   const [loading, setLoading] = useState(true);
 
   // ── form state ────────────────────────────────────────────────────────────
-  // returnQtys: { [orderItemId]: number }  — qty the cashier wants to return
+  // returnQtys: { [orderItemId]: number }, qty the cashier wants to return
   const [returnQtys, setReturnQtys] = useState({});
   const [refundMethod, setRefundMethod] = useState("CASH");
   const [reason, setReason] = useState("");
@@ -218,7 +218,7 @@ const SaleReturnPage = () => {
   /**
    * @param isReprint the slip printed straight after processing the return is the original;
    *                  anything pulled back out of the list afterwards is a copy, and has to
-   *                  say so — nothing else on the paper tells the two apart.
+   *                  say so. Nothing else on the paper tells the two apart.
    */
   const handlePrintReturn = (returnData, isReprint = true) => {
     if (!returnData || !returnPrinterRef.current) return;

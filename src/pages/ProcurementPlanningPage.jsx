@@ -21,7 +21,7 @@ export default function ProcurementPlanningPage(){
  const openAsk=(config)=>setAsk(config);
  const [plans,setPlans]=useState([]),[selected,setSelected]=useState(null),[drafts,setDrafts]=useState([]),[branches,setBranches]=useState([]),[suppliers,setSuppliers]=useState([]),[form,setForm]=useState({name:'Weekly reorder plan',branchId:'',forecastDays:30,targetCoverDays:30});
  // Prefill the plan's branch from the selector when a real branch is active, so the
- // common case is one click. Still required — "All branches" leaves it empty.
+ // common case is one click. Still required, "All branches" leaves it empty.
  useEffect(()=>{setForm(f=>f.branchId?f:(selectedBranchId&&selectedBranchId!==0?{...f,branchId:String(selectedBranchId)}:f));},[selectedBranchId]);
  // Saved-plan list follows the global branch selector, the same way Reports does.
  // The dropdown inside "Generate Plan" is a different thing: it picks the branch the

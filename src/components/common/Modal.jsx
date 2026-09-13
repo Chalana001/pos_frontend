@@ -25,7 +25,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   const titleId = useId();
 
   // Callers pass inline arrows for onClose, so its identity changes every render.
-  // Keeping it in a ref lets the effect depend on `isOpen` alone — otherwise the
+  // Keeping it in a ref lets the effect depend on `isOpen` alone; otherwise the
   // cleanup below would run on every render and yank focus back to the opener
   // while the dialog is still up.
   const onCloseRef = useRef(onClose);
@@ -46,7 +46,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
       const focusable = getFocusable(panelRef.current);
 
-      // Nothing to land on — keep focus on the panel rather than letting it
+      // Nothing to land on. Keep focus on the panel rather than letting it
       // escape to the page behind the overlay.
       if (focusable.length === 0) {
         event.preventDefault();
@@ -72,7 +72,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     // Move focus into the dialog; leaving it on the trigger behind the overlay
     // means the first Tab lands somewhere invisible. React applies autoFocus
     // during commit, before this effect runs, so a child that asked for focus
-    // already has it — respect that instead of dragging focus to the close button.
+    // already has it, respect that instead of dragging focus to the close button.
     if (!panelRef.current?.contains(document.activeElement)) {
       const [firstFocusable] = getFocusable(panelRef.current);
       (firstFocusable || panelRef.current)?.focus();

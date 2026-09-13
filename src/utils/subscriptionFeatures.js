@@ -7,7 +7,7 @@
 // 403s, or a hidden one the API still allowed.
 //
 // The server is now authoritative. GET /api/saas/my-modules returns the shop's effective module
-// set — plan template plus any per-shop override the super admin set — and this file is a thin
+// set, plan template plus any per-shop override the super admin set, and this file is a thin
 // translation from the old feature names the ~18 call sites use to the module keys that back
 // them. The `planName` argument is kept only so those call sites did not all have to change;
 // it is ignored whenever a real module set has loaded.
@@ -35,7 +35,7 @@ export const FEATURE_MODULE_MAP = {
   SERVICES: 'ITEMS_SERVICE',
 };
 
-// Fallback only. Used before /api/saas/my-modules has answered — a cold offline start, or the
+// Fallback only. Used before /api/saas/my-modules has answered, a cold offline start, or the
 // first paint after login. Three tiers instead of the previous nine: the legacy plan names are
 // aliases now, not copies, so they cannot drift from the tier they belong to.
 const TIER_FEATURES = {
@@ -95,7 +95,7 @@ export const isSingleBranchPlan = (planName) => {
  * Whether the shop's package includes a feature.
  *
  * `planName` is only consulted before the module set has loaded. Note that the fallback stays
- * permissive for an unrecognised plan — a shop on a custom plan must not have its whole UI
+ * permissive for an unrecognised plan, a shop on a custom plan must not have its whole UI
  * disappear for the second before /api/saas/my-modules answers. The server-side gate is the one
  * that actually enforces this; here it only decides what to draw.
  */
@@ -113,7 +113,7 @@ export const hasPlanFeature = (planName, feature) => {
   return TIER_FEATURES[tier]?.[feature] ?? true;
 };
 
-/** Direct module check for new code — no legacy feature-name indirection. */
+/** Direct module check for new code, no legacy feature-name indirection. */
 export const hasShopModule = (moduleKey) => {
   const allowed = hasModule(moduleKey);
   return allowed === null ? true : allowed;

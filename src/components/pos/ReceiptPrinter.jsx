@@ -22,8 +22,8 @@ const ReceiptPrinter = forwardRef((props, ref) => {
       };
 
       // One renderer, the same one the Receipt Design preview draws with. A branch that has
-      // never saved a layout gets the default lines from getActiveTemplateLines — the same
-      // default the preview shows it — so the slip on the printer is the slip on screen.
+      // never saved a layout gets the default lines from getActiveTemplateLines, the same
+      // default the preview shows it, so the slip on the printer is the slip on screen.
       // There used to be a second, older renderer for the unsaved case, and it printed a
       // different table: that is how the preview and the print came to disagree.
       const receiptHtml = buildPosReceiptHtml({

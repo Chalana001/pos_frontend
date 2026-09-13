@@ -163,7 +163,7 @@ const Login = () => {
               {canUnlockOffline && (
                 <form onSubmit={handleOfflineUnlock} className="space-y-4">
                   {/* A PIN record only exists on the device where that PIN was set, so this
-                      lists who enrolled here — not everyone who has an account. */}
+                      lists who enrolled here, not everyone who has an account. */}
                   {offlineCandidates.length > 1 ? (
                     <div>
                       <label className="mb-1 block text-sm font-medium text-slate-700">

@@ -47,7 +47,7 @@ const renderElement = (el, item, shopName) => {
       const format = el.barcodeFormat === 'EAN13' && EAN13_RE.test(barcodeValue) ? 'EAN13' : 'CODE128';
       // The number is rendered as normal HTML text below the bars (not baked
       // into the canvas image) so it prints in the same font/weight as the
-      // price and other text elements — canvas-drawn text never matches.
+      // price and other text elements, canvas-drawn text never matches.
       return (
         <div key={el.id} style={{ width: '100%' }}>
           <div style={{ display: 'flex', width: '100%', justifyContent: alignToFlex(el.align) }}>

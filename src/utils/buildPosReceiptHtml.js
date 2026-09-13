@@ -29,7 +29,7 @@ const esc = (v) =>
     .replace(/'/g, '&#039;');
 
 // Sinhala faces sit after the chosen font so Latin text keeps that font and only the glyphs
-// it lacks fall through — an alt name in Sinhala must not print as boxes on the shop's PC.
+// it lacks fall through, an alt name in Sinhala must not print as boxes on the shop's PC.
 const SINHALA_FALLBACK = "'Iskoola Pota', 'Noto Sans Sinhala', 'Nirmala UI'";
 
 const getFontFamily = (key) => {
@@ -52,7 +52,7 @@ const getFontFamily = (key) => {
 
 /**
  * The line before any discount. A weight item is priced per kilo but sold in grams, so its
- * base is qty × the per-gram price, not qty × the shelf price — that product is a thousand
+ * base is qty × the per-gram price, not qty × the shelf price. That product is a thousand
  * times too large and would read as a discount on every gram sold.
  */
 const lineBaseTotal = (item) => {
@@ -79,7 +79,7 @@ const lineDiscountValue = (item) => Number(item?.effectiveDiscountValue ?? item?
  * Rupees taken off this line, from whichever field the caller filled in.
  *
  * <p>Base minus the explicit line total comes first because it is the only figure that
- * captures every cut at once — a line discount and a promotion on the same item. The typed
+ * captures every cut at once, a line discount and a promotion on the same item. The typed
  * discount is the fallback for callers that hand over no line total.
  */
 const lineDiscountAmount = (item) => {
@@ -152,7 +152,7 @@ const renderLine = (line, data, items) => {
   const pointsEarned   = Math.max(0, Number(orderData?.loyaltyPointsEarned ?? 0));
   const pointsRedeemed = Math.max(0, Number(orderData?.loyaltyPointsRedeemed ?? 0));
   const pointsDiscount = Math.max(0, Number(orderData?.loyaltyDiscountAmount ?? 0));
-  // The balance as at this sale, banked on the order — not the customer's balance now, or a
+  // The balance as at this sale, banked on the order, not the customer's balance now, or a
   // reprint would disagree with the slip it is a copy of.
   const pointsBalance  = Math.max(0, Number(orderData?.loyaltyPointsBalance ?? 0));
   // A return moves points too, and its slip wants the same balance line.
@@ -169,7 +169,7 @@ const renderLine = (line, data, items) => {
   const refundMethodLabel = {
     CASH: 'Cash', BANK: 'Bank Transfer', CARD: 'Card', STORE_CREDIT: 'Store Credit',
   }[orderData?.refundMethod] || orderData?.refundMethod || '';
-  // The goods' value, what points had paid of it, and the bill-discount share — the three
+  // The goods' value, what points had paid of it, and the bill-discount share, the three
   // figures that turn "goods returned 1,180" into "cash refund 200" on the slip.
   const returnGoodsValue = (Array.isArray(items) ? items : []).reduce((sum, item) =>
     sum + Number(item?.returnQty ?? 0) * Number(item?.finalUnitPrice ?? 0), 0);
@@ -200,7 +200,7 @@ const renderLine = (line, data, items) => {
   // Total discount shown on DISCOUNT line = everything combined
   const totalDiscount = lineDiscountSum + billDiscount + promoDiscount;
   // If totalDiscount doesn't match subTotal-grandTotal due to rounding, trust the arithmetic
-  // Points were already taken off grandTotal, and they are not a discount — spending them is
+  // Points were already taken off grandTotal, and they are not a discount, spending them is
   // closer to part-payment. Left in, they would be reported on the DISCOUNT line as a price
   // cut the shop never gave.
   const inferredDiscount = subTotal > 0 && grandTotal >= 0 ? subTotal - grandTotal - pointsDiscount : 0;
@@ -340,7 +340,7 @@ const renderLine = (line, data, items) => {
 
     case 'TOTAL_SAVINGS': {
       // What the customer kept, counting both kinds: the shop's price cuts and the points
-      // they spent. It is a statement, not a step in the sum — the Discount and Points
+      // they spent. It is a statement, not a step in the sum, the Discount and Points
       // Discount lines above have each already come off the total, and a line that added
       // them up again in the same column would leave a receipt that does not add up. So it
       // belongs below Net Total, where a customer reads it as "you saved this today".
@@ -375,7 +375,7 @@ const renderLine = (line, data, items) => {
  * Returned items: what came back, at what it was actually sold for, and what that refunds.
  *
  * <p>Deliberately not buildItemRows with different keys. A sale line carries a list price, a
- * discount and a promotion to explain; a return line carries none of that — it is the price
+ * discount and a promotion to explain; a return line carries none of that. It is the price
  * charged, the quantity coming back, and the money going out.
  */
 const buildReturnRows = (items, { nameSize = 11, currency = 'LKR' } = {}) => {
@@ -401,7 +401,7 @@ const buildReturnRows = (items, { nameSize = 11, currency = 'LKR' } = {}) => {
  * <p>Two layouts. COLUMNS, the default, is the supermarket slip: a heading row, the name,
  * then normal price / our price / qty / total in four columns. STACKED is below:
  *
- * <p>Three columns — price, quantity, amount — under an optional heading row, with the item
+ * <p>Three columns, price, quantity, amount, under an optional heading row, with the item
  * name on its own row above them so a long name never squeezes the figures. A discounted
  * line shows the shelf price struck through beside the price actually charged, the way a
  * customer expects to read "was / now"; the amount the cut is worth is a separate optional
@@ -449,7 +449,7 @@ const buildItemRows = (items, settings, cfg, { nameSize = 11, lkr, amt = lkr } =
     // column sits on the paper's left edge, the rest hang right, so the row reads from
     // margin to margin like the supermarket slips do. The normal price is struck only
     // where it was cut; on a plain line both prices print the same
-    // number rather than leaving a hole in the column. Currency goes on the total alone —
+    // number rather than leaving a hole in the column. Currency goes on the total alone,
     // four figures across a 72mm roll leave no room to repeat it.
     const span = cfg.showQty ? 4 : 3;
     // Column widths are declared, not left to the words in the headings: without them the
@@ -507,11 +507,11 @@ const buildItemRows = (items, settings, cfg, { nameSize = 11, lkr, amt = lkr } =
       const hasDiscount = discount > 0.001 && baseTotal > 0 && qty > 0;
 
       // The price per unit actually charged: the shelf price scaled by the cut. Scaling keeps
-      // the unit — a per-kilo price stays per kilo even when the line was sold in grams.
+      // the unit, a per-kilo price stays per kilo even when the line was sold in grams.
       const effUnit = hasDiscount ? unitPrice * (lineTotal / baseTotal) : unitPrice;
 
       // "Price: 480.00" on a plain line; on a discounted one the shelf price struck through
-      // and the charged price named as the shop's own — "480.00 Our Price: 450.00" — which
+      // and the charged price named as the shop's own, "480.00 Our Price: 450.00", which
       // is how a customer reads "was / now" without a column heading to explain it.
       // Label and figure stay on one line; if the cell must wrap it breaks after the
       // struck price, never between "Our Price:" and the number it names.

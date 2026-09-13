@@ -23,7 +23,7 @@ const EMPTY = {
 };
 
 /**
- * Customer segments — the rules a promotion targets instead of a list of names.
+ * Customer segments, the rules a promotion targets instead of a list of names.
  *
  * <p>Membership is a snapshot, not a live query: the rules are aggregates over every completed
  * order, which is not something to run at a till. The screen says when each was last worked out

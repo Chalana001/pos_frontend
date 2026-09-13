@@ -35,7 +35,7 @@ const formatLabel = (label, chartMode) => {
 
 // Chrome and colours come from utils/chartTheme so this chart matches the report
 // screens. It previously carried its own hex values, a dashed grid, a 3px stroke,
-// and a "Rs." y-axis prefix while the rest of the app said "LKR" — the same drift
+// and a "Rs." y-axis prefix while the rest of the app said "LKR", the same drift
 // that had accumulated across the reports section.
 const SalesOverviewChart = ({ data, chartMode, animate }) => (
   <ResponsiveContainer width="100%" height="100%">

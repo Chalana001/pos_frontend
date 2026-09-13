@@ -17,7 +17,7 @@ const validThemes = new Set(Object.values(THEMES));
  * The default is LIGHT, not SYSTEM. An earlier attempt keyed dark mode straight
  * off `prefers-color-scheme`, which flipped tills into a half-dark state nobody
  * asked for. Dark is now something a person picks. SYSTEM is still offered, and
- * when it is chosen it does follow the OS live — but choosing it is the point.
+ * when it is chosen it does follow the OS live, but choosing it is the point.
  */
 
 const prefersDark = () =>

@@ -4,7 +4,7 @@ import Table from "../common/Table";
 import { formatCurrency } from "../../utils/formatters";
 import { tileTone } from "../../utils/chartTheme";
 
-// These grids are plain counts and totals — nothing here means good or bad, so
+// These grids are plain counts and totals. Nothing here means good or bad, so
 // the figures are ink. The tab label already says which family you are looking at.
 const MetricGrid = ({ metrics, tone = "neutral" }) => (
   <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">

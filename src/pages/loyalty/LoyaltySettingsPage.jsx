@@ -17,7 +17,7 @@ const EMPTY_TIER = { name: "", minLifetimePoints: 0, earnMultiplier: 1, sortOrde
  *
  * <p>The two rates are shown side by side with the effective return spelled out underneath,
  * because that number is the whole cost of the scheme and it is not obvious from either rate on
- * its own — earning a point per rupee and spending them back at 0.25 is a 25% giveaway.
+ * its own, earning a point per rupee and spending them back at 0.25 is a 25% giveaway.
  */
 const LoyaltySettingsPage = () => {
   const { user } = useAuth();

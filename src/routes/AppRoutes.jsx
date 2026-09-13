@@ -80,8 +80,8 @@ const withSuspense = (node) => <Suspense fallback={<RouteFallback />}>{node}</Su
  * Where "/" lands.
  *
  * Sending everyone to the dashboard stranded them: the dashboard is an online-only
- * route, so an offline user got "Online Connection Required", and a cashier — who has
- * no dashboard permission — got "Access Denied". Both are dead ends, and "/" is where
+ * route, so an offline user got "Online Connection Required", and a cashier, who has
+ * no dashboard permission, got "Access Denied". Both are dead ends, and "/" is where
  * the login route and the offline PIN unlock both send you.
  *
  * Anyone who cannot reach the dashboard right now goes to the POS instead. Every role

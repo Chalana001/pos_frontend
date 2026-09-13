@@ -47,7 +47,7 @@ const CashDrops = () => {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
   const searchRef = useSearchOnType(setSearch);
-  // This is a live operational log, not a report — it defaults to showing
+  // This is a live operational log, not a report. It defaults to showing
   // EVERYTHING, not just today. A "today only" default filter reads as "this
   // is all the data there is" and makes real totals look wrong when they're
   // just hidden behind an invisible date filter (that's exactly what
@@ -89,7 +89,7 @@ const CashDrops = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranchId, user?.role, search, startDate, endDate, cashierId, page]);
 
-  // Deliberately its own effect, with its own params — "Today's Drop" stays
+  // Deliberately its own effect, with its own params, "Today's Drop" stays
   // pinned to today regardless of whatever date range the table above is
   // filtered to, so it's a stable reference point rather than something that
   // silently changes meaning when someone adjusts the date filter.
@@ -206,7 +206,7 @@ const CashDrops = () => {
     }
   };
 
-  // Fixed to today's calendar date, on purpose — not built from
+  // Fixed to today's calendar date, on purpose, not built from
   // buildQueryParams(), which reads the table's adjustable startDate/endDate.
   const fetchTodayTotal = async () => {
     setTodayTotalLoading(true);

@@ -159,8 +159,8 @@ const Cart = ({
   /**
    * What the per-line cuts came to, split by who made them.
    *
-   * <p>Subtotal is the shelf price and Total is what is owed, and everything taken off a line —
-   * a cashier's own discount, a promotion — used to happen in the gap between the two with
+   * <p>Subtotal is the shelf price and Total is what is owed, and everything taken off a line,
+   * a cashier's own discount, a promotion, used to happen in the gap between the two with
    * nothing naming it. A bill-level promotion got its own row and a line-level one did not, so
    * a cashier reading "Subtotal 1,000, Bill Discount 0, Total 820" had no way to account for
    * the 180 and no way to tell a customer where it went.
@@ -179,7 +179,7 @@ const Cart = ({
     Number.isFinite(previewBillDiscount) ? previewBillDiscount : safeBillDiscount
   ));
   // What the bill comes to before points. This is the figure the points panel is allowed to
-  // spend against, and the base the server quotes a redemption from — feeding it the total
+  // spend against, and the base the server quotes a redemption from, feeding it the total
   // *after* points would shrink the ceiling as the cashier typed.
   const totalBeforePoints = Math.max(0, lineTotalAfterItemDiscounts - effectiveBillDiscount);
   const pointsDiscount = Math.min(totalBeforePoints, Math.max(0, Number(loyaltyDiscount) || 0));

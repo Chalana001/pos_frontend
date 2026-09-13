@@ -1,7 +1,7 @@
 /**
  * Today's date as YYYY-MM-DD, using the browser's LOCAL calendar day.
  *
- * Do not use `new Date().toISOString().split("T")[0]` for this — toISOString
+ * Do not use `new Date().toISOString().split("T")[0]` for this, toISOString
  * converts to UTC first, so for roughly the first 5-6 hours of every day in
  * Sri Lanka (UTC+5:30) it silently returns YESTERDAY's date. That bug showed
  * up as "things I just recorded aren't in the table" (a default date-range
@@ -26,7 +26,7 @@ export const formatCurrency = (amount) => {
 /**
  * Compact currency for chart axis ticks: one prefix, no cents, K/M suffixes.
  *
- * Axis ticks have a fixed width budget, so they cannot use formatCurrency —
+ * Axis ticks have a fixed width budget, so they cannot use formatCurrency,
  * but they must agree with it on the currency, or a single chart ends up
  * showing both "LKR 0.00" and "Rs. 9.5K" (which it did).
  *

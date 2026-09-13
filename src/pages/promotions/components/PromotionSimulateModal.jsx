@@ -10,7 +10,7 @@ import { formatCurrency } from "../../../utils/formatters";
 const DAY_OPTIONS = [7, 30, 90];
 
 /**
- * "What would this have cost?" — the promotion as typed, replayed over the shop's recent real
+ * "What would this have cost?", the promotion as typed, replayed over the shop's recent real
  * sales by the same engine that will price tomorrow's. Cheap to run, and the honest answer to
  * whether a discount is a good idea before anyone can find out the expensive way.
  */

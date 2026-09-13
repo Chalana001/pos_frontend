@@ -56,7 +56,7 @@ api.interceptors.request.use(
     }
 
     // A support-session token already names its tenant, and TenantFilter rejects a
-    // request whose header disagrees with the token — so on those, let the token decide.
+    // request whose header disagrees with the token, so on those, let the token decide.
     if (!isSupportSession()) {
       const hostname = window.location.hostname;
       const tenantId = hostname.split('.')[0];
@@ -80,7 +80,7 @@ api.interceptors.request.use(
  * identical POSTs go out and two rows are created.
  *
  * While a write request is in flight, an identical one (same method, URL,
- * query params and body) is not sent again — the caller is handed the *same*
+ * query params and body) is not sent again, the caller is handed the *same*
  * promise, so the second click resolves with the first click's response and the
  * UI behaves exactly as if the user clicked once.
  *
@@ -112,7 +112,7 @@ const fingerprint = (method, url, data, config) => {
       typeof data === 'string' ? data : JSON.stringify(data ?? null),
     ].join('|');
   } catch {
-    // Circular or otherwise non-serialisable payload — do not de-duplicate.
+    // Circular or otherwise non-serialisable payload. Do not de-duplicate.
     return null;
   }
 };
@@ -149,7 +149,7 @@ api.delete = (url, config) =>
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Requests marked background — reachability probes, automatic queue pushes — must
+    // Requests marked background, reachability probes, automatic queue pushes, must
     // never hijack the UI. A probe that meets an expired token would otherwise throw a
     // cashier onto the login screen in the middle of a checkout, and a probe that fails
     // on purpose would toast a connection error every time it ran.
@@ -164,13 +164,13 @@ api.interceptors.response.use(
         },
       };
       // A request that died with no response at all is the strongest hint the app gets
-      // that the server is gone, and it is the case navigator.onLine misses completely —
+      // that the server is gone, and it is the case navigator.onLine misses completely,
       // a live router with a dead ISP or VPS reads as fully online. Announced as an event
       // rather than an import so this module keeps no dependency on the network store,
       // which reaches back here through the reachability probe.
       //
       // Only a suspicion: utils/networkStatus.js confirms with the server before it
-      // changes anything. Background requests count too — the reachability probe itself
+      // changes anything. Background requests count too, the reachability probe itself
       // is excluded there by its own guard, not here.
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent(SERVER_UNREACHABLE_EVENT));
@@ -189,7 +189,7 @@ api.interceptors.response.use(
     const message = error.response.data?.message || error.response.data?.detail || 'Something went wrong!';
     const code = error.response.data?.code;
 
-    // A revoked or read-only support session is not the shop's problem — say so plainly
+    // A revoked or read-only support session is not the shop's problem, say so plainly
     // instead of telling the operator their own session expired.
     if (code === 'SUPPORT_SESSION_ENDED') {
       toast.error('This support session has ended. Open a new one from the control panel.');

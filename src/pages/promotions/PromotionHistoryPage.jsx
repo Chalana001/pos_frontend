@@ -19,7 +19,7 @@ const isoDate = (date) => date.toISOString().slice(0, 10);
  *
  * <p>Counts item-level and bill-level discounts together. RPT-08 keys only on
  * `orders.bill_promotion_id`, so a shop running item campaigns sees an empty report there and
- * concludes none of them fired — this is the same question asked over both halves.
+ * concludes none of them fired. This is the same question asked over both halves.
  */
 const PromotionHistoryPage = () => {
   const navigate = useNavigate();

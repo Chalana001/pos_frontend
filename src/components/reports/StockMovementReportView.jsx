@@ -22,7 +22,7 @@ export default function StockMovementReportView({ data, totalElements, allBranch
   return <div className="space-y-6">
     {/* Across all branches a branch-to-branch move is an outflow for the sender AND an
         inflow for the receiver, so both columns include it. They cancel, which is why
-        Closing Quantity stays correct — but the two totals on their own read high
+        Closing Quantity stays correct, but the two totals on their own read high
         unless you know they are internal. Say so rather than hiding the movement. */}
     {allBranches && <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">Viewing <span className="font-bold">all branches</span>. Branch transfers are counted on both sides. A move between your own branches shows as an outflow for the sender and an inflow for the receiver. Opening and closing quantities are unaffected.</p>}
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric title="Opening Quantity" value={sums.opening} helper="Current page items" icon={Package} tone="neutral" /><Metric title="Total Inflows" value={sums.incoming} helper="Purchases, returns, branch transfers, processing" icon={ArrowDownToLine} tone="neutral" /><Metric title="Total Outflows" value={sums.outgoing} helper="Sales, returns, branch transfers, processing" icon={ArrowUpFromLine} tone="neutral" /><Metric title="Closing Quantity" value={sums.closing} helper={`${rows.length} of ${totalElements || rows.length} items`} icon={Scale} tone="accent" /></div>

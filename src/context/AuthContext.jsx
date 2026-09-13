@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
 
   // Keep an existing offline-session snapshot in step with the live user record. The
   // snapshot is frozen at the moment it was created, while pos_user is refreshed on every
-  // online bootstrap — so a changed role, branch or plan never reached the offline session.
+  // online bootstrap, so a changed role, branch or plan never reached the offline session.
   // Only refresh a snapshot that is already there and belongs to this same user: login()
   // clears it on purpose, so a new user must never inherit the previous one's.
   const refreshOfflineSessionSnapshot = useCallback((freshUser) => {
@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }) => {
       setUser(updatedUser);
       setUserState(updatedUser);
       await syncCachedUser(updatedUser);
-      // The subscription call failed, so do not touch the cached module set — a network
+      // The subscription call failed, so do not touch the cached module set, a network
       // blip must not silently strip the shop's package down to the fallback tier.
       hydrateModulesFromCache(null);
       return updatedUser;
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }) => {
           setAuthMode("online");
           await fetchAndStoreSubscription(supportUser);
         } catch {
-          // Expired or already-revoked token — fall through to the normal paths below
+          // Expired or already-revoked token, fall through to the normal paths below
           // so the operator sees the login screen rather than a blank app.
           clearSupportSession();
           clearAuth();
@@ -188,7 +188,7 @@ export const AuthProvider = ({ children }) => {
         setUserState(offlineSessionUser);
         setAuthMode("offline");
       } else if (currentUser && token) {
-        // The connection dropped on a session that is still signed in — the stored user
+        // The connection dropped on a session that is still signed in, the stored user
         // and token are untouched, the device has not changed, and this session was
         // already unlocked. Nulling the user here threw the cashier onto the PIN screen
         // with a live cart open. Downgrade the mode and keep them working; the PIN keeps
@@ -329,7 +329,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    // Tell the server first — clearAuth() drops the token the request needs to identify
+    // Tell the server first, clearAuth() drops the token the request needs to identify
     // which session to end. Deliberately not awaited: local sign-out must not wait on, or
     // be blocked by, a network round trip.
     if (getToken()) {
