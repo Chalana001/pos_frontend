@@ -21,6 +21,12 @@ import PromotionAuditPanel from "./components/PromotionAuditPanel";
 import PromotionSimulateModal from "./components/PromotionSimulateModal";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
 import ScopePicker from "./components/ScopePicker";
+import CustomSelect from "../../components/common/CustomSelect";
+
+const DISCOUNT_TYPE_OPTIONS = [
+  { value: DISCOUNT_TYPES.PERCENT, label: "Percent (%)" },
+  { value: DISCOUNT_TYPES.FIXED, label: "Fixed amount" },
+];
 
 // Bump when the saved payload shape changes, so an older draft is discarded rather than
 // loaded into a form that can no longer read it.
@@ -130,7 +136,7 @@ const PromotionBuilderPage = () => {
     ? (form.branchId ? Number(form.branchId) : null)
     : (Number(selectedBranchId) || null);
   const activeBranchName = branches.find((branch) => Number(branch.id) === activeBranchId)?.name;
-  const branchMissing = !isEdit && !activeBranchId;
+  const branchMissing = !activeBranchId;
 
   // Switching the top bar part-way through changes which branch the campaign is for, and the
   // items already picked came from the old one. Say so rather than silently re-scoping them or
@@ -466,10 +472,7 @@ const PromotionBuilderPage = () => {
 
   const validate = () => {
     if (!form.name.trim()) return "Promotion name is required";
-    // Only on the way in. Campaigns created before promotions became per-branch still cover
-    // every branch, and editing one of those must not quietly narrow it to whichever branch
-    // the person editing it happens to be looking at.
-    if (!isEdit && !activeBranchId) return "Choose a branch in the top bar — a promotion runs at one branch";
+    if (!activeBranchId) return "Choose a branch in the top bar — a promotion runs at one branch";
     if (!form.startAt || !form.endAt) return "Start and end dates are required";
     if (new Date(form.startAt) >= new Date(form.endAt)) return "End date must be after start date";
     const value = Number(form.discountValue);
@@ -733,9 +736,7 @@ const PromotionBuilderPage = () => {
             >
               <Building2 size={15} className="shrink-0 opacity-60" />
               <span className="truncate font-medium">
-                {activeBranchId
-                  ? activeBranchName || `Branch ${activeBranchId}`
-                  : isEdit ? "All branches" : "No branch selected"}
+                {activeBranchId ? activeBranchName || `Branch ${activeBranchId}` : "No branch selected"}
               </span>
             </div>
             <span className="mt-1 block text-xs text-slate-500">
@@ -746,7 +747,7 @@ const PromotionBuilderPage = () => {
           </div>
         </div>
 
-        {!isEdit && !activeBranchId ? (
+        {branchMissing ? (
           <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             The top bar is on <strong>All Branches</strong>. Pick the branch this campaign runs at
             before building it — its prices, its items and its margin check all belong to one branch.
@@ -789,14 +790,12 @@ const PromotionBuilderPage = () => {
                 <span className="text-sm font-medium text-slate-700">
                   {form.scope === "ITEM" ? "Default discount type" : "Discount type"}
                 </span>
-                <select
+                <CustomSelect
                   value={form.discountType}
-                  onChange={(event) => updateForm("discountType", event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value={DISCOUNT_TYPES.PERCENT}>Percent (%)</option>
-                  <option value={DISCOUNT_TYPES.FIXED}>Fixed amount</option>
-                </select>
+                  onChange={(v) => updateForm("discountType", v)}
+                  options={DISCOUNT_TYPE_OPTIONS}
+                  className="mt-1 w-full"
+                />
               </label>
               <label>
                 <span className="text-sm font-medium text-slate-700">Value</span>
@@ -918,14 +917,12 @@ const PromotionBuilderPage = () => {
                 </label>
                 <label>
                   <span className="text-xs font-medium text-slate-600">Type</span>
-                  <select
+                  <CustomSelect
                     value={tier.discountType}
-                    onChange={(event) => updateTier(index, { discountType: event.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  >
-                    <option value={DISCOUNT_TYPES.PERCENT}>Percent (%)</option>
-                    <option value={DISCOUNT_TYPES.FIXED}>Fixed amount</option>
-                  </select>
+                    onChange={(v) => updateTier(index, { discountType: v })}
+                    options={DISCOUNT_TYPE_OPTIONS}
+                    className="mt-1 w-full"
+                  />
                 </label>
                 <label>
                   <span className="text-xs font-medium text-slate-600">Value</span>
