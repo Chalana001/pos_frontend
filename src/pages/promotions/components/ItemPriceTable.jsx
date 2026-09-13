@@ -1,7 +1,9 @@
-import React, { useMemo, useRef } from "react";
-import { Download, Percent, Trash2, Upload, WandSparkles } from "lucide-react";
+import React, { useMemo, useRef, useState } from "react";
+import { Download, Loader2, Percent, Trash2, Upload, WandSparkles } from "lucide-react";
+import toast from "react-hot-toast";
 
 import Button from "../../../components/common/Button";
+import { itemsAPI } from "../../../api/items.api";
 import { formatCurrency } from "../../../utils/formatters";
 import ItemSearchPicker from "./ItemSearchPicker";
 import MarginBadge from "./MarginBadge";
@@ -18,12 +20,25 @@ import MarginBadge from "./MarginBadge";
  * makes "20% off these fifteen items, except these three at fixed prices" a single promotion
  * rather than two.
  */
+/**
+ * How many items one bulk add will take.
+ *
+ * <p>Not a technical limit - the table would render them and the price check would post them,
+ * slowly. It is a judgement: a promotion with more than a few hundred hand-priced items is a
+ * category promotion wearing the wrong scope, and silently adding four thousand rows would
+ * make that mistake expensive to undo.
+ */
+const BULK_ADD_LIMIT = 500;
+
 const ItemPriceTable = ({
   lines,
   itemsById,
   priceCheck,
   branchId,
+  categories = [],
+  singleCategoryMode = false,
   onAdd,
+  onAddMany,
   onRemove,
   onChange,
   onBulkPercent,
@@ -31,6 +46,50 @@ const ItemPriceTable = ({
   onClearPrices,
 }) => {
   const fileInputRef = useRef(null);
+  const [bulkCategoryId, setBulkCategoryId] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  /**
+   * Every item in a category, added at once.
+   *
+   * <p>The filter differs by how the shop is set up: a single-category shop's "categories" are
+   * sub-categories under one parent, so they filter on subCategoryId; a shop with main and sub
+   * categories filters on the main one and takes everything beneath it.
+   */
+  const addWholeCategory = async () => {
+    if (!bulkCategoryId || typeof onAddMany !== "function") return;
+    try {
+      setBulkLoading(true);
+      const response = await itemsAPI.getAll({
+        [singleCategoryMode ? "subCategoryId" : "categoryId"]: Number(bulkCategoryId),
+        active: true,
+        page: 0,
+        size: BULK_ADD_LIMIT,
+      });
+      const found = response.data?.content ?? [];
+      const total = response.data?.totalElements ?? found.length;
+      if (found.length === 0) {
+        toast.error("That category has no active items");
+        return;
+      }
+      const already = new Set(lines.map((line) => Number(line.id)));
+      const fresh = found.filter((item) => !already.has(Number(item.id)));
+      onAddMany(found);
+      if (fresh.length === 0) {
+        toast("Every item in that category was already on the list");
+      } else {
+        toast.success(total > found.length
+          ? `Added ${fresh.length} — that category has ${total}, so add the rest by searching`
+          : `Added ${fresh.length} item${fresh.length === 1 ? "" : "s"}`);
+      }
+      setBulkCategoryId("");
+    } catch (error) {
+      console.error("Bulk add by category failed", error);
+      toast.error("Could not load that category's items");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   const checkByItemId = useMemo(() => {
     const map = new Map();
@@ -133,12 +192,42 @@ const ItemPriceTable = ({
         </div>
       </div>
 
-      <div className="border-b border-slate-200 p-4">
+      <div className="space-y-2 border-b border-slate-200 p-4">
         <ItemSearchPicker
           branchId={branchId}
           excludedIds={lines.map((line) => line.id)}
           onSelect={onAdd}
+          onSelectAll={onAddMany}
         />
+
+        {/* The other way in: a whole category, for the shop that thinks in aisles. */}
+        {categories.length > 0 && typeof onAddMany === "function" ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              or add a whole category
+            </span>
+            <select
+              value={bulkCategoryId}
+              onChange={(event) => setBulkCategoryId(event.target.value)}
+              aria-label="Category to add in bulk"
+              className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">Choose a category…</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={addWholeCategory}
+              disabled={!bulkCategoryId || bulkLoading}
+            >
+              {bulkLoading ? <Loader2 size={14} className="mr-1 animate-spin" /> : null}
+              Add all items
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {lines.length === 0 ? (
@@ -171,6 +260,20 @@ const ItemPriceTable = ({
                       </td>
                       <td className="app-table-cell text-right text-slate-600">
                         {formatCurrency(normalPriceOf(line))}
+                        {/*
+                          Two batches of one item are two prices, and the promotion means
+                          something different against each. Only shown when they actually
+                          differ - otherwise it is the same number twice.
+                        */}
+                        {check?.minBatchPrice != null && check?.maxBatchPrice != null
+                          && Number(check.minBatchPrice) !== Number(check.maxBatchPrice) ? (
+                          <div
+                            className="text-xs text-amber-600"
+                            title={`${check.batchCount} batches in stock, priced ${formatCurrency(check.minBatchPrice)} to ${formatCurrency(check.maxBatchPrice)}. The margin is judged on the worst of them.`}
+                          >
+                            batches {formatCurrency(check.minBatchPrice)}–{formatCurrency(check.maxBatchPrice)}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="app-table-cell text-right">
                         <input

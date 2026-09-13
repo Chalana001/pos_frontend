@@ -15,7 +15,7 @@ import { formatCurrency } from "../../../utils/formatters";
  * <p>Requests are debounced and the previous one is aborted, the same way the POS search does
  * it, so a fast typist does not race stale results back over fresh ones.
  */
-const ItemSearchPicker = ({ branchId, excludedIds = [], onSelect, placeholder = "Search items by name or barcode…" }) => {
+const ItemSearchPicker = ({ branchId, excludedIds = [], onSelect, onSelectAll, placeholder = "Search items by name or barcode…" }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -92,7 +92,22 @@ const ItemSearchPicker = ({ branchId, excludedIds = [], onSelect, placeholder = 
               {loading ? "Searching…" : "No matching items"}
             </div>
           ) : (
-            visible.map((item) => (
+            <>
+            {/*
+              Searching "soap" and then clicking two hundred rows is not the job anyone came
+              here to do. One button takes the whole result.
+            */}
+            {typeof onSelectAll === "function" && visible.length > 1 && (
+              <button
+                type="button"
+                onClick={() => { onSelectAll(visible); setOpen(false); setQuery(""); }}
+                className="sticky top-0 z-10 flex w-full items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-bold text-blue-700 hover:bg-blue-50"
+              >
+                <span>Add all {visible.length} results</span>
+                <span className="text-xs font-semibold text-slate-500">or pick one below</span>
+              </button>
+            )}
+            {visible.map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -110,7 +125,8 @@ const ItemSearchPicker = ({ branchId, excludedIds = [], onSelect, placeholder = 
                   <Plus size={14} className="text-blue-600" />
                 </span>
               </button>
-            ))
+            ))}
+            </>
           )}
         </div>
       )}

@@ -237,6 +237,10 @@ const PromotionBuilderPage = () => {
           discountValue: Number(form.discountValue || 0),
           allowBelowCost: form.allowBelowCost,
           marginFloorPercent: form.marginFloorPercent === "" ? null : Number(form.marginFloorPercent),
+          // Whose batches to price against. A branch-specific promotion is judged on that
+          // branch's stock; one that runs everywhere is judged on the worst batch anywhere,
+          // because it will be sold at all of them.
+          branchId: form.branchId ? Number(form.branchId) : null,
         });
         setPriceCheck(response.data);
       } catch (error) {
@@ -279,6 +283,37 @@ const PromotionBuilderPage = () => {
     setItemLines((prev) => (prev.some((line) => Number(line.id) === Number(item.id))
       ? prev
       : [...prev, { id: Number(item.id), offerPrice: "" }]));
+  }, []);
+
+  /**
+   * Add a whole search or a whole category in one go.
+   *
+   * <p>Adding a hundred items one click at a time is not a smaller version of adding one; it is
+   * a different job, and the picker was only built for the first. One pass over the batch keeps
+   * it to a single render and a single price check rather than a hundred of each.
+   *
+   */
+  const addItems = useCallback((items) => {
+    const incoming = (Array.isArray(items) ? items : []).filter((item) => item && item.id != null);
+    if (incoming.length === 0) return;
+
+    setItemsById((prev) => {
+      const next = new Map(prev);
+      incoming.forEach((item) => next.set(Number(item.id), item));
+      return next;
+    });
+
+    setItemLines((prev) => {
+      const have = new Set(prev.map((line) => Number(line.id)));
+      const fresh = [];
+      incoming.forEach((item) => {
+        const itemId = Number(item.id);
+        if (have.has(itemId)) return;
+        have.add(itemId);
+        fresh.push({ id: itemId, offerPrice: "" });
+      });
+      return fresh.length ? [...prev, ...fresh] : prev;
+    });
   }, []);
 
   const removeItem = useCallback((itemId) => {
@@ -843,7 +878,10 @@ const PromotionBuilderPage = () => {
             itemsById={itemsById}
             priceCheck={priceCheck}
             branchId={form.branchId ? Number(form.branchId) : undefined}
+            categories={categories}
+            singleCategoryMode={singleCategoryMode}
             onAdd={addItem}
+            onAddMany={addItems}
             onRemove={removeItem}
             onChange={changeItem}
             onBulkPercent={bulkPercent}
