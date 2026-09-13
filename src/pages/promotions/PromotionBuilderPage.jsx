@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { ArrowLeft, FlaskConical, Save, Search } from "lucide-react";
+import { ArrowLeft, Building2, FlaskConical, Save, Search } from "lucide-react";
 
-import { branchesAPI } from "../../api/branches.api";
 import { categoriesAPI } from "../../api/categories.api";
 import { customersAPI } from "../../api/customers.api";
 import { itemsAPI } from "../../api/items.api";
@@ -13,6 +12,7 @@ import DraftRestoreBar from "../../components/common/DraftRestoreBar";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import useUnsavedWork from "../../hooks/useUnsavedWork";
 import { useAppConfiguration } from "../../context/AppConfigurationContext";
+import { useBranch } from "../../context/BranchContext";
 import { DISCOUNT_TYPES } from "../../utils/constants";
 import { formatCurrency } from "../../utils/formatters";
 import ItemPriceTable from "./components/ItemPriceTable";
@@ -95,13 +95,13 @@ const PromotionBuilderPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { configuration } = useAppConfiguration();
+  const { branches, selectedBranchId } = useBranch();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
   const isEdit = Boolean(id);
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [itemLines, setItemLines] = useState([]);
   const [itemsById, setItemsById] = useState(new Map());
-  const [branches, setBranches] = useState([]);
   const [categories, setCategories] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [segments, setSegments] = useState([]);
@@ -114,13 +114,42 @@ const PromotionBuilderPage = () => {
 
   const updateForm = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  /**
+   * Which branch this campaign belongs to.
+   *
+   * <p>A campaign runs at one branch. Two shops rarely want the same price, the items offered
+   * have to be items that branch actually stocks, and the margin guard is only meaningful
+   * against the batches the selling branch holds — a promotion covering everywhere is judged
+   * on the worst batch anywhere, which is a number nobody set out to pick. So the branch is
+   * not asked for a second time: it is the one already chosen in the top bar.
+   *
+   * <p>An existing campaign keeps the branch it was created for. Moving it would leave its
+   * redemptions, budget spend and audit trail behind at the old one.
+   */
+  const activeBranchId = isEdit
+    ? (form.branchId ? Number(form.branchId) : null)
+    : (Number(selectedBranchId) || null);
+  const activeBranchName = branches.find((branch) => Number(branch.id) === activeBranchId)?.name;
+  const branchMissing = !isEdit && !activeBranchId;
+
+  // Switching the top bar part-way through changes which branch the campaign is for, and the
+  // items already picked came from the old one. Say so rather than silently re-scoping them or
+  // throwing the work away.
+  const lastBranchRef = useRef(selectedBranchId);
+  useEffect(() => {
+    if (isEdit || Number(lastBranchRef.current) === Number(selectedBranchId)) return;
+    lastBranchRef.current = selectedBranchId;
+    if (itemLines.length > 0) {
+      toast("Branch changed — check these items are stocked there", { icon: "⚠️" });
+    }
+  }, [selectedBranchId, isEdit, itemLines.length]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         setLoading(true);
-        const [branchRes, categoryRes, customerRes, segmentRes] = await Promise.all([
-          branchesAPI.getAll(true),
+        const [categoryRes, customerRes, segmentRes] = await Promise.all([
           singleCategoryMode ? categoriesAPI.getSingleCategories() : categoriesAPI.getAll(),
           customersAPI.getList({ activeOnly: true }),
           // Segments are small and used by one scope only; a failure here must not stop the
@@ -128,7 +157,6 @@ const PromotionBuilderPage = () => {
           promotionsAPI.segments().catch(() => ({ data: [] })),
         ]);
         if (cancelled) return;
-        setBranches(Array.isArray(branchRes.data) ? branchRes.data : []);
         setCategories(Array.isArray(categoryRes.data) ? categoryRes.data : []);
         setCustomers(Array.isArray(customerRes.data) ? customerRes.data : []);
         setSegments(Array.isArray(segmentRes.data) ? segmentRes.data : []);
@@ -218,8 +246,11 @@ const PromotionBuilderPage = () => {
       value: form.discountValue,
       floor: form.marginFloorPercent,
       below: form.allowBelowCost,
+      // Batch-aware: the same item at another branch is another batch, at another cost.
+      branch: activeBranchId,
     }),
-    [itemLines, form.discountType, form.discountValue, form.marginFloorPercent, form.allowBelowCost]
+    [itemLines, form.discountType, form.discountValue, form.marginFloorPercent, form.allowBelowCost,
+     activeBranchId]
   );
 
   useEffect(() => {
@@ -240,10 +271,8 @@ const PromotionBuilderPage = () => {
           marginFloorPercent: form.marginFloorPercent === "" ? null : Number(form.marginFloorPercent),
           // Only a profit share prices from cost, so the preview has to know the mechanic.
           effectType: form.effectType,
-          // Whose batches to price against. A branch-specific promotion is judged on that
-          // branch's stock; one that runs everywhere is judged on the worst batch anywhere,
-          // because it will be sold at all of them.
-          branchId: form.branchId ? Number(form.branchId) : null,
+          // Whose batches to price against — the branch that will be selling these items.
+          branchId: activeBranchId,
         });
         setPriceCheck(response.data);
       } catch (error) {
@@ -257,8 +286,8 @@ const PromotionBuilderPage = () => {
   // ── pre-save check ─────────────────────────────────────────────────────────────────────
 
   const checkSignature = useMemo(
-    () => JSON.stringify({ f: form, l: itemLines.map((line) => [line.id, line.offerPrice]) }),
-    [form, itemLines]
+    () => JSON.stringify({ f: form, b: activeBranchId, l: itemLines.map((line) => [line.id, line.offerPrice]) }),
+    [form, itemLines, activeBranchId]
   );
 
   useEffect(() => {
@@ -437,6 +466,10 @@ const PromotionBuilderPage = () => {
 
   const validate = () => {
     if (!form.name.trim()) return "Promotion name is required";
+    // Only on the way in. Campaigns created before promotions became per-branch still cover
+    // every branch, and editing one of those must not quietly narrow it to whichever branch
+    // the person editing it happens to be looking at.
+    if (!isEdit && !activeBranchId) return "Choose a branch in the top bar — a promotion runs at one branch";
     if (!form.startAt || !form.endAt) return "Start and end dates are required";
     if (new Date(form.startAt) >= new Date(form.endAt)) return "End date must be after start date";
     const value = Number(form.discountValue);
@@ -503,7 +536,7 @@ const PromotionBuilderPage = () => {
     discountValue: Number(form.discountValue),
     startAt: form.startAt,
     endAt: form.endAt,
-    branchId: form.branchId ? Number(form.branchId) : null,
+    branchId: activeBranchId,
     active: activate,
     priority: Number.parseInt(form.priority, 10) || 0,
     minBillAmount: Number(form.minBillAmount || 0),
@@ -659,13 +692,17 @@ const PromotionBuilderPage = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isEdit && form.lifecycle && <PromotionStatusBadge status={form.lifecycle} />}
-          <Button variant="secondary" onClick={() => { if (validate()) { toast.error(validate()); return; } setSimulateOpen(true); }}>
+          <Button
+            variant="secondary"
+            disabled={branchMissing}
+            onClick={() => { if (validate()) { toast.error(validate()); return; } setSimulateOpen(true); }}
+          >
             <FlaskConical size={16} className="mr-2" /> Simulate
           </Button>
-          <Button variant="secondary" onClick={() => save(false)} disabled={saving}>
+          <Button variant="secondary" onClick={() => save(false)} disabled={saving || branchMissing}>
             {form.status === "ACTIVE" || form.status === "PENDING_APPROVAL" ? "Save & pause" : "Save as draft"}
           </Button>
-          <Button onClick={() => save(true)} disabled={saving}>
+          <Button onClick={() => save(true)} disabled={saving || branchMissing}>
             <Save size={16} className="mr-2" />
             {saving ? "Saving…" : check?.approvalRequired ? "Save & send for approval" : "Save & activate"}
           </Button>
@@ -685,18 +722,36 @@ const PromotionBuilderPage = () => {
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </label>
-          <label>
+          <div>
             <span className="text-sm font-medium text-slate-700">Branch</span>
-            <select
-              value={form.branchId}
-              onChange={(event) => updateForm("branchId", event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            <div
+              className={`mt-1 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                activeBranchId
+                  ? "border-slate-200 bg-slate-50 text-slate-800"
+                  : "border-amber-300 bg-amber-50 text-amber-800"
+              }`}
             >
-              <option value="">All branches</option>
-              {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-            </select>
-          </label>
+              <Building2 size={15} className="shrink-0 opacity-60" />
+              <span className="truncate font-medium">
+                {activeBranchId
+                  ? activeBranchName || `Branch ${activeBranchId}`
+                  : isEdit ? "All branches" : "No branch selected"}
+              </span>
+            </div>
+            <span className="mt-1 block text-xs text-slate-500">
+              {isEdit
+                ? "A campaign stays at the branch it was created for."
+                : "Switch branches from the selector in the top bar."}
+            </span>
+          </div>
         </div>
+
+        {!isEdit && !activeBranchId ? (
+          <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            The top bar is on <strong>All Branches</strong>. Pick the branch this campaign runs at
+            before building it — its prices, its items and its margin check all belong to one branch.
+          </p>
+        ) : null}
       </section>
 
       {/* 2. Scope */}
@@ -902,7 +957,7 @@ const PromotionBuilderPage = () => {
             lines={itemLines}
             itemsById={itemsById}
             priceCheck={priceCheck}
-            branchId={form.branchId ? Number(form.branchId) : undefined}
+            branchId={activeBranchId ?? undefined}
             categories={categories}
             singleCategoryMode={singleCategoryMode}
             onAdd={addItem}
@@ -1248,7 +1303,7 @@ const PromotionBuilderPage = () => {
         isOpen={simulateOpen}
         onClose={() => setSimulateOpen(false)}
         payload={buildPayload(true)}
-        branchId={form.branchId}
+        branchId={activeBranchId}
       />
     </div>
   );
