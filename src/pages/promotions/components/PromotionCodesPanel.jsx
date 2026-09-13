@@ -30,7 +30,7 @@ const INITIAL_GENERATE = {
  *
  * <p>Codes need a saved promotion to belong to, so this panel only appears in edit mode.
  */
-const PromotionCodesPanel = ({ promotionId }) => {
+const PromotionCodesPanel = ({ promotionId, onCountChange }) => {
   const [codes, setCodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -51,6 +51,10 @@ const PromotionCodesPanel = ({ promotionId }) => {
   }, [promotionId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // The builder decides whether this promotion can go live on whether a code exists, so it
+  // has to hear about one being added or deleted rather than reading a count from load time.
+  useEffect(() => { onCountChange?.(codes.length); }, [codes.length, onCountChange]);
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 

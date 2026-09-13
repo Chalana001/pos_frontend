@@ -75,6 +75,10 @@ const INITIAL_FORM = {
   startAt: "",
   endAt: "",
   branchId: "",
+  // Not a stored column. Whether a promotion is code-gated is decided by whether it has any
+  // codes — see PromotionGate.codeGated — so this only carries the intent of a campaign that
+  // has none yet, and is never sent to the server.
+  requiresCode: false,
   active: true,
   status: "",
   lifecycle: "",
@@ -117,6 +121,7 @@ const PromotionBuilderPage = () => {
   const [saving, setSaving] = useState(false);
   const [check, setCheck] = useState(null);
   const [simulateOpen, setSimulateOpen] = useState(false);
+  const [codeCount, setCodeCount] = useState(0);
 
   const updateForm = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -137,6 +142,19 @@ const PromotionBuilderPage = () => {
     : (Number(selectedBranchId) || null);
   const activeBranchName = branches.find((branch) => Number(branch.id) === activeBranchId)?.name;
   const branchMissing = !activeBranchId;
+
+  /**
+   * How the till comes to apply this promotion.
+   *
+   * <p>There is no column for it: a promotion applies automatically until it has a code, and
+   * from the first code on it applies only when one is presented. That rule already lives in
+   * PromotionGate and is the only truth — repeating it in a flag would let the two disagree.
+   * So while codes exist the choice is settled and shown, not asked; before then it records
+   * what the campaign is meant to be, which is what decides whether it may go live yet.
+   */
+  const codeGated = codeCount > 0;
+  const requiresCode = codeGated || !!form.requiresCode;
+  const needsItsFirstCode = requiresCode && codeCount === 0;
 
   // Switching the top bar part-way through changes which branch the campaign is for, and the
   // items already picked came from the old one. Say so rather than silently re-scoping them or
@@ -186,6 +204,7 @@ const PromotionBuilderPage = () => {
           startAt: toLocalInput(promotion.startAt),
           endAt: toLocalInput(promotion.endAt),
           branchId: promotion.branchId || "",
+          requiresCode: Number(promotion.codeCount || 0) > 0,
           active: promotion.active !== false,
           status: promotion.status || "",
           lifecycle: promotion.lifecycle || "",
@@ -587,6 +606,12 @@ const PromotionBuilderPage = () => {
       toast.error(message);
       return;
     }
+    // A draft is fine without codes; going live is not. With none, "only with a code" is not
+    // a restriction the till can enforce — it would simply apply to every matching sale.
+    if (activate && needsItsFirstCode) {
+      toast.error("Add a promo code first — with none, this would apply to every sale");
+      return;
+    }
     try {
       setSaving(true);
       const response = isEdit
@@ -781,6 +806,46 @@ const PromotionBuilderPage = () => {
               );
             })}
           </div>
+        </div>
+
+        <div className="mt-5">
+          <span className="text-sm font-medium text-slate-700">How it applies</span>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:max-w-2xl">
+            {[
+              { key: false, label: "Automatically", hint: "Every sale that matches gets it, with nothing to type" },
+              { key: true, label: "Only with a promo code", hint: "The cashier enters a code at the till" },
+            ].map((option) => {
+              const selected = requiresCode === option.key;
+              return (
+                <button
+                  key={String(option.key)}
+                  type="button"
+                  aria-pressed={selected}
+                  // While codes exist the answer is the codes themselves; deleting them is how
+                  // it changes, so offering a button that cannot keep its promise is worse.
+                  disabled={codeGated}
+                  onClick={() => updateForm("requiresCode", option.key)}
+                  className={`rounded-lg border px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-60 ${
+                    selected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20" : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className={`text-sm font-bold ${selected ? "text-blue-700" : "text-slate-800"}`}>{option.label}</div>
+                  <div className="text-xs text-slate-500">{option.hint}</div>
+                </button>
+              );
+            })}
+          </div>
+          {codeGated ? (
+            <p className="mt-2 text-xs text-slate-500">
+              Set by the {codeCount} code{codeCount === 1 ? "" : "s"} in section 6. Delete them all to make it automatic.
+            </p>
+          ) : null}
+          {needsItsFirstCode ? (
+            <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              It has no codes yet, so it would apply to <strong>every</strong> matching sale if it went
+              live now. Save it as a draft, add a code in section 6, then activate it.
+            </p>
+          ) : null}
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -1255,11 +1320,14 @@ const PromotionBuilderPage = () => {
       {isEdit && <PromotionAuditPanel promotionId={Number(id)} />}
 
       {isEdit ? (
-        <PromotionCodesPanel promotionId={Number(id)} />
+        <PromotionCodesPanel promotionId={Number(id)} onCountChange={setCodeCount} />
       ) : (
         <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
           <span className="font-bold text-slate-600">6 · Promo codes</span>. Save the promotion first, then add
-          codes here. With no codes it applies automatically; with any, only when one is presented.
+          codes here.{" "}
+          {requiresCode
+            ? "It is set to apply only with a code, so it cannot go live until it has one."
+            : "With no codes it applies automatically; adding one makes it apply only when a code is presented."}
         </section>
       )}
 
