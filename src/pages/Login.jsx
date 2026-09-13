@@ -9,6 +9,7 @@ import { ROLES } from '../utils/permissions';
 import LanguageSelector from '../components/layout/LanguageSelector';
 import { useLanguage } from '../context/LanguageContext';
 import { BRAND_NAME } from '../utils/branding';
+import CustomSelect from '../components/common/CustomSelect';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -165,21 +166,17 @@ const Login = () => {
                       lists who enrolled here — not everyone who has an account. */}
                   {offlineCandidates.length > 1 ? (
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="offline-user">
+                      <label className="mb-1 block text-sm font-medium text-slate-700">
                         {t('User')}
                       </label>
-                      <select
-                        id="offline-user"
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      <CustomSelect
                         value={offlineUserId}
-                        onChange={(e) => setOfflineUserId(e.target.value)}
-                      >
-                        {offlineCandidates.map((candidate) => (
-                          <option key={candidate.userId} value={candidate.userId}>
-                            {candidate.username}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={setOfflineUserId}
+                        options={offlineCandidates}
+                        valueKey="userId"
+                        labelKey="username"
+                        buttonClassName="py-2.5 px-3"
+                      />
                     </div>
                   ) : null}
                   <Input

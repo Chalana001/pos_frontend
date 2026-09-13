@@ -1039,10 +1039,14 @@ const Reports = ({ mode = "basic" }) => {
       <Card className="admin-panel-card p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button variant="secondary" onClick={saveCurrentView}>Save Current View</Button>
-          <select className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm" defaultValue="" onChange={(event) => { const view = savedViews.find((item) => item.name === event.target.value); if (view) loadSavedView(view); event.target.value = ""; }}>
-            <option value="">Load saved view...</option>
-            {savedViews.map((view) => <option key={view.name} value={view.name}>{view.name}</option>)}
-          </select>
+          <CustomSelect
+            value=""
+            placeholder="Load saved view..."
+            onChange={(name) => { const view = savedViews.find((item) => item.name === name); if (view) loadSavedView(view); }}
+            options={savedViews.map((view) => ({ value: view.name, label: view.name }))}
+            className="min-w-0 flex-1"
+            buttonClassName="h-10 py-0 rounded-xl"
+          />
           {savedViews.length > 0 && <Button variant="secondary" onClick={() => { const name = window.prompt("Saved view name to delete"); if (name) deleteSavedView(name); }}>Delete View</Button>}
           <p className="text-xs font-semibold text-slate-500">Filters are stored in the URL for sharing and reload.</p>
         </div>
@@ -1184,9 +1188,12 @@ const Reports = ({ mode = "basic" }) => {
                 <h3 className="text-sm font-black text-slate-800">Schedule This Report</h3>
                 <p className="mt-1 text-xs text-slate-500">Generate the current filtered report automatically and optionally email it.</p>
                 <div className="mt-3 grid gap-3 md:grid-cols-4">
-                  <select className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm" value={scheduleForm.frequency} onChange={(event) => setScheduleForm((value) => ({ ...value, frequency: event.target.value }))}>
-                    <option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option>
-                  </select>
+                  <CustomSelect
+                    value={scheduleForm.frequency}
+                    onChange={(v) => setScheduleForm((value) => ({ ...value, frequency: v }))}
+                    options={[{ value: "DAILY", label: "Daily" }, { value: "WEEKLY", label: "Weekly" }, { value: "MONTHLY", label: "Monthly" }]}
+                    buttonClassName="h-10 py-0 rounded-xl"
+                  />
                   <input aria-label="Email recipient (optional)" type="datetime-local" className="h-10 rounded-xl border border-slate-200 px-3 text-sm" value={scheduleForm.nextRunAt} onChange={(event) => setScheduleForm((value) => ({ ...value, nextRunAt: event.target.value }))} />
                   <input aria-label="Email recipient (optional)" type="email" placeholder="Email recipient (optional)" className="h-10 rounded-xl border border-slate-200 px-3 text-sm" value={scheduleForm.emailTo} onChange={(event) => setScheduleForm((value) => ({ ...value, emailTo: event.target.value }))} />
                   <Button variant="outline" onClick={createSchedule}>Create Schedule</Button>

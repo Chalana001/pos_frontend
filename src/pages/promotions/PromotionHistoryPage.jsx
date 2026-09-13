@@ -10,6 +10,7 @@ import Card from "../../components/common/Card";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { formatCurrency } from "../../utils/formatters";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
+import CustomSelect from "../../components/common/CustomSelect";
 
 const isoDate = (date) => date.toISOString().slice(0, 10);
 
@@ -178,27 +179,19 @@ const PromotionHistoryPage = () => {
             className="ml-2 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
           />
         </label>
-        <select
+        <CustomSelect
           value={filters.branchId}
-          onChange={(event) => setFilters((prev) => ({ ...prev, branchId: event.target.value }))}
-          aria-label="Filter by branch"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        >
-          <option value="">All branches</option>
-          {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-        </select>
+          onChange={(v) => setFilters((prev) => ({ ...prev, branchId: v }))}
+          options={[{ id: "", name: "All branches" }, ...branches]}
+          className="w-48"
+        />
         {tab === "REDEMPTIONS" && (
-          <select
+          <CustomSelect
             value={filters.promotionId}
-            onChange={(event) => setFilters((prev) => ({ ...prev, promotionId: event.target.value }))}
-            aria-label="Filter by promotion"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">All promotions</option>
-            {campaigns.map((campaign) => (
-              <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
-            ))}
-          </select>
+            onChange={(v) => setFilters((prev) => ({ ...prev, promotionId: v }))}
+            options={[{ id: "", name: "All promotions" }, ...campaigns]}
+            className="w-56"
+          />
         )}
       </div>
 

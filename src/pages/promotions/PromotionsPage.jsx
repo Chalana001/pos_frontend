@@ -16,6 +16,7 @@ import PromotionSettingsModal from "./components/PromotionSettingsModal";
 import { useAuth } from "../../context/AuthContext";
 import { hasPermission } from "../../utils/permissions";
 import { promotionStatus } from "./components/promotionStatus";
+import CustomSelect from "../../components/common/CustomSelect";
 
 const STATUS_FILTERS = [
   { key: "ALL", label: "All" },
@@ -224,15 +225,12 @@ const PromotionsPage = () => {
             </button>
           ))}
         </div>
-        <select
+        <CustomSelect
           value={branchFilter}
-          onChange={(event) => setBranchFilter(event.target.value)}
-          aria-label="Filter by branch"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        >
-          <option value="">All branches</option>
-          {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-        </select>
+          onChange={setBranchFilter}
+          options={[{ id: "", name: "All branches" }, ...branches]}
+          className="w-48"
+        />
       </div>
 
       <Card className="overflow-hidden p-0">

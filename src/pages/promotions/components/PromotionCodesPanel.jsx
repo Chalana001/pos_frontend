@@ -4,6 +4,7 @@ import { Copy, Download, KeyRound, Plus } from "lucide-react";
 
 import { promotionsAPI } from "../../../api/promotions.api";
 import Button from "../../../components/common/Button";
+import CustomSelect from "../../../components/common/CustomSelect";
 
 const CODE_TYPES = [
   { key: "PUBLIC", label: "Public", hint: "Anyone can use it, as often as the limits allow" },
@@ -191,13 +192,12 @@ const PromotionCodesPanel = ({ promotionId }) => {
             )}
             <label className="md:col-span-2">
               <span className="text-xs font-medium text-slate-600">Type</span>
-              <select
+              <CustomSelect
                 value={form.codeType}
-                onChange={(event) => update("codeType", event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              >
-                {CODE_TYPES.map((type) => <option key={type.key} value={type.key}>{type.label}, {type.hint}</option>)}
-              </select>
+                onChange={(v) => update("codeType", v)}
+                options={CODE_TYPES.map((type) => ({ value: type.key, label: `${type.label}, ${type.hint}` }))}
+                className="mt-1 w-full"
+              />
             </label>
             <label>
               <span className="text-xs font-medium text-slate-600">Max uses</span>

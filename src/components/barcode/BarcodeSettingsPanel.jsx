@@ -45,6 +45,7 @@ const PREVIEW_ITEM = {
 
 // Font-size range for label elements (5–24px).
 const ELEMENT_FONT_SIZES = Array.from({ length: 20 }, (_, i) => i + 5);
+const ELEMENT_FONT_SIZE_OPTIONS = ELEMENT_FONT_SIZES.map((sz) => ({ value: sz, label: `${sz}px` }));
 
 // Per-type config for the free-text input shown in an element's expander.
 const TEXT_INPUT_CONFIG = {
@@ -189,27 +190,23 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
 
         {/* Font size — hidden for BARCODE (has its own number font size) */}
         {!isBarcode ? (
-          <select
+          <CustomSelect
             value={el.fontSize}
-            onChange={(e) => updateElement(index, 'fontSize', Number(e.target.value))}
-            className="h-9 w-16 rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none"
-          >
-            {ELEMENT_FONT_SIZES.map((sz) => (
-              <option key={sz} value={sz}>{sz}px</option>
-            ))}
-          </select>
+            onChange={(v) => updateElement(index, 'fontSize', Number(v))}
+            options={ELEMENT_FONT_SIZE_OPTIONS}
+            className="w-[76px]"
+            buttonClassName="h-9 py-0 px-2"
+          />
         ) : null}
 
         {/* Alignment — applies to every element (text-align / barcode justify) */}
-        <select
+        <CustomSelect
           value={el.align}
-          onChange={(e) => updateElement(index, 'align', e.target.value)}
-          className="h-9 w-[92px] rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none"
-        >
-          {BARCODE_ELEMENT_ALIGN_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+          onChange={(v) => updateElement(index, 'align', v)}
+          options={BARCODE_ELEMENT_ALIGN_OPTIONS}
+          className="w-[104px]"
+          buttonClassName="h-9 py-0 px-2"
+        />
 
         {/* Bold / Italic / Underline — text elements only */}
         {!isBarcode ? (
@@ -513,15 +510,13 @@ const BarcodeSettingsPanel = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <select
+            <CustomSelect
               value={addElementType}
-              onChange={(e) => setAddElementType(e.target.value)}
-              className="h-9 flex-1 rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-blue-500 focus:outline-none"
-            >
-              {BARCODE_ELEMENT_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              onChange={setAddElementType}
+              options={BARCODE_ELEMENT_TYPE_OPTIONS}
+              className="flex-1"
+              buttonClassName="h-9 py-0"
+            />
             <button
               type="button"
               onClick={() => addElement(addElementType)}
