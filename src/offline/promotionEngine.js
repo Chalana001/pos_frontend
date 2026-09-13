@@ -240,6 +240,17 @@ const lineEffectDiscount = (promotion, target, line, unitPrice, baseLineTotal) =
       const groups = units / (buy + get); // BigInt division floors
       return round2(mul(groups * get, unitPrice));
     }
+    case "PROFIT_SHARE": {
+      // Share of margin, not of price. Mirrors PromotionEvaluator: unknown or non-positive
+      // cost gives nothing away, and the share is capped at the whole margin so the line
+      // can never fall below its own cost.
+      const cost = money(line.costPrice);
+      if (cost <= 0n) return 0n;
+      const profit = nonNegative(unitPrice - cost);
+      if (profit <= 0n) return 0n;
+      const share = min(nonNegative(money(promotion.discountValue)), HUNDRED);
+      return baseLineTotal - total(unitPrice - divRound(profit * share, HUNDRED));
+    }
     case "TIERED": {
       const tier = highestQtyTier(promotion, primaryUnits(line.itemType, line.normalizedQty));
       if (!tier) return null;

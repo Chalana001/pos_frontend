@@ -22,9 +22,14 @@ export const itemsAPI = {
     }),
 
   // BUG-11 FIX: accepts optional AbortSignal to cancel stale in-flight requests
-  searchForPos: (name, branchId, signal) =>
+  searchForPos: (name, branchId, signal, extra) =>
     api.get("/items/searchForPos", {
-      params: (branchId !== undefined && branchId !== null) ? { name, branchId } : { name },
+      params: {
+        name,
+        ...(branchId !== undefined && branchId !== null ? { branchId } : {}),
+        // categoryId / subCategoryId, when a caller wants one aisle of the branch's stock.
+        ...(extra || {}),
+      },
       signal,
     }),
 

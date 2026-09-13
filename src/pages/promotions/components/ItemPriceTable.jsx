@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import { Download, Loader2, Percent, Trash2, Upload, WandSparkles } from "lucide-react";
+import { Download, Loader2, Percent, Trash2, Upload, WandSparkles, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 import Button from "../../../components/common/Button";
@@ -30,6 +30,10 @@ import MarginBadge from "./MarginBadge";
  */
 const BULK_ADD_LIMIT = 500;
 
+/** The tab that shows everything, and the bucket for items whose category is unknown. */
+const ALL_GROUP = "__ALL__";
+const UNGROUPED = "Uncategorised";
+
 const ItemPriceTable = ({
   lines,
   itemsById,
@@ -48,6 +52,48 @@ const ItemPriceTable = ({
   const fileInputRef = useRef(null);
   const [bulkCategoryId, setBulkCategoryId] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [activeGroup, setActiveGroup] = useState(ALL_GROUP);
+
+  /**
+   * The lines, grouped by the category each item belongs to.
+   *
+   * <p>Fifty-nine items in one flat list is a scroll, not a review: nobody checks prices item
+   * by item, they check an aisle at a time. The grouping is read off the items themselves
+   * rather than remembered from how they were added, so it stays right when a line arrives by
+   * search, by import, or from a category that was later renamed.
+   */
+  const groups = useMemo(() => {
+    const byName = new Map();
+    lines.forEach((line) => {
+      const item = itemsById.get(Number(line.id));
+      const name = (singleCategoryMode
+        ? item?.subCategoryName || item?.categoryName
+        : item?.categoryName) || UNGROUPED;
+      if (!byName.has(name)) byName.set(name, []);
+      byName.get(name).push(line);
+    });
+    return [...byName.entries()]
+      .map(([name, groupLines]) => ({ name, lines: groupLines }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [lines, itemsById, singleCategoryMode]);
+
+  // A group that empties out - every item deleted - must not leave the table showing nothing
+  // with no way back.
+  const groupNames = groups.map((group) => group.name);
+  const currentGroup = activeGroup !== ALL_GROUP && !groupNames.includes(activeGroup)
+    ? ALL_GROUP
+    : activeGroup;
+  const shownLines = currentGroup === ALL_GROUP
+    ? lines
+    : (groups.find((group) => group.name === currentGroup)?.lines ?? []);
+
+  const removeGroup = (name) => {
+    const group = groups.find((entry) => entry.name === name);
+    if (!group) return;
+    group.lines.forEach((line) => onRemove(line.id));
+    setActiveGroup(ALL_GROUP);
+    toast.success(`Removed ${group.lines.length} item${group.lines.length === 1 ? "" : "s"} in ${name}`);
+  };
 
   /**
    * Every item in a category, added at once.
@@ -60,14 +106,16 @@ const ItemPriceTable = ({
     if (!bulkCategoryId || typeof onAddMany !== "function") return;
     try {
       setBulkLoading(true);
-      const response = await itemsAPI.getAll({
+      // The branch-scoped search, not the item master. The master lists every item the shop
+      // has ever defined; a two-branch shop would pour the other branch's catalogue into a
+      // promotion that cannot sell it. This endpoint already drops anything never stocked at
+      // the branch, which is the rule that matters.
+      const response = await itemsAPI.searchForPos("", branchId, undefined, {
         [singleCategoryMode ? "subCategoryId" : "categoryId"]: Number(bulkCategoryId),
-        active: true,
-        page: 0,
-        size: BULK_ADD_LIMIT,
       });
-      const found = response.data?.content ?? [];
-      const total = response.data?.totalElements ?? found.length;
+      const all = Array.isArray(response.data) ? response.data : [];
+      const found = all.slice(0, BULK_ADD_LIMIT);
+      const total = all.length;
       if (found.length === 0) {
         toast.error("That category has no active items");
         return;
@@ -230,6 +278,54 @@ const ItemPriceTable = ({
         ) : null}
       </div>
 
+      {/*
+        One tab per category present, so a fifty-nine item promotion is reviewed an aisle at a
+        time. The X clears that whole category — the counterpart of the bulk add that put it
+        there, and the reason adding a category by mistake is not expensive.
+      */}
+      {groups.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 px-4 py-2">
+          <button
+            type="button"
+            onClick={() => setActiveGroup(ALL_GROUP)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+              currentGroup === ALL_GROUP
+                ? "bg-slate-900 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            All ({lines.length})
+          </button>
+          {groups.map((group) => (
+            <span
+              key={group.name}
+              className={`inline-flex items-center rounded-full text-xs font-semibold transition-colors ${
+                currentGroup === group.name
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveGroup(group.name)}
+                className="py-1 pl-3 pr-1.5"
+              >
+                {group.name} ({group.lines.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => removeGroup(group.name)}
+                aria-label={`Remove every item in ${group.name}`}
+                title={`Remove all ${group.lines.length} items in ${group.name}`}
+                className="rounded-full py-1 pl-0.5 pr-2 opacity-60 hover:opacity-100"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       {lines.length === 0 ? (
         <div className="px-4 py-12 text-center text-sm text-slate-500">
           No items yet. Search above to add the first one.
@@ -249,7 +345,7 @@ const ItemPriceTable = ({
                 </tr>
               </thead>
               <tbody className="app-table-body">
-                {lines.map((line, index) => {
+                {shownLines.map((line, index) => {
                   const item = itemsById.get(Number(line.id));
                   const check = checkByItemId.get(Number(line.id));
                   return (

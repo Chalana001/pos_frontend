@@ -33,6 +33,7 @@ const EFFECT_TYPES = [
   { key: "TIERED", label: "Quantity / spend tiers", hint: "More off the more they buy" },
   { key: "BUNDLE", label: "Bundle", hint: "Any 3 for 1,000" },
   { key: "CHEAPEST_FREE", label: "Cheapest free", hint: "Buy 3, cheapest is free" },
+  { key: "PROFIT_SHARE", label: "Share of profit", hint: "Give 10% of the margin", lineOnly: true },
 ];
 
 const STACKING_MODES = [
@@ -237,6 +238,8 @@ const PromotionBuilderPage = () => {
           discountValue: Number(form.discountValue || 0),
           allowBelowCost: form.allowBelowCost,
           marginFloorPercent: form.marginFloorPercent === "" ? null : Number(form.marginFloorPercent),
+          // Only a profit share prices from cost, so the preview has to know the mechanic.
+          effectType: form.effectType,
           // Whose batches to price against. A branch-specific promotion is judged on that
           // branch's stock; one that runs everywhere is judged on the worst batch anywhere,
           // because it will be sold at all of them.
@@ -469,6 +472,12 @@ const PromotionBuilderPage = () => {
         break;
       case "CHEAPEST_FREE":
         if (!Number.isFinite(buy) || buy < 2) return "Cheapest-free needs a group of at least 2";
+        break;
+      case "PROFIT_SHARE":
+        if (!Number.isFinite(value) || value <= 0) return "Share of profit must be greater than zero";
+        // 100% gives the whole margin away and sells at cost. More than that would sell below
+        // it, which is the one thing this mechanic exists to make impossible.
+        if (value > 100) return "Share of profit cannot exceed 100";
         break;
       default:
         break;
@@ -744,6 +753,22 @@ const PromotionBuilderPage = () => {
                 />
               </label>
             </>
+          )}
+          {effect === "PROFIT_SHARE" && (
+            <label className="md:col-span-2">
+              <span className="text-sm font-medium text-slate-700">Share of profit (%)</span>
+              <input
+                type="number" min="0" max="100" step="0.1" placeholder="10"
+                value={form.discountValue}
+                onChange={(event) => updateForm("discountValue", event.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <span className="mt-1 block text-xs text-slate-500">
+                Each item gives away this much of its own margin, so the cut is the same generosity
+                everywhere and never reaches cost. An item making 100 gives 10 at 10%; one making
+                200 gives 20. An item whose cost is unknown gives nothing.
+              </span>
+            </label>
           )}
           {effect === "FIXED_PRICE" && (
             <label>
