@@ -7,6 +7,7 @@ import { itemsAPI } from "../../../api/items.api";
 import { formatCurrency } from "../../../utils/formatters";
 import ItemSearchPicker from "./ItemSearchPicker";
 import MarginBadge from "./MarginBadge";
+import CustomSelect from "../../../components/common/CustomSelect";
 
 /**
  * The price list at the centre of a campaign: one row per item, each with its own offer
@@ -254,17 +255,14 @@ const ItemPriceTable = ({
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               or add a whole category
             </span>
-            <select
+            <CustomSelect
               value={bulkCategoryId}
-              onChange={(event) => setBulkCategoryId(event.target.value)}
-              aria-label="Category to add in bulk"
-              className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-            >
-              <option value="">Choose a category…</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
+              onChange={setBulkCategoryId}
+              options={categories}
+              placeholder="Choose a category…"
+              className="w-52"
+              buttonClassName="py-1.5"
+            />
             <Button
               size="sm"
               variant="secondary"
