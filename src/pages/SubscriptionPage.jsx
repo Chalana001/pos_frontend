@@ -183,7 +183,7 @@ const SubscriptionPage = () => {
                 <p className="mt-0.5 text-xs text-slate-500">
                   {showShared
                     ? `All ${rows.length} features`
-                    : `The ${differing.length} features that differ · ${shared.length} are in every package`}
+                    : `The ${differing.length} features that differ, ${shared.length} are in every package`}
                 </p>
               </div>
               {shared.length ? (

@@ -166,7 +166,7 @@ export default function InventoryValuationReportView({ inventorySummary, singleC
                 <div className="min-w-0">
                   <p className="truncate font-bold text-slate-900">{item.itemName}</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    {item.barcode || "No barcode"} · {getDisplayCategoryName(item, singleCategoryMode)}
+                    {item.barcode || "No barcode"}, {getDisplayCategoryName(item, singleCategoryMode)}
                   </p>
                   <ValuationStatusBadge status={item.valuationStatus} />
                 </div>
@@ -197,7 +197,7 @@ export default function InventoryValuationReportView({ inventorySummary, singleC
                   <div>
                     <p className="font-semibold text-slate-900">{item.itemName}</p>
                     <p className="text-xs text-slate-500">
-                      {item.barcode || "No barcode"} · {getDisplayCategoryName(item, singleCategoryMode)}
+                      {item.barcode || "No barcode"}, {getDisplayCategoryName(item, singleCategoryMode)}
                     </p>
                     <ValuationStatusBadge status={item.valuationStatus} />
                   </div>

@@ -223,8 +223,8 @@ const PromotionHistoryPage = () => {
                       <div className="text-xs text-slate-500">
                         {campaign.scope}
                         {campaign.branchId
-                          ? ` · ${branchNameById.get(Number(campaign.branchId)) || `Branch ${campaign.branchId}`}`
-                          : " · All branches"}
+                          ? `, ${branchNameById.get(Number(campaign.branchId)) || `Branch ${campaign.branchId}`}`
+                          : ", All branches"}
                       </div>
                     </td>
                     <td className="app-table-cell text-xs text-slate-600">

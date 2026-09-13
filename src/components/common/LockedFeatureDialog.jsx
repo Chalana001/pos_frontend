@@ -97,7 +97,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
 
           <p className="mt-1.5 text-sm font-semibold uppercase tracking-wide text-slate-600">
             {featureName}
-            {module?.categoryLabel ? ` · ${module.categoryLabel}` : ""}
+            {module?.categoryLabel ? `, ${module.categoryLabel}` : ""}
           </p>
 
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">

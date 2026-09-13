@@ -128,7 +128,7 @@ const ItemPriceTable = ({
         toast("Every item in that category was already on the list");
       } else {
         toast.success(total > found.length
-          ? `Added ${fresh.length} — that category has ${total}, so add the rest by searching`
+          ? `Added ${fresh.length}. That category has ${total}, so add the rest by searching`
           : `Added ${fresh.length} item${fresh.length === 1 ? "" : "s"}`);
       }
       setBulkCategoryId("");

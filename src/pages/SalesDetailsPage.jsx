@@ -544,7 +544,7 @@ const SalesDetailsPage = () => {
                     </span>
                   </div>
                   <div className="text-xs text-slate-500">
-                    {new Date(ret.createdAt).toLocaleString()} · {ret.items?.length || 0} item(s) · {ret.reason}
+                    {new Date(ret.createdAt).toLocaleString()}, {ret.items?.length || 0} item(s), {ret.reason}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">

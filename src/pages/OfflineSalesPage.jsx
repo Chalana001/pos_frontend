@@ -480,7 +480,7 @@ const OfflineSalesPage = () => {
                       {rowHasOpenShift && validation.hasShortfall ? (
                         <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
                           <ShieldAlert size={12} />
-                          Ready · will go short
+                          Ready, will go short
                         </div>
                       ) : rowHasOpenShift ? (
                         <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">

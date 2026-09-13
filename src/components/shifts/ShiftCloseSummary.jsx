@@ -205,7 +205,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
         renderRow={(purchase) => (
           <div key={purchase.purchaseId} className="flex items-center justify-between gap-2 py-1.5 text-sm">
             <div className="min-w-0">
-              <p className="font-medium text-slate-700 truncate">{purchase.invoiceNo} · {purchase.supplierName}</p>
+              <p className="font-medium text-slate-700 truncate">{purchase.invoiceNo}, {purchase.supplierName}</p>
               <p className="text-xs text-slate-600">{formatDateTime(purchase.createdAt)}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">

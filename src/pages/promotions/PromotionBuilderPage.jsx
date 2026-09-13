@@ -164,7 +164,7 @@ const PromotionBuilderPage = () => {
     if (isEdit || Number(lastBranchRef.current) === Number(selectedBranchId)) return;
     lastBranchRef.current = selectedBranchId;
     if (itemLines.length > 0) {
-      toast("Branch changed — check these items are stocked there", { icon: "⚠️" });
+      toast("Branch changed. Check these items are stocked there", { icon: "⚠️" });
     }
   }, [selectedBranchId, isEdit, itemLines.length]);
 
@@ -491,7 +491,7 @@ const PromotionBuilderPage = () => {
 
   const validate = () => {
     if (!form.name.trim()) return "Promotion name is required";
-    if (!activeBranchId) return "Choose a branch in the top bar — a promotion runs at one branch";
+    if (!activeBranchId) return "Choose a branch in the top bar. A promotion runs at one branch";
     if (!form.startAt || !form.endAt) return "Start and end dates are required";
     if (new Date(form.startAt) >= new Date(form.endAt)) return "End date must be after start date";
     const value = Number(form.discountValue);
@@ -609,7 +609,7 @@ const PromotionBuilderPage = () => {
     // A draft is fine without codes; going live is not. With none, "only with a code" is not
     // a restriction the till can enforce — it would simply apply to every matching sale.
     if (activate && needsItsFirstCode) {
-      toast.error("Add a promo code first — with none, this would apply to every sale");
+      toast.error("Add a promo code first. With none, this would apply to every sale");
       return;
     }
     try {
@@ -739,7 +739,7 @@ const PromotionBuilderPage = () => {
 
       {/* 1. Basics */}
       <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">1 · Basics</h2>
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">1. Basics</h2>
         <div className="grid gap-4 md:grid-cols-3">
           <label className="md:col-span-2">
             <span className="text-sm font-medium text-slate-700">Name</span>
@@ -775,14 +775,14 @@ const PromotionBuilderPage = () => {
         {branchMissing ? (
           <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             The top bar is on <strong>All Branches</strong>. Pick the branch this campaign runs at
-            before building it — its prices, its items and its margin check all belong to one branch.
+            before building it. Its prices, its items and its margin check all belong to one branch.
           </p>
         ) : null}
       </section>
 
       {/* 2. Scope */}
       <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">2 · What it applies to</h2>
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">2. What it applies to</h2>
         <ScopePicker value={form.scope} onChange={changeScope} />
 
         <div className="mt-5">
@@ -966,8 +966,8 @@ const PromotionBuilderPage = () => {
             {form.tiers.length === 0 ? (
               <p className="text-sm text-slate-500">
                 {isLineScope
-                  ? "E.g. 3 or more: 10% off · 6 or more: 20% off. The highest break reached applies to the whole line."
-                  : "E.g. over 5,000: 500 off · over 10,000: 1,200 off. The highest step the bill reaches applies."}
+                  ? "E.g. 3 or more: 10%% off; 6 or more: 20% off. The highest break reached applies to the whole line."
+                  : "E.g. over 5,000: 500 off; over 10,000: 1,200 off. The highest step the bill reaches applies."}
               </p>
             ) : form.tiers.map((tier, index) => (
               <div key={index} className="mb-2 grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
@@ -1014,7 +1014,7 @@ const PromotionBuilderPage = () => {
       {/* 3. Targets */}
       {form.scope === "ITEM" ? (
         <section>
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">3 · Items &amp; prices</h2>
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">3. Items &amp; prices</h2>
           <ItemPriceTable
             lines={itemLines}
             itemsById={itemsById}
@@ -1038,7 +1038,7 @@ const PromotionBuilderPage = () => {
       ) : (
         <section className="rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">
-            3 · {form.scope === "CUSTOMER" ? "Customers" : "Categories"} ({selectedTargetIds.length})
+            3. {form.scope === "CUSTOMER" ? "Customers" : "Categories"} ({selectedTargetIds.length})
           </h2>
 
           {form.scope === "CUSTOMER" && (
@@ -1076,8 +1076,8 @@ const PromotionBuilderPage = () => {
                           <span className="block text-xs text-slate-500">
                             {segment.memberCount} customer{segment.memberCount === 1 ? "" : "s"}
                             {segment.lastEvaluatedAt
-                              ? ` · as of ${new Date(segment.lastEvaluatedAt).toLocaleDateString()}`
-                              : " · never worked out"}
+                              ? `, as of ${new Date(segment.lastEvaluatedAt).toLocaleDateString()}`
+                              : ", never worked out"}
                           </span>
                         </span>
                         <input
@@ -1131,7 +1131,7 @@ const PromotionBuilderPage = () => {
 
       {/* 4. Schedule */}
       <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">4 · Schedule</h2>
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">4. Schedule</h2>
         <div className="grid gap-4 md:grid-cols-3">
           <label>
             <span className="text-sm font-medium text-slate-700">Starts</span>
@@ -1204,7 +1204,7 @@ const PromotionBuilderPage = () => {
 
       {/* 5. Limits */}
       <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">5 · Limits</h2>
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">5. Limits</h2>
         <div className="grid gap-4 md:grid-cols-4">
           <label>
             <span className="text-sm font-medium text-slate-700">Minimum bill</span>
@@ -1323,7 +1323,7 @@ const PromotionBuilderPage = () => {
         <PromotionCodesPanel promotionId={Number(id)} onCountChange={setCodeCount} />
       ) : (
         <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
-          <span className="font-bold text-slate-600">6 · Promo codes</span>. Save the promotion first, then add
+          <span className="font-bold text-slate-600">6. Promo codes</span>. Save the promotion first, then add
           codes here.{" "}
           {requiresCode
             ? "It is set to apply only with a code, so it cannot go live until it has one."
@@ -1351,7 +1351,7 @@ const PromotionBuilderPage = () => {
           )}
           {check?.approvalRequired && (
             <span className="font-bold text-violet-700">
-              Needs approval{check.deepestDiscountPercent != null ? ` · deepest cut ${Number(check.deepestDiscountPercent).toFixed(0)}%` : ""}
+              Needs approval{check.deepestDiscountPercent != null ? `, deepest cut ${Number(check.deepestDiscountPercent).toFixed(0)}%` : ""}
             </span>
           )}
         </div>

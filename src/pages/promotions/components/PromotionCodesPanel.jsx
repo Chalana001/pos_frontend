@@ -126,7 +126,7 @@ const PromotionCodesPanel = ({ promotionId, onCountChange }) => {
     <section className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">6 · Promo codes</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">6. Promo codes</h2>
           <p className="mt-1 text-xs text-slate-500">
             {codes.length === 0
               ? "No codes. This promotion applies automatically. Add one and it will only apply when a code is presented."
@@ -270,7 +270,7 @@ const PromotionCodesPanel = ({ promotionId, onCountChange }) => {
                     <td className="app-table-cell font-mono font-bold text-slate-800">{row.code}</td>
                     <td className="app-table-cell text-slate-600">
                       {CODE_TYPES.find((type) => type.key === row.codeType)?.label || row.codeType}
-                      {row.perCustomerLimit ? ` · ${row.perCustomerLimit}/customer` : ""}
+                      {row.perCustomerLimit ? `, ${row.perCustomerLimit}/customer` : ""}
                     </td>
                     <td className="app-table-cell text-right text-slate-700">
                       {row.redemptionsUsed}{row.maxRedemptions != null ? ` / ${row.maxRedemptions}` : ""}

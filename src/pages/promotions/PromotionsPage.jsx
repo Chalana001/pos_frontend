@@ -269,7 +269,7 @@ const PromotionsPage = () => {
                             {promotion.branchId
                               ? branchNameById.get(Number(promotion.branchId)) || `Branch ${promotion.branchId}`
                               : "All branches"}
-                            {promotion.priority ? ` · Priority ${promotion.priority}` : ""}
+                            {promotion.priority ? `, Priority ${promotion.priority}` : ""}
                           </div>
                         </div>
                       </div>

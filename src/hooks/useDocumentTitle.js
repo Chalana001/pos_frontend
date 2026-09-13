@@ -90,7 +90,7 @@ export const titleForPath = (pathname) => {
     .filter(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`))
     .sort((a, b) => b[0].length - a[0].length)[0];
 
-  return match ? `${match[1]} · ${BRAND_NAME}` : BRAND_NAME;
+  return match ? `${match[1]} | ${BRAND_NAME}` : BRAND_NAME;
 };
 
 export const useDocumentTitle = () => {

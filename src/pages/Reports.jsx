@@ -875,7 +875,7 @@ const Reports = ({ mode = "basic" }) => {
             {reportData.map((shift) => (
               <button key={shift.shiftId} type="button" onClick={() => window.location.assign(`/shifts/history/${shift.shiftId}`)} className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
                 <div className="flex items-start justify-between gap-3">
-                  <div><p className="font-black text-slate-900">Shift #{shift.shiftId}</p><p className="mt-1 text-xs text-slate-500">{shift.cashierUsername} · {formatDateTime(shift.openedAt)}</p></div>
+                  <div><p className="font-black text-slate-900">Shift #{shift.shiftId}</p><p className="mt-1 text-xs text-slate-500">{shift.cashierUsername}, {formatDateTime(shift.openedAt)}</p></div>
                   <span className={`rounded-full px-2 py-1 text-xs font-bold ${shift.shiftStatus === "CLOSED" ? "bg-slate-100 text-slate-700" : "bg-emerald-100 text-emerald-700"}`}>{shift.shiftStatus}</span>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -1200,7 +1200,7 @@ const Reports = ({ mode = "basic" }) => {
                 </div>
                 {reportSchedules.length > 0 && <div className="mt-4 divide-y divide-slate-100">
                   {reportSchedules.map((schedule) => <div key={schedule.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div><p className="text-sm font-bold text-slate-800">{schedule.reportType} · {schedule.frequency}</p><p className="text-xs text-slate-500">Next: {new Date(schedule.nextRunAt).toLocaleString()}{schedule.emailTo ? ` · ${schedule.emailTo}` : ""}</p></div>
+                    <div><p className="text-sm font-bold text-slate-800">{schedule.reportType}, {schedule.frequency}</p><p className="text-xs text-slate-500">Next: {new Date(schedule.nextRunAt).toLocaleString()}{schedule.emailTo ? `, ${schedule.emailTo}` : ""}</p></div>
                     <div className="flex gap-2"><Button variant="outline" size="sm" onClick={async () => { await reportsAPI.setReportScheduleEnabled(schedule.id, !schedule.enabled); await loadReportSchedules(); }}>{schedule.enabled ? "Pause" : "Resume"}</Button><Button variant="outline" size="sm" onClick={async () => { await reportsAPI.deleteReportSchedule(schedule.id); await loadReportSchedules(); }}>Delete</Button></div>
                   </div>)}
                 </div>}
@@ -1221,7 +1221,7 @@ const Reports = ({ mode = "basic" }) => {
                     <div key={job.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-bold text-slate-800">{job.reportType} report</p>
-                        <p className="text-xs text-slate-500">{new Date(job.createdAt).toLocaleString()} · {job.status}</p>
+                        <p className="text-xs text-slate-500">{new Date(job.createdAt).toLocaleString()}, {job.status}</p>
                         {job.errorMessage && <p className="mt-1 text-xs font-semibold text-red-600">{job.errorMessage}</p>}
                       </div>
                       <div className="flex flex-wrap gap-2">

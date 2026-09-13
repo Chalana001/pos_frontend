@@ -68,7 +68,7 @@ const SupportSessionBanner = () => {
           : "Changes made here affect this shop's live data."}
       </span>
       {user?.shopName ? (
-        <span className="text-xs text-white/70">· {user.shopName}</span>
+        <span className="text-xs text-white/70">{user.shopName}</span>
       ) : null}
 
       <div className="flex-1" />

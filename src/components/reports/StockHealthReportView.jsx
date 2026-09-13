@@ -171,7 +171,7 @@ export default function StockHealthReportView({ summary, data }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-black text-slate-900">{row.itemName}</p>
-                    <p className="mt-1 text-xs text-slate-500">{row.barcode || "No barcode"} · {row.unit || "Unitless"}</p>
+                    <p className="mt-1 text-xs text-slate-500">{row.barcode || "No barcode"}, {row.unit || "Unitless"}</p>
                   </div>
                   <StatusBadge status={row.status} />
                 </div>
@@ -199,7 +199,7 @@ export default function StockHealthReportView({ summary, data }) {
         <div className="hidden md:block">
           <Table
             columns={[
-              { header: "Item", render: (row) => <div><p className="font-bold text-slate-900">{row.itemName}</p><p className="text-xs text-slate-500">{row.barcode || "No barcode"} · {row.unit || "Unitless"}</p></div> },
+              { header: "Item", render: (row) => <div><p className="font-bold text-slate-900">{row.itemName}</p><p className="text-xs text-slate-500">{row.barcode || "No barcode"}, {row.unit || "Unitless"}</p></div> },
               { header: "Status", render: (row) => <StatusBadge status={row.status} /> },
               { header: "Stock Position", render: (row) => <div><p className="font-bold text-slate-900">{formatQtyWithUnit(row.qtyOnHand, row.unit)}</p><p className="text-xs text-slate-500">Reorder {formatQtyWithUnit(row.reorderLevel, row.unit)}</p></div> },
               { header: "Demand", render: (row) => <div><p className="font-bold text-slate-900">{formatQtyWithUnit(row.soldLast90Days, row.unit)}</p><p className="text-xs text-slate-500">Avg {formatQtyWithUnit(row.averageDailySales, row.unit)} / day</p></div> },

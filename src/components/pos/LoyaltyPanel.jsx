@@ -88,7 +88,7 @@ const LoyaltyPanel = ({ customerId, billTotal, points, setPoints, refreshKey, fo
           {account.tierName && <span className="rounded-full bg-violet-200 px-1.5 py-0.5 text-[10px]">{account.tierName}</span>}
         </span>
         <span className="text-violet-700">
-          {account.pointsBalance} · worth {formatCurrency(account.pointsValue)}
+          {account.pointsBalance}, worth {formatCurrency(account.pointsValue)}
         </span>
       </div>
 

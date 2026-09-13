@@ -126,7 +126,7 @@ const CustomerSegmentsPage = () => {
     if (segment.minAvgOrderValue) parts.push(`avg ${formatCurrency(segment.minAvgOrderValue)}+`);
     if (segment.purchasedWithinDays) parts.push(`bought in ${segment.purchasedWithinDays} days`);
     if (segment.inactiveForDays) parts.push(`quiet ${segment.inactiveForDays}+ days`);
-    return parts.length ? parts.join(" · ") : "-";
+    return parts.length ? parts.join(", ") : "-";
   };
 
   return (

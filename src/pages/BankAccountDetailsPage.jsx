@@ -142,7 +142,7 @@ const BankAccountDetailsPage = () => {
                     <div className="mt-1 text-2xl font-bold text-slate-800">{account?.name || "-"}</div>
                     <div className="mt-1 text-sm text-slate-600">
                       {account?.bankName || "-"}
-                      {account?.accountNumber ? ` · ${account.accountNumber}` : ""}
+                      {account?.accountNumber ? `, ${account.accountNumber}` : ""}
                     </div>
                   </div>
 
