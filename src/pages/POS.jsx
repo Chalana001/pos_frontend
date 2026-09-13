@@ -1679,11 +1679,15 @@ const POS = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canUseServer, queueCartActive, isFreeLocalSalesPlan, effectiveBranchId, promotionPreviewSignature]);
 
+  // A held table stores the cashier's own discount and nothing else. Resuming one copies what
+  // is stored back into the line's manual discount, so a saved effective discount would be
+  // read as a second cut on top of the promotion when the table is finally settled — and the
+  // promotion is re-priced at that moment anyway, which is right: it may have ended since.
   const createPendingOrderPayload = (items = cartItems) => ({
     customerId: customer ? customer.id : null,
     billDiscount,
     note: "",
-    items: items.map((item) => createOrderItemPayload(item, true)),
+    items: items.map((item) => createOrderItemPayload(item, false)),
   });
 
   const savePendingDraft = async (tableId = selectedTableId, { silent = false } = {}) => {
@@ -1995,7 +1999,18 @@ const POS = () => {
         toast("Server unreachable. Saving this sale to the offline queue.");
       }
 
-      const orderItems = cartItems.map((item) => createOrderItemPayload(item, true));
+      // Which discount the server is told about, and it is not a detail.
+      //
+      // Online the server prices the sale itself, from the same engine the preview used: it
+      // takes the cashier's own discount off and then stacks the promotion on top. Handing it
+      // the effective discount — which already has the promotion inside it — makes it take the
+      // promotion off a second time, so the till charges 90 on a 100 line and the books record
+      // 81. Offline is the opposite case: the till priced the sale, the customer has paid and
+      // holds the receipt, and the server records that price as given rather than re-deriving
+      // one from promotions that may have changed since.
+      const orderItems = cartItems.map(
+        (item) => createOrderItemPayload(item, !useServerForThisCheckout)
+      );
       const orderData = {
         branchId: effectiveBranchId,
         orderType,
