@@ -1,6 +1,49 @@
-export const APP_VERSION = "2.5.0";
+export const APP_VERSION = "2.6.0";
 
 export const VERSION_HISTORY = [
+  {
+    version: "2.6.0",
+    title: "Promotions Per Branch, and a Discount the Books Agree With",
+    releaseDate: "2026-09-14",
+    summary:
+      "A campaign now belongs to one branch and is priced against the stock that branch is actually selling, the till says what it took off every line, and a sale no longer records a smaller total than it collected.",
+    highlights: [
+      "Important fix: an online sale took the promotion off twice. The till charged the right amount but recorded less, which understated revenue, margin and the points earned.",
+      "A promotion belongs to one branch, taken from the branch selector in the top bar. Its items come from that branch's stock.",
+      "Share of profit: give away a set share of each item's own margin instead of a share of its price. It can never reach cost.",
+      "The cart now shows what came off each line, separately for a cashier's discount and for an offer.",
+      "Add a whole category to a campaign at once, and review it a category at a time.",
+      "The margin guard now judges the batch going out of the door, not a reference cost belonging to no batch.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "A promotion runs at one branch. The branch comes from the top bar rather than a second picker, and \"all branches\" is gone: a campaign is priced against the stock of the branch selling it, and covering everywhere meant the margin check judged the worst batch anywhere.",
+          "Share of profit, a new offer type. Set 10% and every item gives 10% of its own margin, so an item making 100 gives 10 and one making 200 gives 20. It cannot price below cost, and an item with no known cost gives nothing. Online only, because it is priced from the cost of the batch being sold.",
+          "The builder now asks whether a campaign applies automatically or only with a promo code, instead of leaving it to be worked out from whether codes exist. A code-only campaign cannot go live until it has a code.",
+          "Add a whole category of items to a campaign in one click, taken from the branch's stock rather than the full item list, with a tab per category and a clear for each.",
+          "The normal-price column shows the spread when an item's batches were bought at different prices.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "Subtotal to Total now adds up on screen: two new rows name what a cashier's discount took off and what an offer took off, instead of the money disappearing between the two figures.",
+          "Buttons with an icon no longer render two rows tall with the icon sitting above the label.",
+          "Plainer punctuation across every screen.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "An online sale took every promotion off twice. On a 100 item with a 10% offer the till showed 90 and collected 90, but the sale was recorded as 81, so revenue, margin and the points earned were all understated. Sales made offline were always correct.",
+          "The margin guard read a cost that belonged to no batch, so a campaign could pass the check and still sell under what the stock leaving the shelf had cost.",
+          "A held table stored the discount with the promotion already inside it, which would have been counted a second time when the table was settled.",
+        ],
+      },
+    ],
+  },
   {
     version: "2.5.0",
     title: "Promotions Rebuilt, Loyalty Points & Receipts You Design",
