@@ -155,6 +155,24 @@ const Cart = ({
     totals.lineTotalAfterItemDiscounts += calculateItemTotal(item);
     return totals;
   }, { computedSubTotal: 0, lineTotalAfterItemDiscounts: 0 }), [cartItems]);
+
+  /**
+   * What the per-line cuts came to, split by who made them.
+   *
+   * <p>Subtotal is the shelf price and Total is what is owed, and everything taken off a line —
+   * a cashier's own discount, a promotion — used to happen in the gap between the two with
+   * nothing naming it. A bill-level promotion got its own row and a line-level one did not, so
+   * a cashier reading "Subtotal 1,000, Bill Discount 0, Total 820" had no way to account for
+   * the 180 and no way to tell a customer where it went.
+   *
+   * <p>The promotion's own figure is the one the engine reported for each line, so this agrees
+   * with the receipt rather than re-deriving it; what is left over is the manual discount.
+   */
+  const promotionSavings = useMemo(
+    () => cartItems.reduce((sum, item) => sum + Math.max(0, toFiniteNumber(item?.promotionDiscountAmount)), 0),
+    [cartItems]
+  );
+  const manualLineDiscounts = Math.max(0, computedSubTotal - lineTotalAfterItemDiscounts - promotionSavings);
   const previewBillDiscount = Number(billPromotion?.appliedBillDiscountAmount);
   const effectiveBillDiscount = Math.max(0, Math.min(
     lineTotalAfterItemDiscounts,
@@ -439,6 +457,18 @@ const Cart = ({
             <span>Subtotal</span>
             <span className="font-medium text-slate-700">{formatCurrency(computedSubTotal)}</span>
           </div>
+          {manualLineDiscounts > 0.004 ? (
+            <div className="flex justify-between text-slate-500 text-sm">
+              <span className="flex items-center gap-1"><Tag size={12} /> Item Discounts</span>
+              <span className="font-medium text-slate-700">-{formatCurrency(manualLineDiscounts)}</span>
+            </div>
+          ) : null}
+          {promotionSavings > 0.004 ? (
+            <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-700">
+              <span className="min-w-0 truncate font-bold">Item offers</span>
+              <span className="shrink-0 font-black">-{formatCurrency(promotionSavings)}</span>
+            </div>
+          ) : null}
           <div className="flex justify-between items-center text-slate-500 text-sm">
             <span className="flex items-center gap-1"><Tag size={12} /> Bill Discount</span>
             <input aria-label="Bill discount"
