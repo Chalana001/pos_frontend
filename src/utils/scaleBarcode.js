@@ -217,3 +217,75 @@ export const buildScaleBarcodeExample = (settings) => {
   const check = s.scaleBarcodeHasCheckDigit && isAllDigits(payload) ? computeEan13CheckDigit(payload) : '';
   return `${payload}${check}`;
 };
+
+// ── resolving a decoded label against an item ─────────────────────────────────────────────
+//
+// Mirror of backend ItemService.resolveScaleBarcodeResolution and of the three refusals
+// getByBarcode makes around it, so a till can finish a scale sale without the network.
+// The server stays the authority and is still asked whenever the item code matches nothing
+// in the till's catalogue snapshot; change one side and change the other.
+
+/** Base units in one primary unit: grams per kilogram, millilitres per litre alike. */
+const BASE_UNITS_PER_PRIMARY_UNIT = 1000;
+
+const MEASURED_ITEM_TYPES = new Set(['WEIGHT', 'VOLUME']);
+
+/** Rounds to whole cents the way the backend's setScale(2, HALF_UP) does. */
+const roundMoney = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+/**
+ * The unit a measured item's quantity is expressed in, mirroring
+ * QuantityConversionUtil.normalizeItemUnit for the two measured types.
+ */
+const primaryUnitFor = (item) => {
+  const unit = String(item?.defaultUnit || '').toUpperCase();
+  if (item?.itemType === 'VOLUME') return unit === 'ML' ? 'ML' : 'L';
+  return unit === 'G' ? 'G' : 'KG';
+};
+
+/**
+ * Turns a successful describeScaleBarcode result plus the matched item into the quantity,
+ * unit and amount the cart line needs.
+ *
+ * Returns { ok: true, quantity, unit, amount } or { ok: false, reason } where `reason` is
+ * worded for a cashier and matches what the server would have answered.
+ */
+export const resolveScaleSale = (item, decoded) => {
+  if (!item) {
+    return { ok: false, reason: `Scale label read as item code '${decoded?.itemCode}', but no item carries that barcode` };
+  }
+  if (!MEASURED_ITEM_TYPES.has(item.itemType)) {
+    return { ok: false, reason: `Item code '${decoded.itemCode}' is '${item.name}', which is not sold by weight or volume` };
+  }
+
+  const sellingPrice = Number(item.sellingPrice);
+  if (!Number.isFinite(sellingPrice) || sellingPrice <= 0) {
+    return { ok: false, reason: `Item code '${decoded.itemCode}' is '${item.name}', which has no selling price set` };
+  }
+
+  let baseUnits;
+  let amount;
+
+  if (decoded.valueType === 'PRICE') {
+    // The amount is embedded in the label; the quantity is derived from it at the item's
+    // per-primary-unit price, the inverse of the WEIGHT branch, so the two agree.
+    amount = roundMoney(Number(decoded.amount));
+    baseUnits = Math.round((amount * BASE_UNITS_PER_PRIMARY_UNIT) / sellingPrice);
+  } else {
+    // describeScaleBarcode has already applied the branch's unit and decimals, so this is
+    // base units. Stock and orders are whole base units, so round rather than refuse: a
+    // sub-gram digit is not a reason to lose a sale.
+    baseUnits = Math.round(Number(decoded.grams));
+    amount = roundMoney((sellingPrice * baseUnits) / BASE_UNITS_PER_PRIMARY_UNIT);
+  }
+
+  if (!Number.isFinite(baseUnits) || baseUnits <= 0 || !Number.isFinite(amount)) {
+    return { ok: false, reason: `Scale label for '${item.name}' does not resolve to a sellable quantity` };
+  }
+
+  const unit = primaryUnitFor(item);
+  const isBaseUnit = unit === 'G' || unit === 'ML';
+  const quantity = isBaseUnit ? baseUnits : baseUnits / BASE_UNITS_PER_PRIMARY_UNIT;
+
+  return { ok: true, quantity, unit, amount };
+};

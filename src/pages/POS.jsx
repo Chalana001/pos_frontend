@@ -33,6 +33,7 @@ import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
 import PanelResizeHandle from "../components/common/PanelResizeHandle";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 import { BRAND_NAME_UPPER } from "../utils/branding";
+import { describeScaleBarcode, resolveScaleSale } from "../utils/scaleBarcode";
 import { getConfigurableFeatureAvailability, hasPlanFeature } from "../utils/subscriptionFeatures";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
@@ -168,6 +169,16 @@ const getCartDraftKey = (userId, branchId) =>
  * thousand items cost the same first paint as eighty.
  */
 const ITEM_PAGE_SIZE = 60;
+
+/**
+ * What to tell a cashier when a scan found nothing. A label that decoded names the item
+ * code it decoded to, which is the one fact that says whether to look at the item or at the
+ * scale settings; anything else gets the plain message.
+ */
+const scaleNotFoundMessage = (decoded) =>
+  decoded?.ok
+    ? `Scale label read as item code '${decoded.itemCode}', but no item carries that barcode`
+    : "Item not found!";
 
 /**
  * Name, alt name and barcode as one lower-cased string, built once when the items load.
@@ -1129,23 +1140,31 @@ const POS = () => {
     }
   };
 
-  // The list the grid draws from. Derived rather than stored: as state it cost a second
-  // render of this whole page on every keystroke, and could disagree with allItems for a
-  // frame. Deferred so the letters a cashier types appear immediately and the grid catches
-  // up a beat later, instead of the input waiting for eight thousand items to be sifted.
-  const deferredSearchQuery = useDeferredValue(searchQuery);
-  const filteredItems = useMemo(() => {
+  // Category and text filter in one place, so the grid and the Enter handler can never
+  // disagree about what a query matches. The grid passes the deferred query, the Enter
+  // handler passes the live one.
+  const selectItems = useCallback((query) => {
     let result = allItems;
     if (activeCategory !== "All") {
       result = result.filter((item) =>
         (singleCategoryMode ? item.subCategoryName || item.categoryName : item.categoryName) === activeCategory);
     }
-    const query = deferredSearchQuery.trim().toLowerCase();
-    if (query) {
-      result = result.filter((item) => (item.searchBlob ?? buildSearchBlob(item)).includes(query));
+    const needle = String(query ?? "").trim().toLowerCase();
+    if (needle) {
+      result = result.filter((item) => (item.searchBlob ?? buildSearchBlob(item)).includes(needle));
     }
     return result;
-  }, [allItems, activeCategory, deferredSearchQuery, singleCategoryMode]);
+  }, [allItems, activeCategory, singleCategoryMode]);
+
+  // The list the grid draws from. Derived rather than stored: as state it cost a second
+  // render of this whole page on every keystroke, and could disagree with allItems for a
+  // frame. Deferred so the letters a cashier types appear immediately and the grid catches
+  // up a beat later, instead of the input waiting for eight thousand items to be sifted.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const filteredItems = useMemo(
+    () => selectItems(deferredSearchQuery),
+    [selectItems, deferredSearchQuery]
+  );
 
   // A new search or category is a new list: start from the top of it, and put the grid back
   // to the top too, or the cashier lands mid-way down results they have not seen.
@@ -1395,56 +1414,115 @@ const POS = () => {
     if (e.key !== "Enter") return;
     e.preventDefault();
 
-    const query = searchQuery.trim();
+    // Read the text off the input, not off searchQuery. The input is controlled, and a
+    // scanner delivers a whole label and its Enter faster than React commits: the handler
+    // bound to the node is then a closure from an earlier render still holding a couple of
+    // characters, and a one-letter query matched half the catalogue and sold its first row.
+    // The DOM node's value is the text that is actually there at the moment of the keydown.
+    const query = String(e.target.value ?? searchQuery).trim();
+
+    // Enter consumes the query, so empty the box now rather than leaving it to whichever
+    // branch below happens to return. The node is cleared alongside the state for the same
+    // reason the value was read off it: two labels scanned back to back would otherwise
+    // have the second one's characters land on top of the first one's uncommitted text.
+    e.target.value = "";
+    setSearchQuery("");
+
     if (!query) {
       toast.error("Item not found!");
-      setSearchQuery("");
       return;
     }
 
-    if (filteredItems.length === 0) {
-      // No fast client-side match (exact or fuzzy) against allItems, fall
-      // back to the server barcode lookup, which also decodes scale barcodes
-      // (weight/price embedded in the digits) per this branch's settings.
-      // Strictly a fallback: any barcode that already resolves client-side
-      // never reaches here.
-      if (canUseServer && effectiveBranchId) {
-        try {
-          const response = await itemsAPI.getByBarcode(query, effectiveBranchId);
-          if (response.data) {
-            addResolvedBarcodeItemToCart(response.data);
+    // Everything below decides from the live query, never from filteredItems.
+    // filteredItems is built from the deferred query, which lags a scanner by
+    // design: a scanner delivers a whole label and its Enter inside a couple of
+    // frames, so on Enter the deferred list is usually still the unfiltered
+    // catalogue. Reading it here meant the "nothing matched" branch was
+    // unreachable for a scanner, so a scale label never reached the server
+    // decode below, and the fuzzy fallback quietly sold catalogue item number
+    // one instead.
+    const lowered = query.toLowerCase();
+
+    // A scanned barcode names exactly one item, so it wins whichever category
+    // tab happens to be open.
+    let itemToAdd = allItems.find((item) => item.barcode?.toLowerCase() === lowered);
+
+    if (!itemToAdd) {
+      // A label this branch's scale could have printed is never a text search,
+      // whatever it happens to look like.
+      const decoded = describeScaleBarcode(query, configuration);
+
+      if (decoded.ok) {
+        // Resolved here rather than over the network. The catalogue is already in memory
+        // with every barcode in it, and the till has to be able to finish this sale with
+        // the server down: a shop that scans scale labels is scanning them all day, and
+        // normal barcodes already work offline. The server is still asked below, but only
+        // for the one case the snapshot genuinely cannot answer.
+        const scaleItem = allItems.find((item) => item.barcode?.toLowerCase() === decoded.itemCode.toLowerCase());
+
+        if (scaleItem) {
+          const sale = resolveScaleSale(scaleItem, decoded);
+          if (!sale.ok) {
+            toast.error(sale.reason);
             return;
           }
-        } catch (error) {
-          if (error?.response?.status !== 404) {
-            console.error(error);
-          }
-          // 404 or any other failure falls through to "not found" below,
-          // matching today's existing behavior.
+          addScaleResolvedToCart(scaleItem, sale.quantity, sale.unit, sale.amount);
+          return;
         }
+        // The label read fine but this till has never seen that item code. That is the one
+        // thing the snapshot can be wrong about, since it is only as new as the last sale,
+        // so fall through to the server and let it look at the real catalogue.
       }
 
-      toast.error("Item not found!");
-      setSearchQuery("");
-      return;
-    }
+      const matches = decoded.ok ? [] : selectItems(query);
 
-    const exactMatch = filteredItems.find(
-      (item) => item.barcode?.toLowerCase() === query.toLowerCase()
-    );
+      if (matches.length === 0) {
+        // No client-side match, fall back to the server barcode lookup, which
+        // also decodes scale barcodes (weight/price embedded in the digits)
+        // per this branch's settings.
+        //
+        // Deliberately no timeout of its own. Some of these shops run on weak mobile
+        // signal, and a lookup that gives up early is not a slow answer, it is a wrong
+        // one: the cashier is told the item does not exist when it does, and goes
+        // looking for a data problem that is not there. Waiting is the cheaper mistake.
+        if (canUseServer && effectiveBranchId) {
+          try {
+            const response = await itemsAPI.getByBarcode(query, effectiveBranchId);
+            if (response.data) {
+              addResolvedBarcodeItemToCart(response.data);
+              return;
+            }
+          } catch (error) {
+            if (error?.response?.status !== 404) {
+              console.error(error);
+            }
+            // The server distinguishes "nothing matched this at all" from "the scale
+            // label read fine, the catalogue is what is wrong", and which of the two it
+            // is decides whether the shop looks at the item or at the scale settings.
+            // Showing a flat "Item not found" for both sent people hunting the wrong one.
+            toast.error(getApiErrorMessage(error, scaleNotFoundMessage(decoded)));
+            return;
+          }
+        }
 
-    const itemToAdd = exactMatch || filteredItems[0];
-
-    if (itemToAdd) {
-      const stockQty = getSellableStockBaseQty(itemToAdd);
-
-      if (!isUnlimitedStockItem(itemToAdd) && stockQty <= 0 && !stockOverrideCanProceed) {
-        toast.error("Item is Out of Stock!");
-        setSearchQuery("");
+        // Offline, or no branch to ask about. A decoded label still knows more than
+        // "Item not found" does, and that is the whole message a shop gets to act on.
+        toast.error(scaleNotFoundMessage(decoded));
         return;
       }
-      addToCart(itemToAdd);
+
+      // Only a typed search gets the nearest name match. A scan either matched
+      // a barcode exactly above or was handed to the server.
+      itemToAdd = matches[0];
     }
+
+    const stockQty = getSellableStockBaseQty(itemToAdd);
+
+    if (!isUnlimitedStockItem(itemToAdd) && stockQty <= 0 && !stockOverrideCanProceed) {
+      toast.error("Item is Out of Stock!");
+      return;
+    }
+    addToCart(itemToAdd);
   };
 
   const updateQuantity = (index, newQty) => {

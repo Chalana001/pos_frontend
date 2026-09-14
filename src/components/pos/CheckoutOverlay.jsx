@@ -133,7 +133,15 @@ const CheckoutOverlay = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm">
-      <div className="shell-surface modal-panel-enter sales-highlight-ring flex h-full w-full max-w-md flex-col">
+      {/* role/aria-modal match common/Modal. Besides the accessibility, useSearchOnType
+          finds an open dialog through [role="dialog"] so that a scan while this is up
+          does not land in the item search behind it. */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Checkout"
+        className="shell-surface modal-panel-enter sales-highlight-ring flex h-full w-full max-w-md flex-col"
+      >
         
         {/* Header */}
         <div className="checkout-head page-section-enter flex items-center justify-between border-b bg-slate-50" style={{ animationDelay: "70ms" }}>
