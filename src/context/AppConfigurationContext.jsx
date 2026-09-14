@@ -1,12 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { appConfigurationAPI } from '../api/appConfiguration.api';
+import { DEFAULT_SCALE_BARCODE_CONFIG, normalizeScaleBarcodeConfig } from '../utils/scaleBarcode';
 import { useAuth } from './AuthContext';
 import { useBranch } from './BranchContext';
 
 const getStorageKey = (branchId) => `app_configuration:${branchId || 'default'}`;
 
 export const DEFAULT_APP_CONFIGURATION = {
+  ...DEFAULT_SCALE_BARCODE_CONFIG,
   recipeItemsEnabled: true,
   weightItemsEnabled: true,
   servicesEnabled: true,
@@ -28,6 +30,8 @@ export const DEFAULT_APP_CONFIGURATION = {
 const AppConfigurationContext = createContext(null);
 
 const normalizeConfiguration = (value = {}) => ({
+  // Scale barcode layout: cached with the rest so the till has it offline too.
+  ...normalizeScaleBarcodeConfig(value),
   recipeItemsEnabled: value.recipeItemsEnabled !== false,
   weightItemsEnabled: value.weightItemsEnabled !== false,
   servicesEnabled: value.servicesEnabled !== false,

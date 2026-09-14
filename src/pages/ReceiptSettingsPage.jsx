@@ -393,8 +393,6 @@ const ReceiptSettingsPage = () => {
 
   // Scale-barcode starting templates, same list for every branch, fetched
   // lazily the first time the Barcode tab is opened and cached thereafter.
-  const [scalePresets, setScalePresets] = useState([]);
-  const [scalePresetsLoading, setScalePresetsLoading] = useState(false);
 
   useEffect(() => {
     if (!kotEnabled && activeTemplate === PRINT_TEMPLATE_TYPES.KOT) {
@@ -469,30 +467,6 @@ const ReceiptSettingsPage = () => {
 
     loadBarcodeSettings();
   }, [activeTemplate, activeBranch, branchSelectionRequired]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!isBarcodeTab || !activeBranch?.id) return;
-    if (scalePresets.length > 0 || scalePresetsLoading) return;
-
-    let cancelled = false;
-    setScalePresetsLoading(true);
-    barcodeLabelSettingsAPI
-      .getScalePresets(activeBranch.id)
-      .then((response) => {
-        if (!cancelled) setScalePresets(Array.isArray(response.data) ? response.data : []);
-      })
-      .catch((error) => {
-        console.error(error);
-        if (!cancelled) toast.error('Failed to load scale barcode templates');
-      })
-      .finally(() => {
-        if (!cancelled) setScalePresetsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isBarcodeTab, activeBranch, scalePresets.length, scalePresetsLoading]);  
 
   const updateField = (field, value) => {
     setForm((prev) => normalizeReceiptSettings({ ...prev, [field]: value }));
@@ -834,8 +808,6 @@ const ReceiptSettingsPage = () => {
               printerTesting={printerTesting}
               onRefreshPrinters={() => loadPrinters()}
               onTestPrint={handleTestPrint}
-              scalePresets={scalePresets}
-              scalePresetsLoading={scalePresetsLoading}
             />
           ) : (
             <>

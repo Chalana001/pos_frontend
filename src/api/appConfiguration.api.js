@@ -9,4 +9,7 @@ export const appConfigurationAPI = {
     api.put('/app-configuration', payload, {
       params: branchId ? { branchId } : {},
     }),
+  // Static starting-point templates for the scale barcode fields. Same list
+  // for every branch; see ScaleBarcodeFormatPresets on the backend.
+  getScalePresets: () => api.get('/app-configuration/scale-barcode-presets'),
 };

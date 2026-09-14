@@ -6,6 +6,8 @@ import { Activity, Building2, ChefHat, FileText, Printer, ReceiptText, Save, Sca
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import CustomSelect from '../components/common/CustomSelect';
+import ScaleBarcodeConfigCard from '../components/configuration/ScaleBarcodeConfigCard';
+import { appConfigurationAPI } from '../api/appConfiguration.api';
 import { useAppConfiguration } from '../context/AppConfigurationContext';
 import { useAuth } from '../context/AuthContext';
 import { useBranch } from '../context/BranchContext';
@@ -91,6 +93,29 @@ const AppConfigurationPage = () => {
   const { configuration, loading, saveConfiguration, activeBranchId } = useAppConfiguration();
   const [form, setForm] = useState(configuration);
   const [saving, setSaving] = useState(false);
+  const [scalePresets, setScalePresets] = useState([]);
+  const [scalePresetsLoading, setScalePresetsLoading] = useState(false);
+
+  // Starting templates for the Scale Configuration card. Static on the server
+  // and the same for every branch, so fetched once per visit.
+  React.useEffect(() => {
+    let cancelled = false;
+    setScalePresetsLoading(true);
+    appConfigurationAPI
+      .getScalePresets()
+      .then((response) => {
+        if (!cancelled) setScalePresets(Array.isArray(response.data) ? response.data : []);
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {
+        if (!cancelled) setScalePresetsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [animationLevel, setAnimationLevel] = useAnimationLevel();
   const [theme, setTheme] = useTheme();
   const featureAvailability = useMemo(
@@ -499,6 +524,17 @@ const AppConfigurationPage = () => {
           </div>
         </Card>
       </div>
+
+      {!branchSelectionRequired ? (
+        <ScaleBarcodeConfigCard
+          form={form}
+          updateField={updateField}
+          presets={scalePresets}
+          presetsLoading={scalePresetsLoading}
+          weightItemsEnabled={featureAvailability.weightItemsEnabled !== false && !!form.weightItemsEnabled}
+          style={{ animationDelay: '170ms' }}
+        />
+      ) : null}
     </div>
   );
 };
