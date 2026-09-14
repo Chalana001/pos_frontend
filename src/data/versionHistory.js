@@ -14,6 +14,7 @@ export const VERSION_HISTORY = [
       "The cart now shows what came off each line, separately for a cashier's discount and for an offer.",
       "Add a whole category to a campaign at once, and review it a category at a time.",
       "The margin guard now judges the batch going out of the door, not a reference cost belonging to no batch.",
+      "The top bar's Light/Dark and language pickers are now one-tap switches, and a cart line shows the live per-unit price a promotion or discount left it at.",
     ],
     sections: [
       {
@@ -24,6 +25,7 @@ export const VERSION_HISTORY = [
           "The builder now asks whether a campaign applies automatically or only with a promo code, instead of leaving it to be worked out from whether codes exist. A code-only campaign cannot go live until it has a code.",
           "Add a whole category of items to a campaign in one click, taken from the branch's stock rather than the full item list, with a tab per category and a clear for each.",
           "The normal-price column shows the spread when an item's batches were bought at different prices.",
+          "Scale Configuration, a new card on App Configuration, says how your weighing scale lays out the barcodes it prints: grams or kilograms, how many decimal places the scale prints (01234 as 1.234 kg or as 1234 g), several prefixes at once (20 to 29), lettered prefixes and item codes such as NS12, and whether leading zeros in the item code are ignored. A test box shows how a label from your own scale splits and reads before you save. It used to sit on the barcode label tab, which prints our labels, not the scale's.",
         ],
       },
       {
@@ -32,11 +34,16 @@ export const VERSION_HISTORY = [
           "Subtotal to Total now adds up on screen: two new rows name what a cashier's discount took off and what an offer took off, instead of the money disappearing between the two figures.",
           "Buttons with an icon no longer render two rows tall with the icon sitting above the label.",
           "Plainer punctuation across every screen.",
+          "The top bar's Light/Dark and English/Sinhala pickers are two-way switches now, not dropdowns for a two-value choice. Connection state is an icon only, in the brand blue rather than a traffic-light colour: a quiet tint for online, a solid fill for offline. The plan-and-expiry badge moved into the account menu.",
+          "A cart line shows what one unit is actually selling for, computed from the line total so a promotion or a typed discount is already folded in, with the shelf price struck through beside it when the two differ. The promotion's own name sits in its chip instead of the word \"Promo\", and a line takes two rows of chrome instead of four. The item discount panel now closes on its own once a cashier moves on, instead of sitting open under a line already checked out.",
+          "The cart panel drags up to 70% of the window instead of a flat cap, remembers the width per device, and opens wider by default, enough for a line's quantity controls to sit on one row.",
+          "A sale opened from Sales History now shows where every rupee went: the shelf total, then item discounts, item offers, the bill discount or the bill offer that won, and points used, down to the grand total. Each line says what it actually lost, split into the offer's share and the cashier's share, with the price per unit it was charged at.",
         ],
       },
       {
         label: "Fixed",
         items: [
+          "The same invoice printed two different Sub Totals, and neither slip added up: the till printed the shelf total while a reprint printed the total after line discounts, and the Discount row counted every offer twice. Sub Total is now the shelf total on every slip, the Discount row is exactly Sub Total less Net Total, and the line below an item names the offer's share and the cashier's share separately.",
           "An online sale took every promotion off twice. On a 100 item with a 10% offer the till showed 90 and collected 90, but the sale was recorded as 81, so revenue, margin and the points earned were all understated. Sales made offline were always correct.",
           "The margin guard read a cost that belonged to no batch, so a campaign could pass the check and still sell under what the stock leaving the shelf had cost.",
           "A held table stored the discount with the promotion already inside it, which would have been counted a second time when the table was settled.",
