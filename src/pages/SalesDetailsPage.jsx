@@ -150,6 +150,8 @@ const SalesDetailsPage = () => {
       // Sales history only ever reprints. The customer's own slip came off the till at
       // checkout, so this one has to be marked as the copy it is.
       isReprint: true,
+      promotionDiscountTotal: sale.promotionDiscountTotal,
+      billPromotionDiscountAmount: sale.billPromotionDiscountAmount,
     };
 
     const cartItems = sale.items.map(item => ({
@@ -161,6 +163,11 @@ const SalesDetailsPage = () => {
       discountType: item.discountType || 'FIXED',
       discountValue: item.discountValue || 0,
       lineTotal: item.lineTotal,
+      finalUnitPrice: item.finalUnitPrice,
+      // The offer's own share of the line's cut, and its name, so a reprint labels the
+      // discount row exactly as the slip printed at the till did.
+      promotionDiscountAmount: Number(item.promotionDiscountAmount || 0),
+      promotionName: item.promotionName || null,
       warrantyLabel: item.warrantyLabel,
       warrantyPeriodValue: item.warrantyPeriodValue,
       warrantyPeriodUnit: item.warrantyPeriodUnit,
@@ -198,6 +205,9 @@ const SalesDetailsPage = () => {
       customerPhone: sale.customerPhone,
       cashierName: sale.cashierName,
       note: sale.note || "",
+      loyaltyDiscountAmount: sale.loyaltyDiscountAmount,
+      promotionDiscountTotal: sale.promotionDiscountTotal,
+      billPromotionDiscountAmount: sale.billPromotionDiscountAmount,
     };
 
     const cartItems = sale.items.map((item) => ({
@@ -210,6 +220,11 @@ const SalesDetailsPage = () => {
       discountType: item.discountType || 'FIXED',
       discountValue: item.discountValue || 0,
       lineTotal: item.lineTotal,
+      finalUnitPrice: item.finalUnitPrice,
+      // The offer's own share of the line's cut, and its name, so a reprint labels the
+      // discount row exactly as the slip printed at the till did.
+      promotionDiscountAmount: Number(item.promotionDiscountAmount || 0),
+      promotionName: item.promotionName || null,
       warrantyLabel: item.warrantyLabel,
       warrantyPeriodValue: item.warrantyPeriodValue,
       warrantyPeriodUnit: item.warrantyPeriodUnit,
@@ -308,6 +323,30 @@ const SalesDetailsPage = () => {
     hasPlanFeature(user?.planName, "ORDER_RETURNS");
   const saleDue = Number(sale.dueAmount || 0);
   const canPaySale = !isCanceled && sale.customerId && saleDue > 0;
+
+  // The money on this sale, laid out the way the cart showed it at the till: shelf total,
+  // then what each kind of cut took off, then what was owed. Every figure comes from the
+  // order as stored. A line's cut is its shelf total less what it came to; the offer's
+  // share is the amount the engine recorded, and the cashier's share is the remainder,
+  // since the stored discount pair folds both into one per-unit number.
+  const money = (value) => Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const lineShelfTotal = (item) => {
+    const qty = Number(item?.qty || 0);
+    const unit = String(item?.qtyUnit || "").toUpperCase();
+    const primaryQty = unit === "G" || unit === "ML" ? qty / 1000 : qty;
+    return primaryQty * Number(item?.unitPrice || 0);
+  };
+  const lineCut = (item) => Math.max(0, lineShelfTotal(item) - Number(item?.lineTotal || 0));
+  const lineOfferCut = (item) => Math.min(Math.max(0, Number(item?.promotionDiscountAmount || 0)), lineCut(item));
+  const lineManualCut = (item) => Math.max(0, lineCut(item) - lineOfferCut(item));
+  const saleItems = Array.isArray(sale.items) ? sale.items : [];
+  const shelfTotal = saleItems.reduce((sum, item) => sum + lineShelfTotal(item), 0);
+  const itemOffers = saleItems.reduce((sum, item) => sum + lineOfferCut(item), 0);
+  const itemDiscounts = saleItems.reduce((sum, item) => sum + lineManualCut(item), 0);
+  const billDiscountAmount = Number(sale.billDiscount || 0);
+  const billOfferName = sale.billPromotionId ? sale.billPromotionName : null;
+  const pointsDiscount = Number(sale.loyaltyDiscountAmount || 0);
+  const pointsRedeemed = Number(sale.loyaltyPointsRedeemed || 0);
 
   return (
     <div className="page-enter space-y-6 pb-20">
@@ -435,10 +474,46 @@ const SalesDetailsPage = () => {
                 </div>
             </div>
             
-            <div className={`p-3 rounded-lg inline-block min-w-[200px] ${isCanceled ? 'bg-slate-100 opacity-80' : 'bg-slate-100'}`}>
-                <div className="text-xs text-slate-500 uppercase font-bold">Grand Total</div>
-                <div className={`text-2xl font-bold ${isCanceled ? 'text-slate-500 line-through' : 'text-emerald-600'}`}>
-                    {sale.grandTotal?.toLocaleString(undefined, {minimumFractionDigits: 2})} <span className="text-sm text-slate-500">LKR</span>
+            <div className={`p-3 rounded-lg inline-block min-w-[260px] text-left ${isCanceled ? 'bg-slate-100 opacity-80' : 'bg-slate-100'}`}>
+                {/* Shelf total down to what was owed, one row per kind of cut, each shown
+                    only when it took something off. The same rows the cart showed. */}
+                <div className="space-y-1 text-sm">
+                    <div className="flex justify-between gap-8">
+                        <span className="text-slate-500">Sub Total</span>
+                        <span className="font-semibold text-slate-700">{money(shelfTotal)} LKR</span>
+                    </div>
+                    {itemDiscounts > 0.004 ? (
+                        <div className="flex justify-between gap-8">
+                            <span className="text-slate-500">Item Discounts</span>
+                            <span className="font-semibold text-amber-700">-{money(itemDiscounts)} LKR</span>
+                        </div>
+                    ) : null}
+                    {itemOffers > 0.004 ? (
+                        <div className="flex justify-between gap-8">
+                            <span className="text-slate-500">Item Offers</span>
+                            <span className="font-semibold text-emerald-700">-{money(itemOffers)} LKR</span>
+                        </div>
+                    ) : null}
+                    {billDiscountAmount > 0.004 ? (
+                        <div className="flex justify-between gap-8">
+                            <span className="min-w-0 truncate text-slate-500" title={billOfferName || undefined}>
+                                {billOfferName ? `Bill Offer (${billOfferName})` : "Bill Discount"}
+                            </span>
+                            <span className={`shrink-0 font-semibold ${billOfferName ? 'text-emerald-700' : 'text-amber-700'}`}>-{money(billDiscountAmount)} LKR</span>
+                        </div>
+                    ) : null}
+                    {pointsDiscount > 0.004 ? (
+                        <div className="flex justify-between gap-8">
+                            <span className="text-slate-500">Points Used{pointsRedeemed > 0 ? ` (${pointsRedeemed.toLocaleString()})` : ""}</span>
+                            <span className="font-semibold text-blue-700">-{money(pointsDiscount)} LKR</span>
+                        </div>
+                    ) : null}
+                </div>
+                <div className="mt-3 border-t border-slate-200 pt-3">
+                    <div className="text-xs text-slate-500 uppercase font-bold">Grand Total</div>
+                    <div className={`text-2xl font-bold ${isCanceled ? 'text-slate-500 line-through' : 'text-emerald-600'}`}>
+                        {sale.grandTotal?.toLocaleString(undefined, {minimumFractionDigits: 2})} <span className="text-sm text-slate-500">LKR</span>
+                    </div>
                 </div>
                 <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-sm">
                     <div className="flex justify-between gap-8">
@@ -503,8 +578,26 @@ const SalesDetailsPage = () => {
                                         {formatQuantityWithUnit(item.qty, item.qtyUnit)}
                                     </span>
                                 </td>
-                                <td className="p-4 text-right text-red-500 text-xs">
-                                    {item.discountValue > 0 ? `- ${item.discountValue.toLocaleString()}` : '-'}
+                                {/* What this line lost, not the stored per-unit pair: that pair
+                                    reads "-30" on a 5 kg line that lost 150. Offer and cashier's
+                                    cut are named separately underneath. */}
+                                <td className="p-4 text-right text-xs">
+                                    {lineCut(item) > 0.004 ? (
+                                        <div className="space-y-0.5">
+                                            <div className="font-semibold text-red-500">- {money(lineCut(item))}</div>
+                                            {lineOfferCut(item) > 0.004 ? (
+                                                <div className="text-emerald-700" title={item.promotionName || undefined}>
+                                                    {item.promotionName || "Offer"}: -{money(lineOfferCut(item))}
+                                                </div>
+                                            ) : null}
+                                            {lineOfferCut(item) > 0.004 && lineManualCut(item) > 0.004 ? (
+                                                <div className="text-amber-700">Discount: -{money(lineManualCut(item))}</div>
+                                            ) : null}
+                                            {item.finalUnitPrice != null && lineCut(item) > 0.004 ? (
+                                                <div className="text-slate-500">@ {money(item.finalUnitPrice)}</div>
+                                            ) : null}
+                                        </div>
+                                    ) : '-'}
                                 </td>
                                 <td className="p-4 text-slate-600">
                                     {item.warrantyLabel || "-"}

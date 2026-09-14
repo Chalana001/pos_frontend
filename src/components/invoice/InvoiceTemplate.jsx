@@ -45,7 +45,10 @@ const calculateItemTotal = (item) => {
   const discountValue = Number((item?.discountValue ?? item?.effectiveDiscountValue) || 0);
 
   if (discountType === 'FIXED') {
-    total -= discountValue;
+    // A fixed figure is per unit (the engine's replay pair), so it scales with the
+    // quantity in primary units: a per-kilo cut on a line sold in grams is per thousand.
+    const primaryQty = (qtyUnit === 'G' || qtyUnit === 'ML') ? qty / 1000 : qty;
+    total -= discountValue * primaryQty;
   } else if (discountType === 'PERCENT') {
     total -= (total * discountValue) / 100;
   }
@@ -71,40 +74,29 @@ const calculateItemBaseTotal = (item) => {
   return qty * (Number.isFinite(unitPrice) ? unitPrice : 0);
 };
 
+/**
+ * Rupees taken off this line: shelf total less what the line came to. That one subtraction
+ * holds every cut at once, the offer and the cashier's discount, which the stored discount
+ * pair cannot say apart: the engine folds both into one per-unit figure, so reading that
+ * figure as the cashier's share and adding the offer again counted the offer twice.
+ */
 const calculateItemDiscountAmount = (item) => {
-  const promotionDiscountAmount = Number(item?.promotionDiscountAmount || 0);
-  const discountType = item?.discountType || item?.effectiveDiscountType;
-  const discountValue = Number((item?.discountValue ?? item?.effectiveDiscountValue) || 0);
-
-  let explicitDiscountAmount = 0;
-  if (discountType === 'FIXED') {
-    explicitDiscountAmount = discountValue;
-  } else if (discountType === 'PERCENT') {
-    const qty = Number(item?.qty || 0);
-    const unitPrice = Number(item?.unitPrice || 0);
-    const perSmallUnitPrice = Number(item?.perSmallUnitPrice ?? item?.perGramPrice);
-    const qtyUnit = String(item?.qtyUnit || '').toUpperCase();
-    const baseAmount = (qtyUnit === 'G' || qtyUnit === 'ML') && Number.isFinite(perSmallUnitPrice)
-      ? qty * perSmallUnitPrice
-      : qty * unitPrice;
-    explicitDiscountAmount = (baseAmount * discountValue) / 100;
-  } else {
-    const baseTotal = calculateItemBaseTotal(item);
-    const finalTotal = calculateItemTotal(item);
-    if (Number.isFinite(baseTotal) && Number.isFinite(finalTotal) && baseTotal > finalTotal) {
-      explicitDiscountAmount = baseTotal - finalTotal - promotionDiscountAmount;
-    }
-  }
-
-  return Math.max(0, explicitDiscountAmount + promotionDiscountAmount);
+  const baseTotal = calculateItemBaseTotal(item);
+  const finalTotal = calculateItemTotal(item);
+  if (!Number.isFinite(baseTotal) || !Number.isFinite(finalTotal)) return 0;
+  return Math.max(0, Math.round((baseTotal - finalTotal) * 100) / 100);
 };
 
-const calculateTotalDiscount = (items, billDiscount, promotionDiscountTotal = 0) => {
-  const itemDiscountTotal = Array.isArray(items)
-    ? items.reduce((sum, item) => sum + calculateItemDiscountAmount(item), 0)
-    : 0;
-  const effectiveItemDiscount = itemDiscountTotal > 0 ? itemDiscountTotal : Number(promotionDiscountTotal || 0);
-  return Math.max(0, effectiveItemDiscount + Number(billDiscount || 0));
+/**
+ * The Discount row has to make the column add up: Sub Total less Discount less points is the
+ * Grand Total. It is derived from those figures rather than re-assembled from the lines, so
+ * a customer with a calculator never catches the invoice out.
+ */
+const calculateTotalDiscount = (subTotal, grandTotal, loyaltyDiscount = 0) => {
+  const sub = Number(subTotal) || 0;
+  const grand = Number(grandTotal) || 0;
+  if (sub <= 0 || grand < 0) return 0;
+  return Math.max(0, Math.round((sub - grand - (Number(loyaltyDiscount) || 0)) * 100) / 100);
 };
 
 const InvoiceTemplate = ({
@@ -130,9 +122,16 @@ const InvoiceTemplate = ({
   const customerName = getValue(customerData?.name || orderData?.customerName, 'Walk-in Customer');
   const customerPhone = getValue(customerData?.phone || orderData?.customerPhone, '');
   const customerAddress = getValue(customerData?.address || orderData?.customerAddress, '');
-  const subTotal = Number(orderData?.subTotal ?? 0);
-  const billDiscount = Number(orderData?.billDiscount ?? 0);
+  // The goods at shelf price, summed from the lines printed below rather than taken from the
+  // caller: the till and the sales history handed over different figures under this name.
+  const listTotal = Array.isArray(items) && items.length > 0
+    ? items.reduce((sum, item) => sum + calculateItemBaseTotal(item), 0)
+    : NaN;
+  const subTotal = Number.isFinite(listTotal)
+    ? Math.round(listTotal * 100) / 100
+    : Number(orderData?.subTotal ?? 0);
   const grandTotal = Number(orderData?.netTotal ?? orderData?.grandTotal ?? 0);
+  const loyaltyDiscount = Math.max(0, Number(orderData?.loyaltyDiscountAmount ?? 0));
   const paidAmount = Number(orderData?.paidAmount ?? 0);
   const dueAmount = Math.max(0, Number(orderData?.dueAmount ?? 0));
   const balanceAmount = Math.max(0, paidAmount - grandTotal);
@@ -465,35 +464,26 @@ const InvoiceTemplate = ({
                   : primaryName;
                 const discountType = item?.discountType || item?.effectiveDiscountType;
                 const discountValue = Number((item?.discountValue ?? item?.effectiveDiscountValue) || 0);
+                // The line's cut, split into the offer's share (the figure the engine
+                // reported) and the cashier's share (whatever is left). The stored discount
+                // pair folds both into one per-unit number, so it cannot be read back apart.
                 const promotionDiscountAmount = Number(item?.promotionDiscountAmount || 0);
-                const explicitDiscountAmount = discountType === 'FIXED'
-                  ? discountValue
-                  : discountType === 'PERCENT'
-                    ? (() => {
-                      const qty = Number(item?.qty || 0);
-                      const unitPrice = Number(item?.unitPrice || 0);
-                      const perSmallUnitPrice = Number(item?.perSmallUnitPrice ?? item?.perGramPrice);
-                      const qtyUnit = String(item?.qtyUnit || '').toUpperCase();
-                      const baseAmount = (qtyUnit === 'G' || qtyUnit === 'ML') && Number.isFinite(perSmallUnitPrice)
-                        ? qty * perSmallUnitPrice
-                        : qty * unitPrice;
-                      return (baseAmount * discountValue) / 100;
-                    })()
-                    : 0;
                 const discountAmount = calculateItemDiscountAmount(item);
                 const hasDiscount = discountAmount > 0;
+                const promoPart = Math.min(Math.max(0, promotionDiscountAmount), discountAmount);
+                const manualPart = Math.max(0, Math.round((discountAmount - promoPart) * 100) / 100);
                 const labelParts = [];
-                if (explicitDiscountAmount > 0) {
+                if (manualPart > 0.001) {
                   labelParts.push(
-                    discountType === 'FIXED'
-                      ? `${t('Discount')}: -${formatCurrency(explicitDiscountAmount)}`
-                      : `${discountValue}% ${t('Off')}: -${formatCurrency(explicitDiscountAmount)}`
+                    promoPart <= 0.001 && discountType === 'PERCENT' && discountValue > 0
+                      ? `${discountValue}% ${t('Off')}: -${formatCurrency(manualPart)}`
+                      : `${t('Discount')}: -${formatCurrency(manualPart)}`
                   );
                 }
-                if (promotionDiscountAmount > 0) {
+                if (promoPart > 0.001) {
                   labelParts.push(item?.promotionName
-                    ? `${item.promotionName}: -${formatCurrency(promotionDiscountAmount)}`
-                    : `${t('Discount')}: -${formatCurrency(promotionDiscountAmount)}`);
+                    ? `${item.promotionName}: -${formatCurrency(promoPart)}`
+                    : `${t('Discount')}: -${formatCurrency(promoPart)}`);
                 }
                 const discountLabel = labelParts.join(' + ');
 
@@ -552,7 +542,7 @@ const InvoiceTemplate = ({
                 {normalized.showDiscount ? (
                   <tr>
                     <td style={styles.summaryCell}>{t('Discount (Rs):')}</td>
-                    <td style={{ ...styles.summaryCell, textAlign: 'right' }}>-{formatCurrency(calculateTotalDiscount(itemRows, billDiscount, orderData?.promotionDiscountTotal ?? orderData?.billPromotionDiscountAmount ?? 0))}</td>
+                    <td style={{ ...styles.summaryCell, textAlign: 'right' }}>-{formatCurrency(calculateTotalDiscount(subTotal, grandTotal, loyaltyDiscount))}</td>
                   </tr>
                 ) : null}
                 {normalized.showNetTotal ? (

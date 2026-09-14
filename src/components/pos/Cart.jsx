@@ -50,6 +50,9 @@ const Cart = ({
 
   const listRef = useRef(null);
   const previousItemsRef = useRef([]);
+  // The row whose discount panel is open, so a click elsewhere can be told apart
+  // from a click inside it.
+  const editingRowRef = useRef(null);
 
   // Follow the row that just changed.
   //
@@ -107,6 +110,30 @@ const Cart = ({
       setEditingIndex(null);
     }
   };
+
+  // The discount panel is a transient thing, not a mode: it closes as soon as the cashier
+  // moves on. It used to stay open until the tag or the X was clicked again, so it sat under
+  // a line the cashier had finished with while they scanned the next item.
+  //
+  // Clicking anywhere outside the row closes it. The discount-type dropdown renders its menu
+  // in a portal on document.body, so that menu has to be treated as inside the panel or
+  // picking Percent would shut the thing the cashier is using.
+  useEffect(() => {
+    if (editingIndex === null) return undefined;
+    const closeOnOutsideClick = (event) => {
+      if (editingRowRef.current?.contains(event.target)) return;
+      if (event.target?.closest?.(".custom-select-menu")) return;
+      setEditingIndex(null);
+    };
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, [editingIndex]);
+
+  // Scanning the next item, or removing one, is the cashier moving on too. Indexes shift on a
+  // removal as well, so a panel left open would be sitting on a different line than it opened on.
+  useEffect(() => {
+    setEditingIndex(null);
+  }, [cartItems.length]);
 
   const handleManualQtyChange = (index, value) => {
     const numVal = parseFloat(value);
@@ -185,20 +212,39 @@ const Cart = ({
   const pointsDiscount = Math.min(totalBeforePoints, Math.max(0, Number(loyaltyDiscount) || 0));
   const computedTotal = Math.max(0, totalBeforePoints - pointsDiscount);
 
-  const getPriceLabel = (item) => {
+  /**
+   * What one unit of this line is actually selling for, and the shelf price it came from.
+   *
+   * <p>The shelf price alone was no help the moment an offer applied: a cashier looking at
+   * "1 KG = LKR 100.00" on a line that had already come down to 80 had to divide the line
+   * total by the quantity in their head before they could judge a discount. The live figure
+   * is that division, taken from the line total so it accounts for the offer and for any
+   * discount already typed, with the shelf price struck through beside it when the two differ.
+   */
+  const getUnitPriceInfo = (item) => {
     if (item.itemType === ItemType.SERVICE) {
       return null;
     }
 
-    if (item.weightItem) {
-      const smallUnit = item.defaultUnit === "L" || item.defaultUnit === "ML" ? "ML" : "G";
-      const primaryUnit = smallUnit === "ML" ? "L" : "KG";
-      return item.qtyUnit === smallUnit
-        ? `1 ${smallUnit} = ${formatCurrency(item.perSmallUnitPrice ?? item.perGramPrice)}`
-        : `1 ${primaryUnit} = ${formatCurrency(item.unitPrice)}`;
-    }
+    const smallUnit = item.defaultUnit === "L" || item.defaultUnit === "ML" ? "ML" : "G";
+    const primaryUnit = smallUnit === "ML" ? "L" : "KG";
+    const showingSmallUnit = item.weightItem && item.qtyUnit === smallUnit;
+    const unit = item.weightItem ? (showingSmallUnit ? smallUnit : primaryUnit) : item.defaultUnit;
 
-    return `1 ${item.defaultUnit} = ${formatCurrency(item.unitPrice)}`;
+    const listPrice = showingSmallUnit
+      ? toFiniteNumber(item.perSmallUnitPrice ?? item.perGramPrice)
+      : toFiniteNumber(item.unitPrice);
+
+    const qty = toFiniteNumber(item.qty);
+    const livePrice = qty > 0 ? calculateItemTotal(item) / qty : listPrice;
+
+    return {
+      unit,
+      listPrice,
+      livePrice,
+      // Half a cent, so a rounding tail never draws a strike-through over an unchanged price.
+      discounted: Math.abs(livePrice - listPrice) >= 0.005,
+    };
   };
 
   return (
@@ -255,13 +301,31 @@ const Cart = ({
               : 1;
 
             return (
-              <div key={index} style={{ animationDelay: `${220 + index * 38}ms` }} className="sales-cart-item sales-panel-hover relative group overflow-visible rounded-xl border border-slate-100 bg-white shadow-sm hover:border-blue-200 transition-all">
+              <div
+                key={index}
+                ref={editingIndex === index ? editingRowRef : null}
+                style={{ animationDelay: `${220 + index * 38}ms` }}
+                className="sales-cart-item sales-panel-hover relative group overflow-visible rounded-xl border border-slate-100 bg-white shadow-sm hover:border-blue-200 transition-all"
+              >
                 <div className="flex items-center gap-2 p-2">
-                  <div className="flex-1">
-                    <h4 className="line-clamp-1 text-[13px] font-bold leading-tight text-slate-800">{item.name}</h4>
-                    {item.altName && <p className="text-xs leading-tight text-slate-600 line-clamp-1">{item.altName}</p>}
-                    <div className="mt-0.5 flex items-center gap-1.5">
-                      
+                  {/* The minimum is what makes the controls wrap before the name does: without
+                      it the controls take their full single-row width at any cart size and the
+                      name is squeezed to nothing instead. */}
+                  <div className="min-w-[168px] flex-1">
+                    {/* Both names on one line, the second wrapping under the first only when
+                        it has to. They used to be two blocks, so every row paid for a second
+                        line whether the alt name needed one or not. */}
+                    <h4 className="line-clamp-2 text-[13px] font-bold leading-tight text-slate-800">
+                      {item.name}
+                      {item.altName && (
+                        <span className="ml-1.5 text-xs font-medium text-slate-600">{item.altName}</span>
+                      )}
+                    </h4>
+                    {/* Price and money in one wrapping row: side by side when the cashier has
+                        widened the cart, stacked when they have not. Height follows the space
+                        available instead of always costing two lines. */}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                    <div className="flex items-center gap-1.5">
                       {item.itemType === ItemType.SERVICE ? (
                         <div className="flex items-center gap-1">
                           <span className="text-xs font-medium text-slate-600">Price:</span>
@@ -280,48 +344,59 @@ const Cart = ({
                             title="Edit Service Price"
                           />
                         </div>
-                      ) : (
-                        <span className="text-xs font-medium text-slate-600">
-                          {getPriceLabel(item)}
-                        </span>
-                      )}
+                      ) : (() => {
+                        const price = getUnitPriceInfo(item);
+                        if (!price) return null;
+                        return (
+                          <>
+                            <span className={`text-xs font-medium ${price.discounted ? "text-emerald-700" : "text-slate-600"}`}>
+                              1 {price.unit} = {formatCurrency(price.livePrice)}
+                            </span>
+                            {price.discounted && (
+                              <span className="text-xs text-slate-400 line-through">
+                                {formatCurrency(price.listPrice)}
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
 
-                      {item.weightItem && (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">
-                          {item.qtyUnit || item.defaultUnit}
-                        </span>
-                      )}
+                      {/* No unit chip here: "1 KG =" on the left and the unit selector beside
+                          the quantity already say it twice. */}
+                    </div>
+                    {/* The money and what came off it stay together: the total is the figure a
+                        discount chip is talking about. */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] font-bold text-blue-600">
+                        {formatCurrency(calculateItemTotal(item))}
+                      </span>
                       {(item.effectiveDiscountValue ?? item.discountValue) > 0 && (
                         <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
                           {(item.effectiveDiscountType || item.discountType) === DISCOUNT_TYPES.PERCENT
                             ? `-${item.effectiveDiscountValue ?? item.discountValue}%`
-                            : `-${formatCurrency(item.effectiveDiscountValue ?? item.discountValue)}`}
+                            // A fixed figure is shown for the whole line. The engine's
+                            // effectiveDiscountValue is per unit (per kg on a weighed
+                            // item), so 0.5 kg at 20 off a kilo read as "-LKR 20.00"
+                            // beside a line that had only lost 10.
+                            : `-${formatCurrency(
+                              Number.isFinite(Number(item.appliedDiscountAmount)) && item.effectiveDiscountType
+                                ? item.appliedDiscountAmount
+                                : (item.effectiveDiscountValue ?? item.discountValue)
+                            )}`}
                         </span>
                       )}
+                      {/* One chip, named: the offer's own name says more than "Promo" and
+                          saves the line it used to take underneath. */}
                       {item.promotionApplied && (
-                        <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">
-                          Promo
+                        <span
+                          className="max-w-[150px] truncate rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-bold text-emerald-700"
+                          title={item.promotionName || "Promotion applied"}
+                        >
+                          {item.promotionName || "Promo"}
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 text-[13px] font-bold text-blue-600">
-                      {formatCurrency(calculateItemTotal(item))}
                     </div>
-                    {item.promotionApplied && item.promotionName && (
-                      <div className="mt-0.5 max-w-[220px] truncate text-xs font-semibold text-emerald-700">
-                        {item.promotionName}
-                      </div>
-                    )}
-                    {explainableDecisions(item.promotionDecisions).length > 0 && (
-                      <WhyButton
-                        applied={!!item.promotionApplied}
-                        label={item.promotionApplied ? "Why this price?" : "No offer. Why?"}
-                        onClick={() => setWhyPanel({
-                          title: item.name,
-                          decisions: item.promotionDecisions,
-                        })}
-                      />
-                    )}
                     {warrantyEnabled ? (
                       <div className="mt-1 max-w-[144px]">
                         <CustomSelect
@@ -342,7 +417,12 @@ const Cart = ({
                     ) : null}
                   </div>
 
-                  <div className="flex flex-col items-end gap-1.5">
+                  {/* Quantity and the two actions sit on one row once the cart is wide enough
+                      to hold them, which halves the height of every line; on a narrow cart
+                      they fall back to the two rows they always used. Buttons stay 44px, the
+                      size a finger needs on a till screen, so the saving comes from the
+                      arrangement rather than from shrinking the targets. */}
+                  <div className="flex flex-wrap items-center justify-end gap-1.5">
                     <div className="flex items-center gap-1.5">
                       <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
                         <button
@@ -399,7 +479,7 @@ const Cart = ({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button aria-label="Add Discount"
                         onClick={() => setEditingIndex(editingIndex === index ? null : index)}
                         className={`inline-flex h-11 w-11 items-center justify-center rounded-md transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-blue-600'}`}

@@ -139,7 +139,18 @@ const renderLine = (line, data, items) => {
     : new Date().toLocaleString();
   const cashierName = branchData?.cashierName || orderData?.cashierName || 'Cashier';
   const customerName = customerData?.name || orderData?.customerName || '';
-  const subTotal     = Number(orderData?.subTotal ?? 0);
+  // Sub Total is the goods at shelf price, summed from the lines the slip prints, not a
+  // figure the caller hands over. The till and the sales history used to hand over two
+  // different numbers under that name (the till the shelf total, the server the total after
+  // line discounts) so the same invoice printed with two different Sub Totals. A return
+  // slip prices its lines differently and keeps the caller's figure.
+  const isReturnSlip = orderData?.refundMethod != null;
+  const listTotal = !isReturnSlip && Array.isArray(items) && items.length > 0
+    ? items.reduce((sum, item) => sum + lineBaseTotal(item), 0)
+    : NaN;
+  const subTotal     = Number.isFinite(listTotal)
+    ? Math.round(listTotal * 100) / 100
+    : Number(orderData?.subTotal ?? 0);
   const grandTotal   = Number(orderData?.netTotal ?? orderData?.grandTotal ?? 0);
   const paidAmount   = Number(orderData?.paidAmount ?? 0);
   const dueAmount    = Math.max(0, Number(orderData?.dueAmount ?? 0));
@@ -190,21 +201,29 @@ const renderLine = (line, data, items) => {
     ? (markHeading ? `${markHeading} (COPY)` : 'COPY')
     : (markHeading || 'ORIGINAL');
 
-  // ── Total discount = bill-level + promotion-level + all per-line discounts ─
+  // ── Total discount = every per-line cut + the bill-level cut ────────────────
   // Per-line figures come from the same helper the item table prints from, so the DISCOUNT
-  // total is always the sum of what the lines above it say.
+  // total is the sum of what the lines above it say. A line's cut already holds its
+  // promotion (it is the shelf total less the priced line), and the server's billDiscount
+  // already holds a bill promotion when one won, so neither is added a second time. Adding
+  // promotionDiscountTotal on top used to count every offer twice on the slip printed at the
+  // till, and read "Sub Total 1,300, Discount 400, Net Total 1,000".
   const lineDiscountSum = (items || []).reduce((sum, item) => sum + lineDiscountAmount(item), 0);
-
   const billDiscount  = Number(orderData?.billDiscount ?? 0);
-  const promoDiscount = Number(orderData?.promotionDiscountTotal ?? 0);
-  // Total discount shown on DISCOUNT line = everything combined
-  const totalDiscount = lineDiscountSum + billDiscount + promoDiscount;
-  // If totalDiscount doesn't match subTotal-grandTotal due to rounding, trust the arithmetic
+  const summedDiscount = Math.max(0, lineDiscountSum + billDiscount);
+  // The slip has to add up: Sub Total, less Discount, less Points Discount, is Net Total.
   // Points were already taken off grandTotal, and they are not a discount, spending them is
   // closer to part-payment. Left in, they would be reported on the DISCOUNT line as a price
-  // cut the shop never gave.
-  const inferredDiscount = subTotal > 0 && grandTotal >= 0 ? subTotal - grandTotal - pointsDiscount : 0;
-  const displayDiscount = totalDiscount > 0.001 ? totalDiscount : (inferredDiscount > 0.001 ? inferredDiscount : 0);
+  // cut the shop never gave. Where the caller's figures agree with the lines the two are the
+  // same number; where they drift (rounding, a stale field), the arithmetic wins, because a
+  // customer checks the column with a calculator and a breakdown that does not sum is worse
+  // than one figure that does.
+  const inferredDiscount = !isReturnSlip && subTotal > 0 && grandTotal > 0
+    ? Math.round((subTotal - grandTotal - pointsDiscount) * 100) / 100
+    : NaN;
+  const displayDiscount = Number.isFinite(inferredDiscount)
+    ? Math.max(0, inferredDiscount)
+    : summedDiscount;
 
   const logoW   = Math.max(35, Math.min(200, Number(settings?.logoWidthPercent || 78)));
   const logoTop = Math.max(0, Math.min(20, Number(settings?.logoTopSpacing || 0))) / 2;
@@ -433,15 +452,26 @@ const buildItemRows = (items, settings, cfg, { nameSize = 11, lkr, amt = lkr } =
     : esc(fmtQty(qty)));
   // Named after the promotion when one gave the cut, else the shop's own label; a percent
   // discount says what percent so the figure beside it is explained.
+  // A line's cut is split into what the offer gave and what the cashier gave on top, each
+  // named. The offer's own figure is the one the engine reported; the cashier's share is
+  // whatever is left of the line's total cut, since the stored discount pair has both
+  // folded into one per-unit number and cannot be read back apart. The two parts add up
+  // to the figure the amount column moved by.
   const discountRowHtml = (item, discount, span) => {
     if (!cfg.showDiscountLine || !(discount > 0.001)) return '';
-    let label = cfg.labelDiscount;
-    if (Number(item.promotionDiscountAmount || 0) > 0 && item.promotionName) {
-      label = item.promotionName;
-    } else if (lineDiscountType(item) === 'PERCENT' && lineDiscountValue(item) > 0) {
-      label = `${fmtQty(lineDiscountValue(item))}% ${cfg.labelDiscount}`;
+    const promoPart = Math.min(Math.max(0, Number(item.promotionDiscountAmount || 0)), discount);
+    const manualPart = Math.max(0, Math.round((discount - promoPart) * 100) / 100);
+    const parts = [];
+    if (promoPart > 0.001) {
+      parts.push(`${esc(item.promotionName || cfg.labelDiscount)}: -${lkr(promoPart)}`);
     }
-    return `<tr><td colspan="${span}" class="muted itl item-disc" style="${smallStyle}">${esc(label)}: -${lkr(discount)}</td></tr>`;
+    if (manualPart > 0.001) {
+      const label = promoPart <= 0.001 && lineDiscountType(item) === 'PERCENT' && lineDiscountValue(item) > 0
+        ? `${fmtQty(lineDiscountValue(item))}% ${cfg.labelDiscount}`
+        : cfg.labelDiscount;
+      parts.push(`${esc(label)}: -${lkr(manualPart)}`);
+    }
+    return `<tr><td colspan="${span}" class="muted itl item-disc" style="${smallStyle}">${parts.join(' + ')}</td></tr>`;
   };
 
   if (cfg.layout === 'COLUMNS') {

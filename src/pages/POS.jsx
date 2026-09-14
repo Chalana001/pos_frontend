@@ -179,6 +179,38 @@ const ITEM_PAGE_SIZE = 60;
 const buildSearchBlob = (item) =>
   `${item?.name || ""}\n${item?.altName || ""}\n${item?.barcode || ""}`.toLowerCase();
 
+// ── cart panel width ──────────────────────────────────────────────────────────────────────
+//
+// The till's own screen decides how wide the cart should be: a shop selling weighed goods
+// wants a wide cart with every line on one row, a shop scanning packets wants the grid.
+// So the cap is a share of the window rather than a fixed pixel count, and the drag is
+// remembered per device the way every other ResizableSplit in the app is.
+
+const CART_PANEL_WIDTH_KEY = "pos_split_cart_panel";
+const CART_PANEL_MIN_WIDTH = 360;
+/** The item grid stops being usable below this, so the cart can never squeeze it further. */
+const ITEM_GRID_MIN_WIDTH = 380;
+
+const maxCartPanelWidth = () => {
+  const viewport = typeof window === "undefined" ? 1280 : window.innerWidth;
+  return Math.max(CART_PANEL_MIN_WIDTH, Math.min(viewport * 0.7, viewport - ITEM_GRID_MIN_WIDTH));
+};
+
+const readStoredCartPanelWidth = () => {
+  try {
+    const stored = Number(window.localStorage.getItem(CART_PANEL_WIDTH_KEY));
+    if (Number.isFinite(stored) && stored >= CART_PANEL_MIN_WIDTH) {
+      return Math.min(stored, maxCartPanelWidth());
+    }
+  } catch {
+    /* storage unavailable, fall through to the default */
+  }
+  // Wide enough that a cart line fits its quantity controls on one row, which is what takes
+  // a line from three rows of chrome down to two. Measured against the cart's own styles:
+  // the controls stop wrapping just under 500px, so 560 clears it on any till.
+  return Math.min(560, maxCartPanelWidth());
+};
+
 const POS = () => {
   const { user, isOnline, hasOnlineSession, isOfflineSession } = useAuth();
   const { selectedBranchId, branches } = useBranch();
@@ -259,7 +291,7 @@ const POS = () => {
   const [queuePressure, setQueuePressure] = useState({ count: 0, oldestAt: null, ageHours: 0 });
   const [serverUnreachable, setServerUnreachable] = useState(false);
   const [, setKotStateVersion] = useState(0);
-  const [cartPanelWidth, setCartPanelWidth] = useState(470);
+  const [cartPanelWidth, setCartPanelWidth] = useState(() => readStoredCartPanelWidth());
   const [isResizingPanels, setIsResizingPanels] = useState(false);
   const resizeStateRef = useRef({ startX: 0, startWidth: 470 });
   const cartPanelRef = useRef(null);
@@ -552,9 +584,10 @@ const POS = () => {
       return undefined;
     }
 
+    const dragMax = maxCartPanelWidth();
     const handleMouseMove = (event) => {
       const deltaX = resizeStateRef.current.startX - event.clientX;
-      const nextWidth = Math.max(360, Math.min(720, resizeStateRef.current.startWidth + deltaX));
+      const nextWidth = Math.max(CART_PANEL_MIN_WIDTH, Math.min(dragMax, resizeStateRef.current.startWidth + deltaX));
       resizeStateRef.current.nextWidth = nextWidth;
       if (resizeFrameRef.current !== null) return;
       resizeFrameRef.current = requestAnimationFrame(() => {
@@ -576,7 +609,13 @@ const POS = () => {
         cancelAnimationFrame(resizeFrameRef.current);
         resizeFrameRef.current = null;
       }
-      setCartPanelWidth(resizeStateRef.current.nextWidth || resizeStateRef.current.startWidth);
+      const settled = resizeStateRef.current.nextWidth || resizeStateRef.current.startWidth;
+      setCartPanelWidth(settled);
+      try {
+        window.localStorage.setItem(CART_PANEL_WIDTH_KEY, String(Math.round(settled)));
+      } catch {
+        /* storage unavailable: the width still holds for this session */
+      }
       setIsResizingPanels(false);
     };
 
@@ -596,6 +635,16 @@ const POS = () => {
       }
     };
   }, [isResizingPanels]);
+
+  // A width dragged on a wide monitor must not swallow the grid on a narrower one, and the
+  // cap moves with the window, so re-clamp whenever the window does.
+  useEffect(() => {
+    const clampToViewport = () => {
+      setCartPanelWidth((current) => Math.min(current, maxCartPanelWidth()));
+    };
+    window.addEventListener("resize", clampToViewport);
+    return () => window.removeEventListener("resize", clampToViewport);
+  }, []);
 
   const toNonNegativeNumber = (value) => {
     const parsed = Number.parseFloat(value);
@@ -1496,6 +1545,7 @@ const POS = () => {
     newItems[index].discountValue = toNonNegativeNumber(value);
     newItems[index].effectiveDiscountType = undefined;
     newItems[index].effectiveDiscountValue = undefined;
+    newItems[index].appliedDiscountAmount = undefined;
     newItems[index].promotionId = null;
     newItems[index].promotionName = "";
     newItems[index].promotionDiscountAmount = 0;
@@ -1617,6 +1667,10 @@ const POS = () => {
         promotionName: preview.promotionApplied ? preview.promotionName : "",
         promotionDiscountAmount: preview.promotionApplied ? Number(preview.promotionDiscountAmount || 0) : 0,
         promotionApplied: !!preview.promotionApplied,
+        // What came off this whole line, promotion and manual discount together. The
+        // engine's discountValue is per unit (per kg for a weighed item), which is
+        // the wrong figure to show beside a line total.
+        appliedDiscountAmount: Number(preview.appliedDiscountAmount || 0),
         effectiveLineTotal: Number(preview.finalLineTotal || 0),
         promotionDecisions: preview.decisions || [],
       };
@@ -2209,7 +2263,9 @@ const POS = () => {
         orderId: response.data.id || response.data.invoiceNo,
         invoiceNo: response.data.invoiceNo,
         subTotal,
-        billDiscount,
+        // The server's figure, not the typed one: it is what was charged and what a reprint
+        // from the sales history will show, and the two slips must never disagree.
+        billDiscount: Number(response.data?.billDiscount ?? billDiscount),
         promotionDiscountTotal: Number(response.data?.promotionDiscountTotal || response.data?.billPromotionDiscountAmount || 0),
         netTotal: response.data.grandTotal ?? total,
         paidAmount: response.data.paidAmount ?? (orderType === ORDER_TYPES.CASH ? paidAmount : 0),
@@ -2237,12 +2293,32 @@ const POS = () => {
         note: "",
       };
 
+      // The slip prints the lines as the server priced them, matched to the cart by position
+      // (the server keeps the order and a cart can hold one item twice on two batches). Raw
+      // cart rows carried no lineTotal, so the printer fell back to the typed discount and a
+      // weighed line with an offer on it could print a different amount than the till showed.
+      const serverItems = Array.isArray(response.data?.items) ? response.data.items : [];
+      const receiptItems = cartItems.map((item, index) => {
+        const priced = serverItems[index];
+        const samePriced = priced && Number(priced.itemId) === Number(item.itemId);
+        return {
+          ...item,
+          discountType: getEffectiveDiscountType(item),
+          discountValue: getEffectiveDiscountValue(item),
+          lineTotal: samePriced ? Number(priced.lineTotal) : calculateCartItemTotal(item),
+          promotionDiscountAmount: samePriced
+            ? Number(priced.promotionDiscountAmount || 0)
+            : Number(item.promotionDiscountAmount || 0),
+          promotionName: samePriced ? (priced.promotionName || "") : (item.promotionName || ""),
+        };
+      });
+
       if (configuration.printReceiptAfterCheckout !== false && printRef.current) {
-        printRef.current.printOrder(printData, cartItems, storeName, myShift, customer, receiptSettings);
+        printRef.current.printOrder(printData, receiptItems, storeName, myShift, customer, receiptSettings);
       }
 
       if (shouldPrintFullInvoice && invoicePrintRef.current) {
-        invoicePrintRef.current.printInvoice(printData, cartItems, storeName, myShift, customer, receiptSettings);
+        invoicePrintRef.current.printInvoice(printData, receiptItems, storeName, myShift, customer, receiptSettings);
       }
 
       const pendingKotItems = saleMode === SALE_MODES.TAKEAWAY ? getPendingKotItems() : kotItems;
