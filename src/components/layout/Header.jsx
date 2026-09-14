@@ -343,37 +343,36 @@ const Header = ({ onOpenSidebar }) => {
         </div>
 
         <div className="page-section-enter flex shrink-0 items-center justify-end gap-2" style={{ animationDelay: '120ms' }}>
-          <ThemeSelector compact />
-          <LanguageSelector compact className="hidden sm:flex" />
+          <ThemeSelector />
+          <LanguageSelector className="hidden sm:inline-flex" />
 
+          {/* Offline queue: the icon and the count, nothing to read. */}
           <Link
             to="/offline-sales"
-            className={`${toolbarItemClass} shell-panel-hover hidden gap-2 xl:inline-flex`}
+            className={`${toolbarItemClass} shell-panel-hover hidden gap-1.5 px-2.5 md:inline-flex`}
+            aria-label={`Offline Queue: ${offlineQueueCount}`}
+            title="Offline Queue"
           >
-            <UploadCloud size={16} />
-            <span className="whitespace-nowrap">Offline Queue</span>
+            <UploadCloud size={18} className="text-blue-700" />
             <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-50 px-1.5 text-xs font-bold text-blue-700">
               {offlineQueueCount}
             </span>
           </Link>
 
-          {/* Offline is the state worth screen space, so it shows at every width.
-              "Online" is the boring default and stays hidden on narrow screens. */}
-          <div className={`shell-panel-hover h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold shadow-sm ${isOnline ? 'hidden border-emerald-200 bg-emerald-50 text-emerald-700 md:inline-flex' : 'dark-hl-chip inline-flex border-amber-200 bg-amber-50 text-amber-700'}`}>
-            {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
-            {isOnline ? 'Online' : 'Offline'}
+          {/* Connection state as an icon in the same 44px chrome as the bell,
+              in the brand blue rather than a traffic-light colour: online is
+              the quiet tint, offline the solid fill, so the state still reads
+              at a glance. Offline shows at every width; "Online" is the boring
+              default and stays hidden on narrow screens. The plan and its
+              expiry live in the account menu, not out here. */}
+          <div
+            className={`shell-panel-hover h-11 w-11 items-center justify-center rounded-xl border shadow-sm ${isOnline ? 'hidden border-blue-200 bg-blue-50 text-blue-700 md:inline-flex' : 'inline-flex border-blue-600 bg-blue-600 text-white'}`}
+            role="status"
+            aria-label={isOnline ? 'Online' : 'Offline'}
+            title={isOnline ? 'Online' : 'Offline'}
+          >
+            {isOnline ? <Wifi size={18} /> : <WifiOff size={18} />}
           </div>
-
-          {validUntilLabel && (
-            <div className="shell-panel-hover hidden h-11 min-w-[142px] flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-right shadow-sm 2xl:flex">
-              <div className="text-xs font-bold uppercase leading-4 text-emerald-700">
-                {t(formatPlanName(user?.planName))}
-              </div>
-              <div className="text-xs leading-4 text-emerald-800">
-                {t(`Valid until ${validUntilLabel}`)}
-              </div>
-            </div>
-          )}
 
           <div className="relative" ref={notificationRef}>
             <button

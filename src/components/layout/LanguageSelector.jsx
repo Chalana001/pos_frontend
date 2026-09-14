@@ -1,31 +1,30 @@
 import React from 'react';
-import { Languages } from 'lucide-react';
+
+import PillToggle from '../common/PillToggle';
 import { useLanguage } from '../../context/LanguageContext';
 import { LANGUAGES } from '../../utils/translations';
-import CustomSelect from '../common/CustomSelect';
 
-const LanguageSelector = ({ compact = false, className = 'flex' }) => {
+/**
+ * English / Sinhala as a two-way switch. The labels are written in their own
+ * script rather than translated, so each side reads correctly to the person
+ * who wants it.
+ */
+const LanguageSelector = ({ className = 'inline-flex' }) => {
   const { language, setLanguage, t } = useLanguage();
+
   const options = [
-    { value: LANGUAGES.EN, label: t('English') },
-    { value: LANGUAGES.SI, label: t('Sinhala') },
+    { value: LANGUAGES.EN, label: 'EN', title: 'English' },
+    { value: LANGUAGES.SI, label: 'සිං', title: 'සිංහල' },
   ];
 
   return (
-    <div className={`h-11 min-w-[132px] max-w-[166px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 shadow-sm sm:min-w-[166px] ${className}`}>
-      <Languages size={compact ? 16 : 18} className="text-slate-500" />
-      <CustomSelect
-        value={language}
-        onChange={setLanguage}
-        options={options}
-        valueKey="value"
-        labelKey="label"
-        placeholder={t('Language')}
-        className="min-w-0 flex-1"
-        buttonClassName="h-11 border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0 hover:border-transparent"
-        menuClassName="min-w-[140px]"
-      />
-    </div>
+    <PillToggle
+      value={language === LANGUAGES.SI ? LANGUAGES.SI : LANGUAGES.EN}
+      options={options}
+      onChange={setLanguage}
+      ariaLabel={t('Language')}
+      className={className}
+    />
   );
 };
 
