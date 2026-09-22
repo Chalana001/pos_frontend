@@ -38,7 +38,7 @@ const AnnouncementBanner = () => {
   const load = useCallback(async () => {
     if (!isAuthenticated || !isOnline) return;
     try {
-      const response = await api.get("/api/saas/my-announcements", {
+      const response = await api.get("/saas/my-announcements", {
         meta: { background: true },
       });
       setItems(Array.isArray(response.data) ? response.data : []);
@@ -56,7 +56,7 @@ const AnnouncementBanner = () => {
     // Hide it straight away; the server call is bookkeeping.
     setItems((current) => current.filter((entry) => entry.id !== announcement.id));
     try {
-      await api.post(`/api/saas/my-announcements/${announcement.id}/dismiss`, null, {
+      await api.post(`/saas/my-announcements/${announcement.id}/dismiss`, null, {
         meta: { background: true },
       });
     } catch {

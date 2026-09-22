@@ -29,9 +29,9 @@ const SubscriptionPage = () => {
 
     const load = async () => {
       const [plansRes, subRes, supportRes] = await Promise.allSettled([
-        api.get('/api/saas/plans', { meta: { background: true } }),
-        api.get('/api/saas/my-subscription', { meta: { background: true } }),
-        api.get('/api/saas/support-info', { meta: { background: true } }),
+        api.get('/saas/plans', { meta: { background: true } }),
+        api.get('/saas/my-subscription', { meta: { background: true } }),
+        api.get('/saas/support-info', { meta: { background: true } }),
       ]);
       if (cancelled) return;
 

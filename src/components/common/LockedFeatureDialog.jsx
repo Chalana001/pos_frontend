@@ -45,11 +45,11 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
 
   useEffect(() => {
     if (!open) return;
-    api.get("/api/saas/support-info", { meta: { background: true } })
+    api.get("/saas/support-info", { meta: { background: true } })
       .then((response) => setSupport(response.data))
       .catch(() => setSupport(null));
     if (isOwner) {
-      api.get("/api/saas/plans", { meta: { background: true } })
+      api.get("/saas/plans", { meta: { background: true } })
         .then((response) => setPlans(response.data ?? []))
         .catch(() => setPlans([]));
     }

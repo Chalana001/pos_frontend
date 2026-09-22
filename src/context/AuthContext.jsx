@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
       // Marked background: this call has a working fallback (the cached set, then the
       // plan tier), so a backend that is down or not yet migrated must not throw a
       // "Server Error" toast at a cashier mid-sale over something the app recovers from.
-      const response = await api.get("/api/saas/my-modules", { meta: { background: true } });
+      const response = await api.get("/saas/my-modules", { meta: { background: true } });
       setModules(response.data);
       return response.data;
     } catch {
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }) => {
     if (!baseUser) return baseUser;
     try {
       setPlanLoading(true);
-      const response = await api.get("/api/saas/my-subscription");
+      const response = await api.get("/saas/my-subscription");
       const planName = response.data?.plan?.name ?? null;
       const subscriptionValidUntil = response.data?.validUntil ?? null;
       const planBillingCycle = response.data?.plan?.billingCycle ?? null;
