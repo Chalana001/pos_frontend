@@ -14,6 +14,8 @@ const Cart = ({
   onUpdatePrice,
   onRemoveItem,
   onInlineDiscount,
+  onRemovePromotion,
+  onRestorePromotion,
   billDiscount,
   setBillDiscount,
   onCheckout,
@@ -390,10 +392,19 @@ const Cart = ({
                           saves the line it used to take underneath. */}
                       {item.promotionApplied && (
                         <span
-                          className="max-w-[150px] truncate rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-bold text-emerald-700"
+                          className="max-w-[168px] truncate rounded bg-emerald-100 py-0.5 pl-1.5 pr-0.5 text-xs font-bold text-emerald-700"
                           title={item.promotionName || "Promotion applied"}
                         >
                           {item.promotionName || "Promo"}
+                          <button
+                            type="button"
+                            aria-label="Remove offer"
+                            title="Remove offer"
+                            onClick={() => onRemovePromotion?.(index)}
+                            className="relative ml-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-emerald-700 before:absolute before:-inset-y-2 before:-inset-x-1.5 before:content-[''] hover:bg-emerald-200 hover:text-emerald-900"
+                          >
+                            <X size={10} />
+                          </button>
                         </span>
                       )}
                     </div>
@@ -501,6 +512,32 @@ const Cart = ({
                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Item Discount</span>
                       <button onClick={() => setEditingIndex(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-md text-slate-600 hover:text-slate-900"><X size={14} /></button>
                     </div>
+                    {(item.promotionApplied || item.promotionExcluded) && (
+                      <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-emerald-50 px-2.5 py-1.5">
+                        <span className="min-w-0 truncate text-xs font-bold text-emerald-700">
+                          {item.promotionExcluded
+                            ? "Offers off this line"
+                            : (item.promotionName || "Promotion applied")}
+                        </span>
+                        {item.promotionExcluded ? (
+                          <button
+                            type="button"
+                            onClick={() => onRestorePromotion?.(index)}
+                            className="inline-flex h-11 shrink-0 items-center rounded-md px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                          >
+                            Restore offer
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => onRemovePromotion?.(index)}
+                            className="inline-flex h-11 shrink-0 items-center rounded-md px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                          >
+                            Remove offer
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <CustomSelect
                         value={item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.PERCENT : item.discountType}

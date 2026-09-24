@@ -910,6 +910,7 @@ const POS = () => {
       defaultUnit: sourceItem?.defaultUnit || qtyUnit,
       discountType: pendingItem.discountType || DISCOUNT_TYPES.NONE,
       discountValue: Number(pendingItem.discountValue || 0),
+      promotionExcluded: !!pendingItem.excludePromotions,
       warrantyOptionValue: "",
       warrantyLabel: pendingItem.warrantyLabel || "",
       warrantyPeriodValue: pendingItem.warrantyPeriodValue || null,
@@ -1290,6 +1291,7 @@ const POS = () => {
           defaultUnit,
           discountType: DISCOUNT_TYPES.NONE,
           discountValue: 0,
+          promotionExcluded: false,
           warrantyOptionValue: "",
           warrantyLabel: "",
           warrantyPeriodValue: null,
@@ -1366,6 +1368,7 @@ const POS = () => {
         defaultUnit: item.defaultUnit || unit,
         discountType: DISCOUNT_TYPES.NONE,
         discountValue: 0,
+        promotionExcluded: false,
         warrantyOptionValue: "",
         warrantyLabel: "",
         warrantyPeriodValue: null,
@@ -1633,6 +1636,39 @@ const POS = () => {
     setCartItems(newItems);
   };
 
+  /**
+   * Take every line-level offer off one line, or put it back.
+   *
+   * The engine's stamped fields are cleared locally so the row reads list price the instant the
+   * cashier clicks; the preview that follows re-prices the whole cart and fills them in again,
+   * and an excluded line comes back with `promotionApplied: false`, so what the row shows and
+   * what the server priced are the same thing. The cashier's own discount is untouched either
+   * way: excluding stands the offers down, it does not clear what they typed.
+   */
+  const setPromotionExcluded = (index, excluded) => {
+    setCartItems((currentItems) => currentItems.map((item, i) => (
+      i === index
+        ? {
+          ...item,
+          promotionExcluded: excluded,
+          promotionId: null,
+          promotionName: "",
+          promotionDiscountAmount: 0,
+          promotionApplied: false,
+          promotionDecisions: undefined,
+          effectiveDiscountType: undefined,
+          effectiveDiscountValue: undefined,
+          appliedDiscountAmount: undefined,
+          effectiveLineTotal: undefined,
+        }
+        : item
+    )));
+    focusSearch();
+  };
+
+  const removePromotion = (index) => setPromotionExcluded(index, true);
+  const restorePromotion = (index) => setPromotionExcluded(index, false);
+
   const updateWarranty = (index, optionValue) => {
     if (!canAddWarranty) {
       return;
@@ -1647,6 +1683,7 @@ const POS = () => {
   };
 
   const createOrderItemPayload = (item, useEffectiveDiscount = true) => {
+    const excluded = !!item.promotionExcluded;
     const payload = {
       itemId: item.itemId,
       batchId: item.batchId,
@@ -1655,11 +1692,13 @@ const POS = () => {
       unitPrice: item.unitPrice,
       discountType: useEffectiveDiscount ? getEffectiveDiscountType(item) : (item.discountType || DISCOUNT_TYPES.NONE),
       discountValue: useEffectiveDiscount ? getEffectiveDiscountValue(item) : toNonNegativeNumber(item.discountValue),
+      excludePromotions: excluded,
     };
 
     // Offline, the till is the only thing that knows which promotion priced this line; the
-    // server records it rather than working it out again.
-    if (item.promotionApplied && item.promotionId) {
+    // server records it rather than working it out again. A line whose offers the cashier took
+    // off has none to attribute, whatever it was priced at a moment ago.
+    if (!excluded && item.promotionApplied && item.promotionId) {
       payload.promotionId = item.promotionId;
       payload.promotionName = item.promotionName || undefined;
       payload.promotionDiscountAmount = Number(item.promotionDiscountAmount || 0);
@@ -1709,6 +1748,7 @@ const POS = () => {
     unitPrice: item.unitPrice,
     discountType: item.discountType || DISCOUNT_TYPES.NONE,
     discountValue: toNonNegativeNumber(item.discountValue),
+    excludePromotions: !!item.promotionExcluded,
     customerId: customer?.id || null,
     billDiscount: toNonNegativeNumber(billDiscount),
     promotionCode: promotionCode || null,
@@ -2818,6 +2858,8 @@ const POS = () => {
             onUpdatePrice={updateUnitPrice}
             onRemoveItem={removeItem}
             onInlineDiscount={handleInlineDiscount}
+            onRemovePromotion={removePromotion}
+            onRestorePromotion={restorePromotion}
             onUpdateQtyUnit={updateQtyUnit}
             onUpdateWarranty={updateWarranty}
             warrantyOptions={warrantyOptions}

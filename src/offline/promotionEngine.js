@@ -285,6 +285,9 @@ export const evaluateLine = (line, branchId, cartBaseSubtotal, promotions) => {
 
   for (const promotion of promotions || []) {
     if (!isLineLevel(promotion)) { decisions.push(decision(promotion, "WRONG_SCOPE")); continue; }
+    // The cashier took the offers off this line. Recorded as a deliberate exclusion rather
+    // than as something the engine never saw, so the trace still answers "why no discount?".
+    if (line.excludePromotions) { decisions.push(decision(promotion, "EXCLUDED_BY_CASHIER")); continue; }
     if (!coversBranch(promotion, branchId)) { decisions.push(decision(promotion, "BRANCH_MISMATCH")); continue; }
     if (safeSubtotal < nonNegative(money(promotion.minBillAmount))) { decisions.push(decision(promotion, "BELOW_MIN_BILL")); continue; }
     const target = matchingTarget(promotion, line);

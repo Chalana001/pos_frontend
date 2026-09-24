@@ -37,6 +37,7 @@ const OUTCOMES = {
   BELOW_COST: { label: "Would sell below cost", tone: "warn" },
   BELOW_MARGIN_FLOOR: { label: "Would leave too little margin", tone: "warn" },
   NO_DISCOUNT: { label: "Would take nothing off", tone: "muted" },
+  EXCLUDED_BY_CASHIER: { label: "Taken off this line", tone: "muted" },
 };
 
 const TONES = {

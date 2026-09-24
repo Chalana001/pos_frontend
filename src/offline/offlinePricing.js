@@ -34,6 +34,7 @@ const toPricingLine = (cartItem, itemsById) => {
     normalizedQty: Math.round(displayToBaseQuantity(cartItem.qty, cartItem, unit)),
     manualDiscountType: cartItem.discountType || DISCOUNT_TYPES.NONE,
     manualDiscountValue: Number(cartItem.discountValue) || 0,
+    excludePromotions: !!cartItem.promotionExcluded,
   };
 };
 
