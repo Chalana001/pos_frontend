@@ -1,6 +1,48 @@
-export const APP_VERSION = "2.6.0";
+export const APP_VERSION = "2.6.1";
 
 export const VERSION_HISTORY = [
+  {
+    version: "2.6.1",
+    title: "Supplier Management & Accurate Sales Return Flows",
+    releaseDate: "2026-09-25",
+    summary:
+      "Full editing and safe deletion for suppliers, optional phone numbers, and critical fixes across sales return calculations, stock batch restorations, and promo limits.",
+    highlights: [
+      "Suppliers can now be edited: update supplier name, phone number, email, address, and bank details at any time.",
+      "Suppliers can now be registered without a phone number; empty numbers no longer collide in the database.",
+      "Safe supplier deletion: deleting a supplier is protected if unpaid balances or purchase history exist, keeping past records intact.",
+      "Sales returns accurately restore batch stock across multiple inventory batches without fractional rounding errors (Flyway V52 & V53).",
+      "Refund method safety: Store Credit is strictly restricted to credit sales with real customers, avoiding unrecorded refund promises.",
+      "Promotion limits (usage caps) correctly release when an entire order is returned across multiple return transactions.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Supplier Edit: Dedicated edit form to modify supplier name, phone, address, and bank accounts.",
+          "Optional Supplier Phone: Phone numbers are now fully optional on creation and editing. Empty inputs are recorded as nulls to prevent unique constraint conflicts.",
+          "Protected Supplier Deletion: Soft deletion with checks preventing accidental deletion of suppliers with active purchases or outstanding payables.",
+          "Apportioned Stock Usage Restoration: Precise largest-remainder restoration of inventory batches on partial and progressive returns.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "Supplier Directory: Action buttons for quick viewing, editing, and safe deletion with confirmation modals.",
+          "Sales Return Preview: Return line preview totals and server-side rounding discrepancies aligned down to the cent.",
+          "Return Method Validation: Cashiers are prevented from selecting Store Credit for cash or card orders, with clear error messaging.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Second numberless supplier creation failing with generic 'invalid or duplicate data' error.",
+          "Sales return stock unit mismatch (display units vs base stock units) that previously restored 1/1000th of the intended quantity.",
+          "Capped promotion usage counter failing to release when 100% of an order was returned via multiple partial returns.",
+        ],
+      },
+    ],
+  },
   {
     version: "2.6.0",
     title: "Promotions Per Branch, and a Discount the Books Agree With",

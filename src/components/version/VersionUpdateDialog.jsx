@@ -38,6 +38,10 @@ const shouldShowUpdateDialog = (seenVersion, currentVersion) => {
     return current.minor > seen.minor;
   }
 
+  if (current.patch !== seen.patch) {
+    return current.patch > seen.patch;
+  }
+
   return false;
 };
 
