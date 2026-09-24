@@ -90,9 +90,10 @@ const Cart = ({
       ? [{ value: "L", label: "L" }, { value: "ML", label: "ML" }]
       : [{ value: "KG", label: "KG" }, { value: "G", label: "G" }];
   };
+  // Cashiers reach for a rate far more often than a flat figure; defaulting typed values to rupees caused surprises.
   const discountTypeOptions = [
-    { value: DISCOUNT_TYPES.FIXED, label: "Fixed (LKR)" },
     { value: DISCOUNT_TYPES.PERCENT, label: "Percent (%)" },
+    { value: DISCOUNT_TYPES.FIXED, label: "Fixed (LKR)" },
   ];
   const compactSelectButtonClass = "min-h-[24px] rounded-md border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs font-semibold text-slate-600 shadow-none";
   const compactSelectMenuClass = "min-w-[144px]";
@@ -502,7 +503,7 @@ const Cart = ({
                     </div>
                     <div className="flex gap-2">
                       <CustomSelect
-                        value={item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.FIXED : item.discountType}
+                        value={item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.PERCENT : item.discountType}
                         onChange={(value) => onInlineDiscount(index, value, item.discountValue)}
                         options={discountTypeOptions}
                         valueKey="value"
@@ -517,7 +518,7 @@ const Cart = ({
                         min="0"
                         value={item.discountValue || ""}
                         onKeyDown={handleKeyDown}
-                        onChange={(e) => onInlineDiscount(index, item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.FIXED : item.discountType, e.target.value)}
+                        onChange={(e) => onInlineDiscount(index, item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.PERCENT : item.discountType, e.target.value)}
                         placeholder="0.00"
                         className="flex-1 text-sm font-bold border border-slate-200 rounded-lg bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 shadow-inner"
                       />
