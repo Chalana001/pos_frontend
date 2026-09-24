@@ -392,10 +392,10 @@ const Cart = ({
                           saves the line it used to take underneath. */}
                       {item.promotionApplied && (
                         <span
-                          className="max-w-[168px] truncate rounded bg-emerald-100 py-0.5 pl-1.5 pr-0.5 text-xs font-bold text-emerald-700"
+                          className="inline-flex max-w-[168px] items-center rounded bg-emerald-100 py-0.5 pl-1.5 pr-0.5 text-xs font-bold text-emerald-700"
                           title={item.promotionName || "Promotion applied"}
                         >
-                          {item.promotionName || "Promo"}
+                          <span className="min-w-0 truncate">{item.promotionName || "Promo"}</span>
                           <button
                             type="button"
                             aria-label="Remove offer"
