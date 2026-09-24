@@ -168,6 +168,8 @@ const SaleReturnPage = () => {
   const pointsValueBack = round2(goodsValue * settlement.pointsShare);
   const totalRefund = round2(goodsValue * settlement.cashShare);
   const discountShare = Math.max(0, round2(goodsValue - pointsValueBack - totalRefund));
+  const storeCreditBlocked = refundMethod === "STORE_CREDIT"
+    && (sale.orderType !== "CREDIT" || !sale.customerId);
 
   // One key per return the cashier composes. Minted on the first submit attempt and held
   // through a retry of that same attempt, so a double-click or a flaky network replays the
@@ -623,12 +625,13 @@ const SaleReturnPage = () => {
                 options={REFUND_METHOD_OPTIONS}
                 buttonClassName="py-2"
               />
-              {refundMethod === "STORE_CREDIT" && sale.orderType !== "CREDIT" && (
-                <p className="text-xs text-amber-600 mt-1">
-                  Store Credit applies to credit orders only. Customer due amount will be reduced.
+              {storeCreditBlocked && (
+                <p className="text-xs font-semibold text-red-600 mt-1">
+                  Store credit can only be refunded on a credit sale. Use cash, bank or
+                  card for this sale.
                 </p>
               )}
-              {refundMethod === "STORE_CREDIT" && sale.orderType === "CREDIT" && (
+              {refundMethod === "STORE_CREDIT" && !storeCreditBlocked && (
                 <p className="text-xs text-emerald-600 mt-1">
                   Customer due amount will be reduced by the refund amount.
                 </p>
@@ -731,12 +734,12 @@ const SaleReturnPage = () => {
             <div className="mt-6">
               <Button
                 className={`w-full py-3 text-base font-bold shadow-md transition-all ${
-                  selectedLines.length > 0 && reason.trim()
+                  selectedLines.length > 0 && reason.trim() && !storeCreditBlocked
                     ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-200"
                     : "bg-slate-200 text-slate-600 cursor-not-allowed"
                 }`}
                 onClick={handleSubmit}
-                disabled={isSubmitting || selectedLines.length === 0 || !reason.trim()}
+                disabled={isSubmitting || selectedLines.length === 0 || !reason.trim() || storeCreditBlocked}
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
@@ -751,11 +754,13 @@ const SaleReturnPage = () => {
                 )}
               </Button>
 
-              {(selectedLines.length === 0 || !reason.trim()) && (
+              {(selectedLines.length === 0 || !reason.trim() || storeCreditBlocked) && (
                 <p className="text-xs text-slate-600 text-center mt-2">
-                  {selectedLines.length === 0
-                    ? "Enter return quantities above to enable"
-                    : "Return reason is required"}
+                  {storeCreditBlocked
+                    ? "Choose an available refund method to continue"
+                    : selectedLines.length === 0
+                      ? "Enter return quantities above to enable"
+                      : "Return reason is required"}
                 </p>
               )}
             </div>
