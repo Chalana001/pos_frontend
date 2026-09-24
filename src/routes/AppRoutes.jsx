@@ -190,6 +190,8 @@ const AppRoutes = () => {
         <Route path="purchases/:id/return" element={<ProtectedRoute permission="PROCESS_PURCHASE_RETURNS" feature="PURCHASE_RETURNS" requiresOnline>{withSuspense(<PurchaseReturnPage />)}</ProtectedRoute>} />
         <Route path="suppliers" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline>{withSuspense(<SuppliersPage />)}</ProtectedRoute>} />
         <Route path="suppliers/new" element={<ProtectedRoute permission="NEW_PURCHASE" feature="PURCHASES" requiresOnline>{withSuspense(<SupplierFormPage />)}</ProtectedRoute>} />
+        <Route path="suppliers/:id/edit" element={<ProtectedRoute permission="MANAGE_SUPPLIERS" feature="PURCHASES" requiresOnline>{withSuspense(<SupplierFormPage />)}</ProtectedRoute>} />
+
         <Route path="suppliers/:id" element={<ProtectedRoute permission="VIEW_PURCHASES" feature="PURCHASES" requiresOnline>{withSuspense(<SupplierViewPage />)}</ProtectedRoute>} />
 
         <Route path="reports" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="basic" />)}</ProtectedRoute>} />

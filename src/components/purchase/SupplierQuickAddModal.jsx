@@ -33,7 +33,10 @@ const SupplierQuickAddModal = ({ isOpen, onClose, onCreated }) => {
       
     } catch (error) {
       console.error(error);
-      toast.error("Failed to add supplier");
+      // Surface the server's reason: it distinguishes a real duplicate ("another supplier
+      // already uses ...") from a soft-deleted supplier still holding the number, and a
+      // generic "Failed to add supplier" threw that away.
+      toast.error(error.response?.data?.message || "Failed to add supplier");
     } finally {
       setLoading(false);
     }

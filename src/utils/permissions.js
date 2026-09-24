@@ -53,6 +53,12 @@ export const PERMISSIONS = {
   // /purchases/{id}/replace, or the button renders and then 403s.
   AMEND_PURCHASE: [ROLES.MANAGER, ROLES.ADMIN],
   PROCESS_PURCHASE_RETURNS: [ROLES.MANAGER, ROLES.ADMIN],
+  // Editing a supplier and deleting one. Must stay in step with SupplierController's
+  // @PreAuthorize on PUT/DELETE /suppliers/{id}: the backend enforces the role
+  // independently, so a mismatch here shows up as a page that loads and then 403s.
+  // (SUPER_ADMIN also holds these routes; it is a backend-only role with no entry in
+  // ROLES, exactly as MANAGE_ITEMS has always been.)
+  MANAGE_SUPPLIERS: [ROLES.MANAGER, ROLES.ADMIN],
   
   // --- Shifts ---
   MANAGE_SHIFTS: [ROLES.CASHIER, ROLES.MANAGER, ROLES.ADMIN],

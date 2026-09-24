@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, Eye, Truck } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Trash2, Truck } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { suppliersAPI } from "../api/suppliers.api";
@@ -10,9 +10,16 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency } from "../utils/formatters";
 import { useSearchOnType } from "../hooks/useSearchOnType";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import { useAuth } from "../context/AuthContext";
+import { hasPermission } from "../utils/permissions";
 
 const SuppliersPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canManageSuppliers = hasPermission(user?.role, "MANAGE_SUPPLIERS");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -67,6 +74,24 @@ const SuppliersPage = () => {
     }
   }, [filteredSuppliers.length, page, pageSize]);
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      await suppliersAPI.remove(deleteTarget.id);
+      toast.success(`${deleteTarget.name} deleted`);
+      setDeleteTarget(null);
+      await loadSuppliers();
+    } catch (error) {
+      // Kept open deliberately: the backend refuses with a 409 while the supplier still
+      // has an outstanding payable, and that message is the whole point of the dialog.
+      console.error("Failed to delete supplier", error);
+      toast.error(error.response?.data?.message || "Failed to delete supplier");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const goToPage = () => {
     const requestedPage = Number(pageInput);
     if (!Number.isInteger(requestedPage)) {
@@ -118,7 +143,7 @@ const SuppliersPage = () => {
                   <th className="px-6 py-3 font-medium">Email</th>
                   <th className="px-6 py-3 text-right font-medium">Payable</th>
                   <th className="px-6 py-3 text-center font-medium">Status</th>
-                  <th className="px-6 py-3 w-10"></th>
+                  <th className="px-6 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -156,8 +181,46 @@ const SuppliersPage = () => {
                           {supplier.active ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        <Eye size={18} />
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            aria-label={`View ${supplier.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(`/suppliers/${supplier.id}`);
+                            }}
+                            className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          {canManageSuppliers && (
+                            <>
+                              <button
+                                type="button"
+                                aria-label={`Edit ${supplier.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  navigate(`/suppliers/${supplier.id}/edit`);
+                                }}
+                                className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                              >
+                                <Pencil size={18} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Delete ${supplier.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setDeleteTarget(supplier);
+                                }}
+                                className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -178,6 +241,20 @@ const SuppliersPage = () => {
           onGoToPage={goToPage}
         />
       </Card>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        onClose={() => {
+          if (!deleting) setDeleteTarget(null);
+        }}
+        onConfirm={handleDelete}
+        title="Delete Supplier"
+        tone="danger"
+        confirmLabel="Delete Supplier"
+        busy={deleting}
+        message={deleteTarget ? `Delete ${deleteTarget.name}?` : ""}
+        detail="The supplier will be removed from this directory. Suppliers with purchase history or unpaid balances cannot be deleted — set them to Inactive instead."
+      />
     </div>
   );
 };

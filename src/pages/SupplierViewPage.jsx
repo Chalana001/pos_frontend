@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Building2, Calendar, ChevronRight, CreditCard, Landmark, Mail, Phone, Truck, UserRound } from "lucide-react";
+import { ArrowLeft, Building2, Calendar, ChevronRight, CreditCard, Landmark, Mail, Pencil, Phone, Truck, UserRound } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { purchasesAPI } from "../api/purchases.api";
@@ -8,11 +8,15 @@ import { suppliersAPI } from "../api/suppliers.api";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { useAuth } from "../context/AuthContext";
+import { hasPermission } from "../utils/permissions";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
 
 const SupplierViewPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canManageSuppliers = hasPermission(user?.role, "MANAGE_SUPPLIERS");
   const [supplier, setSupplier] = useState(null);
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -63,9 +67,16 @@ const SupplierViewPage = () => {
           <h1 className="text-3xl font-bold text-slate-800">Supplier Profile</h1>
           <p className="mt-1 text-sm text-slate-500">Supplier payable balance and purchase invoices.</p>
         </div>
-        <Button variant="secondary" onClick={() => navigate("/suppliers")} className="w-full justify-center sm:w-auto">
-          <ArrowLeft size={18} className="mr-2" /> Back
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          {canManageSuppliers && (
+            <Button onClick={() => navigate(`/suppliers/${id}/edit`)} className="w-full justify-center sm:w-auto">
+              <Pencil size={18} className="mr-2" /> Edit Supplier
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => navigate("/suppliers")} className="w-full justify-center sm:w-auto">
+            <ArrowLeft size={18} className="mr-2" /> Back
+          </Button>
+        </div>
       </div>
 
       <Card className="sales-panel-enter p-6" style={{ animationDelay: "90ms" }}>
