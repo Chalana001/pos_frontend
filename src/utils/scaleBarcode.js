@@ -98,22 +98,40 @@ const stripLeadingZeros = (code) => {
   return code.slice(i);
 };
 
+export const SCALE_BARCODE_ERROR_CODES = {
+  DISABLED: 'E5',
+  INVALID_CONFIG: 'E5',
+  LENGTH: 'E1',
+  PREFIX: 'E2',
+  CHECK_DIGIT: 'E3',
+  VALUE: 'E4',
+};
+
+export const SCALE_RESOLVE_ERROR_CODES = {
+  NO_ITEM: 'E6',
+  NOT_MEASURED: 'E7',
+  NO_PRICE: 'E8',
+  NO_QUANTITY: 'E9',
+};
+
 /**
  * Splits and interprets a scanned string against a branch's scale settings.
  *
  * Returns { ok: true, prefix, itemCode, valueDigits, checkDigit, valueType,
- * grams | amount, display } or { ok: false, reason, ...whatever segments could
+ * grams | amount, display } or { ok: false, code, reason, ...whatever segments could
  * still be shown }. `reason` is written for the shop admin, not the developer.
+ * `code` is the stable E-series debug id (E1/E2/E3/E4/E5) the POS toast shows so a
+ * failed scan can be told apart from a missing item.
  */
 export const describeScaleBarcode = (rawBarcode, settings) => {
   const s = settings || {};
   const barcode = String(rawBarcode ?? '').trim();
 
   if (!s.scaleBarcodeEnabled) {
-    return { ok: false, reason: 'Scale barcode decoding is switched off for this branch.' };
+    return { ok: false, code: SCALE_BARCODE_ERROR_CODES.DISABLED, reason: 'Scale barcode decoding is switched off for this branch.' };
   }
   if (!barcode) {
-    return { ok: false, reason: 'Scan or type a barcode to test.' };
+    return { ok: false, code: SCALE_BARCODE_ERROR_CODES.DISABLED, reason: 'Scan or type a barcode to test.' };
   }
 
   const prefixLength = Number(s.scaleBarcodePrefixLength) || 0;
@@ -122,13 +140,16 @@ export const describeScaleBarcode = (rawBarcode, settings) => {
   const hasCheckDigit = !!s.scaleBarcodeHasCheckDigit;
 
   if (prefixLength < 0 || itemCodeLength <= 0 || valueLength <= 0 || valueLength > 12) {
-    return { ok: false, reason: 'The segment lengths above are not valid.' };
+    return { ok: false, code: SCALE_BARCODE_ERROR_CODES.INVALID_CONFIG, reason: 'The segment lengths above are not valid.' };
   }
 
   const expectedLength = prefixLength + itemCodeLength + valueLength + (hasCheckDigit ? 1 : 0);
   if (barcode.length !== expectedLength) {
     return {
       ok: false,
+      code: SCALE_BARCODE_ERROR_CODES.LENGTH,
+      expectedLength,
+      actualLength: barcode.length,
       reason: `Expected ${expectedLength} characters (${prefixLength} prefix + ${itemCodeLength} item code + ${valueLength} value${hasCheckDigit ? ' + 1 check digit' : ''}), got ${barcode.length}.`,
     };
   }
@@ -141,7 +162,7 @@ export const describeScaleBarcode = (rawBarcode, settings) => {
 
   const allowed = parseScalePrefixes(s.scaleBarcodePrefix);
   if (prefixLength > 0 && allowed.length > 0 && !allowed.includes(prefix.toUpperCase())) {
-    return { ok: false, ...segments, reason: `Prefix "${prefix}" is not one of ${allowed.join(', ')}.` };
+    return { ok: false, code: SCALE_BARCODE_ERROR_CODES.PREFIX, allowedPrefixes: allowed, ...segments, reason: `Prefix "${prefix}" is not one of ${allowed.join(', ')}.` };
   }
 
   // EAN-13 mod-10 is only defined over digits. A scale that prints a lettered
@@ -154,14 +175,14 @@ export const describeScaleBarcode = (rawBarcode, settings) => {
     if (isAllDigits(payload)) {
       const computed = computeEan13CheckDigit(payload);
       if (!isAllDigits(checkDigit) || computed !== checkDigit) {
-        return { ok: false, ...segments, reason: `Check digit should be ${computed}, the label has ${checkDigit}.` };
+        return { ok: false, code: SCALE_BARCODE_ERROR_CODES.CHECK_DIGIT, expectedCheckDigit: computed, ...segments, reason: `Check digit should be ${computed}, the label has ${checkDigit}.` };
       }
       checkDigitVerified = true;
     }
   }
 
   if (!isAllDigits(valueDigits)) {
-    return { ok: false, ...segments, reason: `The value segment "${valueDigits}" must be digits only.` };
+    return { ok: false, code: SCALE_BARCODE_ERROR_CODES.VALUE, ...segments, reason: `The value segment "${valueDigits}" must be digits only.` };
   }
 
   const itemCode = s.scaleBarcodeStripLeadingZeros ? stripLeadingZeros(itemCodeRaw) : itemCodeRaw;
@@ -252,15 +273,15 @@ const primaryUnitFor = (item) => {
  */
 export const resolveScaleSale = (item, decoded) => {
   if (!item) {
-    return { ok: false, reason: `Scale label read as item code '${decoded?.itemCode}', but no item carries that barcode` };
+    return { ok: false, code: SCALE_RESOLVE_ERROR_CODES.NO_ITEM, reason: `Scale label read as item code '${decoded?.itemCode}', but no item carries that barcode` };
   }
   if (!MEASURED_ITEM_TYPES.has(item.itemType)) {
-    return { ok: false, reason: `Item code '${decoded.itemCode}' is '${item.name}', which is not sold by weight or volume` };
+    return { ok: false, code: SCALE_RESOLVE_ERROR_CODES.NOT_MEASURED, reason: `Item code '${decoded.itemCode}' is '${item.name}', which is not sold by weight or volume` };
   }
 
   const sellingPrice = Number(item.sellingPrice);
   if (!Number.isFinite(sellingPrice) || sellingPrice <= 0) {
-    return { ok: false, reason: `Item code '${decoded.itemCode}' is '${item.name}', which has no selling price set` };
+    return { ok: false, code: SCALE_RESOLVE_ERROR_CODES.NO_PRICE, reason: `Item code '${decoded.itemCode}' is '${item.name}', which has no selling price set` };
   }
 
   let baseUnits;
@@ -280,7 +301,7 @@ export const resolveScaleSale = (item, decoded) => {
   }
 
   if (!Number.isFinite(baseUnits) || baseUnits <= 0 || !Number.isFinite(amount)) {
-    return { ok: false, reason: `Scale label for '${item.name}' does not resolve to a sellable quantity` };
+    return { ok: false, code: SCALE_RESOLVE_ERROR_CODES.NO_QUANTITY, reason: `Scale label for '${item.name}' does not resolve to a sellable quantity` };
   }
 
   const unit = primaryUnitFor(item);

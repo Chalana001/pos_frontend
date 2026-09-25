@@ -173,12 +173,53 @@ const ITEM_PAGE_SIZE = 60;
 /**
  * What to tell a cashier when a scan found nothing. A label that decoded names the item
  * code it decoded to, which is the one fact that says whether to look at the item or at the
- * scale settings; anything else gets the plain message.
+ * scale settings; anything else carries the stable E-series debug id (E0/E1/E2/E4/E5/E10-E14)
+ * so a truncated scan, a wrong scale layout and a genuinely missing item stop sharing
+ * one "Item not found!" message.
  */
+const POS_SCAN_DEBUG = true;
+
+const truncateScanned = (value, max = 24) => {
+  const text = String(value ?? "");
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+};
+
+const logScanDebug = (code, detail = {}) => {
+  if (!POS_SCAN_DEBUG) return;
+  try {
+    // eslint-disable-next-line no-console
+    console.info(`[pos-scan ${code}]`, detail);
+  } catch {
+    /* logging must never break a sale */
+  }
+};
+
 const scaleNotFoundMessage = (decoded) =>
   decoded?.ok
-    ? `Scale label read as item code '${decoded.itemCode}', but no item carries that barcode`
+    ? `Scale label read as item code '${decoded.itemCode}', but no item carries that barcode (E6)`
     : "Item not found!";
+
+/**
+ * Turns a failed describeScaleBarcode result into a cashier toast that names the
+ * scanned text, so a truncated scan reads differently from a wrong scale layout.
+ */
+const scaleDecodeErrorMessage = (decoded, query) => {
+  const scanned = truncateScanned(query);
+  switch (decoded?.code) {
+    case "E1":
+      return `Scale label needs ${decoded.expectedLength} chars, got ${decoded.actualLength}: "${scanned}" (E1)`;
+    case "E2":
+      return `Prefix "${decoded.prefix}" not accepted (${(decoded.allowedPrefixes || []).join(", ")}). Got "${scanned}" (E2)`;
+    case "E3":
+      return `Check digit should be ${decoded.expectedCheckDigit}, label has "${decoded.checkDigit}" (E3)`;
+    case "E4":
+      return `Weight part "${decoded.valueDigits}" must be digits. Got "${scanned}" (E4)`;
+    case "E5":
+      return `Scale reading is OFF for this branch. Got "${scanned}" (E5)`;
+    default:
+      return decoded?.reason ? `${decoded.reason} Got "${scanned}"` : `Item not found! Got "${scanned}"`;
+  }
+};
 
 /**
  * Name, alt name and barcode as one lower-cased string, built once when the items load.
@@ -1432,7 +1473,8 @@ const POS = () => {
     setSearchQuery("");
 
     if (!query) {
-      toast.error("Item not found!");
+      logScanDebug("E0", { reason: "empty-query" });
+      toast.error("Nothing was read. Scan again. (E0)");
       return;
     }
 
@@ -1466,7 +1508,8 @@ const POS = () => {
         if (scaleItem) {
           const sale = resolveScaleSale(scaleItem, decoded);
           if (!sale.ok) {
-            toast.error(sale.reason);
+            logScanDebug(sale.code || "E9", { query, itemCode: decoded.itemCode, reason: sale.reason });
+            toast.error(sale.code ? `${sale.reason} (${sale.code})` : sale.reason);
             return;
           }
           addScaleResolvedToCart(scaleItem, sale.quantity, sale.unit, sale.amount);
@@ -1480,6 +1523,17 @@ const POS = () => {
       const matches = decoded.ok ? [] : selectItems(query);
 
       if (matches.length === 0) {
+        // A label that looks like this branch's scale layout but failed to split is
+        // never a text search: showing the split failure (E1/E2/E4, E3 when a check
+        // digit is configured) with the scanned text tells a truncated scan apart
+        // from a wrong scale layout. E5 (decoding OFF / bad config) still falls
+        // through to the server so a normal barcode is never blocked by scale code.
+        const isScaleDecodeFailure = !decoded.ok && ["E1", "E2", "E3", "E4"].includes(decoded?.code);
+        if (isScaleDecodeFailure) {
+          logScanDebug(decoded.code, { query, reason: decoded.reason });
+          toast.error(scaleDecodeErrorMessage(decoded, query));
+          return;
+        }
         // No client-side match, fall back to the server barcode lookup, which
         // also decodes scale barcodes (weight/price embedded in the digits)
         // per this branch's settings.
@@ -1496,21 +1550,42 @@ const POS = () => {
               return;
             }
           } catch (error) {
-            if (error?.response?.status !== 404) {
+            const status = error?.response?.status;
+            if (status !== 404) {
               console.error(error);
             }
+            const serverMessage = getApiErrorMessage(error, scaleNotFoundMessage(decoded));
             // The server distinguishes "nothing matched this at all" from "the scale
             // label read fine, the catalogue is what is wrong", and which of the two it
             // is decides whether the shop looks at the item or at the scale settings.
-            // Showing a flat "Item not found" for both sent people hunting the wrong one.
-            toast.error(getApiErrorMessage(error, scaleNotFoundMessage(decoded)));
+            if (status !== 404 && !/\(E1[0-4]\)/.test(serverMessage)) {
+              logScanDebug("E13", { query, serverMessage });
+              toast.error(`${serverMessage} Server error, not a missing item. Retry. (E13)`);
+              return;
+            }
+            const tagged = /\(E1[0-4]\)/.test(serverMessage)
+              ? serverMessage
+              : `${serverMessage} (E10)`;
+            // Decoded locally but unknown here and unknown on the server too: keep the
+            // decoded weight/item-code in the message (E6), not a flat "not found".
+            const fallback = decoded.ok
+              ? `Scale read OK (code ${decoded.itemCode}) but no item matched "${truncateScanned(query)}" (E6)`
+              : scaleDecodeErrorMessage(decoded, query);
+            logScanDebug(decoded.ok ? "E6" : "E10", { query, serverMessage, itemCode: decoded?.itemCode });
+            toast.error(status === 404 && !error?.response?.data?.message ? fallback : tagged);
             return;
           }
         }
 
         // Offline, or no branch to ask about. A decoded label still knows more than
         // "Item not found" does, and that is the whole message a shop gets to act on.
-        toast.error(scaleNotFoundMessage(decoded));
+        if (decoded.ok) {
+          logScanDebug("E14", { query, itemCode: decoded.itemCode });
+          toast.error(`Offline: code ${decoded.itemCode} unknown on this till. Sync & retry. (E14)`);
+          return;
+        }
+        logScanDebug(decoded?.code || "E10", { query, reason: decoded?.reason });
+        toast.error(scaleDecodeErrorMessage(decoded, query));
         return;
       }
 
