@@ -3,7 +3,8 @@ import toast from "react-hot-toast";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal"; 
-import CustomSelect from "../components/common/CustomSelect"; 
+import CustomSelect from "../components/common/CustomSelect";
+import SearchSelect from "../components/common/SearchSelect";
 import AccordionSection from "../components/items/BulkItemForm";
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api"; 
@@ -1029,7 +1030,6 @@ export default function BulkAddItems() {
                   className="w-full border rounded-lg px-3 py-2"
                   value={draft.altName}
                   onChange={(e) => updateDraft("altName", e.target.value)}
-                  placeholder="e.g. සකර 1kg"
                 />
               </div>
 
@@ -1064,11 +1064,16 @@ export default function BulkAddItems() {
                   <label className="text-sm font-medium">Category *</label>
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <CustomSelect
+                      <SearchSelect
                         value={singleCategoryMode ? draft.subCategoryId : draft.categoryId}
                         onChange={handleCategoryChange}
                         options={categories}
                         placeholder="Select Category"
+                        searchPlaceholder="Type category name…"
+                        noResultsMessage="No category matches that"
+                        emptyMessage="No categories yet — add one with +"
+                        menuMinWidth={260}
+                        onOpen={loadCategories}
                       />
                     </div>
                     <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="px-3 shrink-0">
@@ -1082,11 +1087,16 @@ export default function BulkAddItems() {
                     <label className="text-sm font-medium">Sub Category *</label>
                     <div className="flex gap-2">
                       <div className="flex-1">
-                        <CustomSelect
+                        <SearchSelect
                           value={draft.subCategoryId}
                           onChange={(val) => updateDraft("subCategoryId", val)}
                           options={subCategories}
                           placeholder="Select Sub Category"
+                          searchPlaceholder="Type sub-category name…"
+                          noResultsMessage="No sub-category matches that"
+                          emptyMessage="No sub-categories for this category"
+                          menuMinWidth={260}
+                          onOpen={() => loadSubCategories(draft.categoryId)}
                           disabled={!draft.categoryId}
                         />
                       </div>

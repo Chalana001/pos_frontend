@@ -23,7 +23,37 @@ import {
 import { toast } from "react-hot-toast";
 import { formatQuantityWithUnit } from "../utils/formatters";
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// Unit families a measured item may be returned in. The sale line's own qtyUnit is the only
+// reliable signal on this page: OrderItemResponse carries neither itemType nor weightItem, so the
+// old checks against those never fired and the dropdown never rendered.
+const MEASURED_UNITS = {
+  KG: ["KG", "G"],
+  G: ["KG", "G"],
+  L: ["L", "ML"],
+  ML: ["L", "ML"],
+};
+
+const isMeasuredItem = (item) =>
+  ["G", "KG", "L", "ML"].includes(String(item?.qtyUnit || "").toUpperCase());
+
+const measuredUnitOptions = (item) => {
+  const units = MEASURED_UNITS[String(item?.qtyUnit || "").toUpperCase()];
+  return units ? units.map((value) => ({ value, label: value })) : [];
+};
+
+// G and ML are thousandths of their primary unit (KG/L); every other unit is 1:1. Mirrors
+// QuantityConversionUtil.displayUnitFactor on the backend.
+const unitFactor = (unit) => (unit === "G" || unit === "ML" ? 0.001 : 1);
+const convertUnit = (value, from, to) => {
+  const base = Number(value || 0) * unitFactor(from);
+  return base / unitFactor(to);
+};
+
+// final_unit_price is quoted per primary unit (per KG/L/PC), so a figure entered in G or ML has to
+// bring it down to the unit on screen before the two multiply into the right money.
+const priceInUnit = (item, unit) => Number(item?.finalUnitPrice || 0) * unitFactor(unit);
+
+// ─── component ──────────────────────────────────────────────────────────────
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString(undefined, {
@@ -54,7 +84,7 @@ const SaleReturnPage = () => {
   const [loading, setLoading] = useState(true);
 
   // ── form state ────────────────────────────────────────────────────────────
-  // returnQtys: { [orderItemId]: number }, qty the cashier wants to return
+  // returnQtys: { [orderItemId]: { qty: number, unit: string } }
   const [returnQtys, setReturnQtys] = useState({});
   const [refundMethod, setRefundMethod] = useState("CASH");
   const [reason, setReason] = useState("");
@@ -70,7 +100,7 @@ const SaleReturnPage = () => {
   // ── load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     loadData();
-  }, [invoiceNo]);
+  }, [invoiceNo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     try {
@@ -111,27 +141,55 @@ const SaleReturnPage = () => {
     return map;
   }, [existingReturns]);
 
+  const getEntry = (item) => returnQtys[item.id] || {
+    qty: 0,
+    unit: String(item.qtyUnit || item.defaultUnit || "PCS").toUpperCase(),
+  };
+
+  const entryQty = (item) => Number(getEntry(item).qty) || 0;
+
   const maxReturnableQty = (item) =>
-    Math.max(0, item.qty - (alreadyReturnedMap[item.id] || 0));
+    Math.max(0, Number(item.qty) - (alreadyReturnedMap[item.id] || 0));
+
+  const maxEntryQty = (item, unit) => convertUnit(maxReturnableQty(item), item.qtyUnit, unit);
+
+  // "Everything selected" has to compare in one unit: the entry is in the cashier's unit, the cap
+  // is in the line's. Converting the entry back to the sale unit makes the two comparable whatever
+  // the dropdown is on, and the epsilon absorbs the 0.001 rounding in convertUnit.
+  const isFullySelected = (item) =>
+    Math.abs(convertUnit(entryQty(item), getEntry(item).unit, item.qtyUnit) - maxReturnableQty(item)) < 1e-9;
 
   // ── qty change ────────────────────────────────────────────────────────────
-  const setQtyForItem = (orderItemId, value) => {
-    const parsed = Math.max(0, parseInt(value, 10) || 0);
-    setReturnQtys((prev) => ({ ...prev, [orderItemId]: parsed }));
+  const setQtyForItem = (item, value) => {
+    const entry = getEntry(item);
+    const parsed = Math.max(0, Math.min(maxEntryQty(item, entry.unit),
+      Number.isFinite(Number(value)) ? Number(Number(value).toFixed(3)) : 0));
+    setReturnQtys((prev) => ({ ...prev, [item.id]: { ...entry, qty: parsed } }));
+  };
+
+  const setUnitForItem = (item, unit) => {
+    const entry = getEntry(item);
+    const converted = convertUnit(entry.qty, entry.unit, unit);
+    const max = maxEntryQty(item, unit);
+    setReturnQtys((prev) => ({
+      ...prev,
+      [item.id]: { qty: Math.min(max, Number(converted.toFixed(3))), unit },
+    }));
   };
 
   const toggleSelectAll = () => {
     if (!sale) return;
-    const alreadyAllSelected = sale.items.every(
-      (item) => (returnQtys[item.id] || 0) === maxReturnableQty(item)
-    );
+    const alreadyAllSelected = sale.items.every(isFullySelected);
     if (alreadyAllSelected) {
       setReturnQtys({});
     } else {
       const newQtys = {};
       sale.items.forEach((item) => {
         const max = maxReturnableQty(item);
-        if (max > 0) newQtys[item.id] = max;
+        if (max > 0) newQtys[item.id] = {
+          qty: max,
+          unit: String(item.qtyUnit || item.defaultUnit || "PCS").toUpperCase(),
+        };
       });
       setReturnQtys(newQtys);
     }
@@ -154,14 +212,21 @@ const SaleReturnPage = () => {
   const selectedLines = React.useMemo(() => {
     if (!sale) return [];
     return sale.items
-      .map((item) => ({
-        item,
-        returnQty: returnQtys[item.id] || 0,
-        // What the goods sold for.
-        refundLine: (returnQtys[item.id] || 0) * item.finalUnitPrice,
-      }))
+      .map((item) => {
+        const entry = getEntry(item);
+        // The entry is in the cashier's own unit and the request carries it, so the preview has
+        // to price it in that unit. perSmallUnitPrice does not exist on a fetched sale line, and
+        // falling back to finalUnitPrice made a G entry preview a thousand times too much.
+        const returnQty = entryQty(item);
+        return {
+          item,
+          returnQty,
+          unit: entry.unit,
+          refundLine: returnQty * priceInUnit(item, entry.unit),
+        };
+      })
       .filter((l) => l.returnQty > 0);
-  }, [sale, returnQtys]);
+  }, [sale, returnQtys]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goodsValue = selectedLines.reduce((s, l) => s + l.refundLine, 0);
   const round2 = (n) => Math.round(n * 100) / 100;
@@ -195,6 +260,9 @@ const SaleReturnPage = () => {
       items: selectedLines.map((l) => ({
         orderItemId: l.item.id,
         returnQty: l.returnQty,
+        // The unit the cashier typed the figure in. The server converts it to the line's own
+        // unit once, so the two never disagree about what "250" means.
+        unit: l.unit,
       })),
     };
 
@@ -225,8 +293,17 @@ const SaleReturnPage = () => {
   const handlePrintReturn = (returnData, isReprint = true) => {
     if (!returnData || !returnPrinterRef.current) return;
     const storeName = user?.shopName || BRAND_NAME_UPPER;
+    // A return item carries no unit of its own - it is persisted in the sale line's unit - so the
+    // slip borrows that line's qtyUnit to know whether "250" means grams or pieces. Filled in here
+    // from data the page already holds, rather than adding a column for it.
+    const qtyUnitByOrderItemId = new Map((sale?.items || []).map((item) => [item.id, item.qtyUnit]));
+    const items = (returnData.items || []).map((item) => ({
+      ...item,
+      qtyUnit: item.qtyUnit || qtyUnitByOrderItemId.get(item.orderItemId),
+    }));
     const returnWithBranch = {
       ...returnData,
+      items,
       branchName: sale?.branchName,
       branchAddress: sale?.branchAddress,
       branchPhone: sale?.branchPhone,
@@ -302,12 +379,17 @@ const SaleReturnPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {successReturn.items.map((ri) => (
+                {successReturn.items.map((ri) => {
+                  // returnQty is persisted in the sale line's unit and finalUnitPrice is per
+                  // primary unit, so the value needs that line's qtyUnit to land on the right
+                  // money - without it a G line reads a thousand times its ticket value.
+                  const saleLine = sale.items.find((item) => item.id === ri.orderItemId);
+                  return (
                   <tr key={ri.id}>
                     <td className="px-4 py-2 text-slate-700 font-medium">{ri.itemName}</td>
-                    <td className="px-4 py-2 text-center text-slate-600">{ri.returnQty}</td>
+                    <td className="px-4 py-2 text-center text-slate-600">{formatQuantityWithUnit(ri.returnQty, saleLine?.qtyUnit)}</td>
                     <td className="px-4 py-2 text-right text-slate-700">
-                      {fmt(ri.returnQty * ri.finalUnitPrice)} LKR
+                      {fmt(Number(ri.returnQty) * Number(ri.finalUnitPrice) * unitFactor(saleLine?.qtyUnit))} LKR
                     </td>
                     <td className="px-4 py-2 text-center">
                       {ri.stockReversed ? (
@@ -321,12 +403,19 @@ const SaleReturnPage = () => {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
               <tfoot>
                 {(() => {
+                  // Goods value in the ticket's own terms: returnQty is in the sale line's unit and
+                  // finalUnitPrice per primary unit, so a G/ML line needs the factor to be money
+                  // rather than a thousand times it. Keeps goods - points - discount = cash intact.
                   const goods = (successReturn.items || [])
-                    .reduce((sum, ri) => sum + ri.returnQty * ri.finalUnitPrice, 0);
+                    .reduce((sum, ri) => {
+                      const saleLine = sale.items.find((item) => item.id === ri.orderItemId);
+                      return sum + Number(ri.returnQty) * Number(ri.finalUnitPrice) * unitFactor(saleLine?.qtyUnit);
+                    }, 0);
                   const pointsValue = Number(successReturn.loyaltyValueReturned) || 0;
                   const cash = Number(successReturn.totalRefundAmount) || 0;
                   const discount = Math.max(0, Math.round((goods - pointsValue - cash) * 100) / 100);
@@ -506,9 +595,7 @@ const SaleReturnPage = () => {
               className="text-xs text-blue-600 hover:underline font-medium"
               onClick={toggleSelectAll}
             >
-              {sale.items.every(
-                (item) => (returnQtys[item.id] || 0) === maxReturnableQty(item)
-              )
+              {sale.items.every(isFullySelected)
                 ? "Deselect All"
                 : "Select All"}
             </button>
@@ -532,8 +619,10 @@ const SaleReturnPage = () => {
               {sale.items?.map((item) => {
                 const already = alreadyReturnedMap[item.id] || 0;
                 const maxRet = maxReturnableQty(item);
-                const currentQty = returnQtys[item.id] || 0;
-                const refundLine = currentQty * item.finalUnitPrice;
+                const entry = getEntry(item);
+                const currentQty = entry.qty;
+                const currentUnit = entry.unit;
+                const refundLine = currentQty * priceInUnit(item, currentUnit);
                 const fullyReturned = maxRet === 0;
 
                 return (
@@ -559,12 +648,12 @@ const SaleReturnPage = () => {
                     </td>
                     <td className="p-4 text-center">
                       {already > 0 ? (
-                        <span className="text-orange-600 font-semibold">{already}</span>
+                        <span className="text-orange-600 font-semibold">{formatQuantityWithUnit(already, item.qtyUnit)}</span>
                       ) : (
                         <span className="text-slate-600">-</span>
                       )}
                     </td>
-                    <td className="p-4 text-center font-semibold text-slate-700">{maxRet}</td>
+                    <td className="p-4 text-center font-semibold text-slate-700">{formatQuantityWithUnit(maxRet, item.qtyUnit)}</td>
                     <td className="p-4 text-right text-slate-600">
                       {fmt(item.finalUnitPrice)}
                     </td>
@@ -572,19 +661,33 @@ const SaleReturnPage = () => {
                       {fullyReturned || isCanceled ? (
                         <span className="text-slate-600 text-sm">-</span>
                       ) : (
-                        <input aria-label="Return quantity"
-                          type="number"
-                          min={0}
-                          max={maxRet}
-                          value={currentQty || ""}
-                          onChange={(e) => setQtyForItem(item.id, e.target.value)}
-                          placeholder="0"
-                          className={`w-20 text-center border rounded-lg px-2 py-1.5 text-sm outline-none transition focus:ring-2 focus:ring-orange-400 ${
-                            currentQty > 0
-                              ? "border-orange-400 bg-orange-50 font-bold"
-                              : "border-slate-300 bg-white"
-                          }`}
-                        />
+                        <div className="flex items-center justify-center gap-1">
+                          <input aria-label="Return quantity"
+                            type="number"
+                            min={0}
+                            max={maxEntryQty(item, currentUnit)}
+                            value={currentQty || ""}
+                            onChange={(e) => setQtyForItem(item, e.target.value)}
+                            placeholder="0"
+                            step="0.001"
+                            className={`w-20 text-center border rounded-lg px-2 py-1.5 text-sm outline-none transition focus:ring-2 focus:ring-orange-400 ${
+                              currentQty > 0
+                                ? "border-orange-400 bg-orange-50 font-bold"
+                                : "border-slate-300 bg-white"
+                            }`}
+                          />
+                          {isMeasuredItem(item) && (
+                            <CustomSelect
+                              value={currentUnit}
+                              onChange={(unit) => setUnitForItem(item, unit)}
+                              options={measuredUnitOptions(item)}
+                              valueKey="value"
+                              labelKey="label"
+                              buttonClassName="py-1.5 px-2 text-xs"
+                              menuClassName="min-w-[60px]"
+                            />
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="p-4 text-right pr-6">
@@ -682,14 +785,14 @@ const SaleReturnPage = () => {
             ) : (
               <>
                 <div className="space-y-2 mb-5">
-                  {selectedLines.map(({ item, returnQty, refundLine }) => (
+                  {selectedLines.map(({ item, returnQty, unit, refundLine }) => (
                     <div
                       key={item.id}
                       className="flex items-center justify-between text-sm"
                     >
                       <div className="text-slate-700 truncate max-w-[60%]">
                         {item.itemName}{" "}
-                        <span className="text-slate-600 font-mono">×{returnQty}</span>
+                        <span className="text-slate-600 font-mono">×{returnQty} {unit}</span>
                       </div>
                       <div className="font-semibold text-red-600">
                         -{fmt(refundLine)} LKR

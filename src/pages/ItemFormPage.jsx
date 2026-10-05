@@ -6,6 +6,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import CustomSelect from "../components/common/CustomSelect";
+import SearchSelect from "../components/common/SearchSelect";
 
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api";
@@ -856,7 +857,6 @@ const ItemFormPage = ({ mode }) => {
                       value={formData.altName}
                       onChange={(e) => setFormData({ ...formData, altName: e.target.value })}
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g. සුදු බත්"
                     />
                   </div>
 
@@ -873,11 +873,16 @@ const ItemFormPage = ({ mode }) => {
                   <div className="relative z-20">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
                     <div className="flex gap-2">
-                      <CustomSelect
+                      <SearchSelect
                         value={singleCategoryMode ? formData.subCategoryId : formData.categoryId}
                         onChange={handleCategoryChange}
                         options={categories}
                         placeholder="Select Category"
+                        searchPlaceholder="Type category name…"
+                        noResultsMessage="No category matches that"
+                        emptyMessage="No categories yet — add one with +"
+                        menuMinWidth={260}
+                        onOpen={loadCategories}
                       />
                       <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="px-3 shrink-0">
                         <Plus size={18} />
@@ -889,11 +894,16 @@ const ItemFormPage = ({ mode }) => {
                     <div className="relative z-10">
                       <label className="block text-sm font-medium text-slate-700 mb-1">Sub Category *</label>
                       <div className="flex gap-2">
-                        <CustomSelect
+                        <SearchSelect
                           value={formData.subCategoryId}
                           onChange={(value) => setFormData({ ...formData, subCategoryId: value })}
                           options={subCategories}
                           placeholder="Select Sub Category"
+                          searchPlaceholder="Type sub-category name…"
+                          noResultsMessage="No sub-category matches that"
+                          emptyMessage="No sub-categories for this category"
+                          menuMinWidth={260}
+                          onOpen={() => loadSubCategories(formData.categoryId)}
                           disabled={!formData.categoryId}
                         />
                         <Button

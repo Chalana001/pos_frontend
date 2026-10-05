@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Trash2, Minus, Plus, Tag, UserPlus, Receipt, X, KeyRound } from "lucide-react";
+import { Trash2, Minus, Plus, Tag, UserPlus, UserRoundCheck, Receipt, X, KeyRound } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { DISCOUNT_TYPES, ItemType } from "../../utils/constants";
 import Button from "../../components/common/Button";
@@ -21,6 +21,7 @@ const Cart = ({
   onCheckout,
   loading,
   onAddCustomer,
+  onClearCart,
   onUpdateQtyUnit,
   onUpdateWarranty,
   warrantyOptions = [],
@@ -270,28 +271,40 @@ const Cart = ({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700">
             {cartItems.length} Items
           </span>
           <button
             onClick={onAddCustomer}
-            className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all ${
+            type="button"
+            aria-label={customer ? `Change customer: ${customer.name}` : "Add customer"}
+            title={customer ? `Change customer: ${customer.name}` : "Add customer (F4)"}
+            className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border transition-all ${customer ? "max-w-[150px] px-2" : "w-9"} ${
               customer
                 ? "border-blue-100 bg-blue-50 text-blue-700 hover:border-blue-200 hover:text-blue-800"
                 : "border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:text-blue-600"
             }`}
           >
-            <UserPlus size={16} />
-            <span className="max-w-[170px] truncate">
-              {customer ? customer.name : "Add Customer (F4)"}
-            </span>
+            {customer ? <UserRoundCheck size={15} className="shrink-0" /> : <UserPlus size={15} />}
+            {customer && <span className="truncate text-xs font-semibold">{customer.name}</span>}
+          </button>
+          <button
+            type="button"
+            onClick={onClearCart}
+            disabled={cartItems.length === 0}
+            aria-label="Clear current cart"
+            title="Clear current cart"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-white px-2.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Trash2 size={14} />
+            <span>Clear all</span>
           </button>
         </div>
       </div>
 
       {/* --- Items List --- */}
-      <div ref={listRef} className="custom-scrollbar flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
+      <div ref={listRef} className="custom-scrollbar flex-1 overflow-y-auto px-1.5 py-2 space-y-1.5">
         {cartItems.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center opacity-20 grayscale">
             <Receipt size={64} className="mb-4" />
@@ -429,18 +442,14 @@ const Cart = ({
                     ) : null}
                   </div>
 
-                  {/* Quantity and the two actions sit on one row once the cart is wide enough
-                      to hold them, which halves the height of every line; on a narrow cart
-                      they fall back to the two rows they always used. Buttons stay 44px, the
-                      size a finger needs on a till screen, so the saving comes from the
-                      arrangement rather than from shrinking the targets. */}
+                  {/* Keep quantity and line actions compact so more of the cart stays visible. */}
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
                         <button
                           onClick={() => onUpdateQty(index, Math.max(0, item.qty - stepValue))}
                           aria-label="Decrease quantity"
-                          className="inline-flex h-11 w-11 items-center justify-center rounded-md transition-all hover:bg-white"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-all hover:bg-white"
                         >
                           <Minus size={14} />
                         </button>
@@ -455,14 +464,14 @@ const Cart = ({
                               e.currentTarget.blur();
                             }
                           }}
-                          className="w-12 rounded bg-transparent px-1 text-center text-[13px] font-bold outline-none transition-all focus:bg-white focus-visible:ring-2 focus-visible:ring-blue-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          className="w-9 rounded bg-transparent px-0.5 text-center text-[13px] font-bold outline-none transition-all focus:bg-white focus-visible:ring-2 focus-visible:ring-blue-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           title="Click to edit quantity"
                         />
 
                         <button
                           onClick={() => onUpdateQty(index, item.qty + stepValue)}
                           aria-label="Increase quantity"
-                          className="inline-flex h-11 w-11 items-center justify-center rounded-md transition-all hover:bg-white"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-all hover:bg-white"
                         >
                           <Plus size={14} />
                         </button>
@@ -491,15 +500,15 @@ const Cart = ({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <button aria-label="Add Discount"
                         onClick={() => setEditingIndex(editingIndex === index ? null : index)}
-                        className={`inline-flex h-11 w-11 items-center justify-center rounded-md transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-blue-600'}`}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-blue-600'}`}
                         title="Add Discount"
                       >
                         <Tag size={14} />
                       </button>
-                      <button onClick={() => onRemoveItem(index)} className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-slate-50 text-slate-600 transition-all hover:bg-red-50 hover:text-red-500" title="Remove Item">
+                      <button onClick={() => onRemoveItem(index)} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-slate-50 text-slate-600 transition-all hover:bg-red-50 hover:text-red-500" title="Remove Item">
                         <Trash2 size={14} />
                       </button>
                     </div>

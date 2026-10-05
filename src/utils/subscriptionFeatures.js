@@ -125,4 +125,5 @@ export const getConfigurableFeatureAvailability = (planName) => ({
   servicesEnabled: hasPlanFeature(planName, 'SERVICES'),
   tableManagementEnabled: hasPlanFeature(planName, 'DINING_TABLES'),
   dineInEnabled: hasPlanFeature(planName, 'DINING_TABLES'),
+  quickSaleHeldBillsEnabled: true,
 });

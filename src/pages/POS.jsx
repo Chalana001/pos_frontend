@@ -13,8 +13,8 @@ import { shiftsAPI } from "../api/shifts.api";
 import { diningTablesAPI } from "../api/diningTables.api";
 import { pendingOrdersAPI } from "../api/pendingOrders.api";
 import { warrantyTemplatesAPI } from "../api/warrantyTemplates.api";
-import CustomerSelect from "../components/pos/CustomerSelect";
 import Cart from "../components/pos/Cart";
+import CustomerSelect from "../components/pos/CustomerSelect";
 import CheckoutOverlay from "../components/pos/CheckoutOverlay";
 import BatchSelectModal from "../components/pos/BatchSelectModal";
 import { formatCurrency } from "../utils/formatters";
@@ -160,7 +160,13 @@ const CART_MODES = {
   QUEUE: "QUEUE",
 };
 
-const getCartDraftKey = (userId, branchId) =>
+const getCartDraftKey = (userId, branchId, saleMode, quickSaleSlot = 1) => {
+  if (!userId || !branchId) return null;
+  const baseKey = `pos-active-cart-v1:${userId}:${branchId}`;
+  return saleMode === SALE_MODES.TAKEAWAY ? `${baseKey}:quick-sale-slot:${quickSaleSlot}` : null;
+};
+
+const getLegacyCartDraftKey = (userId, branchId) =>
   userId && branchId ? `pos-active-cart-v1:${userId}:${branchId}` : null;
 
 /**
@@ -272,10 +278,13 @@ const POS = () => {
   const printRef = useRef(null);
   const invoicePrintRef = useRef(null);
   const kotPrintRef = useRef(null);
+  const kotPrintedQuantitiesRef = useRef({});
   const searchInputRef = useRef(null);
   const categoryScrollRef = useRef(null);
-  const kotPrintedQuantitiesRef = useRef({});
   const hydratedCartDraftKeysRef = useRef(new Set());
+  const lastHydratedCartDraftKeyRef = useRef(null);
+  const resumedHeldIdRef = useRef(null);
+  const restoringCartDraftRef = useRef(false);
 
   const [myShift, setMyShift] = useState(null);
   const [loadingShift, setLoadingShift] = useState(true);
@@ -304,6 +313,7 @@ const POS = () => {
   const [customer, setCustomer] = useState(null);
   const [orderType, setOrderType] = useState(ORDER_TYPES.CASH);
   const [saleMode, setSaleMode] = useState(SALE_MODES.TAKEAWAY);
+  const [quickSaleSlot, setQuickSaleSlot] = useState(1);
   const [cartMode, setCartMode] = useState(null);
   const [billDiscount, setBillDiscount] = useState(0);
   const [billPromotionPreview, setBillPromotionPreview] = useState(null);
@@ -389,7 +399,12 @@ const POS = () => {
   const effectiveBranchId = myShift?.branchId || fallbackBranchId;
   const effectiveBranch = branches.find((branch) => Number(branch.id) === Number(effectiveBranchId)) || null;
   const canSell = !!effectiveBranchId && (isFreeLocalSalesPlan || queueCartActive || (canUseServer ? !!myShift : true));
-  const cartDraftKey = getCartDraftKey(user?.userId || user?.id, effectiveBranchId);
+  const cartDraftKey = getCartDraftKey(user?.userId || user?.id, effectiveBranchId, saleMode, quickSaleSlot);
+  const legacyCartDraftKey = getLegacyCartDraftKey(user?.userId || user?.id, effectiveBranchId);
+  const obsoleteDineInDraftKey = legacyCartDraftKey ? `${legacyCartDraftKey}:mode:dine_in` : null;
+  const quickSaleSlotCount = configuration.quickSaleHeldBillsEnabled
+    ? Math.min(5, Math.max(1, Number(configuration.quickSaleHeldBillsMax) || 5))
+    : 1;
 
   const pendingOrdersByTable = useMemo(
     () => Object.fromEntries((pendingOrders || []).map((pendingOrder) => [Number(pendingOrder.tableId), pendingOrder])),
@@ -435,34 +450,43 @@ const POS = () => {
 
 
   useEffect(() => {
-    if (!cartDraftKey || hydratedCartDraftKeysRef.current.has(cartDraftKey)) {
-      return;
+    if (!legacyCartDraftKey) return;
+    try {
+      localStorage.removeItem(legacyCartDraftKey);
+      if (obsoleteDineInDraftKey) localStorage.removeItem(obsoleteDineInDraftKey);
+    } catch {
+      /* storage unavailable */
     }
+  }, [legacyCartDraftKey, obsoleteDineInDraftKey]);
 
-    hydratedCartDraftKeysRef.current.add(cartDraftKey);
-    if (cartItems.length > 0) {
+  useEffect(() => {
+    if (!cartDraftKey) {
+      lastHydratedCartDraftKeyRef.current = null;
       return;
     }
+    if (lastHydratedCartDraftKeyRef.current === cartDraftKey) return;
+    lastHydratedCartDraftKeyRef.current = cartDraftKey;
+    hydratedCartDraftKeysRef.current.add(cartDraftKey);
+    if (cartItems.length > 0) return;
 
     try {
       const rawDraft = localStorage.getItem(cartDraftKey);
-      if (!rawDraft) {
-        return;
-      }
-
+      if (!rawDraft) return;
       const draft = JSON.parse(rawDraft);
       if (!Array.isArray(draft.cartItems) || draft.cartItems.length === 0) {
         localStorage.removeItem(cartDraftKey);
         return;
       }
 
+      restoringCartDraftRef.current = true;
       setCartItems(draft.cartItems);
       setCustomer(draft.customer || null);
       setBillDiscount(Number(draft.billDiscount || 0));
       setOrderType(draft.orderType || ORDER_TYPES.CASH);
       setPaidAmount(Number(draft.paidAmount || 0));
       setPaymentMethod(draft.paymentMethod || "CASH");
-      setSaleMode(draft.saleMode || SALE_MODES.TAKEAWAY);
+      setPromotionCode(draft.promotionCode || "");
+      setLoyaltyPoints(Number(draft.loyaltyPoints || 0));
       setCartMode(draft.cartMode || CART_MODES.QUEUE);
     } catch {
       localStorage.removeItem(cartDraftKey);
@@ -470,10 +494,11 @@ const POS = () => {
   }, [cartDraftKey, cartItems.length]);
 
   useEffect(() => {
+    if (restoringCartDraftRef.current && cartItems.length === 0) return;
+    restoringCartDraftRef.current = false;
     if (!cartDraftKey || !hydratedCartDraftKeysRef.current.has(cartDraftKey)) {
       return;
     }
-
     if (cartItems.length === 0) {
       localStorage.removeItem(cartDraftKey);
       return;
@@ -482,12 +507,15 @@ const POS = () => {
     localStorage.setItem(
       cartDraftKey,
       JSON.stringify({
+        heldId: resumedHeldIdRef.current,
         cartItems,
         customer,
         billDiscount,
         orderType,
         paidAmount,
         paymentMethod,
+        promotionCode,
+        loyaltyPoints,
         saleMode,
         cartMode: activeCartMode || cartMode || (canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE),
         savedAt: new Date().toISOString(),
@@ -500,6 +528,8 @@ const POS = () => {
     cartDraftKey,
     cartItems,
     cartMode,
+    promotionCode,
+    loyaltyPoints,
     customer,
     isFreeLocalSalesPlan,
     orderType,
@@ -899,8 +929,14 @@ const POS = () => {
     setKotStateVersion((value) => value + 1);
   };
 
-  const clearCartState = ({ preserveSaleMode = true } = {}) => {
+  const clearCartState = ({ preserveSaleMode = true, preserveDraft = false } = {}) => {
     delete kotPrintedQuantitiesRef.current[currentSessionKey];
+    try {
+      if (cartDraftKey && !preserveDraft) localStorage.removeItem(cartDraftKey);
+    } catch {
+      /* storage unavailable */
+    }
+    resumedHeldIdRef.current = null;
     setCartItems([]);
     setCustomer(null);
     setCartMode(null);
@@ -918,16 +954,42 @@ const POS = () => {
       setSaleMode(SALE_MODES.TAKEAWAY);
     }
   };
-
   const clearSelectedTableDraft = () => {
-    setCartItems([]);
-    setCustomer(null);
-    setCartMode(null);
-    setBillDiscount(0);
-      setPromotionCode("");
-      setLoyaltyPoints(0);
-      setLoyaltyDiscount(0);
-      setLoyaltyRefreshKey((key) => key + 1);
+    clearCartState();
+  };
+  const clearCurrentCart = async () => {
+    const savedDraft = pendingOrdersByTable[Number(selectedTableId)];
+    const shouldSyncSavedDraft =
+      saleMode === SALE_MODES.DINE_IN &&
+      !!selectedTableId &&
+      canUseServer &&
+      canUseDining &&
+      !!savedDraft;
+
+    if (shouldSyncSavedDraft) {
+      setSavingDraft(true);
+      try {
+        await pendingOrdersAPI.clearTable(selectedTableId);
+        await refreshDiningState(myShift?.branchId, selectedTableId);
+      } catch (error) {
+        console.error(error);
+        toast.error(error?.response?.data?.message || "Failed to clear table draft");
+        return;
+      } finally {
+        setSavingDraft(false);
+      }
+    }
+
+    clearCartState();
+  };
+  const switchQuickSaleSlot = (nextSlot) => {
+    if (saleMode !== SALE_MODES.TAKEAWAY || nextSlot === quickSaleSlot || nextSlot < 1 || nextSlot > quickSaleSlotCount) return;
+    if (cartDraftKey && cartItems.length > 0) {
+      localStorage.setItem(cartDraftKey, JSON.stringify({ cartItems, customer, billDiscount, orderType, paidAmount, paymentMethod, promotionCode, loyaltyPoints, saleMode: SALE_MODES.TAKEAWAY, cartMode: activeCartMode || cartMode, savedAt: new Date().toISOString() }));
+    }
+    setQuickSaleSlot(nextSlot);
+    setCartItems([]); setCustomer(null); setBillDiscount(0); setPromotionCode(""); setLoyaltyPoints(0);
+    setOrderType(ORDER_TYPES.CASH); setPaidAmount(0); setPaymentMethod("CASH"); setCartMode(null); setShowPayment(false);
   };
 
   const mapPendingItemToCartItem = (pendingItem) => {
@@ -1847,27 +1909,44 @@ const POS = () => {
     });
 
     const previewItems = Array.isArray(data?.items) ? data.items : [];
-    setCartItems((currentItems) => currentItems.map((item, index) => {
-      const preview = previewItems[index];
-      if (!preview || String(preview.itemId) !== String(item.itemId)) {
-        return item;
-      }
-      return {
-        ...item,
-        effectiveDiscountType: preview.discountType || item.discountType || DISCOUNT_TYPES.NONE,
-        effectiveDiscountValue: Number(preview.discountValue || 0),
-        promotionId: preview.promotionApplied ? preview.promotionId : null,
-        promotionName: preview.promotionApplied ? preview.promotionName : "",
-        promotionDiscountAmount: preview.promotionApplied ? Number(preview.promotionDiscountAmount || 0) : 0,
-        promotionApplied: !!preview.promotionApplied,
-        // What came off this whole line, promotion and manual discount together. The
-        // engine's discountValue is per unit (per kg for a weighed item), which is
-        // the wrong figure to show beside a line total.
-        appliedDiscountAmount: Number(preview.appliedDiscountAmount || 0),
-        effectiveLineTotal: Number(preview.finalLineTotal || 0),
-        promotionDecisions: preview.decisions || [],
-      };
-    }));
+    const responseHasBatchIdentity = previewItems.some((preview) => preview.batchId != null);
+    setCartItems((currentItems) => {
+      const usedPreviewIndexes = new Set();
+      return currentItems.map((item) => {
+        const itemKey = `${item.itemId}:${item.batchId ?? ""}`;
+        let previewIndex = previewItems.findIndex((preview, index) => (
+          !usedPreviewIndexes.has(index) &&
+          `${preview.itemId}:${preview.batchId ?? ""}` === itemKey
+        ));
+        // Offline preview responses predate batchId. Preserve their itemId matching while
+        // still consuming each response once, so duplicate cart lines cannot share a result.
+        // Legacy/offline responses may omit batchId entirely. Never fall back when any
+        // response carries batch identity, since duplicate item lines could differ by batch.
+        if (previewIndex < 0 && !responseHasBatchIdentity) {
+          previewIndex = previewItems.findIndex((preview, index) => (
+            !usedPreviewIndexes.has(index) && String(preview.itemId) === String(item.itemId)
+          ));
+        }
+        if (previewIndex < 0) return item;
+        usedPreviewIndexes.add(previewIndex);
+        const preview = previewItems[previewIndex];
+        return {
+          ...item,
+          effectiveDiscountType: preview.discountType || item.discountType || DISCOUNT_TYPES.NONE,
+          effectiveDiscountValue: Number(preview.discountValue || 0),
+          promotionId: preview.promotionApplied ? preview.promotionId : null,
+          promotionName: preview.promotionApplied ? preview.promotionName : "",
+          promotionDiscountAmount: preview.promotionApplied ? Number(preview.promotionDiscountAmount || 0) : 0,
+          promotionApplied: !!preview.promotionApplied,
+          // What came off this whole line, promotion and manual discount together. The
+          // engine's discountValue is per unit (per kg for a weighed item), which is the
+          // wrong figure to show beside a line total.
+          appliedDiscountAmount: Number(preview.appliedDiscountAmount || 0),
+          effectiveLineTotal: Number(preview.finalLineTotal || 0),
+          promotionDecisions: preview.decisions || [],
+        };
+      });
+    });
   }, []);
 
   // Offline pricing runs synchronously off the cached bundle, no debounce, no request. A
@@ -1895,12 +1974,13 @@ const POS = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canUseServer, queueCartActive, isFreeLocalSalesPlan, effectiveBranchId, promotionPreviewSignature, promotionBundle]);
 
+  const promotionPreviewGenerationRef = useRef(0);
   useEffect(() => {
+    const generation = ++promotionPreviewGenerationRef.current;
     if (!canUseServer || queueCartActive || isFreeLocalSalesPlan || !effectiveBranchId || cartItems.length === 0) {
       setBillPromotionPreview(null);
       return undefined;
     }
-
     let cancelled = false;
     const timeoutId = window.setTimeout(async () => {
       try {
@@ -1911,14 +1991,14 @@ const POS = () => {
           promotionCode: promotionCode || null,
           items: cartItems.map((item) => createOrderItemPayload(item, false)),
         });
-        if (cancelled) return;
+        if (cancelled || generation !== promotionPreviewGenerationRef.current) return;
         applyPromotionPreview(response.data, billDiscount);
       } catch (error) {
+        if (cancelled || generation !== promotionPreviewGenerationRef.current) return;
         console.error("Promotion preview failed", error);
         setBillPromotionPreview(null);
       }
     }, 250);
-
     return () => {
       cancelled = true;
       window.clearTimeout(timeoutId);
@@ -2010,6 +2090,31 @@ const POS = () => {
     if ((!canUseServer || queueCartActive) && nextMode === SALE_MODES.DINE_IN) {
       toast.error("Dine-in is not available while the current sale is in queue mode");
       return;
+    }
+
+    if (saleMode === SALE_MODES.TAKEAWAY && nextMode === SALE_MODES.DINE_IN) {
+      if (cartDraftKey && cartItems.length > 0) {
+        try {
+          localStorage.setItem(cartDraftKey, JSON.stringify({
+            heldId: resumedHeldIdRef.current,
+            cartItems,
+            customer,
+            billDiscount,
+            orderType,
+            paidAmount,
+            paymentMethod,
+            promotionCode,
+            loyaltyPoints,
+            saleMode: SALE_MODES.TAKEAWAY,
+            cartMode: activeCartMode || cartMode || (canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE),
+            savedAt: new Date().toISOString(),
+          }));
+        } catch {
+          toast.error("Could not save the Quick Sale cart before switching modes");
+          return;
+        }
+      }
+      clearCartState({ preserveDraft: true });
     }
 
     if (saleMode === SALE_MODES.DINE_IN && selectedTableId && cartItems.length > 0) {
@@ -2679,17 +2784,17 @@ const POS = () => {
             </div>
 
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-              <div className="inline-flex rounded-xl bg-slate-100 p-1 sales-panel-hover">
-                <button
-                  type="button"
-                  onClick={() => handleSaleModeChange(SALE_MODES.TAKEAWAY)}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${saleMode === SALE_MODES.TAKEAWAY ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                    }`}
-                >
-                  <ShoppingBag size={16} />
-                  Quick Sale
-                </button>
-                {canUseDining && (
+              {canUseDining && (
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 sales-panel-hover">
+                  <button
+                    type="button"
+                    onClick={() => handleSaleModeChange(SALE_MODES.TAKEAWAY)}
+                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${saleMode === SALE_MODES.TAKEAWAY ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      }`}
+                  >
+                    <ShoppingBag size={16} />
+                    Quick Sale
+                  </button>
                   <button
                     type="button"
                     onClick={() => handleSaleModeChange(SALE_MODES.DINE_IN)}
@@ -2700,9 +2805,30 @@ const POS = () => {
                     <UtensilsCrossed size={16} />
                     Dine In
                   </button>
-                )}
-              </div>
+                </div>
+              )}
 
+              {saleMode === SALE_MODES.TAKEAWAY && configuration.quickSaleHeldBillsEnabled && effectiveBranchId ? (
+                <div className="inline-flex w-fit flex-shrink-0 items-center gap-1 rounded-xl bg-slate-100 p-1 sales-panel-hover">
+                  {Array.from({ length: quickSaleSlotCount }, (_, index) => index + 1).map((slot) => {
+                    const isActive = quickSaleSlot === slot;
+                    let hasDraft = isActive && cartItems.length > 0;
+                    try {
+                      if (!isActive) {
+                        const rawDraft = localStorage.getItem(getCartDraftKey(user?.userId || user?.id, effectiveBranchId, SALE_MODES.TAKEAWAY, slot));
+                        const draft = JSON.parse(rawDraft || "null");
+                        hasDraft = Array.isArray(draft?.cartItems) && draft.cartItems.length > 0;
+                      }
+                    } catch { /* storage unavailable or malformed draft */ }
+                    return (
+                      <button key={slot} type="button" onClick={() => switchQuickSaleSlot(slot)} aria-label={`Quick Sale slot ${slot}`} aria-pressed={isActive}
+                        className={`relative inline-flex h-9 min-w-9 flex-shrink-0 items-center justify-center rounded-lg px-2 text-sm font-semibold transition ${isActive ? "bg-white shadow-sm" : "hover:bg-white/70"} ${hasDraft ? "text-sky-500" : isActive ? "text-slate-900" : "text-slate-500"}`}>
+                        {slot}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
               <div className="ml-auto flex items-center gap-2 lg:gap-3">
                 {saleMode === SALE_MODES.DINE_IN ? (
                   <div className="text-xs font-medium text-slate-500">
@@ -2954,6 +3080,7 @@ const POS = () => {
             onCheckout={handleCheckout}
             loading={loading}
             onAddCustomer={() => setShowCustomerSelect(true)}
+            onClearCart={clearCurrentCart}
             focusSearch={focusSearch}
             cartSummary={cartSummary}
             checkoutLabel={

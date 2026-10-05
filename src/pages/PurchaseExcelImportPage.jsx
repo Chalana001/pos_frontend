@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -17,6 +17,7 @@ import {
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import CustomSelect from "../components/common/CustomSelect";
+import SearchSelect from "../components/common/SearchSelect";
 import DatePicker from "../components/common/DatePicker";
 import Modal from "../components/common/Modal";
 import SupplierQuickAddModal from "../components/purchase/SupplierQuickAddModal";
@@ -85,6 +86,9 @@ const computeLineTotal = (row) => {
   return qty * cost;
 };
 
+// Matched by the supplier picker, not only the name it prints.
+const SUPPLIER_SEARCH_KEYS = ["name", "phone"];
+
 const PurchaseExcelImportPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -94,6 +98,7 @@ const PurchaseExcelImportPage = () => {
   // --- Header / metadata state ---
   const [branches, setBranches] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(false);
   const [targetBranchId, setTargetBranchId] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -146,11 +151,7 @@ const PurchaseExcelImportPage = () => {
 
   const loadInitialData = async () => {
     try {
-      const [suppRes, branchRes] = await Promise.all([
-        suppliersAPI.list(),
-        branchesAPI.getAll(),
-      ]);
-      setSuppliers(suppRes.data || []);
+      const branchRes = await branchesAPI.getAll();
 
       const branchList = branchRes.data || [];
       const scoped = isManager
@@ -162,9 +163,42 @@ const PurchaseExcelImportPage = () => {
         setTargetBranchId(String(scoped[0].id));
       }
     } catch (e) {
-      toast.error("Failed to load suppliers/branches");
+      toast.error("Failed to load branches");
     }
   };
+
+  // Suppliers are read when the picker is opened, never once on mount, exactly as on the
+  // purchase form: a supplier added from another till while this page sat open used to be
+  // invisible here until a refresh. Re-reading on open also keeps the list current.
+  const suppliersRequestRef = useRef(0);
+
+  const loadSuppliers = useCallback(async () => {
+    const requestId = suppliersRequestRef.current + 1;
+    suppliersRequestRef.current = requestId;
+    setSuppliersLoading(true);
+
+    try {
+      const response = await suppliersAPI.list();
+      if (suppliersRequestRef.current !== requestId) return;
+      setSuppliers(response.data || []);
+    } catch (error) {
+      console.error("Failed to load suppliers", error);
+      // No toast of its own: the axios interceptor already said why the call failed, and
+      // whatever was loaded before stays pickable.
+    } finally {
+      if (suppliersRequestRef.current === requestId) {
+        setSuppliersLoading(false);
+      }
+    }
+  }, []);
+
+  // A quick-added supplier sets an id before any list exists, and the picker reads its label
+  // out of the list.
+  useEffect(() => {
+    if (supplierId && suppliers.length === 0) {
+      loadSuppliers();
+    }
+  }, [supplierId, suppliers.length, loadSuppliers]);
 
   const handleSupplierCreated = (newSupplier) => {
     setSuppliers((prev) => [...prev, newSupplier]);
@@ -569,14 +603,24 @@ const PurchaseExcelImportPage = () => {
               />
             </div>
             <div>
-              <label className="label-text">Supplier</label>
+              <label htmlFor="purchaseexcelimportpage-supplier" className="label-text">Supplier</label>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <CustomSelect
+                  <SearchSelect
+                    inputId="purchaseexcelimportpage-supplier"
+                    ariaLabel="Supplier"
                     value={supplierId}
                     onChange={setSupplierId}
                     options={suppliers}
                     placeholder="Select Supplier"
+                    searchPlaceholder="Type name or phone…"
+                    searchKeys={SUPPLIER_SEARCH_KEYS}
+                    noResultsMessage="No supplier matches that"
+                    emptyMessage="No suppliers found — add one with +"
+                    loading={suppliersLoading}
+                    loadingMessage="Loading suppliers…"
+                    menuMinWidth={300}
+                    onOpen={loadSuppliers}
                   />
                 </div>
                 <Button

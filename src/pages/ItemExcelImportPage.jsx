@@ -4,6 +4,7 @@ import { AlertCircle, CheckCircle2, Download, RefreshCw, Upload } from "lucide-r
 import Button from "../components/common/Button";
 import Card from "../components/common/Card";
 import CustomSelect from "../components/common/CustomSelect";
+import SearchSelect from "../components/common/SearchSelect";
 import { categoriesAPI } from "../api/categories.api";
 import { itemsAPI } from "../api/items.api";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
@@ -146,10 +147,12 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
     }
   };
 
-  const loadSubCategories = async (categoryId) => {
+  // `force` re-reads a category whose sub-categories are already cached, which is what opening
+  // the picker needs: a sub-category added since this file was parsed must be selectable.
+  const loadSubCategories = async (categoryId, force = false) => {
     if (singleCategoryMode) return [];
     if (!categoryId) return [];
-    if (subCategoryMap[String(categoryId)]) {
+    if (!force && subCategoryMap[String(categoryId)]) {
       return subCategoryMap[String(categoryId)];
     }
 
@@ -520,19 +523,23 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                         <input aria-label="Category" className="w-44 rounded-lg border border-slate-300 px-2 py-2" value={row.name || ""} onChange={(e) => updateRow(row.rowNumber, "name", e.target.value)} />
                       </td>
                       <td className="px-3 py-3">
-                        <CustomSelect
+                        <SearchSelect
                           value={singleCategoryMode ? row.subCategoryId ? String(row.subCategoryId) : "" : row.categoryId ? String(row.categoryId) : ""}
                           onChange={(value) => updateRow(row.rowNumber, singleCategoryMode ? "subCategoryId" : "categoryId", value)}
                           options={categoryOptions}
                           valueKey="value"
                           labelKey="label"
                           placeholder="Category"
+                          searchPlaceholder="Type category name…"
+                          noResultsMessage="No category matches that"
                           className="w-48"
+                          menuMinWidth={240}
+                          onOpen={loadCategories}
                         />
                       </td>
                       {!singleCategoryMode && (
                         <td className="px-3 py-3">
-                          <CustomSelect value={row.subCategoryId ? String(row.subCategoryId) : ""} onChange={(value) => updateRow(row.rowNumber, "subCategoryId", value)} options={subCategoryOptions} valueKey="value" labelKey="label" placeholder="Sub category" className="w-48" disabled={!row.categoryId} />
+                          <SearchSelect value={row.subCategoryId ? String(row.subCategoryId) : ""} onChange={(value) => updateRow(row.rowNumber, "subCategoryId", value)} options={subCategoryOptions} valueKey="value" labelKey="label" placeholder="Sub category" searchPlaceholder="Type sub-category name…" noResultsMessage="No sub-category matches that" className="w-48" menuMinWidth={240} onOpen={() => loadSubCategories(row.categoryId, true)} disabled={!row.categoryId} />
                         </td>
                       )}
                       <td className="px-3 py-3">

@@ -61,6 +61,19 @@ class PosOfflineDatabase extends Dexie {
       formDrafts: "draftId, [kind+userId], kind, userId, updatedAt",
       appMeta: "key",
     });
+    // v5 adds Quick Sale held bills. Scope is user + branch so carts never cross
+    // cashier or branch boundaries on a shared terminal.
+    this.version(5).stores({
+      cachedItems: "[branchId+itemId], branchId, itemId, syncedAt",
+      cachedBranches: "id, active",
+      cachedUsers: "userId, username, lastSyncedAt",
+      cachedReceiptSettings: "[branchId+templateType], branchId, templateType, syncedAt",
+      offlineSales: "clientSaleId, branchId, cashierUserId, createdAt",
+      promotionBundles: "branchId, version, syncedAt",
+      formDrafts: "draftId, [kind+userId], kind, userId, updatedAt",
+      heldBills: "heldId, [userId+branchId], userId, branchId, createdAt",
+      appMeta: "key",
+    });
   }
 }
 
@@ -524,4 +537,59 @@ export const listFormDraftsForUser = async (userId) => {
 export const purgeExpiredFormDrafts = async (ttlDays = DRAFT_TTL_DAYS) => {
   const cutoff = new Date(Date.now() - ttlDays * 24 * 60 * 60 * 1000).toISOString();
   await offlineDb.formDrafts.where("updatedAt").below(cutoff).delete();
+};
+
+// --------------------------------------------------------------------------- Held bills
+//
+// A held bill is one cashier's parked Quick Sale cart. Scope is [userId+branchId]:
+// the same human at a different branch, or a different human at this counter, must
+// never see each other's carts, exactly like the active-cart localStorage draft.
+//
+// These are leaf helpers, not state: the POS page owns the cart and decides what a
+// hold means (copy out, clear active cart), the same division useUnsavedWork uses.
+// There is no TTL here. Unlike a half-typed purchase form, a held bill is standing
+// in front of a customer; a shop clears it by resuming or deleting it, never by a
+// sweep the cashier did not initiate.
+
+/** Unique handle for one held bill, including simultaneous tills/tabs. */
+export const buildHeldBillId = (userId, branchId) =>
+  `held:${userId}:${branchId}:${crypto.randomUUID()}`;
+
+export const saveHeldBill = async ({ heldId, userId, branchId, cart, max }) => {
+  if (!heldId || userId === null || userId === undefined || !branchId || !cart) {
+    return null;
+  }
+  return offlineDb.transaction("rw", offlineDb.heldBills, async () => {
+    const count = await offlineDb.heldBills.where("[userId+branchId]").equals([userId, Number(branchId)]).count();
+    if (max != null && count >= max) return null;
+    const record = {
+      heldId,
+      userId,
+      branchId: Number(branchId),
+      cart,
+      createdAt: new Date().toISOString(),
+    };
+    await offlineDb.heldBills.add(record);
+    return record;
+  });
+};
+
+export const listHeldBills = async (userId, branchId) => {
+  if (userId === null || userId === undefined || !branchId) return [];
+  const rows = await offlineDb.heldBills
+    .where("[userId+branchId]")
+    .equals([userId, Number(branchId)])
+    .toArray();
+  return rows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+};
+
+export const getHeldBill = async (heldId) => offlineDb.heldBills.get(heldId);
+
+export const deleteHeldBill = async (heldId, userId, branchId) => {
+  if (!heldId || userId === null || userId === undefined || !branchId) return;
+  await offlineDb.heldBills
+    .where("[userId+branchId]")
+    .equals([userId, Number(branchId)])
+    .and((bill) => bill.heldId === heldId)
+    .delete();
 };

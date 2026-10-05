@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Card from "../components/common/Card";
 import DraftRestoreBar from "../components/common/DraftRestoreBar";
@@ -7,6 +7,7 @@ import Button from "../components/common/Button";
 import SupplierQuickAddModal from "../components/purchase/SupplierQuickAddModal";
 import Modal from "../components/common/Modal";
 import CustomSelect from "../components/common/CustomSelect";
+import SearchSelect from "../components/common/SearchSelect";
 import DatePicker from "../components/common/DatePicker";
 import PanelResizeHandle from "../components/common/PanelResizeHandle";
 import { suppliersAPI } from "../api/suppliers.api";
@@ -64,6 +65,10 @@ const getPrimaryUnitQty = (item) => {
   return item.qtyUnit === "G" || item.qtyUnit === "ML" ? qty / 1000 : qty;
 };
 
+// The picker matches on these, not only on the name it prints, a supplier whose contact is
+// remembered by its phone number is otherwise unfindable in a list of a few hundred.
+const SUPPLIER_SEARCH_KEYS = ["name", "phone"];
+
 const paymentMethodOptions = [
   { value: "CASH", label: "Cash" },
   { value: "CARD", label: "Card" },
@@ -101,6 +106,7 @@ const PurchaseFormPage = () => {
   // --- HEADER DATA ---
   const [branches, setBranches] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(false);
 
   const [supplierId, setSupplierId] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -141,7 +147,7 @@ const PurchaseFormPage = () => {
   // --- DRAFT RECOVERY ---
   //
   // Only what the user typed. Deliberately absent: `branches`, `suppliers` and
-  // `searchResults` (server data, re-fetched on mount, a restored draft must not carry
+  // `searchResults` (server data, re-read from the server, a restored draft must not carry
   // yesterday's prices or a supplier deleted since), `search` and `selectedItem`
   // (transient), `selectionPanelWidth` (a device preference, already in localStorage), and
   // `branchInputs`, which is the quantity block being typed for whichever item is selected
@@ -375,19 +381,55 @@ const PurchaseFormPage = () => {
 
   const loadInitialData = async () => {
     try {
-      const [suppRes, branchRes] = await Promise.all([
-        suppliersAPI.list(),
-        branchesAPI.getAll()
-      ]);
-      setSuppliers(suppRes.data || []);
+      const branchRes = await branchesAPI.getAll();
       const branchList = branchRes.data || [];
       setBranches(isManager
         ? branchList.filter((branch) => Number(branch.id) === Number(user?.branchId))
         : branchList);
     } catch (e) {
-      toast.error("Failed to load initial data");
+      toast.error("Failed to load branches");
     }
   };
+
+  // Suppliers are read when the picker is opened, never once on mount.
+  //
+  // The list used to be fetched when the page loaded and then kept, so a supplier created
+  // from another tab or another till while this page sat open was invisible here: the
+  // operator searched for a supplier that plainly existed and found nothing until they
+  // refreshed. Re-reading on every open also means what they choose from is never older
+  // than the click that opened it.
+  const suppliersRequestRef = useRef(0);
+
+  const loadSuppliers = useCallback(async () => {
+    const requestId = suppliersRequestRef.current + 1;
+    suppliersRequestRef.current = requestId;
+    setSuppliersLoading(true);
+
+    try {
+      const response = await suppliersAPI.list();
+      // Opened, closed and opened again while the first call was still in flight: only the
+      // newest answer may be written, an older one would put a shorter list back on screen.
+      if (suppliersRequestRef.current !== requestId) return;
+      setSuppliers(response.data || []);
+    } catch (error) {
+      console.error("Failed to load suppliers", error);
+      // No toast of its own: the axios interceptor already said why the call failed, and a
+      // second message for every failed open is noise. Whatever loaded before stays pickable.
+    } finally {
+      if (suppliersRequestRef.current === requestId) {
+        setSuppliersLoading(false);
+      }
+    }
+  }, []);
+
+  // A supplier id can arrive before any list does: a restored draft carries one, and so does
+  // the bill being rebuilt. The picker reads its label out of the list, so without this the
+  // field would sit on "Select Supplier" while a supplier really was selected.
+  useEffect(() => {
+    if (supplierId && suppliers.length === 0) {
+      loadSuppliers();
+    }
+  }, [supplierId, suppliers.length, loadSuppliers]);
 
   const handleSupplierCreated = (newSupplier) => {
     setSuppliers((prev) => [...prev, newSupplier]);
@@ -727,14 +769,24 @@ const PurchaseFormPage = () => {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
             {/* Supplier Select */}
             <div>
-              <label className="label-text">Supplier</label>
+              <label htmlFor="purchaseformpage-supplier" className="label-text">Supplier</label>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <CustomSelect
+                  <SearchSelect
+                    inputId="purchaseformpage-supplier"
+                    ariaLabel="Supplier"
                     value={supplierId}
                     onChange={setSupplierId}
                     options={suppliers}
                     placeholder="Select Supplier"
+                    searchPlaceholder="Type name or phone…"
+                    searchKeys={SUPPLIER_SEARCH_KEYS}
+                    noResultsMessage="No supplier matches that"
+                    emptyMessage="No suppliers found — add one with +"
+                    loading={suppliersLoading}
+                    loadingMessage="Loading suppliers…"
+                    menuMinWidth={300}
+                    onOpen={loadSuppliers}
                   />
                 </div>
                 <Button

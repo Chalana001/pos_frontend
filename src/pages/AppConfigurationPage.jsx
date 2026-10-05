@@ -48,6 +48,12 @@ const featureDefinitions = [
     description: 'Show dine-in mode in POS and allow table-based sales.',
     icon: Table2,
   },
+  {
+    key: 'quickSaleHeldBillsEnabled',
+    label: 'Quick Sale Held Bills',
+    description: 'Let cashiers hold and resume unfinished Quick Sale carts on this device.',
+    icon: ReceiptText,
+  },
 ];
 
 const stockOverrideRoleDefinitions = [
@@ -367,6 +373,14 @@ const AppConfigurationPage = () => {
               );
             })}
           </div>
+          <label className="mt-5 flex items-center gap-3 text-sm text-slate-700">
+            Maximum held bills per cashier and branch
+            <select disabled={!form.quickSaleHeldBillsEnabled} value={form.quickSaleHeldBillsMax ?? 5}
+              onChange={(event) => updateField('quickSaleHeldBillsMax', Number(event.target.value))}
+              className="rounded border border-slate-300 px-2 py-1">
+              {[1, 2, 3, 4, 5].map((max) => <option key={max} value={max}>{max}</option>)}
+            </select>
+          </label>
 
           <div className="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-4">
             <div className="flex items-start justify-between gap-4">

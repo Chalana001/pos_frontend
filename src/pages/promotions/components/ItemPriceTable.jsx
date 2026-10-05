@@ -7,7 +7,7 @@ import { itemsAPI } from "../../../api/items.api";
 import { formatCurrency } from "../../../utils/formatters";
 import ItemSearchPicker from "./ItemSearchPicker";
 import MarginBadge from "./MarginBadge";
-import CustomSelect from "../../../components/common/CustomSelect";
+import SearchSelect from "../../../components/common/SearchSelect";
 
 /**
  * The price list at the centre of a campaign: one row per item, each with its own offer
@@ -255,13 +255,16 @@ const ItemPriceTable = ({
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               or add a whole category
             </span>
-            <CustomSelect
+            <SearchSelect
               value={bulkCategoryId}
               onChange={setBulkCategoryId}
               options={categories}
               placeholder="Choose a category…"
+              searchPlaceholder="Type category name…"
+              noResultsMessage="No category matches that"
               className="w-52"
-              buttonClassName="py-1.5"
+              inputClassName="py-1.5"
+              menuMinWidth={240}
             />
             <Button
               size="sm"

@@ -1,6 +1,9 @@
 import api from "./axios";
 
 export const promotionsAPI = {
+  bundle: (branchId) => api.get("/promotions/bundle", {
+    params: (branchId !== undefined && branchId !== null) ? { branchId } : {},
+  }),
   list: () => api.get("/promotions"),
   create: (payload) => api.post("/promotions", payload),
   update: (id, payload) => api.put(`/promotions/${id}`, payload),

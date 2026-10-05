@@ -6,6 +6,11 @@ import { useAuth } from './AuthContext';
 import { useBranch } from './BranchContext';
 
 const getStorageKey = (branchId) => `app_configuration:${branchId || 'default'}`;
+const normalizeQuickSaleHeldBillsMax = (value) => {
+  const max = Number(value);
+  if (!Number.isFinite(max) || max <= 0) return 5;
+  return Math.min(5, Math.max(1, Math.floor(max)));
+};
 
 export const DEFAULT_APP_CONFIGURATION = {
   ...DEFAULT_SCALE_BARCODE_CONFIG,
@@ -24,6 +29,8 @@ export const DEFAULT_APP_CONFIGURATION = {
   printReceiptAfterCheckout: true,
   adminWarrantyAllowed: true,
   managerWarrantyAllowed: true,
+  quickSaleHeldBillsEnabled: true,
+  quickSaleHeldBillsMax: 2,
   cashierWarrantyAllowed: false,
 };
 
@@ -49,6 +56,10 @@ const normalizeConfiguration = (value = {}) => ({
   printReceiptAfterCheckout: value.printReceiptAfterCheckout !== false,
   adminWarrantyAllowed: value.adminWarrantyAllowed !== false,
   managerWarrantyAllowed: value.managerWarrantyAllowed !== false,
+  quickSaleHeldBillsEnabled: value.quickSaleHeldBillsEnabled !== false,
+  quickSaleHeldBillsMax: Object.hasOwn(value, 'quickSaleHeldBillsMax')
+    ? normalizeQuickSaleHeldBillsMax(value.quickSaleHeldBillsMax)
+    : 2,
   cashierWarrantyAllowed: value.cashierWarrantyAllowed === true,
 });
 

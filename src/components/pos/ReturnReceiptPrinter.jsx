@@ -7,6 +7,17 @@ import { buildPosReceiptHtml } from '../../utils/buildPosReceiptHtml';
 import { getPrintPaperWidth, printerAgentAPI } from '../../api/printerAgent.api';
 import toast from 'react-hot-toast';
 import { printHtmlInFrame } from '../../utils/printFrame';
+import { formatQuantityWithUnit } from '../../utils/formatters';
+
+// G and ML are thousandths of their primary unit (KG/L); every other unit is 1:1. The same factor
+// the return page and QuantityConversionUtil.displayUnitFactor use.
+const unitFactor = (unit) => (unit === 'G' || unit === 'ML' ? 0.001 : 1);
+
+// What the line is worth on the ticket. returnQty is persisted in the sale line's own unit while
+// finalUnitPrice is per primary unit, so a G or ML line has to be scaled down or it prints a
+// thousand times its value. The page attaches each item's qtyUnit before calling printReturn.
+const lineValue = (item) =>
+  Number(item.returnQty || 0) * Number(item.finalUnitPrice || 0) * unitFactor(item.qtyUnit);
 
 const ReturnReceiptPrinter = forwardRef((props, ref) => {
   const printFrameRef = useRef(null);
@@ -22,7 +33,8 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
      *   reason, cashierNote, cashierName, customerName, createdAt,
      *   loyaltyPointsTakenBack, loyaltyPointsGivenBack, loyaltyPointsBalance,
      *   branchName, branchAddress, branchPhone, branchLogo,
-     *   items: [{ itemName, barcode, returnQty, finalUnitPrice, refundLineAmount, stockReversed }]
+     *   items: [{ itemName, barcode, returnQty, qtyUnit, finalUnitPrice, refundLineAmount, stockReversed }]
+     *          qtyUnit is the sale line's unit; SaleReturnPage attaches it before printing.
      */
     printReturn: async (returnData, storeName, receiptSettings) => {
       const settings = normalizeReceiptSettings(receiptSettings);
@@ -106,8 +118,7 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
       // three figures that turn "goods returned 1,180" into "cash refund 200". Without them
       // the slip shows lines adding to one number and a refund of another, and the customer
       // is left to guess which is the mistake.
-      const goodsValue = (returnData.items || [])
-        .reduce((sum, item) => sum + Number(item.returnQty || 0) * Number(item.finalUnitPrice || 0), 0);
+      const goodsValue = (returnData.items || []).reduce((sum, item) => sum + lineValue(item), 0);
       const pointsValue = Math.max(0, Number(returnData.loyaltyValueReturned || 0));
       const cashRefund = Math.max(0, Number(returnData.totalRefundAmount || 0));
       const discountShare = Math.max(0, Math.round((goodsValue - pointsValue - cashRefund) * 100) / 100);
@@ -124,9 +135,9 @@ const ReturnReceiptPrinter = forwardRef((props, ref) => {
           (item) => `
           <tr>
             <td style="padding:3px 0;font-size:11px;word-break:break-word;">${item.itemName}</td>
-            <td style="padding:3px 4px;font-size:11px;text-align:center;">${item.returnQty}</td>
+            <td style="padding:3px 4px;font-size:11px;text-align:center;">${formatQuantityWithUnit(item.returnQty, item.qtyUnit)}</td>
             <td style="padding:3px 0;font-size:11px;text-align:right;">${fmt(item.finalUnitPrice)}</td>
-            <td style="padding:3px 0;font-size:11px;text-align:right;">${fmt(item.returnQty * item.finalUnitPrice)}</td>
+            <td style="padding:3px 0;font-size:11px;text-align:right;">${fmt(lineValue(item))}</td>
           </tr>`
         )
         .join('');

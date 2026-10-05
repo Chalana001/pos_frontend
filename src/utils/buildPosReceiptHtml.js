@@ -72,6 +72,21 @@ const lineFinalTotal = (item) => {
   return Number.isFinite(explicit) && explicit >= 0 ? explicit : lineBaseTotal(item);
 };
 
+/**
+ * The ticket value of a return line. return_qty is stored in the sale line's own unit while
+ * finalUnitPrice is per primary unit, so a line sold in G or ML has to be scaled down or it reads
+ * a thousand times its value - the same trap lineBaseTotal documents for sale lines. The unit is
+ * attached by the caller (SaleReturnPage) from the sale line, since a return item has none.
+ */
+const returnLineAmount = (item) => {
+  const qty = Number(item?.returnQty ?? item?.qty ?? 0);
+  const unitPrice = Number(item?.finalUnitPrice ?? item?.unitPrice ?? 0);
+  const unit = String(item?.qtyUnit || '').toUpperCase();
+  return unit === 'G' || unit === 'ML'
+    ? qty * unitPrice / STOCK_BASE_UNITS_PER_UNIT
+    : qty * unitPrice;
+};
+
 const lineDiscountType = (item) => item?.effectiveDiscountType || item?.discountType || null;
 const lineDiscountValue = (item) => Number(item?.effectiveDiscountValue ?? item?.discountValue ?? 0);
 
@@ -182,8 +197,8 @@ const renderLine = (line, data, items) => {
   }[orderData?.refundMethod] || orderData?.refundMethod || '';
   // The goods' value, what points had paid of it, and the bill-discount share, the three
   // figures that turn "goods returned 1,180" into "cash refund 200" on the slip.
-  const returnGoodsValue = (Array.isArray(items) ? items : []).reduce((sum, item) =>
-    sum + Number(item?.returnQty ?? 0) * Number(item?.finalUnitPrice ?? 0), 0);
+  const returnGoodsValue = (Array.isArray(items) ? items : [])
+    .reduce((sum, item) => sum + returnLineAmount(item), 0);
   const returnPointsValue = Math.max(0, Number(orderData?.loyaltyValueReturned ?? 0));
   const returnCash = Math.max(0, Number(orderData?.totalRefundAmount ?? 0));
   const returnDiscountShare = Math.max(0,
@@ -402,9 +417,10 @@ const buildReturnRows = (items, { nameSize = 11, currency = 'LKR' } = {}) => {
   return (Array.isArray(items) ? items : []).map((item) => {
     const qty = Number(item?.returnQty ?? item?.qty ?? 0);
     const unit = Number(item?.finalUnitPrice ?? item?.unitPrice ?? 0);
-    // What the goods sold for. The cash share of it is the refund line below the table;
+    // What the goods sold for, scaled to the unit they were sold in: a G/ML line would otherwise
+    // read a thousand times its value. The cash share of it is the refund line below the table;
     // printed here beside the unit price it reads as a mistake, because 800.00 x 1 is not 135.59.
-    const amount = qty * unit;
+    const amount = returnLineAmount(item);
     const name = item?.itemName || item?.name || 'Item';
     return (
       `<tr><td colspan="3" class="item-name" style="${tdStyle}">${esc(name)}</td></tr>` +
