@@ -171,6 +171,8 @@ const renderLine = (line, data, items) => {
   const dueAmount    = Math.max(0, Number(orderData?.dueAmount ?? 0));
   const changeAmt    = Math.max(0, paidAmount - grandTotal);
   const balanceShow  = dueAmount > 0 ? dueAmount : changeAmt;
+  const paymentMethod = String(orderData?.paymentMethod || '').trim().toUpperCase();
+  const bankReference = String(orderData?.bankReference || '').trim();
 
   // ── Loyalty ───────────────────────────────────────────────────────────────
   // Every one of these prints nothing when it is zero, so a shop can leave the lines in its
@@ -307,6 +309,13 @@ const renderLine = (line, data, items) => {
 
     case 'PAID':
       return isPreBill ? '' : two('Paid', lkr(paidAmount));
+
+    case 'BANK_REFERENCE':
+      // A new bank sale carries its transfer reference. A historical one has none, and a
+      // blank row would imply the reference was lost rather than never recorded.
+      return paymentMethod === 'BANK' && bankReference && !isPreBill
+        ? two('Bank Reference', esc(bankReference))
+        : '';
 
     case 'BALANCE':
       return !isPreBill && balanceShow > 0 ? two('Balance', lkr(balanceShow)) : '';
@@ -620,9 +629,24 @@ export const buildPosReceiptHtml = ({
     options.includeCopies === false
       ? 1
       : Math.max(1, Math.min(10, Number(settings?.printerCopies || 1)));
-
-  // Which default layout to fall back on when the shop has not customised this document.
   const savedLines = getActiveTemplateLines(settings, templateType);
+  // Which default layout to fall back on when the shop has not customised this document.
+  // A layout saved before bank sales existed has no BANK_REFERENCE line. New bank sales
+  // still need it, so it is injected after PAID rather than waiting for each shop to
+  // redisign its slip. A layout that already has it is left exactly where the shop put it.
+  const needsInjectedBankReference = templateType === 'THERMAL'
+    && !savedLines.some((l) => l.type === 'BANK_REFERENCE');
+  const bankReferenceLines = needsInjectedBankReference ? [createReceiptTemplateLine('BANK_REFERENCE')] : [];
+  const linesWithBankReference = needsInjectedBankReference
+    ? (() => {
+        const paidAt = savedLines.findIndex((l) => l.type === 'PAID');
+        if (paidAt >= 0) return [...savedLines.slice(0, paidAt + 1), ...bankReferenceLines, ...savedLines.slice(paidAt + 1)];
+        const netAt = savedLines.findIndex((l) => l.type === 'NET_TOTAL');
+        return netAt >= 0
+          ? [...savedLines.slice(0, netAt + 1), ...bankReferenceLines, ...savedLines.slice(netAt + 1)]
+          : [...savedLines, ...bankReferenceLines];
+      })()
+    : savedLines;
 
   // Two documents are stamped under the shop's letterhead by the renderer, on every layout,
   // because neither may depend on anyone remembering to add a line:
@@ -646,10 +670,10 @@ export const buildPosReceiptHtml = ({
   const lines = stamp
     ? (() => {
         let at = 0;
-        while (at < savedLines.length && HEADER_LINE_TYPES.includes(savedLines[at].type)) at += 1;
-        return [...savedLines.slice(0, at), stamp, ...savedLines.slice(at)];
+        while (at < linesWithBankReference.length && HEADER_LINE_TYPES.includes(linesWithBankReference[at].type)) at += 1;
+        return [...linesWithBankReference.slice(0, at), stamp, ...linesWithBankReference.slice(at)];
       })()
-    : savedLines;
+    : linesWithBankReference;
   const dataObj = { settings, branchData, storeName, orderData, customerData };
 
   const billHtml =

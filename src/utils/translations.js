@@ -222,8 +222,16 @@ const exactTranslations = {
     'Batch *': 'කාණ්ඩය *',
     'Batch sell price': 'කාණ්ඩ විකිණුම් මිල',
     'Bill Items': 'බිල් භාණ්ඩ',
-    'Bill Summary': 'බිල් සාරාංශය',
-    'Bill Total': 'බිල් එකතුව',
+    'Bank Payment': 'බැංකු ගෙවීම',
+    'Bank Reference': 'බැංකු යොමුව',
+    'Bank amount must equal the invoice total': 'බැංකු මුදල ඉන්වොයිසි මුළු මුදලට සමාන විය යුතුය',
+    'Bank reference is required for BANK payments': 'BANK ගෙවීම් සඳහා බැංකු යොමුව අවශ්‍යය',
+    'Card amount must equal the invoice total': 'කාඩ්පත් මුදල ඉන්වොයිසි මුළු මුදලට සමාන විය යුතුය',
+    'Credit sales cannot include a payment amount': 'ණය විකිණීම් සඳහා ගෙවීම් මුදලක් ඇතුළත් කළ නොහැක',
+    'Select customer to save the remaining balance as credit': 'ඉතිරි ශේෂය ණය ලෙස සුරැකීමට පාරිභෝගිකයාගේ නම තෝරන්න',
+    'Enter bank reference for bank payment': 'බැංකු ගෙවීම සඳහා බැංකු යොමුව ඇතුළත් කරන්න',
+    'Enter transfer / cheque reference': 'මාරු / චෙක්පත් යොමුව ඇතුළත් කරන්න',
+    'The full invoice total will be paid by bank transfer.': 'ඉන්වොයිසි මුළු මුදල බැංකු මාරුවෙන් ගෙවනු ලැබේ',
 
     // Branch
     Branch: 'ශාඛාව',

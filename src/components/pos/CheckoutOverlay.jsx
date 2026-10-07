@@ -1,27 +1,28 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { X, Banknote, CreditCard, Printer, CheckCircle2, FileText, AlertTriangle } from "lucide-react";
+import { X, CreditCard, Printer, CheckCircle2, FileText, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
-import { ORDER_TYPES } from "../../utils/constants";
 import Button from "../common/Button";
 import CustomSelect from "../common/CustomSelect";
 
+export const salePaymentMethods = new Set(["CASH", "CARD", "BANK", "CREDIT"]);
+
 const paymentMethodOptions = [
-  { value: "CASH", label: "Cash" },
+  { value: "CASH", label: "Cash (F1)" },
   { value: "CARD", label: "Card" },
   { value: "BANK", label: "Bank" },
-  { value: "CHEQUE", label: "Cheque" },
+  { value: "CREDIT", label: "Credit (F2)" },
 ];
 
 const CheckoutOverlay = ({ 
   isOpen, 
   onClose, 
   total, 
-  orderType, 
-  setOrderType, 
+  paymentMethod = "CASH",
+  onSelectPaymentMethod,
   paidAmount, 
   setPaidAmount, 
-  paymentMethod = "CASH",
-  setPaymentMethod,
+  bankReference = "",
+  setBankReference,
   onPlaceOrder, 
   loading,
   printFullInvoice,
@@ -45,8 +46,8 @@ const CheckoutOverlay = ({
     && customer?.creditLimit !== ""
     && Number.isFinite(Number(customer.creditLimit));
   const currentDue = Number(customer?.dueAmount || 0);
-  const creditLimit = hasCreditLimit ? Number(customer.creditLimit) : null;
-  const availableCredit = hasCreditLimit ? Math.max(0, creditLimit - currentDue) : null;
+  const creditLimit = hasCreditLimit ? Number(customer.creditLimit) : 0;
+  const availableCredit = hasCreditLimit ? Math.max(0, creditLimit - currentDue) : 0;
 
   useEffect(() => {
     if (isOpen) {
@@ -115,21 +116,25 @@ const CheckoutOverlay = ({
   // Content swaps change the natural height, so re-fit when they do.
   useEffect(() => {
     fitToHeight();
-  }, [fitToHeight, orderType, errorMessage, customer, paidAmount, isOnline]);
+  }, [fitToHeight, paymentMethod, bankReference, errorMessage, customer, paidAmount, isOnline]);
 
   if (!isOpen) return null;
 
-  const changeAmount = normalizedPaidAmount - normalizedTotal;
-  const creditDueAmount = orderType === ORDER_TYPES.CREDIT
+  const creditDueAmount = paymentMethod === "CREDIT"
     ? normalizedTotal
     : Math.max(0, normalizedTotal - normalizedPaidAmount);
+  const changeAmount = paymentMethod === "CASH"
+    ? normalizedPaidAmount - normalizedTotal
+    : 0;
   const projectedDue = currentDue + creditDueAmount;
-  const isMixedPayment = orderType === ORDER_TYPES.CASH && creditDueAmount > 0;
-  const needsCustomer = orderType === ORDER_TYPES.CREDIT || isMixedPayment;
+  const isMixedPayment = paymentMethod === "CASH" && creditDueAmount > 0;
+  const needsCustomer = paymentMethod === "CREDIT" || isMixedPayment;
   const canConfirm = !errorMessage
-    && (orderType === ORDER_TYPES.CASH
-      ? (normalizedPaidAmount >= normalizedTotal || (isOnline && !!customer))
-      : (isOnline && !!customer));
+    && (paymentMethod === "CREDIT"
+      ? (isOnline && !!customer)
+      : (paymentMethod === "CASH"
+        ? (normalizedPaidAmount >= normalizedTotal || (isOnline && !!customer))
+        : isOnline));
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm">
@@ -163,34 +168,20 @@ const CheckoutOverlay = ({
           </div>
 
           {/* Payment Methods */}
-          <div className="sales-panel-enter grid grid-cols-2 gap-4" style={{ animationDelay: "180ms" }}>
-            <button
-              onClick={() => setOrderType(ORDER_TYPES.CASH)}
-              className={`checkout-method flex flex-col items-center justify-center rounded-xl border-2 transition-all ${
-                orderType === ORDER_TYPES.CASH 
-                ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md' 
-                : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'
-              }`}
-            >
-              <Banknote size={28} />
-              <span className="font-bold text-base">Cash (F1)</span>
-            </button>
-            <button
-              onClick={() => setOrderType(ORDER_TYPES.CREDIT)}
-              disabled={!isOnline}
-              className={`checkout-method flex flex-col items-center justify-center rounded-xl border-2 transition-all ${
-                orderType === ORDER_TYPES.CREDIT 
-                ? 'border-amber-500 bg-amber-50 text-amber-500 shadow-md' 
-                : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'
-              }`}
-            >
-              <CreditCard size={28} />
-              <span className="font-bold text-base">Credit (F2)</span>
-            </button>
+          <div className="sales-panel-enter" style={{ animationDelay: "180ms" }}>
+            <div>
+              <label className="mb-2 block text-sm font-black text-slate-700 uppercase">Payment Method</label>
+              <CustomSelect
+                value={paymentMethod}
+                onChange={(nextValue) => onSelectPaymentMethod?.(nextValue)}
+                options={paymentMethodOptions}
+                buttonClassName="border-2 border-slate-200 px-4 py-3 font-bold focus:ring-blue-100"
+              />
+            </div>
           </div>
 
           {/* Cash Input Section */}
-          {orderType === ORDER_TYPES.CASH && (
+          {paymentMethod === "CASH" && (
             <div className="sales-panel-enter space-y-4" style={{ animationDelay: "220ms" }}>
               <label htmlFor="checkoutoverlay-cash-received" className="block text-sm font-black text-slate-700 uppercase">Cash Received</label>
               <div className="relative">
@@ -203,16 +194,6 @@ const CheckoutOverlay = ({
                   onChange={(e) => setPaidAmount(roundToRupee(e.target.value))}
                   className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-5 pl-16 pr-6 text-3xl font-black text-slate-800 focus:border-blue-600 focus:bg-white outline-none transition-all"
                   placeholder="0.00"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-black text-slate-700 uppercase">Payment Method</label>
-                <CustomSelect
-                  value={paymentMethod}
-                  onChange={(nextValue) => setPaymentMethod?.(nextValue)}
-                  options={paymentMethodOptions}
-                  buttonClassName="border-2 border-slate-200 px-4 py-3 font-bold focus:ring-blue-100"
                 />
               </div>
 
@@ -248,7 +229,7 @@ const CheckoutOverlay = ({
                       </div>
                       <div className="mt-2 flex justify-between gap-3">
                         <span className="text-slate-500">New Credit</span>
-                        <span className="font-semibold text-amber-700">{formatCurrency(creditDueAmount)}</span>
+                        <span className="font-semibold text-slate-700">{formatCurrency(creditDueAmount)}</span>
                       </div>
                       <div className="mt-2 flex justify-between gap-3">
                         <span className="text-slate-500">Projected Due</span>
@@ -261,7 +242,32 @@ const CheckoutOverlay = ({
             </div>
           )}
 
-          {orderType === ORDER_TYPES.CREDIT && (
+          {paymentMethod === "BANK" && (
+            <div className="sales-panel-enter space-y-2" style={{ animationDelay: "220ms" }}>
+              <label htmlFor="checkoutoverlay-bank-reference" className="block text-sm font-black text-slate-700 uppercase">Bank Reference</label>
+              <input
+                id="checkoutoverlay-bank-reference"
+                type="text"
+                value={bankReference}
+                onChange={(event) => setBankReference?.(event.target.value)}
+                className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-base font-bold text-slate-800 focus:border-blue-600 focus:bg-white outline-none transition-all"
+                placeholder="Enter transfer / cheque reference"
+                autoComplete="off"
+              />
+              <p className="text-sm font-medium text-slate-500">The full invoice total will be paid by bank transfer.</p>
+            </div>
+          )}
+
+          {paymentMethod === "CARD" && (
+            <div className="sales-panel-enter rounded-xl border-2 border-blue-100 bg-blue-50 px-5 py-4" style={{ animationDelay: "220ms" }}>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-600">Card Payment</span>
+                <span className="text-2xl font-black text-blue-600">{formatCurrency(normalizedTotal)}</span>
+              </div>
+            </div>
+          )}
+
+          {paymentMethod === "CREDIT" && (
             <div className="sales-panel-enter bg-amber-50 border-2 border-amber-100 p-5 rounded-xl space-y-4" style={{ animationDelay: "220ms" }}>
               <div className="flex gap-4 items-start">
                 <CheckCircle2 className="text-amber-500 shrink-0" size={24} />
@@ -296,6 +302,7 @@ const CheckoutOverlay = ({
               )}
             </div>
           )}
+
 
           {needsCustomer && !customer && !errorMessage && (
             <div className="rounded-xl border-2 border-amber-100 bg-amber-50 p-4 flex gap-3 items-start">

@@ -322,7 +322,16 @@ const ReceiptTemplate = ({
   const grandTotal = Number(orderData?.netTotal ?? orderData?.grandTotal ?? 0);
   const paidAmount = Number(orderData?.paidAmount ?? 0);
   const dueAmount = Math.max(0, Number(orderData?.dueAmount ?? 0));
+  const normalizedPaymentMethod = String(orderData?.paymentMethod || '').trim().toUpperCase();
+  const bankReference = String(orderData?.bankReference || '').trim();
   const paymentMethod = (orderData?.paymentMethod || 'CASH').replace('_', ' ');
+  const serverChangeValue = Number(orderData?.changeAmount);
+  const hasServerChange = orderData?.changeAmount !== null
+    && orderData?.changeAmount !== undefined
+    && Number.isFinite(serverChangeValue);
+  const changeAmount = paymentMethod === 'CASH' && dueAmount === 0 && hasServerChange
+    ? Math.max(0, serverChangeValue)
+    : paidAmount - grandTotal;
   // Loyalty. Points spent came off the grand total already, so the row sits above Net Total
   // and the arithmetic on the slip adds up; what was earned and what is left are after it,
   // because they are news rather than money.
@@ -532,10 +541,16 @@ const ReceiptTemplate = ({
                 <span>{formatCurrency(paidAmount)}</span>
               </div>
             ) : null}
+            {normalizedPaymentMethod === 'BANK' && bankReference && !isPreBill && !isKot ? (
+              <div style={styles.totalRow}>
+                <span>{t('Bank Reference')}</span>
+                <span>{bankReference}</span>
+              </div>
+            ) : null}
             {normalized.showBalance && orderType === 'CASH' ? (
               <div style={{ ...styles.totalRow, fontWeight: 700 }}>
                 <span>{t('Balance')}</span>
-                <span>{formatCurrency(paidAmount - grandTotal)}</span>
+                <span>{formatCurrency(changeAmount)}</span>
               </div>
             ) : null}
             {(normalized.showDueAmount || isPreBill) && dueAmount > 0 ? (

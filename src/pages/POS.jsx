@@ -15,7 +15,7 @@ import { pendingOrdersAPI } from "../api/pendingOrders.api";
 import { warrantyTemplatesAPI } from "../api/warrantyTemplates.api";
 import Cart from "../components/pos/Cart";
 import CustomerSelect from "../components/pos/CustomerSelect";
-import CheckoutOverlay from "../components/pos/CheckoutOverlay";
+import CheckoutOverlay, { salePaymentMethods } from "../components/pos/CheckoutOverlay";
 import BatchSelectModal from "../components/pos/BatchSelectModal";
 import { formatCurrency } from "../utils/formatters";
 import { ORDER_TYPES, DISCOUNT_TYPES, ItemType, SALE_MODES } from "../utils/constants";
@@ -336,6 +336,7 @@ const POS = () => {
   const [loading, setLoading] = useState(false);
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [bankReference, setBankReference] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [stockOverrideDialog, setStockOverrideDialog] = useState(null);
   const [receiptSettings, setReceiptSettings] = useState(null);
@@ -485,6 +486,7 @@ const POS = () => {
       setOrderType(draft.orderType || ORDER_TYPES.CASH);
       setPaidAmount(Number(draft.paidAmount || 0));
       setPaymentMethod(draft.paymentMethod || "CASH");
+      setBankReference(typeof draft.bankReference === "string" ? draft.bankReference : "");
       setPromotionCode(draft.promotionCode || "");
       setLoyaltyPoints(Number(draft.loyaltyPoints || 0));
       setCartMode(draft.cartMode || CART_MODES.QUEUE);
@@ -514,10 +516,10 @@ const POS = () => {
         orderType,
         paidAmount,
         paymentMethod,
+        bankReference,
         promotionCode,
         loyaltyPoints,
         saleMode,
-        cartMode: activeCartMode || cartMode || (canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE),
         savedAt: new Date().toISOString(),
       })
     );
@@ -535,6 +537,7 @@ const POS = () => {
     orderType,
     paidAmount,
     paymentMethod,
+    bankReference,
     saleMode,
   ]);
 
@@ -542,7 +545,7 @@ const POS = () => {
     if (showPayment) {
       setPaymentError("");
     }
-  }, [showPayment, orderType, customer?.id, cartItems, billDiscount, paidAmount]);
+  }, [showPayment, paymentMethod, bankReference, customer?.id, cartItems, billDiscount, paidAmount]);
 
   // Warm the server-reachability probe while the cashier is still entering the
   // payment. A success is cached for 10 seconds, so by the time Confirm is
@@ -844,9 +847,9 @@ const POS = () => {
   const getCheckoutCreditAmount = (total = calculateTotal()) => {
     const normalizedTotal = roundToRupee(total || 0);
     const normalizedPaidAmount = roundToRupee(paidAmount || 0);
-    return orderType === ORDER_TYPES.CREDIT
-      ? normalizedTotal
-      : Math.max(0, normalizedTotal - normalizedPaidAmount);
+    if (paymentMethod === "CREDIT") return normalizedTotal;
+    if (paymentMethod === "CASH") return Math.max(0, normalizedTotal - normalizedPaidAmount);
+    return 0;
   };
 
   const getCreditLimitValidationMessage = (total = calculateTotal()) => {
@@ -948,6 +951,7 @@ const POS = () => {
     setOrderType(ORDER_TYPES.CASH);
     setPaidAmount(0);
     setPaymentMethod("CASH");
+    setBankReference("");
     setPrintFullInvoice(false);
     setShowPayment(false);
     if (!preserveSaleMode) {
@@ -985,11 +989,11 @@ const POS = () => {
   const switchQuickSaleSlot = (nextSlot) => {
     if (saleMode !== SALE_MODES.TAKEAWAY || nextSlot === quickSaleSlot || nextSlot < 1 || nextSlot > quickSaleSlotCount) return;
     if (cartDraftKey && cartItems.length > 0) {
-      localStorage.setItem(cartDraftKey, JSON.stringify({ cartItems, customer, billDiscount, orderType, paidAmount, paymentMethod, promotionCode, loyaltyPoints, saleMode: SALE_MODES.TAKEAWAY, cartMode: activeCartMode || cartMode, savedAt: new Date().toISOString() }));
+      localStorage.setItem(cartDraftKey, JSON.stringify({ cartItems, customer, billDiscount, orderType, paidAmount, paymentMethod, bankReference, promotionCode, loyaltyPoints, saleMode: SALE_MODES.TAKEAWAY, cartMode: activeCartMode || cartMode, savedAt: new Date().toISOString() }));
     }
     setQuickSaleSlot(nextSlot);
     setCartItems([]); setCustomer(null); setBillDiscount(0); setPromotionCode(""); setLoyaltyPoints(0);
-    setOrderType(ORDER_TYPES.CASH); setPaidAmount(0); setPaymentMethod("CASH"); setCartMode(null); setShowPayment(false);
+    setOrderType(ORDER_TYPES.CASH); setPaidAmount(0); setPaymentMethod("CASH"); setBankReference(""); setCartMode(null); setShowPayment(false);
   };
 
   const mapPendingItemToCartItem = (pendingItem) => {
@@ -2134,20 +2138,28 @@ const POS = () => {
     }
   };
 
+  const selectPaymentMethod = (nextMethod) => {
+    if (!salePaymentMethods.has(nextMethod) || nextMethod === paymentMethod) return;
+    setPaymentMethod(nextMethod);
+    setOrderType(nextMethod === "CREDIT" ? ORDER_TYPES.CREDIT : ORDER_TYPES.CASH);
+    setBankReference("");
+    setPaidAmount(nextMethod === "CREDIT" ? 0 : roundToRupee(calculateTotal()));
+  };
+
   const handleCheckout = () => {
     if (cartItems.length === 0) return toast.error("Cart is empty");
     if (!canSell) return toast.error(canUseServer && !isFreeLocalSalesPlan ? "No active shift. Cannot checkout." : "POS queue mode is not ready.");
     if (saleMode === SALE_MODES.DINE_IN && !selectedTableId) return toast.error("Select a table before checkout");
     // Points that price at nothing, below the scheme's minimum, or on a bill that cannot
     // absorb them, are refused by the server, which fails the whole sale. Better to say so
-    // here than to let the cashier take the money and then lose the sale to a 400.
     if (canUseServer && loyaltyPoints > 0 && loyaltyDiscount <= 0) {
       return toast.error("Those points cannot be redeemed on this bill. Clear them or enter more.");
     }
-
     setPaymentError("");
     setPaidAmount(calculateTotal());
     setPaymentMethod("CASH");
+    setBankReference("");
+    setOrderType(ORDER_TYPES.CASH);
     setShowPayment(true);
   };
 
@@ -2310,16 +2322,36 @@ const POS = () => {
     };
 
     setPaymentError("");
-
     if (!effectiveBranchId) return failCheckout("Select a branch before checkout");
+    const normalizedTotal = roundToRupee(total || 0);
+    const normalizedPaidAmount = roundToRupee(paidAmount || 0);
     const creditAmount = getCheckoutCreditAmount(total);
+    if (paymentMethod === "CASH" && normalizedPaidAmount < normalizedTotal && !customer) {
+      return failCheckout("Select customer to save the remaining balance as credit");
+    }
+    if (paymentMethod === "CARD" && normalizedPaidAmount !== normalizedTotal) {
+      return failCheckout("Card amount must equal the invoice total");
+    }
+    if (paymentMethod === "BANK") {
+      if (normalizedPaidAmount !== normalizedTotal) {
+        return failCheckout("Bank amount must equal the invoice total");
+      }
+      if (!bankReference.trim()) return failCheckout("Enter bank reference for bank payment");
+    }
+    if (paymentMethod === "CREDIT" && normalizedPaidAmount !== 0) {
+      return failCheckout("Credit sales cannot include a payment amount");
+    }
     if (creditAmount > 0 && !customer) return failCheckout("Select customer for credit sale");
     const creditLimitMessage = getCreditLimitValidationMessage(total);
     if (creditLimitMessage) return failCheckout(creditLimitMessage);
     if (!shouldUseServerForCheckout && creditAmount > 0) return failCheckout("Queue mode supports fully paid cash sales only");
-    if (!shouldUseServerForCheckout && orderType !== ORDER_TYPES.CASH) return failCheckout("Queue mode supports cash sales only");
+    if (!shouldUseServerForCheckout && paymentMethod !== "CASH") return failCheckout("Queue mode supports cash sales only");
     if (!shouldUseServerForCheckout && saleMode !== SALE_MODES.TAKEAWAY) return failCheckout("Queue mode supports takeaway sales only");
-
+    const saleOrderType = paymentMethod === "CREDIT" ? ORDER_TYPES.CREDIT : ORDER_TYPES.CASH;
+    const paymentAmount = paymentMethod === "CASH" ? normalizedPaidAmount
+      : paymentMethod === "CREDIT" ? 0
+      : normalizedTotal;
+    const trimmedBankReference = paymentMethod === "BANK" ? bankReference.trim() : "";
     setLoading(true);
     try {
       // One key per checkout attempt, held until the sale is actually banked.
@@ -2344,7 +2376,7 @@ const POS = () => {
 
         // Only a fully paid cash takeaway can be queued; the rest need server state the
         // browser does not have, so those genuinely cannot proceed.
-        if (creditAmount > 0 || orderType !== ORDER_TYPES.CASH || saleMode !== SALE_MODES.TAKEAWAY) {
+        if (creditAmount > 0 || paymentMethod !== "CASH" || saleMode !== SALE_MODES.TAKEAWAY) {
           failCheckout("Cannot reach the server. Only fully paid cash takeaway sales can be saved offline.");
           return;
         }
@@ -2365,7 +2397,7 @@ const POS = () => {
       );
       const orderData = {
         branchId: effectiveBranchId,
-        orderType,
+        orderType: saleOrderType,
         saleMode,
         tableId: saleMode === SALE_MODES.DINE_IN ? selectedTableId : null,
         customerId: customer ? customer.id : null,
@@ -2374,19 +2406,20 @@ const POS = () => {
         // Online only, a disconnected till cannot check a balance, and two of them would each
         // spend the same points.
         loyaltyPointsToRedeem: canUseServer ? loyaltyPoints : 0,
-        paidAmount: orderType === ORDER_TYPES.CASH ? paidAmount : 0,
-        paymentMethod: orderType === ORDER_TYPES.CASH ? paymentMethod : "CREDIT",
+        paidAmount: paymentAmount,
+        paymentMethod,
         items: orderItems,
         note: "",
       };
+      if (paymentMethod === "CASH") orderData.tenderedAmount = normalizedPaidAmount;
+      if (paymentMethod === "BANK") orderData.bankReference = trimmedBankReference;
 
       if (!useServerForThisCheckout) {
         // Reused, not regenerated: offlineSales is keyed by clientSaleId and
         // written with put(), so a double-click overwrites the same queued row
-        // instead of queueing a second sale that would sync as a second order.
-        const clientSaleId = checkoutIdempotencyKey;
-        const soldAt = new Date().toISOString();
-        const storeName = user?.shopName || BRAND_NAME_UPPER;
+      const clientSaleId = checkoutIdempotencyKey;
+      const soldAt = new Date().toISOString();
+      const storeName = user?.shopName || BRAND_NAME_UPPER;
         const branchName = effectiveBranch?.name || myShift?.branchName || `Branch ${effectiveBranchId}`;
         const branchAddress = effectiveBranch?.address || myShift?.branchAddress || "";
         const branchPhone = effectiveBranch?.phone || myShift?.branchPhone || "";
@@ -2415,7 +2448,7 @@ const POS = () => {
           netTotal: total,
           paidAmount,
           paymentMethod: orderData.paymentMethod,
-          orderType,
+          orderType: orderData.orderType,
           dueAmount: creditAmount,
           saleMode,
           customerName,
@@ -2557,6 +2590,13 @@ const POS = () => {
       const resolvedTableName = saleMode === SALE_MODES.DINE_IN
         ? (selectedTable?.tableName || pendingOrdersByTable[Number(selectedTableId)]?.tableName || "")
         : "";
+      const responsePaidAmount = Number(response.data?.paidAmount ?? orderData.paidAmount);
+      const responseDueAmount = Number(response.data?.dueAmount ?? creditAmount);
+      const responsePaymentMethod = response.data?.paymentMethod || orderData.paymentMethod;
+      const responseChangeAmount = response.data?.changeAmount;
+      const hasServerChangeAmount = responseChangeAmount !== null
+        && responseChangeAmount !== undefined
+        && Number.isFinite(Number(responseChangeAmount));
       const printData = {
         orderId: response.data.id || response.data.invoiceNo,
         invoiceNo: response.data.invoiceNo,
@@ -2566,12 +2606,14 @@ const POS = () => {
         billDiscount: Number(response.data?.billDiscount ?? billDiscount),
         promotionDiscountTotal: Number(response.data?.promotionDiscountTotal || response.data?.billPromotionDiscountAmount || 0),
         netTotal: response.data.grandTotal ?? total,
-        paidAmount: response.data.paidAmount ?? (orderType === ORDER_TYPES.CASH ? paidAmount : 0),
-        dueAmount: response.data.dueAmount ?? creditAmount,
-        paymentMethod: response.data.paymentMethod || orderData.paymentMethod,
-        orderType: response.data.dueAmount > 0 && response.data.paidAmount > 0
-          ? "CASH + CREDIT"
-          : (response.data.orderType || orderType),
+        paidAmount: responsePaidAmount,
+        dueAmount: responseDueAmount,
+        paymentMethod: responsePaymentMethod,
+        orderType: responseDueAmount > 0 && responsePaidAmount > 0
+          ? `${responsePaymentMethod} + CREDIT`
+          : (response.data.orderType || saleOrderType),
+        ...(hasServerChangeAmount ? { changeAmount: Number(responseChangeAmount) } : {}),
+        ...(response.data?.bankReference ? { bankReference: response.data.bankReference } : {}),
         saleMode,
         tableName: resolvedTableName,
         customerName,
@@ -2674,8 +2716,8 @@ const POS = () => {
 
   useKeyboard("F4", () => setShowCustomerSelect(true));
   useKeyboard("F9", handleCheckout);
-  useKeyboard("F1", () => showPayment && setOrderType(ORDER_TYPES.CASH));
-  useKeyboard("F2", () => showPayment && shouldUseServerForCheckout && setOrderType(ORDER_TYPES.CREDIT));
+  useKeyboard("F1", () => showPayment && selectPaymentMethod("CASH"));
+  useKeyboard("F2", () => showPayment && shouldUseServerForCheckout && selectPaymentMethod("CREDIT"));
 
   // Bound only while the payment overlay is up. Registering it page-wide would
   // preventDefault the Enter a barcode scanner sends to terminate a scan.
@@ -3152,12 +3194,12 @@ const POS = () => {
         isOpen={showPayment}
         onClose={() => { setShowPayment(false); setPaymentError(""); }}
         total={checkoutTotal}
-        orderType={orderType}
-        setOrderType={setOrderType}
         paidAmount={paidAmount}
         setPaidAmount={setPaidAmount}
         paymentMethod={paymentMethod}
-        setPaymentMethod={setPaymentMethod}
+        onSelectPaymentMethod={selectPaymentMethod}
+        bankReference={bankReference}
+        setBankReference={setBankReference}
         onPlaceOrder={handlePlaceOrder}
         loading={loading}
         printFullInvoice={printFullInvoice}

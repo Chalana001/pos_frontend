@@ -29,6 +29,7 @@ export const RECEIPT_LINE_TYPES = [
   'DISCOUNT',
   'NET_TOTAL',
   'PAID',
+  'BANK_REFERENCE',
   'BALANCE',
   'CREDIT_DUE',
   'LOYALTY_REDEEMED',
@@ -61,8 +62,9 @@ export const RECEIPT_LINE_TYPE_OPTIONS = [
   { value: 'ITEM_TABLE',     label: 'Item Table' },
   { value: 'SUBTOTAL',       label: 'Subtotal' },
   { value: 'DISCOUNT',       label: 'Discount' },
-  { value: 'NET_TOTAL',      label: 'Net Total' },
-  { value: 'PAID',           label: 'Paid Amount' },
+  { value: 'NET_TOTAL',     label: 'Net Total' },
+  { value: 'PAID',          label: 'Paid Amount' },
+  { value: 'BANK_REFERENCE', label: 'Bank Reference' },
   { value: 'BALANCE',        label: 'Balance' },
   { value: 'CREDIT_DUE',     label: 'Credit Due' },
   { value: 'LOYALTY_REDEEMED', label: 'Points Used (count)' },
@@ -121,7 +123,7 @@ export const RECEIPT_LINE_FONT_SIZES = Array.from({ length: 17 }, (_, i) => i + 
 /** Types that support a custom label / text override */
 export const RECEIPT_LINE_CUSTOM_TEXT_TYPES = [
   'ADDRESS', 'PHONE', 'INVOICE_NO', 'DATE_TIME', 'CASHIER', 'CUSTOMER',
-  'SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE', 'CREDIT_DUE',
+  'SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BANK_REFERENCE', 'BALANCE', 'CREDIT_DUE',
   'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
   'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
   'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK', 'TOTAL_SAVINGS',
@@ -204,7 +206,7 @@ const _createLineId = () =>
  */
 export const createReceiptTemplateLine = (type = 'CUSTOM_TEXT') => {
   const centerAligned = ['LOGO', 'STORE_NAME', 'BRANCH_NAME', 'ADDRESS', 'PHONE', 'INVOICE_NO', 'DATE_TIME', 'CASHIER', 'CUSTOMER', 'CREDIT_DUE', 'THANKS_MESSAGE', 'PRINT_MARK'];
-  const splitAligned  = ['SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BALANCE',
+  const splitAligned  = ['SUBTOTAL', 'DISCOUNT', 'NET_TOTAL', 'PAID', 'BANK_REFERENCE', 'BALANCE',
     'LOYALTY_REDEEMED', 'LOYALTY_DISCOUNT', 'LOYALTY_EARNED', 'LOYALTY_BALANCE',
     'RETURN_NO', 'ORIGINAL_INVOICE', 'TOTAL_REFUND', 'REFUND_METHOD', 'RETURN_REASON',
     'CASHIER_NOTE', 'LOYALTY_TAKEN_BACK', 'LOYALTY_GIVEN_BACK', 'TOTAL_SAVINGS',
@@ -288,6 +290,7 @@ export const buildLegacyTemplateLines = (settings) => {
   lines.push(mk('LOYALTY_DISCOUNT', { id: 'def-lpdisc', align: 'split' }));
   if (s.showNetTotal)  lines.push(mk('NET_TOTAL', { id: 'def-net',  align: 'split', bold: true, fontSize: 14 }));
   if (s.showPaid)      lines.push(mk('PAID',      { id: 'def-paid', align: 'split' }));
+  lines.push(mk('BANK_REFERENCE', { id: 'def-bankref', align: 'split' }));
   if (s.showBalance)   lines.push(mk('BALANCE',   { id: 'def-bal',  align: 'split' }));
   if (s.showDueAmount) lines.push(mk('CREDIT_DUE', { id: 'def-due', align: 'center', bold: true, fontSize: 12 }));
 

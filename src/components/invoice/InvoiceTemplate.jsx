@@ -135,6 +135,8 @@ const InvoiceTemplate = ({
   const paidAmount = Number(orderData?.paidAmount ?? 0);
   const dueAmount = Math.max(0, Number(orderData?.dueAmount ?? 0));
   const balanceAmount = Math.max(0, paidAmount - grandTotal);
+  const normalizedPaymentMethod = String(orderData?.paymentMethod || '').trim().toUpperCase();
+  const bankReference = String(orderData?.bankReference || '').trim();
   const paymentMethod = getValue(orderData?.paymentMethod || orderData?.orderType || 'CASH').replaceAll('_', ' ');
   const noteText = String(orderData?.note || '').trim();
   const companyName = getValue(storeName, 'ZenSys POS');
@@ -433,12 +435,13 @@ const InvoiceTemplate = ({
                 <td style={{ ...styles.paymentCell, textAlign: 'right' }}>{t('Branch:')}</td>
                 <td style={{ ...styles.paymentCell, textAlign: 'right' }}>{normalized.showBranchName ? branchName : ''}</td>
               </tr>
-              <tr>
-                <td style={styles.paymentCell}>{t('Due Amount:')}</td>
-                <td style={styles.paymentCell}>{formatCurrency(dueAmount)}</td>
-                <td style={{ ...styles.paymentCell, textAlign: 'right' }}>{t('Address:')}</td>
-                <td style={{ ...styles.paymentCell, textAlign: 'right' }}>{normalized.showAddress ? branchAddress : ''}</td>
-              </tr>
+              {normalizedPaymentMethod === 'BANK' && bankReference ? (
+                <tr>
+                  <td style={styles.paymentCell}>{t('Bank Reference')}:</td>
+                  <td style={styles.paymentCell}>{bankReference}</td>
+                  <td colSpan="2" style={styles.paymentCell} />
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>

@@ -2,6 +2,43 @@ export const APP_VERSION = "2.6.1";
 
 export const VERSION_HISTORY = [
   {
+    version: "Unreleased",
+    title: "Clearer Payment Methods at Checkout",
+    releaseDate: "",
+    summary:
+      "Checkout now records every sale's initial payment as its own ledger entry, with clear method choices and safer cash, card, bank, and credit handling.",
+    highlights: [
+      "Checkout offers four payment methods: cash, card, bank, and credit; cheque is no longer accepted at the till.",
+      "Cash shows change as you type, and overpayment is allowed only for cash.",
+      "Card and bank payments must cover the full bill, and bank payments require a reference.",
+      "Credit requires a customer, and later settlement records remain separate from the original payment.",
+      "Offline checkout still allows only fully paid cash takeaway sales.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "A dedicated initial-payment ledger records the method, applied amount, cash tendered, change, shortfall, and bank reference for every completed sale.",
+          "Sales responses now include the original sale's paid and due totals separately from later settlements.",
+          "Completed historical sales are backfilled into the initial-payment ledger, and those rows are marked as historical so old cheque and unknown payment methods are preserved rather than rewritten.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "Cash drawers count only the cash applied to the sale, not the customer's change.",
+          "Receipts use the server's change amount for online sales, while offline receipts use the locally calculated change.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "Later credit settlements no longer overwrite the record of how the sale was originally paid.",
+        ],
+      },
+    ],
+  },
+  {
     version: "2.6.1",
     title: "Supplier Management & Accurate Sales Return Flows",
     releaseDate: "2026-09-25",

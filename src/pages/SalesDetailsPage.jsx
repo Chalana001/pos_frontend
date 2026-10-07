@@ -25,7 +25,6 @@ import ConfirmDialog from "../components/common/ConfirmDialog";
 const paymentMethodOptions = [
   { value: "CASH", label: "Cash" },
   { value: "BANK", label: "Bank" },
-  { value: "CHEQUE", label: "Cheque" },
   { value: "CARD", label: "Card" },
 ];
 
@@ -57,6 +56,7 @@ const SalesDetailsPage = () => {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paymentNote, setPaymentNote] = useState("");
+  const [paymentBankReference, setPaymentBankReference] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   const [existingReturns, setExistingReturns] = useState([]);
@@ -141,6 +141,10 @@ const SalesDetailsPage = () => {
       branchPhone: sale.branchPhone,
       branchLogo: sale.branchLogo,
       createdAt: sale.createdAt,
+      // Initial-tender facts come from the server, not from a local arithmetic guess,
+      // so a reprint matches the original slip after partial payment or settlement.
+      changeAmount: sale.changeAmount,
+      bankReference: sale.bankReference,
       // What this sale did to the customer's points, as it stood then. A reprint has to
       // match the slip it copies, so the balance comes from the order, not the account.
       loyaltyPointsEarned: sale.loyaltyPointsEarned,
@@ -200,6 +204,7 @@ const SalesDetailsPage = () => {
       branchAddress: sale.branchAddress,
       branchPhone: sale.branchPhone,
       branchLogo: sale.branchLogo,
+      bankReference: sale.bankReference,
       createdAt: sale.createdAt,
       customerName: sale.customerName,
       customerPhone: sale.customerPhone,
@@ -249,6 +254,7 @@ const SalesDetailsPage = () => {
     setPaymentAmount(String(Math.max(0, Number(sale?.dueAmount || 0))));
     setPaymentMethod("CASH");
     setPaymentNote("");
+    setPaymentBankReference("");
     setShowPaymentModal(true);
   };
 
@@ -264,12 +270,17 @@ const SalesDetailsPage = () => {
       toast.error("Payment amount cannot exceed this sale due amount");
       return;
     }
+    if (paymentMethod === "BANK" && !paymentBankReference.trim()) {
+      toast.error("Bank reference is required for BANK payments");
+      return;
+    }
 
     try {
       setPaymentLoading(true);
       await salesAPI.recordPayment(sale.invoiceNo, {
         amount,
         paymentMethod,
+        bankReference: paymentMethod === "BANK" ? paymentBankReference.trim() : undefined,
         note: paymentNote || `Payment for sale ${sale.invoiceNo}`,
       });
       toast.success("Sale payment recorded");
@@ -281,6 +292,7 @@ const SalesDetailsPage = () => {
     } finally {
       setPaymentLoading(false);
     }
+
   };
 
   // 🟢 1. Open Modal
@@ -697,6 +709,23 @@ const SalesDetailsPage = () => {
               className="mb-4"
               buttonClassName="py-2 focus:ring-blue-100"
             />
+            {paymentMethod === "BANK" && (
+              <>
+                <label htmlFor="salesdetailspage-bank-reference" className="mb-1 block text-xs font-semibold uppercase text-slate-600">
+                  Bank Reference
+                </label>
+                <input
+                  id="salesdetailspage-bank-reference"
+                  type="text"
+                  value={paymentBankReference}
+                  onChange={(e) => setPaymentBankReference(e.target.value)}
+                  className="mb-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+                  placeholder="Transaction reference"
+                  maxLength={120}
+                  autoFocus
+                />
+              </>
+            )}
 
             <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Note</label>
             <textarea
