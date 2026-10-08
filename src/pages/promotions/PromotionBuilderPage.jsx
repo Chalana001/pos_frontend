@@ -14,7 +14,6 @@ import useUnsavedWork from "../../hooks/useUnsavedWork";
 import { useAppConfiguration } from "../../context/AppConfigurationContext";
 import { useBranch } from "../../context/BranchContext";
 import { DISCOUNT_TYPES } from "../../utils/constants";
-import { formatCurrency } from "../../utils/formatters";
 import ItemPriceTable from "./components/ItemPriceTable";
 import PromotionCodesPanel from "./components/PromotionCodesPanel";
 import PromotionAuditPanel from "./components/PromotionAuditPanel";
@@ -23,6 +22,9 @@ import PromotionStatusBadge from "./components/PromotionStatusBadge";
 import AccordionSection from "./components/AccordionSection";
 import MechanicPicker from "./components/MechanicPicker";
 import ScheduleComposer from "./components/ScheduleComposer";
+import ReadinessRail from "./components/ReadinessRail";
+import RailSheet from "./components/RailSheet";
+import PromotionActionBar from "./components/PromotionActionBar";
 import ScopePicker from "./components/ScopePicker";
 import CustomSelect from "../../components/common/CustomSelect";
 
@@ -121,8 +123,17 @@ const PromotionBuilderPage = () => {
   const [simulateOpen, setSimulateOpen] = useState(false);
   const [codeCount, setCodeCount] = useState(0);
   const [openSections, setOpenSections] = useState({ offer: true, coverage: true, schedule: true, limits: false, codes: false, activity: false });
+  const [railSheetOpen, setRailSheetOpen] = useState(false);
 
   const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  const openAndScroll = (key) => {
+    setOpenSections((prev) => ({ ...prev, [key]: true }));
+    setRailSheetOpen(false);
+    // Wait a frame so the section's contents exist before scrolling to them.
+    requestAnimationFrame(() => {
+      document.getElementById(`builder-${key}-section`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  };
 
   const updateForm = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -654,6 +665,95 @@ const PromotionBuilderPage = () => {
   }, [form.startAt, form.endAt, form.scope, itemLines.length, selectedTargetIds.length,
       form.segmentIds.length, priceCheck]);
 
+  // ── readiness checklist ────────────────────────────────────────────────────────────────
+  //
+  // The same facts validate() refuses a save on, restated as a visible checklist. Each entry
+  // maps to the section that owns it, so the jump button can expand and scroll there.
+
+  const readinessItems = useMemo(() => {
+    // Mirrors validate()'s mechanic rules exactly: the checklist must never say ready to a
+    // form the save button would refuse, and never block a form it would accept.
+    const value = Number(form.discountValue);
+    const buy = Number(form.buyQty);
+    const get = Number(form.getQty);
+    let valueReady;
+    let valueLabel = "Set the offer value";
+    switch (effect) {
+      case "DISCOUNT":
+      case "PROFIT_SHARE":
+        valueReady = Number.isFinite(value) && value > 0 && value <= 100;
+        break;
+      case "FIXED_PRICE":
+        valueReady = Number.isFinite(value) && value > 0;
+        break;
+      case "BUY_X_GET_Y_FREE":
+        valueReady = buy > 0 && get > 0;
+        valueLabel = "Set buy and free quantities";
+        break;
+      case "BUNDLE":
+        valueReady = buy >= 2 && Number.isFinite(value) && value > 0;
+        valueLabel = "Set the group size and bundle price";
+        break;
+      case "CHEAPEST_FREE":
+        valueReady = buy >= 2;
+        valueLabel = "Set the group size";
+        break;
+      case "TIERED":
+        valueReady = form.tiers.length > 0 && form.tiers.every((tier) => {
+          const threshold = Number(isLineScope ? tier.minQty : tier.minAmount);
+          const tierValue = Number(tier.discountValue);
+          return Number.isFinite(threshold) && threshold > 0
+            && Number.isFinite(tierValue) && tierValue > 0
+            && (tier.discountType !== DISCOUNT_TYPES.PERCENT || tierValue <= 100);
+        });
+        valueLabel = "Add at least one tier";
+        break;
+      default:
+        valueReady = true;
+    }
+    const coversReady = form.scope === "BILL" ? true
+      : form.scope === "ITEM" ? itemLines.length > 0
+      : form.scope === "CUSTOMER" ? (form.customerIds.length + form.segmentIds.length) > 0
+      : selectedTargetIds.length > 0;
+    const codesBlockActivation = needsItsFirstCode;
+
+    return [
+      { key: "name", label: form.name.trim() ? "Name" : "Name the campaign", state: form.name.trim() ? "done" : "pending", section: "offer" },
+      { key: "branch", label: activeBranchId ? "Branch chosen" : "Choose a branch", state: activeBranchId ? "done" : "error", section: "offer" },
+      { key: "dates", label: form.startAt && form.endAt && new Date(form.startAt) < new Date(form.endAt) ? "Start and end dates" : "Set start and end dates", state: form.startAt && form.endAt && new Date(form.startAt) < new Date(form.endAt) ? "done" : "pending", section: "schedule" },
+      { key: "value", label: valueReady ? "Offer value" : valueLabel, state: valueReady ? "done" : "pending", section: "offer" },
+      { key: "coverage", label: coversReady ? "What it covers" : "Choose what it covers", state: coversReady ? "done" : "pending", section: "coverage" },
+      { key: "cost", label: "No items priced below cost", state: !form.allowBelowCost && priceCheck?.belowCostCount > 0 ? "error" : "done", section: "coverage" },
+      { key: "codes", label: codesBlockActivation ? "Add a promo code before activating" : "Codes", state: codesBlockActivation ? "error" : "done", section: "codes" },
+    ];
+  }, [form.name, form.startAt, form.endAt, form.discountValue, form.buyQty, form.getQty, form.tiers, form.customerIds,
+      form.segmentIds, form.scope, form.allowBelowCost, effect, isLineScope, itemLines.length,
+      selectedTargetIds.length, activeBranchId, needsItsFirstCode, priceCheck]);
+
+  const railProps = {
+    items: readinessItems,
+    exposure: {
+      scopeLabel: form.scope === "CUSTOMER" ? "Customers" : form.scope === "CATEGORY" ? "Categories" : "Items",
+      count: summary.count,
+      avgPercent: summary.avgPercent,
+      maxLine: summary.maxLine,
+      days: summary.days,
+      budget: form.budgetAmount === "" ? null : Number(form.budgetAmount) || null,
+      belowCost: summary.belowCost,
+      deepestCut: check?.deepestDiscountPercent,
+    },
+    warnings: check?.warnings || [],
+    approvalRequired: !!check?.approvalRequired,
+    saving,
+    canSave: !branchMissing,
+    onJump: (item) => item.section && openAndScroll(item.section),
+    onSimulate: () => { if (validate()) { toast.error(validate()); return; } setSimulateOpen(true); },
+    onSaveDraft: () => save(false),
+    onActivate: () => save(true),
+  };
+
+  const railIssues = readinessItems.filter((item) => item.state !== "done").length;
+
   // --- DRAFT RECOVERY ---
   //
   // Only the typed promotion. Deliberately absent: `branches`, `categories`, `customers`,
@@ -747,7 +847,9 @@ const PromotionBuilderPage = () => {
         </p>
       )}
 
-      {/* 2. What's on offer */}
+      <div className="flex items-start gap-6">
+        <div className="min-w-0 flex-1 space-y-6 pb-24">
+          {/* 2. What's on offer */}
       <AccordionSection
         id="builder-offer-section"
         title="What's on offer?"
@@ -1261,7 +1363,7 @@ const PromotionBuilderPage = () => {
           <PromotionCodesPanel promotionId={Number(id)} onCountChange={setCodeCount} />
         </AccordionSection>
       ) : (
-        <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
+        <section id="builder-codes-section" className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
           <span className="font-bold text-slate-600">Promo codes</span>. Save the promotion first, then add
           codes here.{" "}
           {requiresCode
@@ -1269,39 +1371,28 @@ const PromotionBuilderPage = () => {
             : "With no codes it applies automatically; adding one makes it apply only when a code is presented."}
         </section>
       )}
-
-      {/* Summary */}
-      <div className="sticky bottom-4 z-20 rounded-xl border border-slate-300 bg-white/95 p-4 shadow-lg backdrop-blur">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <span className="font-bold text-slate-700">Summary</span>
-          <span className="text-slate-600">
-            {summary.count} {form.scope === "CUSTOMER" ? "customer" : form.scope === "CATEGORY" ? "category" : "item"}
-            {summary.count === 1 ? "" : "s"}
-          </span>
-          {summary.avgPercent != null && (
-            <span className="text-slate-600">avg {Number(summary.avgPercent).toFixed(1)}% off</span>
-          )}
-          {summary.maxLine != null && Number(summary.maxLine) > 0 && (
-            <span className="text-slate-600">max {formatCurrency(summary.maxLine)} off a line</span>
-          )}
-          <span className="text-slate-600">runs {summary.days} day{summary.days === 1 ? "" : "s"}</span>
-          {summary.belowCost > 0 && (
-            <span className="font-bold text-red-600">{summary.belowCost} below cost</span>
-          )}
-          {check?.approvalRequired && (
-            <span className="font-bold text-violet-700">
-              Needs approval{check.deepestDiscountPercent != null ? `, deepest cut ${Number(check.deepestDiscountPercent).toFixed(0)}%` : ""}
-            </span>
-          )}
         </div>
-        {check?.warnings?.length > 0 && (
-          <ul className="mt-2 space-y-1 text-xs text-amber-800">
-            {check.warnings.map((warning, index) => (
-              <li key={`${warning.code}-${warning.promotionId ?? index}`}>⚠ {warning.message}</li>
-            ))}
-          </ul>
-        )}
+
+        <div className="hidden w-[320px] shrink-0 lg:block">
+          <ReadinessRail {...railProps} />
+        </div>
       </div>
+
+      {railSheetOpen && (
+        <RailSheet onClose={() => setRailSheetOpen(false)}>
+          <ReadinessRail {...railProps} />
+        </RailSheet>
+      )}
+
+      <PromotionActionBar
+        issues={railIssues}
+        saving={saving}
+        canSave={!branchMissing}
+        approvalRequired={!!check?.approvalRequired}
+        onOpenSheet={() => setRailSheetOpen(true)}
+        onSaveDraft={() => save(false)}
+        onActivate={() => save(true)}
+      />
 
       <PromotionSimulateModal
         isOpen={simulateOpen}
