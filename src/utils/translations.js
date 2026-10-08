@@ -404,6 +404,24 @@ const exactTranslations = {
     'Reason': 'හේතුව',
     'Draft': 'කෙටුම්පත',
     'Awaiting approval': 'අනුමැතිය බලාපොරොත්තුවෙන්',
+    'Live now': 'දැන් ක්‍රියාත්මක',
+    'Drafts': 'කෙටුම්පත්',
+    'Budget used': 'භාවිත කළ අයවැය',
+    'Across all campaigns': 'සියලු ප්‍රවර්ධන හරහා',
+    'Last 12 months, all campaigns': 'අවසන් මාස 12, සියලු ප්‍රවර්ධන',
+    'No budget set': 'අයවැයක් සකසා නැත',
+    'Unlimited campaign budgets': 'අසීමිත ප්‍රවර්ධන අයවැය',
+    'Unavailable': 'ලබා ගත නොහැක',
+    'History did not load': 'ඉතිහාසය පූරණය වුණේ නැත',
+    'Retire': 'ඉවත් කරන්න',
+    'More campaign actions': 'තව ප්‍රවර්ධන ක්‍රියා',
+    'Clear filters': 'පෙරහන් ඉවත් කරන්න',
+    'Show': 'පෙන්වන්න',
+    'Hide': 'සඟවන්න',
+    'No limits set': 'සීමා සකසා නැත',
+    'Simulate one against last month\'s sales before it goes live.': 'සක්‍රීය කිරීමට පෙර අවසන් මාසයේ විකුණුම් සමඟ එකක් අනුකරණය කරන්න.',
+    'The submitter sees this note with the rejection.': 'ඉදිරිපත් කළ තැනැත්තාට මෙම සටහන ප්‍රතික්ෂේපය සමඟ පෙනේ.',
+    'Too deep a cut for this margin': 'මෙම ලාභ ආන්තිකයට මෙය ඉතා විශාල වට්ටමක්',
     'Save as draft': 'කෙටුම්පතක් ලෙස සුරකින්න',
     'Save & activate': 'සුරකින්න සහ සක්‍රීය කරන්න',
     'Submit for approval': 'අනුමැතියට යොමු කරන්න',
@@ -999,6 +1017,70 @@ const patternTranslations = {
     {
       regex: /^Prepared By: (.+)$/,
       translate: ([, name]) => `සකස් කළේ: ${name}`,
+    },
+    {
+      regex: /^(\d+) ending soon$/,
+      translate: ([, count]) => `${count} ක් ඉක්මනින් අවසන් වේ`,
+    },
+    {
+      regex: /^No campaigns ending soon$/,
+      translate: () => 'ඉක්මනින් අවසන් වන ප්‍රවර්ධන නැත',
+    },
+    {
+      regex: /^(\d+) item(s?)$/,
+      translate: ([, count]) => `භාණ්ඩ ${count}`,
+    },
+    {
+      regex: /^(\d+) customer(s?)$/,
+      translate: ([, count]) => `පාරිභෝගිකයින් ${count}`,
+    },
+    {
+      regex: /^(\d+) categor(y|ies)$/,
+      translate: ([, count]) => `ප්‍රවර්ග ${count}`,
+    },
+    {
+      regex: /^(\d+) redeemed$/,
+      translate: ([, count]) => `භාවිත ${count}`,
+    },
+    {
+      regex: /^(\d+) code(s?)$/,
+      translate: ([, count]) => `කේත ${count}`,
+    },
+    {
+      regex: /^ends today$/,
+      translate: () => 'අද අවසන් වේ',
+    },
+    {
+      regex: /^(\d+) day(s?) left$/,
+      translate: ([, count]) => `දින ${count} ඉතිරි`,
+    },
+    {
+      regex: /^starts today$/,
+      translate: () => 'අද ආරම්භ වේ',
+    },
+    {
+      regex: /^starts tomorrow$/,
+      translate: () => 'හෙට ආරම්භ වේ',
+    },
+    {
+      regex: /^starts in (\d+) day(s?)$/,
+      translate: ([, count]) => `දින ${count} කින් ආරම්භ වේ`,
+    },
+    {
+      regex: /^Budget used: (.+)$/,
+      translate: ([, value]) => `භාවිත කළ අයවැය: ${value}`,
+    },
+    {
+      regex: /^cap (\d+)\/(\d+)$/,
+      translate: ([, used, cap]) => `සීමාව ${used}/${cap}`,
+    },
+    {
+      regex: /^Priority (\d+)$/,
+      translate: ([, value]) => `ප්‍රමුඛතාව ${value}`,
+    },
+    {
+      regex: /^Includes: (.+)$/,
+      translate: ([, value]) => `ඇතුළත්: ${value}`,
     },
   ],
 };
