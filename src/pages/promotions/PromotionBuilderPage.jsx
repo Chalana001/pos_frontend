@@ -20,6 +20,9 @@ import PromotionCodesPanel from "./components/PromotionCodesPanel";
 import PromotionAuditPanel from "./components/PromotionAuditPanel";
 import PromotionSimulateModal from "./components/PromotionSimulateModal";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
+import AccordionSection from "./components/AccordionSection";
+import MechanicPicker from "./components/MechanicPicker";
+import ScheduleComposer from "./components/ScheduleComposer";
 import ScopePicker from "./components/ScopePicker";
 import CustomSelect from "../../components/common/CustomSelect";
 
@@ -46,11 +49,6 @@ const STACKING_MODES = [
   { key: "BEST_ONLY", label: "Best offer wins", hint: "Competes with others; the biggest discount applies" },
   { key: "STACKABLE", label: "Stacks on top", hint: "Adds to whatever else applies" },
   { key: "EXCLUSIVE", label: "Cannot be combined", hint: "If it wins, nothing else applies to the line or the bill" },
-];
-
-const DAYS = [
-  { bit: 1, label: "Mon" }, { bit: 2, label: "Tue" }, { bit: 4, label: "Wed" }, { bit: 8, label: "Thu" },
-  { bit: 16, label: "Fri" }, { bit: 32, label: "Sat" }, { bit: 64, label: "Sun" },
 ];
 
 const EMPTY_TIER = { minQty: "", minAmount: "", discountType: DISCOUNT_TYPES.PERCENT, discountValue: "" };
@@ -122,6 +120,9 @@ const PromotionBuilderPage = () => {
   const [check, setCheck] = useState(null);
   const [simulateOpen, setSimulateOpen] = useState(false);
   const [codeCount, setCodeCount] = useState(0);
+  const [openSections, setOpenSections] = useState({ offer: true, coverage: true, schedule: true, limits: false, codes: false, activity: false });
+
+  const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const updateForm = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -485,7 +486,6 @@ const PromotionBuilderPage = () => {
   }));
   const addTier = () => setForm((prev) => ({ ...prev, tiers: [...prev.tiers, { ...EMPTY_TIER }] }));
   const removeTier = (index) => setForm((prev) => ({ ...prev, tiers: prev.tiers.filter((_, i) => i !== index) }));
-  const toggleDay = (bit) => setForm((prev) => ({ ...prev, scheduleDays: prev.scheduleDays ^ bit }));
 
   // ── save ──────────────────────────────────────────────────────────────────────────────
 
@@ -704,27 +704,31 @@ const PromotionBuilderPage = () => {
         onRestore={restoreDraft}
         onDiscard={discardDraft}
       />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <Button variant="secondary" size="sm" onClick={() => navigate("/promotions")}>
             <ArrowLeft size={15} />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">
-              {isEdit ? "Edit Promotion" : "New Promotion"}
-            </h1>
-            <p className="text-sm text-slate-500">
-              One campaign can hold a different price for every item in it.
-            </p>
+          <div className="min-w-0 flex-1">
+            <input
+              value={form.name}
+              onChange={(event) => updateForm("name", event.target.value)}
+              placeholder="Campaign name"
+              aria-label="Campaign name"
+              className="w-full border-0 bg-transparent px-0 text-2xl font-black text-slate-900 outline-none placeholder:text-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:rounded-md focus-visible:px-2"
+            />
+            <p className="mt-0.5 text-xs font-medium text-slate-500">One campaign can hold a different price for every item in it.</p>
+          </div>
+          <div className={`hidden items-center gap-2 rounded-lg border px-3 py-2 text-sm md:flex ${
+            activeBranchId ? "border-slate-200 bg-slate-50 text-slate-800" : "border-amber-300 bg-amber-50 text-amber-800"
+          }`}>
+            <Building2 size={15} className="shrink-0 opacity-60" />
+            <span className="max-w-44 truncate font-medium">{activeBranchId ? activeBranchName || `Branch ${activeBranchId}` : "No branch selected"}</span>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isEdit && form.lifecycle && <PromotionStatusBadge status={form.lifecycle} />}
-          <Button
-            variant="secondary"
-            disabled={branchMissing}
-            onClick={() => { if (validate()) { toast.error(validate()); return; } setSimulateOpen(true); }}
-          >
+          <Button variant="secondary" disabled={branchMissing} onClick={() => { if (validate()) { toast.error(validate()); return; } setSimulateOpen(true); }}>
             <FlaskConical size={16} className="mr-2" /> Simulate
           </Button>
           <Button variant="secondary" onClick={() => save(false)} disabled={saving || branchMissing}>
@@ -737,74 +741,30 @@ const PromotionBuilderPage = () => {
         </div>
       </div>
 
-      {/* 1. Basics */}
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">1. Basics</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <label className="md:col-span-2">
-            <span className="text-sm font-medium text-slate-700">Name</span>
-            <input
-              value={form.name}
-              onChange={(event) => updateForm("name", event.target.value)}
-              placeholder="Christmas Sale"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-          </label>
-          <div>
-            <span className="text-sm font-medium text-slate-700">Branch</span>
-            <div
-              className={`mt-1 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-                activeBranchId
-                  ? "border-slate-200 bg-slate-50 text-slate-800"
-                  : "border-amber-300 bg-amber-50 text-amber-800"
-              }`}
-            >
-              <Building2 size={15} className="shrink-0 opacity-60" />
-              <span className="truncate font-medium">
-                {activeBranchId ? activeBranchName || `Branch ${activeBranchId}` : "No branch selected"}
-              </span>
-            </div>
-            <span className="mt-1 block text-xs text-slate-500">
-              {isEdit
-                ? "A campaign stays at the branch it was created for."
-                : "Switch branches from the selector in the top bar."}
-            </span>
-          </div>
-        </div>
+      {branchMissing && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          The top bar is on <strong>All Branches</strong>. Pick the branch this campaign runs at before building it.
+        </p>
+      )}
 
-        {branchMissing ? (
-          <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            The top bar is on <strong>All Branches</strong>. Pick the branch this campaign runs at
-            before building it. Its prices, its items and its margin check all belong to one branch.
-          </p>
-        ) : null}
-      </section>
-
-      {/* 2. Scope */}
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">2. What it applies to</h2>
+      {/* 2. What's on offer */}
+      <AccordionSection
+        id="builder-offer-section"
+        title="What's on offer?"
+        hint="Scope, mechanic and value"
+        open={openSections.offer}
+        onToggle={() => toggleSection("offer")}
+      >
         <ScopePicker value={form.scope} onChange={changeScope} />
 
         <div className="mt-5">
           <span className="text-sm font-medium text-slate-700">Offer type</span>
-          <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
-            {EFFECT_TYPES.filter((type) => !type.lineOnly || isLineScope).map((type) => {
-              const selected = effect === type.key;
-              return (
-                <button
-                  key={type.key}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => updateForm("effectType", type.key)}
-                  className={`rounded-lg border px-3 py-2 text-left ${
-                    selected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20" : "border-slate-200 bg-white hover:border-slate-300"
-                  }`}
-                >
-                  <div className={`text-sm font-bold ${selected ? "text-blue-700" : "text-slate-800"}`}>{type.label}</div>
-                  <div className="text-xs text-slate-500">{type.hint}</div>
-                </button>
-              );
-            })}
+          <div className="mt-2">
+            <MechanicPicker
+              options={EFFECT_TYPES.filter((type) => !type.lineOnly || isLineScope)}
+              value={effect}
+              onChange={(key) => updateForm("effectType", key)}
+            />
           </div>
         </div>
 
@@ -1009,12 +969,18 @@ const PromotionBuilderPage = () => {
             Used for any item you leave without its own offer price.
           </p>
         )}
-      </section>
+      </AccordionSection>
 
-      {/* 3. Targets */}
+      {/* 3. What it covers */}
       {form.scope === "ITEM" ? (
-        <section>
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">3. Items &amp; prices</h2>
+        <AccordionSection
+          id="builder-coverage-section"
+          title="What does it cover?"
+          hint="Items and their offer prices"
+          badge={`${itemLines.length} item${itemLines.length === 1 ? "" : "s"}`}
+          open={openSections.coverage}
+          onToggle={() => toggleSection("coverage")}
+        >
           <ItemPriceTable
             lines={itemLines}
             itemsById={itemsById}
@@ -1030,16 +996,20 @@ const PromotionBuilderPage = () => {
             onRoundTo99={roundTo99}
             onClearPrices={clearPrices}
           />
-        </section>
+        </AccordionSection>
       ) : form.scope === "BILL" ? (
         <section className="rounded-xl border border-blue-100 bg-blue-50 p-5 text-sm font-medium text-blue-800">
           Applies to every qualifying bill in the selected branch and date range.
         </section>
       ) : (
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">
-            3. {form.scope === "CUSTOMER" ? "Customers" : "Categories"} ({selectedTargetIds.length})
-          </h2>
+        <AccordionSection
+          id="builder-coverage-section"
+          title="What does it cover?"
+          hint={form.scope === "CUSTOMER" ? "Customers and segments" : "Categories"}
+          badge={`${selectedTargetIds.length} selected`}
+          open={openSections.coverage}
+          onToggle={() => toggleSection("coverage")}
+        >
 
           {form.scope === "CUSTOMER" && (
             <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/40 p-3">
@@ -1126,85 +1096,35 @@ const PromotionBuilderPage = () => {
               );
             })}
           </div>
-        </section>
+        </AccordionSection>
       )}
 
-      {/* 4. Schedule */}
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">4. Schedule</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <label>
-            <span className="text-sm font-medium text-slate-700">Starts</span>
-            <input
-              type="datetime-local" value={form.startAt}
-              onChange={(event) => updateForm("startAt", event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <label>
-            <span className="text-sm font-medium text-slate-700">Ends</span>
-            <input
-              type="datetime-local" value={form.endAt}
-              onChange={(event) => updateForm("endAt", event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <div className="self-end rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            Whether it runs is decided by the save button: <span className="font-semibold">Save & activate</span> switches
-            it on{check?.approvalRequired ? " after approval" : ""}; <span className="font-semibold">Save as draft</span> keeps it off.
-          </div>
-        </div>
+      {/* 4. When it runs */}
+      <AccordionSection
+        id="builder-schedule-section"
+        title="When does it run?"
+        hint="Dates, days and time window"
+        open={openSections.schedule}
+        onToggle={() => toggleSection("schedule")}
+      >
+        <ScheduleComposer
+          startAt={form.startAt}
+          endAt={form.endAt}
+          daysOfWeek={form.scheduleDays}
+          startTime={form.scheduleStart}
+          endTime={form.scheduleEnd}
+          onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+        />
+      </AccordionSection>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto_auto]">
-          <div>
-            <span className="text-sm font-medium text-slate-700">Days</span>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {DAYS.map((day) => {
-                const on = (form.scheduleDays & day.bit) !== 0;
-                return (
-                  <button
-                    key={day.bit}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => toggleDay(day.bit)}
-                    className={`rounded-md px-3 py-1.5 text-xs font-bold ${
-                      on ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    {day.label}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-1 text-xs text-slate-500">
-              {form.scheduleDays === 0 ? "Every day within the dates." : "Only on the selected days."}
-            </p>
-          </div>
-          <label>
-            <span className="text-sm font-medium text-slate-700">From time</span>
-            <input
-              type="time" value={form.scheduleStart}
-              onChange={(event) => updateForm("scheduleStart", event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <label>
-            <span className="text-sm font-medium text-slate-700">To time</span>
-            <input
-              type="time" value={form.scheduleEnd}
-              onChange={(event) => updateForm("scheduleEnd", event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-          </label>
-        </div>
-        <p className="mt-2 text-xs text-slate-500">
-          Leave the times empty for all day. An end before the start runs overnight 22:00 to 02:00.
-        </p>
-      </section>
-
-      {/* 5. Limits */}
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-slate-500">5. Limits</h2>
+      {/* 5. How far it can go */}
+      <AccordionSection
+        id="builder-limits-section"
+        title="How far can it go?"
+        hint="Caps, limits, budget and combining"
+        open={openSections.limits}
+        onToggle={() => toggleSection("limits")}
+      >
         <div className="grid gap-4 md:grid-cols-4">
           <label>
             <span className="text-sm font-medium text-slate-700">Minimum bill</span>
@@ -1315,15 +1235,34 @@ const PromotionBuilderPage = () => {
             />
           </label>
         </div>
-      </section>
+      </AccordionSection>
 
-      {isEdit && <PromotionAuditPanel promotionId={Number(id)} />}
+      {isEdit && (
+        <AccordionSection
+          id="builder-activity-section"
+          title="Activity"
+          hint="Who changed what"
+          open={openSections.activity}
+          onToggle={() => toggleSection("activity")}
+        >
+          <PromotionAuditPanel promotionId={Number(id)} className="border-0 p-0 shadow-none" />
+        </AccordionSection>
+      )}
 
       {isEdit ? (
-        <PromotionCodesPanel promotionId={Number(id)} onCountChange={setCodeCount} />
+        <AccordionSection
+          id="builder-codes-section"
+          title="Promo codes"
+          hint={`${codeCount} code${codeCount === 1 ? "" : "s"} gate this promotion`}
+          open={openSections.codes}
+          onToggle={() => toggleSection("codes")}
+          keepMounted
+        >
+          <PromotionCodesPanel promotionId={Number(id)} onCountChange={setCodeCount} />
+        </AccordionSection>
       ) : (
         <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
-          <span className="font-bold text-slate-600">6. Promo codes</span>. Save the promotion first, then add
+          <span className="font-bold text-slate-600">Promo codes</span>. Save the promotion first, then add
           codes here.{" "}
           {requiresCode
             ? "It is set to apply only with a code, so it cannot go live until it has one."
