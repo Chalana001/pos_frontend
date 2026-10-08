@@ -5,6 +5,8 @@ export const promotionsAPI = {
     params: (branchId !== undefined && branchId !== null) ? { branchId } : {},
   }),
   list: () => api.get("/promotions"),
+  // One campaign with its item targets resolved; the edit screen's single read.
+  get: (id) => api.get(`/promotions/${id}`),
   create: (payload) => api.post("/promotions", payload),
   update: (id, payload) => api.put(`/promotions/${id}`, payload),
   updateStatus: (id, active) => api.patch(`/promotions/${id}/status`, { active }),
