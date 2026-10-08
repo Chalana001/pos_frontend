@@ -1,39 +1,46 @@
-export const APP_VERSION = "2.6.1";
+export const APP_VERSION = "2.6.2";
 
 export const VERSION_HISTORY = [
   {
-    version: "Unreleased",
-    title: "Clearer Payment Methods at Checkout",
-    releaseDate: "",
+    version: "2.6.2",
+    title: "Shift Cash You Can Trust",
+    releaseDate: "2026-10-07",
     summary:
-      "Checkout now records every sale's initial payment as its own ledger entry, with clear method choices and safer cash, card, bank, and credit handling.",
+      "Closing a shift no longer changes its numbers, offline sales keep the time they were actually made, card, bank, and credit-collection activity is now visible on every shift — plus promotions that search by item, a tappable checkout, and a refreshed online cart that stays online.",
     highlights: [
-      "Checkout offers four payment methods: cash, card, bank, and credit; cheque is no longer accepted at the till.",
-      "Cash shows change as you type, and overpayment is allowed only for cash.",
-      "Card and bank payments must cover the full bill, and bank payments require a reference.",
-      "Credit requires a customer, and later settlement records remain separate from the original payment.",
-      "Offline checkout still allows only fully paid cash takeaway sales.",
+      "The live shift screen and the closed shift record now agree by construction: closing keeps the running cash ledger instead of recalculating it.",
+      "Card and bank sales no longer inflate the cash expected in the drawer — a shift's expected cash counts only cash.",
+      "Offline sales are stored at the moment they were made, not five and a half hours earlier, and land on the right business day.",
+      "Each shift shows its card and bank totals and the cash collected against old credit balances, in the live screen, close modal, and Z-report.",
+      "Checkout offers four tappable payment cards — cash, card, bank, and credit — and printing is a choice of exactly one document: the thermal receipt or the A4 invoice.",
+      "The Promotions page search now answers \"which campaigns is this item in?\" as well as \"which campaign is this?\".",
     ],
     sections: [
       {
+        label: "Fixed",
+        items: [
+          "Closing a shift used to re-derive cash sales from a time window of orders, counting card and bank payments as cash and re-adding refunded sales — the drawer figure changed the moment you closed. It now keeps the ledger the live screen was already maintaining.",
+          "Offline sales queued during an outage were timestamped in UTC and stored 5h30m early, which could place them before the shift opened and on the wrong trading day. Both the till and the server now handle the sale time correctly, and sale time stays the sale time — it is never replaced by the push time.",
+          "A plain browser refresh no longer latches an online till into offline mode: the saved cart draft now remembers whether it was drafted online or in the queue, and restoring it only trusts an explicit mode.",
+          "Later credit settlements no longer overwrite the record of how the sale was originally paid.",
+        ],
+      },
+      {
         label: "Added",
         items: [
-          "A dedicated initial-payment ledger records the method, applied amount, cash tendered, change, shortfall, and bank reference for every completed sale.",
-          "Sales responses now include the original sale's paid and due totals separately from later settlements.",
-          "Completed historical sales are backfilled into the initial-payment ledger, and those rows are marked as historical so old cheque and unknown payment methods are preserved rather than rewritten.",
+          "Card sales, bank sales, and cash collected settling old credit dues are tracked per shift and shown on the Shifts screen, the close-shift modal, and the shift Z-report.",
+          "The close summary's sales list is labelled as all tenders, with a payment-method badge on each sale, and a note that only cash sales entered the expected drawer figure.",
+          "A dedicated initial-payment ledger records the method, applied amount, cash tendered, change, shortfall, and bank reference for every completed sale, and completed historical sales are backfilled into it.",
+          "The payment method dropdown became a row of four tappable cards, and the Full Invoice checkbox became a two-card Print choice — Receipt (default) or Invoice, exactly one document printed.",
+          "Promotions search matches a target item's name or barcode, not just the promotion name, and a matched row says which items made it appear.",
         ],
       },
       {
         label: "Improved",
         items: [
-          "Cash drawers count only the cash applied to the sale, not the customer's change.",
-          "Receipts use the server's change amount for online sales, while offline receipts use the locally calculated change.",
-        ],
-      },
-      {
-        label: "Fixed",
-        items: [
-          "Later credit settlements no longer overwrite the record of how the sale was originally paid.",
+          "Cash drawers count only the cash applied to the sale, not the customer's change; offline receipts use the locally calculated change while online receipts use the server's.",
+          "The expected-cash figure is computed by one shared formula on every screen, so two screens can no longer disagree about the same shift.",
+          "The checkout panel holds its size while switching payment methods or typing an amount, and squeezed item tiles and the POS header keep their badges and labels readable instead of overlapping.",
         ],
       },
     ],
