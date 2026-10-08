@@ -72,10 +72,18 @@ const PromotionsPage = () => {
 
   useEffect(() => { loadData(); }, []);
 
+  // The search answers "which campaigns is this item in?" as well as "which campaign is this":
+  // a line matches on the promotion name or on any target item's name or barcode.
+  const matchesTerm = (promotion, term) => {
+    if (promotion.name?.toLowerCase().includes(term)) return true;
+    return (promotion.items || []).some((line) =>
+      line.name?.toLowerCase().includes(term) || line.barcode?.toLowerCase().includes(term));
+  };
+
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return promotions.filter((promotion) => {
-      if (term && !promotion.name?.toLowerCase().includes(term)) return false;
+      if (term && !matchesTerm(promotion, term)) return false;
       if (branchFilter && Number(promotion.branchId) !== Number(branchFilter)) return false;
       if (statusFilter === "ALL") return true;
       const status = promotionStatus(promotion);
@@ -83,6 +91,17 @@ const PromotionsPage = () => {
       return status === statusFilter;
     });
   }, [promotions, search, statusFilter, branchFilter]);
+
+  // When the operator searched for an item, say which ones here made the row appear, otherwise
+  // a match with no visible reason reads like a bug. Capped so a whole-catalog price list
+  // doesn't turn the cell into a wall of names.
+  const matchedItemNames = (promotion, term) => {
+    if (!term) return [];
+    return (promotion.items || [])
+      .filter((line) => line.name?.toLowerCase().includes(term) || line.barcode?.toLowerCase().includes(term))
+      .map((line) => line.name)
+      .filter(Boolean);
+  };
 
   const lifecycle = async (promotion, action) => {
     try {
@@ -206,8 +225,8 @@ const PromotionsPage = () => {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search promotions"
-            aria-label="Search promotions"
+            placeholder="Search promotions or items"
+            aria-label="Search promotions or items"
             className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm"
           />
         </div>
@@ -271,6 +290,17 @@ const PromotionsPage = () => {
                               : "All branches"}
                             {promotion.priority ? `, Priority ${promotion.priority}` : ""}
                           </div>
+                          {(() => {
+                            const matches = matchedItemNames(promotion, search.trim().toLowerCase());
+                            if (matches.length === 0) return null;
+                            const shown = matches.slice(0, 2).join(", ");
+                            const extra = matches.length > 2 ? ` +${matches.length - 2} more` : "";
+                            return (
+                              <div className="truncate text-xs text-slate-600">
+                                Includes: {shown}{extra}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </td>

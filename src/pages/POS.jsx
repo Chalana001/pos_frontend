@@ -15,9 +15,9 @@ import { pendingOrdersAPI } from "../api/pendingOrders.api";
 import { warrantyTemplatesAPI } from "../api/warrantyTemplates.api";
 import Cart from "../components/pos/Cart";
 import CustomerSelect from "../components/pos/CustomerSelect";
-import CheckoutOverlay, { salePaymentMethods } from "../components/pos/CheckoutOverlay";
+import CheckoutOverlay, { salePaymentMethods, saleDocumentTypes } from "../components/pos/CheckoutOverlay";
 import BatchSelectModal from "../components/pos/BatchSelectModal";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, localDateTimeStamp } from "../utils/formatters";
 import { ORDER_TYPES, DISCOUNT_TYPES, ItemType, SALE_MODES } from "../utils/constants";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
@@ -341,7 +341,9 @@ const POS = () => {
   const [stockOverrideDialog, setStockOverrideDialog] = useState(null);
   const [receiptSettings, setReceiptSettings] = useState(null);
   const [kotReceiptSettings, setKotReceiptSettings] = useState(null);
-  const [printFullInvoice, setPrintFullInvoice] = useState(false);
+  // What the till prints once the sale is banked. RECEIPT (thermal slip) is the
+  // default; INVOICE prints the A4 full invoice instead, not in addition.
+  const [printDocumentType, setPrintDocumentType] = useState("RECEIPT");
 
   const [diningTables, setDiningTables] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
@@ -489,7 +491,16 @@ const POS = () => {
       setBankReference(typeof draft.bankReference === "string" ? draft.bankReference : "");
       setPromotionCode(draft.promotionCode || "");
       setLoyaltyPoints(Number(draft.loyaltyPoints || 0));
-      setCartMode(draft.cartMode || CART_MODES.QUEUE);
+      // A draft saved online must not come back as queue mode: the banner, the payment
+      // methods and the checkout path all key off cartMode, and hard-defaulting it to
+      // QUEUE once online carts started being drafted too meant a refresh latched the
+      // till offline. Drafts from before cartMode was persisted (or written while
+      // offline) fall back to what the live conditions say now.
+      setCartMode(
+        draft.cartMode === CART_MODES.ONLINE || draft.cartMode === CART_MODES.QUEUE
+          ? draft.cartMode
+          : (canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE)
+      );
     } catch {
       localStorage.removeItem(cartDraftKey);
     }
@@ -520,6 +531,10 @@ const POS = () => {
         promotionCode,
         loyaltyPoints,
         saleMode,
+        // Persisted so a refresh restores the cart to the mode it was drafted in; without
+        // it the restore fell back to QUEUE and an online till read as offline after a
+        // refresh. Matches the other draft writers (slot switch, dine-in switch).
+        cartMode: activeCartMode || cartMode || (canUseServer && !isFreeLocalSalesPlan ? CART_MODES.ONLINE : CART_MODES.QUEUE),
         savedAt: new Date().toISOString(),
       })
     );
@@ -952,7 +967,7 @@ const POS = () => {
     setPaidAmount(0);
     setPaymentMethod("CASH");
     setBankReference("");
-    setPrintFullInvoice(false);
+    setPrintDocumentType("RECEIPT");
     setShowPayment(false);
     if (!preserveSaleMode) {
       setSaleMode(SALE_MODES.TAKEAWAY);
@@ -2146,6 +2161,11 @@ const POS = () => {
     setPaidAmount(nextMethod === "CREDIT" ? 0 : roundToRupee(calculateTotal()));
   };
 
+  const selectPrintDocumentType = (nextType) => {
+    if (!saleDocumentTypes.has(nextType)) return;
+    setPrintDocumentType(nextType);
+  };
+
   const handleCheckout = () => {
     if (cartItems.length === 0) return toast.error("Cart is empty");
     if (!canSell) return toast.error(canUseServer && !isFreeLocalSalesPlan ? "No active shift. Cannot checkout." : "POS queue mode is not ready.");
@@ -2315,7 +2335,7 @@ const POS = () => {
     const subTotal = cartItems.reduce((acc, item) => acc + calculateItemBaseTotal(item), 0);
     const effectiveBillDiscount = getEffectiveBillDiscount(subTotal);
     const kotItems = getKotEligibleItems(cartItems);
-    const shouldPrintFullInvoice = printFullInvoice;
+    const shouldPrintFullInvoice = printDocumentType === "INVOICE";
     const failCheckout = (message) => {
       setPaymentError(message);
       toast.error(message);
@@ -2418,7 +2438,12 @@ const POS = () => {
         // Reused, not regenerated: offlineSales is keyed by clientSaleId and
         // written with put(), so a double-click overwrites the same queued row
       const clientSaleId = checkoutIdempotencyKey;
-      const soldAt = new Date().toISOString();
+      // Local wall-clock, NOT toISOString(): that converts to UTC first, so a sale
+      // made after midnight Colombo-time carried yesterday's date, and the Z suffix
+      // on the push made the backend store the time 5h30m early (see the Jackson
+      // lenient-instant fix on the backend). An offset-less local string is what
+      // both sides of the queue contract now mean by "when this sale happened".
+      const soldAt = localDateTimeStamp();
       const storeName = user?.shopName || BRAND_NAME_UPPER;
         const branchName = effectiveBranch?.name || myShift?.branchName || `Branch ${effectiveBranchId}`;
         const branchAddress = effectiveBranch?.address || myShift?.branchAddress || "";
@@ -2653,7 +2678,12 @@ const POS = () => {
         };
       });
 
-      if (configuration.printReceiptAfterCheckout !== false && printRef.current) {
+      // One document per sale: the thermal slip, or the A4 invoice when the
+      // cashier picked it. The KOT below is a kitchen workflow, not the customer
+      // copy, and still prints on its own trigger.
+      if (configuration.printReceiptAfterCheckout !== false
+        && !shouldPrintFullInvoice
+        && printRef.current) {
         printRef.current.printOrder(printData, receiptItems, storeName, myShift, customer, receiptSettings);
       }
 
@@ -2803,9 +2833,9 @@ const POS = () => {
 
           <header className="page-section-enter flex flex-shrink-0 flex-col gap-2 border-b border-slate-100 bg-white px-2 py-2 lg:px-4 lg:py-3" style={{ animationDelay: "140ms" }}>
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-              <div className="hidden sm:block lg:block">
-                <h1 className="text-sm lg:text-xl font-bold text-slate-800">
-                  New Sale {branchLabel ? `(Branch: ${branchLabel})` : ""}
+              <div className="hidden min-w-0 sm:block lg:block">
+                <h1 className="sales-header-title text-sm lg:text-xl font-bold text-slate-800">
+                  New Sale <span className="sales-header-title-branch">{branchLabel ? `(Branch: ${branchLabel})` : ""}</span>
                 </h1>
               </div>
               <div className="flex items-center flex-1 lg:flex-none lg:w-1/3 w-full">
@@ -2827,7 +2857,7 @@ const POS = () => {
 
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               {canUseDining && (
-                <div className="inline-flex rounded-xl bg-slate-100 p-1 sales-panel-hover">
+                <div className="sales-mode-toggle inline-flex rounded-xl bg-slate-100 p-1 sales-panel-hover">
                   <button
                     type="button"
                     onClick={() => handleSaleModeChange(SALE_MODES.TAKEAWAY)}
@@ -3027,22 +3057,22 @@ const POS = () => {
                         : "cursor-not-allowed opacity-90"
                         }`}
                     >
-                      <div className="absolute top-1 right-1 lg:top-2 lg:right-2 flex flex-col items-end gap-1">
+                      <div className="absolute top-1 right-1 lg:top-2 lg:right-2 flex max-w-[calc(100%-0.75rem)] flex-col items-end gap-1">
                         {item.itemType === ItemType.SERVICE ? (
-                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-purple-50 text-purple-600 text-xs font-bold rounded border border-purple-100 uppercase">Service</span>
+                          <span className="tile-badge px-1 py-[1px] bg-purple-50 text-purple-600 text-[10px] font-bold rounded border border-purple-100 uppercase leading-4">Service</span>
                         ) : item.itemType === ItemType.RECIPE && !isOutOfStock ? (
-                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-rose-50 text-rose-600 text-xs font-bold rounded border border-rose-100 uppercase">
+                          <span className="tile-badge px-1 py-[1px] bg-rose-50 text-rose-600 text-[10px] font-semibold rounded border border-rose-100 uppercase leading-4">
                             {item.isKotEnabled ? "Recipe • KOT" : "Recipe"}
                           </span>
                         ) : isOutOfStock ? (
-                          <span className={`px-1.5 lg:px-2 py-[1px] lg:py-0.5 text-xs font-bold rounded border uppercase ${canSelectOutOfStock
+                          <span className={`tile-badge px-1 py-[1px] text-[10px] font-bold rounded border uppercase leading-4 ${canSelectOutOfStock
                             ? "border-amber-200 bg-amber-50 text-amber-600"
                             : "border-red-100 bg-red-50 text-red-500"
                             }`}>
                             {canSelectOutOfStock ? "Override" : "Out"}
                           </span>
                         ) : (
-                          <span className="px-1.5 lg:px-2 py-[1px] lg:py-0.5 bg-emerald-50 text-emerald-600 text-xs font-bold rounded border border-emerald-100 whitespace-nowrap">{stockLabel}</span>
+                          <span className="tile-badge px-1 lg:px-1.5 py-[1px] bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded border border-emerald-100 leading-4">{stockLabel}</span>
                         )}
                       </div>
 
@@ -3202,8 +3232,8 @@ const POS = () => {
         setBankReference={setBankReference}
         onPlaceOrder={handlePlaceOrder}
         loading={loading}
-        printFullInvoice={printFullInvoice}
-        setPrintFullInvoice={setPrintFullInvoice}
+        printDocumentType={printDocumentType}
+        onSelectPrintDocumentType={selectPrintDocumentType}
         isOnline={shouldUseServerForCheckout}
         customer={customer}
         errorMessage={checkoutError}

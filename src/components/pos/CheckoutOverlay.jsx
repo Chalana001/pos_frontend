@@ -1,16 +1,32 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { X, CreditCard, Printer, CheckCircle2, FileText, AlertTriangle } from "lucide-react";
+import { X, CreditCard, Banknote, Landmark, Printer, CheckCircle2, FileText, AlertTriangle, ReceiptText } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import Button from "../common/Button";
-import CustomSelect from "../common/CustomSelect";
 
 export const salePaymentMethods = new Set(["CASH", "CARD", "BANK", "CREDIT"]);
 
+// What the till prints once the sale is banked: the thermal slip, or the A4
+// invoice - exactly one of them, never both. The old tick printed the receipt
+// plus an optional second document; shops wanted the choice, not the extra paper.
+export const saleDocumentTypes = new Set(["RECEIPT", "INVOICE"]);
+
 const paymentMethodOptions = [
-  { value: "CASH", label: "Cash (F1)" },
+  { value: "CASH", label: "Cash", hint: "F1" },
   { value: "CARD", label: "Card" },
   { value: "BANK", label: "Bank" },
-  { value: "CREDIT", label: "Credit (F2)" },
+  { value: "CREDIT", label: "Credit", hint: "F2" },
+];
+
+const paymentMethodIcons = {
+  CASH: Banknote,
+  CARD: CreditCard,
+  BANK: Landmark,
+  CREDIT: CheckCircle2,
+};
+
+const documentTypeOptions = [
+  { value: "RECEIPT", label: "Receipt", icon: ReceiptText },
+  { value: "INVOICE", label: "Invoice", icon: FileText },
 ];
 
 const CheckoutOverlay = ({ 
@@ -25,8 +41,8 @@ const CheckoutOverlay = ({
   setBankReference,
   onPlaceOrder, 
   loading,
-  printFullInvoice,
-  setPrintFullInvoice,
+  printDocumentType = "RECEIPT",
+  onSelectPrintDocumentType,
   isOnline = true,
   customer = null,
   errorMessage = "",
@@ -66,13 +82,15 @@ const CheckoutOverlay = ({
   // room available, and scale by the ratio. zoom rather than transform, because
   // zoom reflows: text stays crisp and the number input keeps its caret and
   // scroll position.
-  const fitToHeight = useCallback(() => {
+  //
+  // The scale is sticky: cash is the tallest section, so re-fitting on every
+  // method click made the whole panel breathe - the total card included. The
+  // scale follows the room the window gives (allowGrow, on resize) and can only
+  // tighten when the content genuinely grows; it never loosens on a swap.
+  const fitToHeight = useCallback((allowGrow = false) => {
     const body = bodyRef.current;
     const fit = fitRef.current;
     if (!body || !fit) return;
-
-    fit.style.zoom = "1";
-    const natural = fit.scrollHeight;
 
     // clientHeight counts the body's own padding, which sits outside the element
     // being scaled, comparing against it left a constant overflow the size of
@@ -84,39 +102,52 @@ const CheckoutOverlay = ({
       - parseFloat(style.paddingTop)
       - parseFloat(style.paddingBottom)
       - 2;
-    if (!natural || available <= 0) return;
+    if (available <= 0) return;
+
+    // A zoom already applied changes what scrollHeight reports, so measure at 1
+    // and remember what was on the element before.
+    const current = fit.style.zoom === "" ? 1 : Number(fit.style.zoom);
+    fit.style.zoom = "1";
+    const natural = fit.scrollHeight;
+    if (!natural) return;
 
     // A floor, so an absurdly short window scrolls rather than shrinking the
     // total past reading distance on a till. 0.6 was measured, not guessed: the
     // tallest arrangement of this panel needs about 0.68 to fit a 560px window,
     // and an earlier 0.7 floor clipped it and left the scrollbar in place.
-    fit.style.zoom = natural > available
-      ? String(Math.max(0.6, available / natural))
-      : "1";
+    const target = natural > available
+      ? Math.max(0.6, available / natural)
+      : 1;
+    fit.style.zoom = String(allowGrow ? target : Math.min(current, target));
   }, []);
 
   useLayoutEffect(() => {
     if (!isOpen) return undefined;
 
-    fitToHeight();
+    // A fresh open starts from scale 1 so the panel is fitted, not inherited.
+    if (fitRef.current) fitRef.current.style.zoom = "1";
+    fitToHeight(true);
 
     // Watch the panel, never the element being zoomed - that would re-trigger
-    // on its own change and loop.
+    // on its own change and loop. A resize changes the room, so growth back out
+    // is allowed there; content swaps are not resizes.
     const body = bodyRef.current;
-    const observer = body ? new ResizeObserver(fitToHeight) : null;
+    const onResize = () => fitToHeight(true);
+    const observer = body ? new ResizeObserver(onResize) : null;
     if (body) observer.observe(body);
-    window.addEventListener("resize", fitToHeight);
+    window.addEventListener("resize", onResize);
 
     return () => {
       observer?.disconnect();
-      window.removeEventListener("resize", fitToHeight);
+      window.removeEventListener("resize", onResize);
     };
   }, [isOpen, fitToHeight]);
 
-  // Content swaps change the natural height, so re-fit when they do.
+  // Content swaps change the natural height, so re-fit when they do - sticky,
+  // so switching to a shorter section keeps the scale the tall one needed.
   useEffect(() => {
     fitToHeight();
-  }, [fitToHeight, paymentMethod, bankReference, errorMessage, customer, paidAmount, isOnline]);
+  }, [fitToHeight, paymentMethod, bankReference, printDocumentType, errorMessage, customer, isOnline]);
 
   if (!isOpen) return null;
 
@@ -169,14 +200,34 @@ const CheckoutOverlay = ({
 
           {/* Payment Methods */}
           <div className="sales-panel-enter" style={{ animationDelay: "180ms" }}>
-            <div>
-              <label className="mb-2 block text-sm font-black text-slate-700 uppercase">Payment Method</label>
-              <CustomSelect
-                value={paymentMethod}
-                onChange={(nextValue) => onSelectPaymentMethod?.(nextValue)}
-                options={paymentMethodOptions}
-                buttonClassName="border-2 border-slate-200 px-4 py-3 font-bold focus:ring-blue-100"
-              />
+            <label className="mb-2 block text-sm font-black text-slate-700 uppercase">Payment Method</label>
+
+            {/* Four tiles in one row everywhere; the tile itself resizes between
+                phones and desktops, the row never reflows. */}
+            <div className="checkout-methods grid" role="group" aria-label="Payment Method">
+              {paymentMethodOptions.map((option) => {
+                const MethodIcon = paymentMethodIcons[option.value];
+                const isSelected = paymentMethod === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onSelectPaymentMethod?.(option.value)}
+                    aria-pressed={isSelected}
+                    className={`checkout-method flex flex-col items-center justify-center rounded-xl border-2 font-black uppercase transition-all active:scale-[0.98] ${
+                      isSelected
+                        ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md shadow-blue-100"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-blue-300 hover:bg-blue-50/60"
+                    }`}
+                  >
+                    {MethodIcon ? <MethodIcon size={28} className={isSelected ? "text-blue-600" : "text-slate-500"} /> : null}
+                    <span className="checkout-method-label">
+                      {option.label}
+                      {option.hint ? <sup className="ml-0.5 font-bold">{`(${option.hint})`}</sup> : null}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -320,26 +371,40 @@ const CheckoutOverlay = ({
             </div>
           )}
 
-          <label className="flex items-start gap-4 rounded-xl border border-slate-200 bg-slate-50 p-[18px]">
-            <input
-              type="checkbox"
-              checked={!!printFullInvoice}
-              disabled={!isOnline}
-              onChange={(event) => setPrintFullInvoice?.(event.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <div>
-              <div className="flex items-center gap-2 text-sm font-bold uppercase text-slate-700">
-                <FileText size={16} />
-                Full Invoice
-              </div>
-              <p className="mt-1 text-sm text-slate-500">
-                {isOnline
-                  ? "Print an additional professional A4 invoice after this sale is confirmed."
-                  : "Full invoice printing is available only while online."}
-              </p>
+          {/* Print document: thermal slip or A4 invoice, exactly one. Tiles match
+              the payment-method row so both selectors read as one family. */}
+          <div className="sales-panel-enter" style={{ animationDelay: "240ms" }}>
+            <label className="mb-2 block text-sm font-black text-slate-700 uppercase">Print</label>
+            <div className="checkout-methods checkout-docs grid" role="group" aria-label="Print document type">
+              {documentTypeOptions.map((option) => {
+                const DocIcon = option.icon;
+                const isSelected = printDocumentType === option.value;
+                const disabled = option.value === "INVOICE" && !isOnline;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => !disabled && onSelectPrintDocumentType?.(option.value)}
+                    disabled={disabled}
+                    aria-pressed={isSelected}
+                    className={`checkout-method checkout-doc flex flex-col items-center justify-center rounded-xl border-2 font-black uppercase transition-all active:scale-[0.98] ${
+                      isSelected
+                        ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md shadow-blue-100"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-blue-300 hover:bg-blue-50/60"
+                    } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    {DocIcon ? <DocIcon size={28} className={isSelected ? "text-blue-600" : "text-slate-500"} /> : null}
+                    <span className="checkout-method-label">{option.label}</span>
+                  </button>
+                );
+              })}
             </div>
-          </label>
+            {!isOnline && (
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                A4 invoice printing is available only while online.
+              </p>
+            )}
+          </div>
           </div>
         </div>
 
