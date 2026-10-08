@@ -18,7 +18,7 @@ const AccordionSection = ({ id, title, hint, badge, open, onToggle, keepMounted 
         onClick={onToggle}
         className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500/30"
       >
-        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors ${open ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 ${open ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
           <ChevronDown size={16} className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
         </span>
         <span className="min-w-0 flex-1">

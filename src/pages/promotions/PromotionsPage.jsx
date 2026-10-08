@@ -164,12 +164,12 @@ const CampaignRow = ({ promotion, ctx }) => {
                   <span className="font-semibold tabular-nums text-slate-600">
                     Budget used: {formatCurrency(budget.consumed)} of {formatCurrency(budget.budget)}
                   </span>
-                <span className="h-1 overflow-hidden rounded-full bg-slate-100" aria-label="Budget used">
-                  <span
-                    className={`block h-full rounded-full ${budget.percent >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
-                    style={{ width: `${budget.percent}%` }}
-                  />
-                </span>
+                  <span className="h-1 overflow-hidden rounded-full bg-slate-100" aria-label="Budget used">
+                    <span
+                      className={`budget-bar block h-full rounded-full ${budget.percent >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
+                      style={{ width: `${budget.percent}%` }}
+                    />
+                  </span>
               </span>
             )}
             {promotion.maxTotalRedemptions != null && (
@@ -542,7 +542,7 @@ const PromotionsPage = () => {
                     <tr>
                       <td colSpan="5" className="bg-slate-50/80 px-4 py-2">
                         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
-                          <span className={`h-2 w-2 rounded-full ${group.dot}`} aria-hidden="true" />
+                          <span className={`h-2 w-2 rounded-full ${group.dot} ${group.key === "LIVE" ? "live-dot-pulse" : ""}`} aria-hidden="true" />
                           <span>{group.label}</span>
                           <span className="tabular-nums text-slate-400">({group.rows.length})</span>
                           {isEndedGroup && (

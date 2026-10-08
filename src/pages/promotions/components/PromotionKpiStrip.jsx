@@ -28,7 +28,7 @@ const KpiCard = ({ icon: Icon, label, value, sub, tone = "blue", progress, delay
     {progress != null && (
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100" aria-label="Budget used">
         <div
-          className={`h-full rounded-full transition-[width] duration-300 ease-out ${progress >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
+          className={`budget-bar h-full rounded-full ${progress >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
           style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
         />
       </div>

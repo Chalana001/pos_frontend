@@ -10,8 +10,8 @@ const STYLES = {
   SCHEDULED: { label: "Scheduled", className: "bg-blue-100 text-blue-700" },
   PAUSED: { label: "Paused", className: "bg-slate-200 text-slate-700" },
   EXHAUSTED: { label: "Limit reached", className: "bg-orange-100 text-orange-700" },
-  ENDED: { label: "Ended", className: "bg-slate-100 text-slate-500" },
-  ARCHIVED: { label: "Archived", className: "bg-slate-100 text-slate-500" },
+  ENDED: { label: "Ended", className: "bg-slate-100 text-slate-600" },
+  ARCHIVED: { label: "Archived", className: "bg-slate-100 text-slate-600" },
 };
 
 const PromotionStatusBadge = ({ promotion, status }) => {

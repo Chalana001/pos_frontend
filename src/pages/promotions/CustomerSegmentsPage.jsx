@@ -118,16 +118,29 @@ const CustomerSegmentsPage = () => {
     }
   };
 
-  /** The rules in the words an operator would use, so the table is readable without the form. */
-  const describe = (segment) => {
+  /**
+   * The rules in the words an operator would use, so the table is readable without the form.
+   * One source for the chips and the modal's live sentence; the words must not drift apart,
+   * because the sentence is the promise the chips keep.
+   */
+  const ruleTexts = (segment) => {
     const parts = [];
-    if (segment.minTotalSpend) parts.push(`spent ${formatCurrency(segment.minTotalSpend)}+`);
+    if (segment.minTotalSpend) parts.push(`Spent ${formatCurrency(segment.minTotalSpend)}+`);
     if (segment.minOrderCount) parts.push(`${segment.minOrderCount}+ orders`);
-    if (segment.minAvgOrderValue) parts.push(`avg ${formatCurrency(segment.minAvgOrderValue)}+`);
-    if (segment.purchasedWithinDays) parts.push(`bought in ${segment.purchasedWithinDays} days`);
-    if (segment.inactiveForDays) parts.push(`quiet ${segment.inactiveForDays}+ days`);
-    return parts.length ? parts.join(", ") : "-";
+    if (segment.minAvgOrderValue) parts.push(`Avg ${formatCurrency(segment.minAvgOrderValue)}+`);
+    if (segment.purchasedWithinDays) parts.push(`Bought within ${segment.purchasedWithinDays} days`);
+    if (segment.inactiveForDays) parts.push(`Quiet ${segment.inactiveForDays}+ days`);
+    return parts;
   };
+
+  const RuleChip = ({ children }) => (
+    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
+      {children}
+    </span>
+  );
+
+  const rulesToChips = (segment) =>
+    ruleTexts(segment).map((text, index) => <RuleChip key={index}>{text}</RuleChip>);
 
   return (
     <div className="page-enter space-y-6 pb-10">
@@ -184,7 +197,12 @@ const CustomerSegmentsPage = () => {
                       {segment.description && <div className="text-xs text-slate-500">{segment.description}</div>}
                       {!segment.active && <div className="text-xs text-slate-500">Inactive</div>}
                     </td>
-                    <td className="app-table-cell text-xs text-slate-600">{describe(segment)}</td>
+                    <td className="app-table-cell">
+                      <div className="flex max-w-md flex-wrap gap-1">
+                        {rulesToChips(segment)}
+                        {ruleTexts(segment).length === 0 && <span className="text-xs text-slate-400">No rules</span>}
+                      </div>
+                    </td>
                     <td className="app-table-cell text-right font-bold text-slate-800">{segment.memberCount}</td>
                     <td className="app-table-cell text-xs text-slate-500">
                       {segment.lastEvaluatedAt ? new Date(segment.lastEvaluatedAt).toLocaleString() : "Never"}
@@ -252,6 +270,11 @@ const CustomerSegmentsPage = () => {
 
             <div>
               <span className="text-sm font-bold text-slate-800">Rules</span>
+              {/* The rule in the operator's own words, live while it is being typed: what the
+                  table will say is decided here, so it should be visible here too. */}
+              <p className="mb-3 rounded-lg bg-blue-50/60 px-3 py-2 text-xs font-semibold text-blue-800">
+                {ruleTexts(editing).join(", ") || "No rules yet, every customer matches"}
+              </p>
               <p className="mb-3 text-xs text-slate-500">
                 A customer must satisfy every rule you set. Leave a box empty and it is not a rule.
               </p>

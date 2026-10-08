@@ -821,6 +821,7 @@ html[data-animation-level="off"] #root table tbody tr {
 html[data-animation-level="balanced"] .sidebar-logo-spin,
 html[data-animation-level="balanced"] .shell-kpi-glow,
 html[data-animation-level="balanced"] .dashboard-soft-glow,
+html[data-animation-level="balanced"] .live-dot-pulse,
 html[data-animation-level="balanced"] .scan-effect {
   animation: none !important;
 }
@@ -956,6 +957,34 @@ html[data-animation-level="balanced"] .custom-select-option {
   50% {
     box-shadow: 0 18px 42px rgb(37 99 235 / 0.16);
   }
+}
+
+/* The campaign board's "live now" marker: the one deliberately alive element on an otherwise
+   static list. Pulsing the dot, not the row, keeps the text still while it is being read. */
+@keyframes live-dot-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgb(16 185 129 / 0.12);
+  }
+}
+
+.live-dot-pulse {
+  animation: live-dot-pulse 2s ease-in-out infinite;
+}
+
+/* Budget bars grow in once when the data arrives. An animation, not a transition: a
+   transition re-fires on every keystroke-level re-render of the parent; this plays once,
+   on mount, and stays put. */
+@keyframes budget-bar-grow {
+  from {
+    width: 0%;
+  }
+}
+
+.budget-bar {
+  animation: budget-bar-grow 300ms ease-out 1;
 }
 
 @keyframes dashboard-icon-pop {
@@ -1566,6 +1595,8 @@ html[data-animation-level="balanced"] #root table tbody tr {
   .custom-select-menu,
   .custom-select-option,
   .sidebar-logo-spin,
+  .live-dot-pulse,
+  .budget-bar,
   #root table tbody tr {
     animation: none !important;
     opacity: 1 !important;
