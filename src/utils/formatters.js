@@ -15,6 +15,23 @@ export const getLocalDateString = (date = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
+/**
+ * A local wall-clock timestamp "YYYY-MM-DDTHH:mm:ss", with no offset suffix.
+ *
+ * This is what an entity's "when this happened locally" field must carry to the
+ * backend. `new Date().toISOString()` converts to UTC first (the same trap as
+ * getLocalDateString above) AND appends a Z, which the backend's Jackson used
+ * to store 5h30m early. The backend now converts Z-suffixed instants correctly,
+ * but a local wall-clock string is unambiguous for both sides, so the offline
+ * sale queue sends this.
+ */
+export const localDateTimeStamp = (date = new Date()) => {
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${getLocalDateString(date)}T${hours}:${minutes}:${seconds}`;
+};
+
 export const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-LK', {
     style: 'currency',

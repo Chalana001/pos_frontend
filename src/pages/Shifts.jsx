@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
 import { useShift } from "../context/ShiftContext";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
+import { calculateExpectedCash, nonCashTotals } from "../utils/shiftCash";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
@@ -50,16 +51,6 @@ const Shifts = () => {
   }, [activeShift]);
 
   const hasOpenShift = shiftsList.length > 0;
-
-  const calculateExpectedCash = (shift) => {
-    if (!shift) return 0;
-    return (
-      (shift.openingCash || 0) +
-      (shift.cashSales || 0) -
-      (shift.totalExpenses || 0) -
-      (shift.totalCashDrops || 0)
-    );
-  };
 
   const handleOpenShift = async (e) => {
     e.preventDefault();
@@ -176,7 +167,7 @@ const Shifts = () => {
               
               {/* Cards Grid */}
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-                
+
                 {/* 1. Status & Time */}
                 <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "150ms" }}>
                   <h3 className="text-xs lg:text-sm font-medium text-slate-600 mb-2">Status & Time</h3>
@@ -200,6 +191,16 @@ const Shifts = () => {
                   <p className="text-sm lg:text-xl font-bold text-emerald-600">
                     {formatCurrency((shift.cashSales || 0) - (shift.totalExpenses || 0))}
                   </p>
+                  {(() => {
+                    const { cardSales, bankSales, cashCollections } = nonCashTotals(shift);
+                    if (!cardSales && !bankSales && !cashCollections) return null;
+                    return (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Card {formatCurrency(cardSales)} · Bank {formatCurrency(bankSales)}
+                        {cashCollections ? ` · Credit collected (cash) ${formatCurrency(cashCollections)}` : ""}
+                      </p>
+                    );
+                  })()}
                 </Card>
 
                 {/* 4. Expected Drawer */}
@@ -269,6 +270,19 @@ const Shifts = () => {
                 {formatCurrency(calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift))}
               </span>
             </div>
+            {(() => {
+              const shiftForModal = isAdmin ? selectedShiftToClose : activeShift;
+              const { cardSales, bankSales, cashCollections } = nonCashTotals(shiftForModal);
+              if (!cardSales && !bankSales && !cashCollections) return null;
+              return (
+                <div className="text-xs text-slate-600 space-y-0.5 pt-1 border-t border-slate-200">
+                  <p>Not in the drawer: Card {formatCurrency(cardSales)} · Bank {formatCurrency(bankSales)}</p>
+                  {cashCollections > 0 && (
+                    <p>Cash collected on old credit dues: {formatCurrency(cashCollections)} (in the drawer, shown for reconciliation)</p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {showCloseModal && (

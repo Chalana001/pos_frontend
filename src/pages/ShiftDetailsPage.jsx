@@ -10,16 +10,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import ShiftCloseSummary from "../components/shifts/ShiftCloseSummary";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
-
-const calculateExpectedCash = (shift) => {
-  if (!shift) return 0;
-  return (
-    (shift.openingCash || 0) +
-    (shift.cashSales || 0) -
-    (shift.totalExpenses || 0) -
-    (shift.totalCashDrops || 0)
-  );
-};
+import { calculateExpectedCash, nonCashTotals } from "../utils/shiftCash";
 
 const formatCategoryLabel = (value) => value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 
@@ -213,6 +204,20 @@ const ShiftDetailsPage = () => {
           </div>
         </div>
         {(shift.openNote || shift.closeNote) && <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">{shift.openNote && <div><p className="text-xs font-bold uppercase text-slate-500">Opening note</p><p className="mt-1 text-sm text-slate-700">{shift.openNote}</p></div>}{shift.closeNote && <div><p className="text-xs font-bold uppercase text-slate-500">Closing note</p><p className="mt-1 text-sm text-slate-700">{shift.closeNote}</p></div>}</div>}
+        {(() => {
+          const { cardSales, bankSales, cashCollections } = nonCashTotals(shift);
+          if (!cardSales && !bankSales && !cashCollections) return null;
+          return (
+            <div className="mt-5 rounded-xl bg-slate-50 p-4">
+              <p className="text-xs font-bold uppercase text-slate-500">Other tender this shift</p>
+              <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-slate-700 sm:grid-cols-3">
+                <span>Card: {formatCurrency(cardSales)} (not in drawer)</span>
+                <span>Bank: {formatCurrency(bankSales)} (not in drawer)</span>
+                <span>Cash collected on credit dues: {formatCurrency(cashCollections)}</span>
+              </div>
+            </div>
+          );
+        })()}
       </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">

@@ -131,7 +131,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
   return (
     <div className="space-y-2">
       <Section
-        title="Sales"
+        title="Sales (all tenders)"
         items={sales.items}
         totalCount={sales.total}
         emptyText="No sales in this shift"
@@ -148,6 +148,9 @@ const ShiftCloseSummary = ({ shiftId }) => {
               {sale.status === "CANCELED" && (
                 <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">CANCELED</span>
               )}
+              {sale.paymentMethod && sale.paymentMethod !== "CASH" && (
+                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-700">{sale.paymentMethod}</span>
+              )}
               <span className={`font-bold ${sale.status === "CANCELED" ? "text-slate-600 line-through" : "text-slate-800"}`}>
                 {formatCurrency(sale.grandTotal || 0)}
               </span>
@@ -155,6 +158,11 @@ const ShiftCloseSummary = ({ shiftId }) => {
           </div>
         )}
       />
+
+      <p className="text-xs text-slate-500 px-1">
+        Sales lists every tender; only CASH sales entered Expected Cash above. Card and bank
+        money never touched the drawer.
+      </p>
 
       <Section
         title="Expenses"
