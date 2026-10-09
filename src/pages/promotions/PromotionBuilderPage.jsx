@@ -25,7 +25,6 @@ import ScheduleComposer from "./components/ScheduleComposer";
 import ReadinessRail from "./components/ReadinessRail";
 import RailSheet from "./components/RailSheet";
 import PromotionActionBar from "./components/PromotionActionBar";
-import ResizableSplit from "../../components/common/ResizableSplit";
 import ScopePicker from "./components/ScopePicker";
 import CustomSelect from "../../components/common/CustomSelect";
 
@@ -844,8 +843,8 @@ const PromotionBuilderPage = () => {
         </p>
       )}
 
-      <ResizableSplit storageKey="pos_split_promotions_builder" initialWidth={900} min={560} max={1280}>
-        <div className="space-y-6 pb-24">
+      <div className="flex flex-col gap-6 xl:flex-row xl:items-stretch xl:gap-6">
+        <div className="min-w-0 custom-scrollbar space-y-6 pb-24 xl:w-3/4 xl:shrink-0 xl:max-h-[calc(100vh-11rem)] xl:overflow-y-auto">
           {/* 2. What's on offer */}
       <AccordionSection
         id="builder-offer-section"
@@ -1370,10 +1369,10 @@ const PromotionBuilderPage = () => {
       )}
         </div>
 
-        <div className="hidden xl:block xl:max-w-xs">
+        <div className="hidden xl:block xl:w-1/4">
           <ReadinessRail {...railProps} />
         </div>
-      </ResizableSplit>
+      </div>
 
       {railSheetOpen && (
         <RailSheet onClose={() => setRailSheetOpen(false)}>
