@@ -1,25 +1,21 @@
 import React from "react";
 import { AlertTriangle, CheckCircle2, Circle, CircleDollarSign, CircleSlash } from "lucide-react";
 import { formatCurrency } from "../../../utils/formatters";
-import Button from "../../../components/common/Button";
-import { FlaskConical, Save } from "lucide-react";
 
 /**
  * The cockpit's instrument panel: what still blocks activation, and what the campaign will do
  * to money, always in view while the form is edited. Checklist items are jump buttons —
  * clicking a missing requirement opens and scrolls to the section that owns it.
+ *
+ * <p>Deliberately no save/simulate buttons here: the page header owns those actions. This
+ * panel is instrumentation, not a second command bar competing with it.
  */
 const ReadinessRail = ({
   items,
   exposure,
   warnings,
   approvalRequired,
-  saving,
-  canSave,
   onJump,
-  onSimulate,
-  onSaveDraft,
-  onActivate,
 }) => {
   const done = items.filter((item) => item.state === "done").length;
   const missing = items.filter((item) => item.state === "error");
@@ -110,21 +106,10 @@ const ReadinessRail = ({
         )}
       </section>
 
-      <div className="space-y-2">
-        <Button variant="secondary" className="w-full" onClick={onSimulate} disabled={!canSave}>
-          <FlaskConical size={15} className="mr-2" /> Simulate
-        </Button>
-        <Button variant="secondary" className="w-full" onClick={onSaveDraft} disabled={saving || !canSave}>
-          Save as draft
-        </Button>
-        <Button className="w-full" onClick={onActivate} disabled={saving || !canSave}>
-          <Save size={15} className="mr-2" />
-          {saving ? "Saving…" : approvalRequired ? "Save & send for approval" : "Save & activate"}
-        </Button>
-      </div>
       <p className="text-center text-[11px] font-medium text-slate-400">
         {issues.length === 0 ? "Ready to activate" : `${issues.length} item${issues.length === 1 ? "" : "s"} to finish`}
-      </p>    </aside>
+      </p>
+    </aside>
   );
 };
 

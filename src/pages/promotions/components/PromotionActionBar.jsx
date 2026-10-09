@@ -1,14 +1,13 @@
 import React from "react";
-import { ChevronUp, Save } from "lucide-react";
-import Button from "../../../components/common/Button";
+import { ChevronUp } from "lucide-react";
 
 /**
- * The rail's narrow-width stand-in: below lg the two-pane layout gives way to a single column,
- * and the save actions must not fall off-screen. The issue count opens the rail as a bottom
- * sheet so readiness detail is one tap away without competing for vertical space.
+ * The rail's narrow-width stand-in: below xl the split layout stacks, and readiness is one
+ * tap away. The save actions stay in the page header at every breakpoint, so this bar only
+ * routes to the panel — it is not a second command bar.
  */
-const PromotionActionBar = ({ issues, saving, canSave, approvalRequired, onOpenSheet, onSaveDraft, onActivate }) => (
-  <div className="sticky bottom-3 z-20 flex items-center gap-2 rounded-xl border border-slate-300 bg-white/95 p-2.5 shadow-lg backdrop-blur xl:hidden">
+const PromotionActionBar = ({ issues, onOpenSheet }) => (
+  <div className="sticky bottom-3 z-20 flex items-center justify-center rounded-xl border border-slate-300 bg-white/95 p-2 shadow-lg backdrop-blur xl:hidden">
     <button
       type="button"
       onClick={onOpenSheet}
@@ -19,13 +18,6 @@ const PromotionActionBar = ({ issues, saving, canSave, approvalRequired, onOpenS
       <ChevronUp size={14} />
       {issues === 0 ? "Ready" : `${issues} to finish`}
     </button>
-    <Button variant="secondary" size="sm" className="ml-auto" onClick={onSaveDraft} disabled={saving || !canSave}>
-      Save as draft
-    </Button>
-    <Button size="sm" onClick={onActivate} disabled={saving || !canSave}>
-      <Save size={14} className="mr-1" />
-      {saving ? "Saving…" : approvalRequired ? "Approve" : "Activate"}
-    </Button>
   </div>
 );
 

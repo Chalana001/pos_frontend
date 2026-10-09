@@ -744,12 +744,7 @@ const PromotionBuilderPage = () => {
     },
     warnings: check?.warnings || [],
     approvalRequired: !!check?.approvalRequired,
-    saving,
-    canSave: !branchMissing,
     onJump: (item) => item.section && openAndScroll(item.section),
-    onSimulate: () => { if (validate()) { toast.error(validate()); return; } setSimulateOpen(true); },
-    onSaveDraft: () => save(false),
-    onActivate: () => save(true),
   };
 
   const railIssues = readinessItems.filter((item) => item.state !== "done").length;
@@ -1375,7 +1370,7 @@ const PromotionBuilderPage = () => {
       )}
         </div>
 
-        <div className="hidden xl:block">
+        <div className="hidden xl:block xl:max-w-sm">
           <ReadinessRail {...railProps} />
         </div>
       </ResizableSplit>
@@ -1388,12 +1383,7 @@ const PromotionBuilderPage = () => {
 
       <PromotionActionBar
         issues={railIssues}
-        saving={saving}
-        canSave={!branchMissing}
-        approvalRequired={!!check?.approvalRequired}
         onOpenSheet={() => setRailSheetOpen(true)}
-        onSaveDraft={() => save(false)}
-        onActivate={() => save(true)}
       />
 
       <PromotionSimulateModal
