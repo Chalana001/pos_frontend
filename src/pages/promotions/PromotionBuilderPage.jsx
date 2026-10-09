@@ -844,7 +844,7 @@ const PromotionBuilderPage = () => {
         </p>
       )}
 
-      <ResizableSplit storageKey="pos_split_promotions_builder" initialWidth={640} min={480} max={900}>
+      <ResizableSplit storageKey="pos_split_promotions_builder" initialWidth={900} min={560} max={1280}>
         <div className="space-y-6 pb-24">
           {/* 2. What's on offer */}
       <AccordionSection
@@ -1370,7 +1370,7 @@ const PromotionBuilderPage = () => {
       )}
         </div>
 
-        <div className="hidden xl:block xl:max-w-sm">
+        <div className="hidden xl:block xl:max-w-xs">
           <ReadinessRail {...railProps} />
         </div>
       </ResizableSplit>
