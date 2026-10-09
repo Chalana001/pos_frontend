@@ -503,7 +503,11 @@ const exactTranslations = {
     'Unlimited campaign budgets': 'අසීමිත ප්‍රවර්ධන අයවැය',
     'Unavailable': 'ලබා ගත නොහැක',
     'History did not load': 'ඉතිහාසය පූරණය වුණේ නැත',
-    'Retire': 'ඉවත් කරන්න',
+    'End Campaign': 'ප්‍රවර්ධනය අවසන් කරන්න',
+    'End campaign': 'ප්‍රවර්ධනය අවසන් කරන්න',
+    'Campaign ended': 'ප්‍රවර්ධනය අවසන් කළා',
+    'Failed to end campaign': 'ප්‍රවර්ධනය අවසන් කිරීම අසාර්ථක විය',
+    'Open this campaign': 'මෙම ප්‍රවර්ධනය විවෘත කරන්න',
     'More campaign actions': 'තව ප්‍රවර්ධන ක්‍රියා',
     'Clear filters': 'පෙරහන් ඉවත් කරන්න',
     'Show': 'පෙන්වන්න',
@@ -1167,6 +1171,18 @@ const patternTranslations = {
     {
       regex: /^Priority (\d+)$/,
       translate: ([, value]) => `ප්‍රමුඛතාව ${value}`,
+    },
+    {
+      regex: /^Saved locally (.+)$/,
+      translate: ([, time]) => `දේශීයව සුරකින ලදී ${time}`,
+    },
+    {
+      regex: /^End "(.+)"\?$/,
+      translate: ([, name]) => `"${name}" අවසන් කරන්නද?`,
+    },
+    {
+      regex: /^Show 100 more \((\d+) shown\)$/,
+      translate: ([, count]) => `තව 100 පෙන්වන්න (පෙන්වා ඇත ${count})`,
     },
     {
       regex: /^Includes: (.+)$/,

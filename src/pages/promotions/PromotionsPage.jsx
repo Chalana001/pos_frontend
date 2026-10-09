@@ -1,14 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { CalendarClock, Copy, History, Pencil, Plus, Search, Settings, Tag, Trash2, Users } from "lucide-react";
+import { CalendarClock, Copy, Plus, Search, Settings, Tag, Trash2 } from "lucide-react";
 
 import { branchesAPI } from "../../api/branches.api";
 import { promotionsAPI } from "../../api/promotions.api";
 import Button from "../../components/common/Button";
 import Card from "../../components/common/Card";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
+import CustomSelect from "../../components/common/CustomSelect";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import TablePagination from "../../components/common/TablePagination";
+import useClientPagination from "../../hooks/useClientPagination";
 import { DISCOUNT_TYPES } from "../../utils/constants";
 import { formatCurrency } from "../../utils/formatters";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
@@ -19,7 +22,6 @@ import ActionOverflowMenu from "./components/ActionOverflowMenu";
 import { useAuth } from "../../context/AuthContext";
 import { hasPermission } from "../../utils/permissions";
 import { promotionStatus } from "./components/promotionStatus";
-import CustomSelect from "../../components/common/CustomSelect";
 
 /**
  * The campaign board: rows grouped by what each promotion is doing right now, so a live
@@ -107,7 +109,11 @@ const CampaignRow = ({ promotion, ctx }) => {
   const matched = matchedItemNamesFor(ctx.search, promotion);
 
   return (
-    <tr className={`border-l-4 ${isLive ? group.accent : "border-l-transparent"} ${isEnded || isDraft ? "opacity-70" : ""}`}>
+    <tr
+      className={`border-l-4 ${isLive ? group.accent : "border-l-transparent"} ${isEnded || isDraft ? "opacity-70" : ""} cursor-pointer transition-colors hover:bg-blue-50/40`}
+      onClick={() => ctx.onEdit(promotion.id)}
+      title="Open this campaign"
+    >
       <td className="app-table-cell align-top">
         <div className="min-w-0">
           <div className={`truncate font-semibold ${isEnded || isDraft ? "text-slate-500" : "text-slate-800"}`}>
@@ -190,7 +196,10 @@ const CampaignRow = ({ promotion, ctx }) => {
         {!isDraft && <PromotionStatusBadge promotion={promotion} />}
       </td>
       <td className="app-table-cell align-top">
-        <div className="flex items-center justify-end gap-2">
+        <div
+          className="flex items-center justify-end gap-2"
+          onClick={(event) => event.stopPropagation()}
+        >
           {actions.map((action) => (
             <Button
               key={action.key}
@@ -203,13 +212,12 @@ const CampaignRow = ({ promotion, ctx }) => {
               {action.label}
             </Button>
           ))}
-          <ActionOverflowMenu
-            items={[
-              { key: "edit", label: "Edit", icon: Pencil, onClick: () => ctx.onEdit(promotion.id) },
-              { key: "duplicate", label: "Duplicate", icon: Copy, onClick: () => ctx.onDuplicate(promotion) },
-              { key: "retire", label: "Retire", icon: Trash2, danger: true, onClick: () => ctx.onRetire(promotion) },
-            ]}
-          />
+            <ActionOverflowMenu
+              items={[
+                { key: "duplicate", label: "Duplicate", icon: Copy, onClick: () => ctx.onDuplicate(promotion) },
+                { key: "end", label: "End campaign", icon: Trash2, danger: true, onClick: () => ctx.onRetire(promotion) },
+              ]}
+            />
         </div>
       </td>
     </tr>
@@ -283,16 +291,30 @@ const PromotionsPage = () => {
     });
   }, [promotions, search, statusFilter, branchFilter]);
 
+  // Client-side pages over the filtered board: campaign counts are tens, not thousands,
+  // and the item-name search needs the whole list in memory anyway. The reset key means
+  // every filter change starts again at page one rather than an empty page N.
+  const {
+    page, setPage, totalPages, pageItems,
+  } = useClientPagination(visible, `${search}|${statusFilter}|${branchFilter}`, 25);
+  const [pageInput, setPageInput] = useState("1");
+  useEffect(() => setPageInput(String(page + 1)), [page]);
+
+  const goToPage = () => {
+    const parsed = Number.parseInt(pageInput, 10);
+    if (Number.isFinite(parsed)) setPage(Math.min(Math.max(parsed - 1, 0), Math.max(totalPages - 1, 0)));
+  };
+
   const grouped = useMemo(() => {
     const byGroup = new Map(GROUP_ORDER.map((group) => [group.key, []]));
-    visible.forEach((promotion) => {
+    pageItems.forEach((promotion) => {
       const groupKey = groupKeyOf(promotion);
       byGroup.get(groupKey)?.push(promotion);
     });
     return GROUP_ORDER
       .map((group) => ({ ...group, rows: byGroup.get(group.key) }))
       .filter((group) => group.rows.length > 0);
-  }, [visible]);
+  }, [pageItems]);
 
   const filterCounts = useMemo(() => {
     const counts = new Map();
@@ -361,11 +383,11 @@ const PromotionsPage = () => {
   const remove = async (promotion) => {
     try {
       await promotionsAPI.remove(promotion.id);
-      toast.success("Promotion retired");
+      toast.success("Campaign ended");
       setDeleteTarget(null);
       await loadData();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to delete promotion");
+      toast.error(error?.response?.data?.message || "Failed to end campaign");
     }
   };
 
@@ -440,12 +462,6 @@ const PromotionsPage = () => {
               <Settings size={16} />
             </Button>
           )}
-          <Button variant="secondary" onClick={() => navigate("/promotions/segments")}>
-            <Users size={16} className="mr-2" /> Segments
-          </Button>
-          <Button variant="secondary" onClick={() => navigate("/promotions/history")}>
-            <History size={16} className="mr-2" /> History
-          </Button>
           <Button onClick={() => navigate("/promotions/new")}>
             <Plus size={16} className="mr-2" /> New promotion
           </Button>
@@ -567,6 +583,18 @@ const PromotionsPage = () => {
               })}
             </table>
           </div>
+          {totalPages > 1 && (
+            <TablePagination
+              summary={`${visible.length} campaign${visible.length === 1 ? "" : "s"}`}
+              page={page}
+              pageInput={pageInput}
+              totalPages={totalPages}
+              loading={loading}
+              onPageChange={(next) => setPage(Math.min(Math.max(next, 0), totalPages - 1))}
+              onPageInputChange={setPageInput}
+              onGoToPage={goToPage}
+            />
+          )}
         </Card>
       )}
 
@@ -593,11 +621,11 @@ const PromotionsPage = () => {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => remove(deleteTarget)}
-        title="Retire Promotion"
+        title="End Campaign"
         icon={Trash2}
-        message={`Retire "${deleteTarget?.name}"?`}
+        message={`End "${deleteTarget?.name}"?`}
         detail="It stops applying straight away. Past sales keep their discount and stay in history."
-        confirmLabel="Retire"
+        confirmLabel="End campaign"
       />
     </div>
   );

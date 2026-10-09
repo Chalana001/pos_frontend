@@ -42,7 +42,7 @@ const RailSheet = ({ onClose, children }) => {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[95] lg:hidden" role="dialog" aria-modal="true" aria-label="Readiness and exposure">
+    <div className="fixed inset-0 z-[95] xl:hidden" role="dialog" aria-modal="true" aria-label="Readiness and exposure">
       <button type="button" aria-label="Close readiness panel" className="absolute inset-0 bg-slate-950/30" onClick={onClose} />
       <div
         ref={panelRef}

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { ArrowLeft, Building2, FlaskConical, Save, Search } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FlaskConical, Save, Search } from "lucide-react";
 
 import { categoriesAPI } from "../../api/categories.api";
 import { customersAPI } from "../../api/customers.api";
@@ -25,6 +25,7 @@ import ScheduleComposer from "./components/ScheduleComposer";
 import ReadinessRail from "./components/ReadinessRail";
 import RailSheet from "./components/RailSheet";
 import PromotionActionBar from "./components/PromotionActionBar";
+import ResizableSplit from "../../components/common/ResizableSplit";
 import ScopePicker from "./components/ScopePicker";
 import CustomSelect from "../../components/common/CustomSelect";
 
@@ -105,7 +106,7 @@ const PromotionBuilderPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { configuration } = useAppConfiguration();
-  const { branches, selectedBranchId } = useBranch();
+  const { selectedBranchId } = useBranch();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
   const isEdit = Boolean(id);
 
@@ -152,7 +153,6 @@ const PromotionBuilderPage = () => {
   const activeBranchId = isEdit
     ? (form.branchId ? Number(form.branchId) : null)
     : (Number(selectedBranchId) || null);
-  const activeBranchName = branches.find((branch) => Number(branch.id) === activeBranchId)?.name;
   const branchMissing = !activeBranchId;
 
   /**
@@ -775,7 +775,7 @@ const PromotionBuilderPage = () => {
 
   const isDraftDirty = baselineRef.current !== null && serializedDraft !== baselineRef.current;
 
-  const { pendingDraft, discardDraft, clearDraft } = useUnsavedWork({
+  const { pendingDraft, discardDraft, clearDraft, lastSavedAt } = useUnsavedWork({
     kind: "promotion",
     entityId: id ?? null,
     schemaVersion: PROMOTION_DRAFT_SCHEMA_VERSION,
@@ -817,13 +817,14 @@ const PromotionBuilderPage = () => {
               aria-label="Campaign name"
               className="w-full border-0 bg-transparent px-0 text-2xl font-black text-slate-900 outline-none placeholder:text-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:rounded-md focus-visible:px-2"
             />
-            <p className="mt-0.5 text-xs font-medium text-slate-500">One campaign can hold a different price for every item in it.</p>
-          </div>
-          <div className={`hidden items-center gap-2 rounded-lg border px-3 py-2 text-sm md:flex ${
-            activeBranchId ? "border-slate-200 bg-slate-50 text-slate-800" : "border-amber-300 bg-amber-50 text-amber-800"
-          }`}>
-            <Building2 size={15} className="shrink-0 opacity-60" />
-            <span className="max-w-44 truncate font-medium">{activeBranchId ? activeBranchName || `Branch ${activeBranchId}` : "No branch selected"}</span>
+            <p className="mt-0.5 text-xs font-medium text-slate-500">
+              One campaign can hold a different price for every item in it.
+              {isDraftDirty && lastSavedAt && (
+                <span className="ml-2 inline-flex items-center gap-1 font-semibold text-emerald-600">
+                  <CheckCircle2 size={11} /> Saved locally {new Date(lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -843,12 +844,13 @@ const PromotionBuilderPage = () => {
 
       {branchMissing && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          The top bar is on <strong>All Branches</strong>. Pick the branch this campaign runs at before building it.
+          The top bar is on <strong>All Branches</strong>. Choose this campaign's branch there:
+          its prices, items and margin check all belong to one branch.
         </p>
       )}
 
-      <div className="flex items-start gap-6">
-        <div className="min-w-0 flex-1 space-y-6 pb-24">
+      <ResizableSplit storageKey="pos_split_promotions_builder" initialWidth={640} min={480} max={900}>
+        <div className="space-y-6 pb-24">
           {/* 2. What's on offer */}
       <AccordionSection
         id="builder-offer-section"
@@ -1373,10 +1375,10 @@ const PromotionBuilderPage = () => {
       )}
         </div>
 
-        <div className="hidden w-[320px] shrink-0 lg:block">
+        <div className="hidden xl:block">
           <ReadinessRail {...railProps} />
         </div>
-      </div>
+      </ResizableSplit>
 
       {railSheetOpen && (
         <RailSheet onClose={() => setRailSheetOpen(false)}>

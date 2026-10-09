@@ -75,6 +75,8 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
   // 🟢 අලුතින් එකතු කළ Sales Route Detection
   const isSalesRoute = location.pathname.startsWith("/sales") || location.pathname.startsWith("/offline-sales");
 
+  const isPromotionsRoute = location.pathname.startsWith("/promotions");
+
   // ✅ dropdown open states
   // Which locked module the shop just tapped, if any.
   const [lockedModule, setLockedModule] = useState(null);
@@ -87,6 +89,7 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
   const [openExpenses, setOpenExpenses] = useState(false);
   const [openCashDrops, setOpenCashDrops] = useState(false);
   const [openSales, setOpenSales] = useState(false); // 🟢 Sales dropdown state
+  const [openPromotions, setOpenPromotions] = useState(false);
   const [openWarranties, setOpenWarranties] = useState(false);
   const [openReports, setOpenReports] = useState(false);
   const [openConfiguration, setOpenConfiguration] = useState(false);
@@ -104,6 +107,7 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
     setOpenExpenses(false);
     setOpenCashDrops(false);
     setOpenSales(false);
+    setOpenPromotions(false);
     setOpenWarranties(false);
     setOpenReports(false);
     setOpenConfiguration(false);
@@ -120,6 +124,7 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
     if (key === "expenses") setOpenExpenses(true);
     if (key === "cashdrops") setOpenCashDrops(true);
     if (key === "sales") setOpenSales(true);
+    if (key === "promotions") setOpenPromotions(true);
     if (key === "warranties") setOpenWarranties(true);
     if (key === "reports") setOpenReports(true);
     if (key === "configuration") setOpenConfiguration(true);
@@ -207,6 +212,10 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
     if (isSalesRoute) openOnlyDropdown("sales");
   }, [isSalesRoute, openOnlyDropdown]);
 
+  useEffect(() => {
+    if (isPromotionsRoute) openOnlyDropdown("promotions");
+  }, [isPromotionsRoute, openOnlyDropdown]);
+
   // 🔴 Mobile එකේදී වෙනත් පිටුවකට ගියාම Sidebar එක Auto Close වෙන්න
   useEffect(() => {
     setIsOpen(false);
@@ -239,6 +248,7 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
       icon: Tag,
       path: "/promotions",
       permission: "MANAGE_PROMOTIONS",
+      type: "dropdown-promotions",
     },
     {
       name: "Loyalty",
@@ -399,6 +409,7 @@ return (
               item.type !== "dropdown-expenses" &&
               item.type !== "dropdown-cashdrops" &&
               item.type !== "dropdown-sales" &&
+              item.type !== "dropdown-promotions" &&
               item.type !== "dropdown-reports" &&
               item.type !== "dropdown-warranties" &&
               item.type !== "dropdown-configuration"
@@ -414,7 +425,71 @@ return (
             }
 
             // =========================
-            // 🟢 Sales Dropdown 
+            // Promotions Dropdown
+            // =========================
+            if (item.type === "dropdown-promotions") {
+              if (!hasPermission(role, "MANAGE_PROMOTIONS")) return null;
+
+              return (
+                <div key={item.path} className="shell-nav-item-enter space-y-1" style={{ animationDelay: navDelay }}>
+                  <button
+                    onClick={(event) => toggleDropdown("promotions", openPromotions, event.currentTarget)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                      isPromotionsRoute ? "sidebar-group-active" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon size={20} />
+                      <span className="font-medium">{t("Promotions")}</span>
+                    </div>
+                    {openPromotions ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  </button>
+
+                  {openPromotions && (
+                    <div className="ml-8 space-y-1 border-l border-slate-800 pl-3">
+                      <NavLink
+                        to="/promotions"
+                        end
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          }`
+                        }
+                      >
+                        {t("Campaigns")}
+                      </NavLink>
+                      {hasPermission(role, "VIEW_PROMOTION_HISTORY") && (
+                        <NavLink
+                          to="/promotions/history"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Promotion History")}
+                        </NavLink>
+                      )}
+                      {hasPermission(role, "MANAGE_CUSTOMER_SEGMENTS") && (
+                        <NavLink
+                          to="/promotions/segments"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Customer Segments")}
+                        </NavLink>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // =========================
+            // 🟢 Sales Dropdown
             // =========================
             if (item.type === "dropdown-sales") {
               const canSeeSalesMenu = hasPermission(role, "VIEW_SALES"); // Permission එක check කරන්න

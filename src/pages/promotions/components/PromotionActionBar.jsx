@@ -8,7 +8,7 @@ import Button from "../../../components/common/Button";
  * sheet so readiness detail is one tap away without competing for vertical space.
  */
 const PromotionActionBar = ({ issues, saving, canSave, approvalRequired, onOpenSheet, onSaveDraft, onActivate }) => (
-  <div className="sticky bottom-3 z-20 flex items-center gap-2 rounded-xl border border-slate-300 bg-white/95 p-2.5 shadow-lg backdrop-blur lg:hidden">
+  <div className="sticky bottom-3 z-20 flex items-center gap-2 rounded-xl border border-slate-300 bg-white/95 p-2.5 shadow-lg backdrop-blur xl:hidden">
     <button
       type="button"
       onClick={onOpenSheet}

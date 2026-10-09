@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { ArrowLeft, Download, ExternalLink } from "lucide-react";
@@ -69,16 +69,32 @@ const PromotionHistoryPage = () => {
     return () => { cancelled = true; };
   }, [params]);
 
+  const [redemptionPage, setRedemptionPage] = useState(0);
+  const [moreRedemptions, setMoreRedemptions] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // A filter change during an in-flight "load more" must not land its rows: the request
+  // carries the old filters, and appending them after a fresh first page would mix periods.
+  const redemptionRequestRef = useRef(0);
+
   useEffect(() => {
     if (tab !== "REDEMPTIONS") return undefined;
+    const requestId = ++redemptionRequestRef.current;
     let cancelled = false;
     (async () => {
       try {
         setLoading(true);
+        setRedemptionPage(0);
         const query = params();
         if (filters.promotionId) query.promotionId = Number(filters.promotionId);
-        const response = await promotionsAPI.redemptions({ ...query, page: 0, size: 200 });
-        if (!cancelled) setRedemptions(Array.isArray(response.data) ? response.data : []);
+        // The endpoint pages but does not total; a full page means there is more, an
+        // under-full page means the ledger is exhausted for these filters.
+        const response = await promotionsAPI.redemptions({ ...query, page: 0, size: 100 });
+        const rows = Array.isArray(response.data) ? response.data : [];
+        if (!cancelled && redemptionRequestRef.current === requestId) {
+          setRedemptions(rows);
+          setMoreRedemptions(rows.length === 100);
+        }
       } catch (error) {
         console.error("Failed to load redemptions", error);
         toast.error(error?.response?.data?.message || "Failed to load redemptions");
@@ -88,6 +104,27 @@ const PromotionHistoryPage = () => {
     })();
     return () => { cancelled = true; };
   }, [tab, params, filters.promotionId]);
+
+  const loadMoreRedemptions = async () => {
+    const nextPage = redemptionPage + 1;
+    const requestId = ++redemptionRequestRef.current;
+    try {
+      setLoadingMore(true);
+      const query = params();
+      if (filters.promotionId) query.promotionId = Number(filters.promotionId);
+      const response = await promotionsAPI.redemptions({ ...query, page: nextPage, size: 100 });
+      const rows = Array.isArray(response.data) ? response.data : [];
+      if (redemptionRequestRef.current === requestId) {
+        setRedemptions((prev) => [...prev, ...rows]);
+        setMoreRedemptions(rows.length === 100);
+        setRedemptionPage(nextPage);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to load redemptions");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const duplicate = async (campaign) => {
     try {
@@ -286,6 +323,13 @@ const PromotionHistoryPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {tab === "REDEMPTIONS" && moreRedemptions && (
+          <div className="flex justify-center border-t border-slate-100 p-4">
+            <Button variant="secondary" size="sm" onClick={loadMoreRedemptions} disabled={loadingMore}>
+              {loadingMore ? "Loading…" : `Show 100 more (${redemptions.length} shown)`}
+            </Button>
           </div>
         )}
       </Card>

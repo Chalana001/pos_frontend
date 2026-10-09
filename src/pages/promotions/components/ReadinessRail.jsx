@@ -26,7 +26,7 @@ const ReadinessRail = ({
   const issues = items.filter((item) => item.state !== "done");
 
   return (
-    <aside aria-label="Readiness and exposure" className="sticky top-4 space-y-4">
+    <aside aria-label="Readiness and exposure" className="space-y-4">
       <section className="dashboard-rise-in rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="flex items-center justify-between text-sm font-black text-slate-800">
           Readiness
