@@ -10,6 +10,7 @@ const EMPTY = {
   approvalThresholdPercent: "",
   approvalThresholdAmount: "",
   cashierManualStacking: true,
+  allowBelowCostPromotions: false,
 };
 
 /**
@@ -35,6 +36,7 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
           approvalThresholdPercent: response.data?.approvalThresholdPercent ?? "",
           approvalThresholdAmount: response.data?.approvalThresholdAmount ?? "",
           cashierManualStacking: response.data?.cashierManualStacking !== false,
+          allowBelowCostPromotions: !!response.data?.allowBelowCostPromotions,
         });
       } catch (error) {
         toast.error(error?.response?.data?.message || "Failed to load settings");
@@ -55,6 +57,7 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
         approvalThresholdPercent: form.approvalThresholdPercent === "" ? null : Number(form.approvalThresholdPercent),
         approvalThresholdAmount: form.approvalThresholdAmount === "" ? null : Number(form.approvalThresholdAmount),
         cashierManualStacking: form.cashierManualStacking,
+        allowBelowCostPromotions: form.allowBelowCostPromotions,
       });
       toast.success("Settings saved");
       onSaved?.();
@@ -120,6 +123,20 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
               type="checkbox" checked={form.cashierManualStacking}
               onChange={(event) => update("cashierManualStacking", event.target.checked)}
               className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+          </label>
+
+          <label className="flex items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+            <span>
+              <span className="block text-sm font-bold text-slate-800">Allow promotions below cost</span>
+              <span className="block text-xs text-amber-800">
+                Lets this shop publish offers below the item's cost price. Use only for deliberate loss leaders; it applies to new and edited campaigns.
+              </span>
+            </span>
+            <input
+              type="checkbox" checked={form.allowBelowCostPromotions}
+              onChange={(event) => update("allowBelowCostPromotions", event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
             />
           </label>
 
