@@ -1,13 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { ArrowLeft, Download, ExternalLink } from "lucide-react";
 
 import { formatCurrency } from "../../utils/formatters";
-import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Button from "../../components/common/Button";
 import Card from "../../components/common/Card";
 import CustomSelect from "../../components/common/CustomSelect";
+import Skeleton from "../../components/common/Skeleton";
+import TablePagination from "../../components/common/TablePagination";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
 import PeriodPicker from "./components/PeriodPicker";
 import HistoryTotalsStrip from "./components/HistoryTotalsStrip";
@@ -34,6 +35,13 @@ const PromotionHistoryPage = () => {
     branchId: "",
     promotionId: "",
   });
+  const [search, setSearch] = useState("");
+
+  const [page, setPage] = useState(0);
+  const [pageInput, setPageInput] = useState("1");
+  const [pageSize, setPageSize] = useState(25);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   const branchNameById = useMemo(() => {
     const map = new Map();
@@ -41,89 +49,88 @@ const PromotionHistoryPage = () => {
     return map;
   }, [branches]);
 
-  const params = useCallback(() => {
+  const params = useMemo(() => {
     const query = { from: filters.from, to: filters.to };
     if (filters.branchId) query.branchId = Number(filters.branchId);
     return query;
   }, [filters]);
 
+  const changeFilters = (next) => {
+    setFilters((prev) => ({ ...prev, ...next }));
+    setPage(0);
+  };
+
+  // The campaign list also feeds the redemption tab's promotion dropdown, so it is loaded
+  // with search and branch applied but a bounded page, not as an unbounded reference list.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        setLoading(true);
         const [historyRes, branchRes] = await Promise.all([
-          promotionsAPI.history(params()),
+          promotionsAPI.history({
+            ...params,
+            page,
+            size: pageSize,
+            search: search.trim() || undefined,
+          }),
           branchesAPI.getAll(true),
         ]);
         if (cancelled) return;
-        setCampaigns(Array.isArray(historyRes.data) ? historyRes.data : []);
+        setCampaigns(Array.isArray(historyRes.data?.items) ? historyRes.data.items : []);
+        setTotalPages(Number(historyRes.data?.totalPages || 0));
+        setTotalElements(Number(historyRes.data?.totalElements || 0));
         setBranches(Array.isArray(branchRes.data) ? branchRes.data : []);
       } catch (error) {
         console.error("Failed to load promotion history", error);
         toast.error(error?.response?.data?.message || "Failed to load history");
+        setCampaigns([]);
+        setTotalPages(0);
+        setTotalElements(0);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [params]);
-
-  const [redemptionPage, setRedemptionPage] = useState(0);
-  const [moreRedemptions, setMoreRedemptions] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-
-  // A filter change during an in-flight "load more" must not land its rows: the request
-  // carries the old filters, and appending them after a fresh first page would mix periods.
-  const redemptionRequestRef = useRef(0);
+  }, [params, page, pageSize, search]);
 
   useEffect(() => {
     if (tab !== "REDEMPTIONS") return undefined;
-    const requestId = ++redemptionRequestRef.current;
     let cancelled = false;
     (async () => {
       try {
         setLoading(true);
-        setRedemptionPage(0);
-        const query = params();
+        const query = { ...params, page, size: 100 };
         if (filters.promotionId) query.promotionId = Number(filters.promotionId);
-        // The endpoint pages but does not total; a full page means there is more, an
-        // under-full page means the ledger is exhausted for these filters.
-        const response = await promotionsAPI.redemptions({ ...query, page: 0, size: 100 });
-        const rows = Array.isArray(response.data) ? response.data : [];
-        if (!cancelled && redemptionRequestRef.current === requestId) {
-          setRedemptions(rows);
-          setMoreRedemptions(rows.length === 100);
-        }
+        const response = await promotionsAPI.redemptions(query);
+        if (cancelled) return;
+        setRedemptions(Array.isArray(response.data?.items) ? response.data.items : []);
+        setTotalPages(Number(response.data?.totalPages || 0));
+        setTotalElements(Number(response.data?.totalElements || 0));
       } catch (error) {
         console.error("Failed to load redemptions", error);
         toast.error(error?.response?.data?.message || "Failed to load redemptions");
+        setRedemptions([]);
+        setTotalPages(0);
+        setTotalElements(0);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [tab, params, filters.promotionId]);
+  }, [tab, params, filters.promotionId, page]);
 
-  const loadMoreRedemptions = async () => {
-    const nextPage = redemptionPage + 1;
-    const requestId = ++redemptionRequestRef.current;
-    try {
-      setLoadingMore(true);
-      const query = params();
-      if (filters.promotionId) query.promotionId = Number(filters.promotionId);
-      const response = await promotionsAPI.redemptions({ ...query, page: nextPage, size: 100 });
-      const rows = Array.isArray(response.data) ? response.data : [];
-      if (redemptionRequestRef.current === requestId) {
-        setRedemptions((prev) => [...prev, ...rows]);
-        setMoreRedemptions(rows.length === 100);
-        setRedemptionPage(nextPage);
-      }
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load redemptions");
-    } finally {
-      setLoadingMore(false);
+  useEffect(() => {
+    setPageInput(String(page + 1));
+  }, [page]);
+
+  const goToPage = () => {
+    const parsed = Number.parseInt(pageInput, 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(String(page + 1));
+      return;
     }
+    const maxPage = totalPages > 0 ? totalPages : 1;
+    setPage(Math.min(Math.max(parsed, 1), maxPage) - 1);
   };
 
   const duplicate = async (campaign) => {
@@ -153,11 +160,13 @@ const PromotionHistoryPage = () => {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `promotion-redemptions-${filters.from}-to-${filters.to}.csv`;
+    anchor.download = `promotion-redemptions-${filters.from}-to-${filters.to}-page-${page + 1}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
 
+  // Page-level totals: the strip is what this page has in hand, which is exactly what a
+  // manager scans before paging deeper. Whole-period totals are a report question.
   const totals = useMemo(() => {
     if (tab === "REDEMPTIONS") {
       return redemptions.reduce((acc, row) => ({
@@ -191,55 +200,92 @@ const PromotionHistoryPage = () => {
         </div>
         {tab === "REDEMPTIONS" && (
           <Button variant="secondary" onClick={exportRedemptions} disabled={!redemptions.length}>
-            <Download size={16} className="mr-2" /> Export CSV
+            <Download size={16} className="mr-2" /> Export page CSV
           </Button>
         )}
       </div>
 
       <HistoryTotalsStrip totals={totals} loading={loading} />
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1">
-          {[{ key: "CAMPAIGNS", label: "Campaigns" }, { key: "REDEMPTIONS", label: "Redemptions" }].map((entry) => (
-            <button
-              key={entry.key}
-              type="button"
-              onClick={() => setTab(entry.key)}
-              aria-pressed={tab === entry.key}
-              className={`rounded-md px-4 py-1.5 text-xs font-bold ${
-                tab === entry.key ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {entry.label}
-            </button>
-          ))}
-        </div>
-        <PeriodPicker
-          from={filters.from}
-          to={filters.to}
-          onChange={({ from, to }) => setFilters((prev) => ({ ...prev, from, to }))}
-        />
-        <CustomSelect
-          value={filters.branchId}
-          onChange={(v) => setFilters((prev) => ({ ...prev, branchId: v }))}
-          options={[{ id: "", name: "All branches" }, ...branches]}
-          className="w-48"
-        />
-        {tab === "REDEMPTIONS" && (
-          <CustomSelect
-            value={filters.promotionId}
-            onChange={(v) => setFilters((prev) => ({ ...prev, promotionId: v }))}
-            options={[{ id: "", name: "All promotions" }, ...campaigns]}
-            className="w-56"
-          />
-        )}
-      </div>
+      <Card className="sales-panel-enter sales-panel-hover p-4">
+        <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
+          <div className="flex col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-4">
+            <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1">
+              {[{ key: "CAMPAIGNS", label: "Campaigns" }, { key: "REDEMPTIONS", label: "Redemptions" }].map((entry) => (
+                <button
+                  key={entry.key}
+                  type="button"
+                  onClick={() => { setTab(entry.key); setPage(0); setPageSize(entry.key === "REDEMPTIONS" ? 100 : 25); }}
+                  aria-pressed={tab === entry.key}
+                  className={`rounded-md px-4 py-1.5 text-xs font-bold ${
+                    tab === entry.key ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {entry.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <Card className="overflow-hidden p-0">
-        {loading ? (
-          <div className="py-12"><LoadingSpinner size="lg" text="Loading…" /></div>
-        ) : tab === "CAMPAIGNS" ? (
-          <div className="app-table-wrap">
+          {tab === "CAMPAIGNS" ? (
+            <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-3">
+              <input
+                aria-label="Search campaign history"
+                type="text"
+                placeholder="Search campaigns..."
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={search}
+                onChange={(event) => { setSearch(event.target.value); setPage(0); }}
+              />
+            </div>
+          ) : (
+            <div className="col-span-1 xl:col-span-2">
+              <CustomSelect
+                value={filters.promotionId}
+                onChange={(value) => changeFilters({ promotionId: value })}
+                options={[{ id: "", name: "All promotions" }, ...campaigns]}
+                buttonClassName="h-10 rounded-lg"
+              />
+            </div>
+          )}
+
+          <div className="col-span-1 xl:col-span-3">
+            <PeriodPicker
+              from={filters.from}
+              to={filters.to}
+              onChange={({ from, to }) => changeFilters({ from, to })}
+            />
+          </div>
+
+          <div className="col-span-1 xl:col-span-2">
+            <CustomSelect
+              value={filters.branchId}
+              onChange={(value) => changeFilters({ branchId: value })}
+              options={[{ id: "", name: "All branches" }, ...branches]}
+              buttonClassName="h-10 rounded-lg"
+            />
+          </div>
+
+          <div className="col-span-1 xl:col-span-1">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setSearch("");
+                setFilters({ from: filters.from, to: filters.to, branchId: "", promotionId: "" });
+                setPage(0);
+              }}
+              className="h-10 w-full px-4 text-sm"
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="sales-panel-enter p-0 overflow-hidden border border-slate-200">
+        <div className="app-table-wrap w-full">
+          {tab === "CAMPAIGNS" ? (
             <table className="app-table min-w-[900px]">
               <thead className="app-table-head">
                 <tr>
@@ -254,7 +300,15 @@ const PromotionHistoryPage = () => {
                 </tr>
               </thead>
               <tbody className="app-table-body">
-                {campaigns.length === 0 ? (
+                {loading ? (
+                  Array.from({ length: 8 }).map((_, row) => (
+                    <tr key={`skeleton-${row}`}>
+                      {Array.from({ length: 8 }).map((_, cell) => (
+                        <td key={cell} className="app-table-cell"><Skeleton className="h-3.5 w-full" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : campaigns.length === 0 ? (
                   <tr><td colSpan="8" className="app-table-empty">No campaigns in this period.</td></tr>
                 ) : campaigns.map((campaign) => (
                   <tr
@@ -292,9 +346,7 @@ const PromotionHistoryPage = () => {
                 ))}
               </tbody>
             </table>
-          </div>
-        ) : (
-          <div className="app-table-wrap">
+          ) : (
             <table className="app-table min-w-[960px]">
               <thead className="app-table-head">
                 <tr>
@@ -308,7 +360,15 @@ const PromotionHistoryPage = () => {
                 </tr>
               </thead>
               <tbody className="app-table-body">
-                {redemptions.length === 0 ? (
+                {loading ? (
+                  Array.from({ length: 8 }).map((_, row) => (
+                    <tr key={`skeleton-${row}`}>
+                      {Array.from({ length: 7 }).map((_, cell) => (
+                        <td key={cell} className="app-table-cell"><Skeleton className="h-3.5 w-full" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : redemptions.length === 0 ? (
                   <tr><td colSpan="7" className="app-table-empty">No promotion was applied in this period.</td></tr>
                 ) : redemptions.map((row, index) => (
                   <tr key={`${row.orderId}-${row.level}-${row.itemId ?? index}`}>
@@ -323,15 +383,19 @@ const PromotionHistoryPage = () => {
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-        {tab === "REDEMPTIONS" && moreRedemptions && (
-          <div className="flex justify-center border-t border-slate-100 p-4">
-            <Button variant="secondary" size="sm" onClick={loadMoreRedemptions} disabled={loadingMore}>
-              {loadingMore ? "Loading…" : `Show 100 more (${redemptions.length} shown)`}
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
+
+        <TablePagination
+          summary={`Showing ${(tab === "CAMPAIGNS" ? campaigns : redemptions).length} of ${totalElements} records. Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          page={page}
+          pageInput={pageInput}
+          totalPages={totalPages}
+          loading={loading}
+          onPageChange={setPage}
+          onPageInputChange={setPageInput}
+          onGoToPage={goToPage}
+        />
       </Card>
 
       <CampaignDetailDrawer
