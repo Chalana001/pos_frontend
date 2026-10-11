@@ -323,11 +323,11 @@ const Cart = ({
                 style={{ animationDelay: `${220 + index * 38}ms` }}
                 className="sales-cart-item sales-panel-hover relative group overflow-visible rounded-xl border border-slate-100 bg-white shadow-sm hover:border-blue-200 transition-all"
               >
-                <div className="flex items-center gap-2 p-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 p-2">
                   {/* The minimum is what makes the controls wrap before the name does: without
                       it the controls take their full single-row width at any cart size and the
                       name is squeezed to nothing instead. */}
-                  <div className="min-w-[168px] flex-1">
+                  <div className="min-w-[168px] flex-1 basis-[168px]">
                     {/* Both names on one line, the second wrapping under the first only when
                         it has to. They used to be two blocks, so every row paid for a second
                         line whether the alt name needed one or not. */}
@@ -387,7 +387,7 @@ const Cart = ({
                         {formatCurrency(calculateItemTotal(item))}
                       </span>
                       {(item.effectiveDiscountValue ?? item.discountValue) > 0 && (
-                        <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
+                        <span className="shrink-0 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
                           {(item.effectiveDiscountType || item.discountType) === DISCOUNT_TYPES.PERCENT
                             ? `-${item.effectiveDiscountValue ?? item.discountValue}%`
                             // A fixed figure is shown for the whole line. The engine's
@@ -442,9 +442,12 @@ const Cart = ({
                     ) : null}
                   </div>
 
-                  {/* Keep quantity and line actions compact so more of the cart stays visible. */}
-                  <div className="flex flex-wrap items-center justify-end gap-1.5">
-                    <div className="flex items-center gap-1">
+                  {/* Keep quantity and line actions compact so more of the cart stays visible.
+                      They stay whole, never shrinking or splitting: when the cart is too
+                      narrow for them beside the prices, the whole group drops to its own row
+                      instead of crushing into the discount and offer chips. */}
+                  <div className="flex flex-nowrap items-center justify-end gap-1.5">
+                    <div className="flex shrink-0 flex-nowrap items-center gap-1">
                       <div className="flex items-center rounded-lg bg-slate-100 p-0.5">
                         <button
                           onClick={() => onUpdateQty(index, Math.max(0, item.qty - stepValue))}
@@ -500,7 +503,7 @@ const Cart = ({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex shrink-0 flex-nowrap items-center gap-1">
                       <button aria-label="Add Discount"
                         onClick={() => setEditingIndex(editingIndex === index ? null : index)}
                         className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-blue-600'}`}
