@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { CalendarClock, Copy, History, Plus, Search, Settings, Trash2 } from "lucide-react";
+import { CalendarClock, Copy, Plus, Search, Settings, Trash2 } from "lucide-react";
 
 import { branchesAPI } from "../../api/branches.api";
 import { promotionsAPI } from "../../api/promotions.api";
@@ -24,18 +24,10 @@ import { promotionStatus } from "./components/promotionStatus";
 
 /**
  * The campaign board: one flat, paginated table of the work still in play. Ended and
- * archived campaigns are deliberately absent - their numbers live in Promotion History,
+ * archived campaigns are deliberately absent - their numbers live in Campaign History,
  * which is the page that answers "what did this campaign do". The KPI strip reads the same
  * list response plus one history call for the discount total; no new API.
  */
-const GROUP_ORDER = [
-  { key: "LIVE", label: "Live now", accent: "border-l-emerald-500", dot: "bg-emerald-500" },
-  { key: "SCHEDULED", label: "Scheduled", accent: "border-l-blue-500", dot: "bg-blue-500" },
-  { key: "PENDING_APPROVAL", label: "Awaiting approval", accent: "border-l-violet-500", dot: "bg-violet-500" },
-  { key: "EXHAUSTED", label: "Limit reached", accent: "border-l-orange-500", dot: "bg-orange-500" },
-  { key: "PAUSED", label: "Paused", accent: "border-l-slate-400", dot: "bg-slate-400" },
-  { key: "DRAFT", label: "Drafts", accent: "border-l-slate-300", dot: "bg-slate-300" },
-];
 
 const STATUS_FILTERS = [
   { value: "ALL", label: "All Statuses" },
@@ -46,8 +38,8 @@ const STATUS_FILTERS = [
   { value: "PAUSED", label: "Paused" },
 ];
 
-/** The live accent a row carries: derived status, not the stored one. */
-const groupKeyOf = (promotion) => {
+/** Derived state for time emphasis: "ending soon" is still live, not its own state. */
+const stateKeyOf = (promotion) => {
   const status = promotionStatus(promotion);
   if (status === "ENDING_SOON") return "LIVE";
   return status;
@@ -88,21 +80,20 @@ const matchedItemNamesFor = (term, promotion) => {
     .filter(Boolean);
 };
 
-/** A draft has nothing to report on: no accent, no badge, one muted line. */
+/** A draft has nothing to report on: no badge, one muted line. */
 const CampaignRow = ({ promotion, ctx }) => {
-  const groupKey = groupKeyOf(promotion);
-  const group = GROUP_ORDER.find((entry) => entry.key === groupKey) || GROUP_ORDER[5];
+  const stateKey = stateKeyOf(promotion);
   const actions = ctx.lifecycleActions(promotion);
   const budget = ctx.budgetState(promotion);
   const left = daysLeft(promotion);
   const until = daysUntil(promotion);
-  const isLive = groupKey === "LIVE";
-  const isDraft = groupKey === "DRAFT";
+  const isLive = stateKey === "LIVE";
+  const isDraft = stateKey === "DRAFT";
   const matched = matchedItemNamesFor(ctx.search, promotion);
 
   return (
     <tr
-      className={`border-l-4 ${isLive ? group.accent : "border-l-transparent"} ${isDraft ? "opacity-70" : ""} cursor-pointer transition-colors hover:bg-blue-50/40`}
+      className={`${isDraft ? "opacity-70" : ""} cursor-pointer transition-colors hover:bg-blue-50/40`}
       onClick={() => ctx.onEdit(promotion.id)}
       title="Open this campaign"
     >
@@ -145,7 +136,7 @@ const CampaignRow = ({ promotion, ctx }) => {
         {isLive && left != null && left <= 7 && (
           <div className="mt-1 font-bold text-amber-600">{timeUntilText(left)}</div>
         )}
-        {groupKey === "SCHEDULED" && until != null && (
+        {stateKey === "SCHEDULED" && until != null && (
           <div className="mt-1 font-semibold text-blue-600">{startsText(until)}</div>
         )}
       </td>
@@ -273,7 +264,7 @@ const PromotionsPage = () => {
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return promotions.filter((promotion) => {
-      // The board is the working set. Ended and archived campaigns live in Promotion
+      // The board is the working set. Ended and archived campaigns live in Campaign
       // History, where their numbers are, not at the foot of every page of live work.
       const status = promotionStatus(promotion);
       if (status === "ENDED" || status === "ARCHIVED") return false;
@@ -447,9 +438,6 @@ const PromotionsPage = () => {
               <Settings size={16} />
             </Button>
           )}
-          <Button variant="secondary" onClick={() => navigate("/promotions/history")}>
-            <History size={16} className="mr-2" /> History
-          </Button>
           <Button onClick={() => navigate("/promotions/new")}>
             <Plus size={16} className="mr-2" /> New promotion
           </Button>
@@ -512,19 +500,6 @@ const PromotionsPage = () => {
               Clear
             </Button>
           </div>
-
-          <div className="col-span-full xl:col-span-3">
-            <p className="h-10 truncate text-xs font-semibold leading-10 text-slate-500">
-              Ended campaigns live in{" "}
-              <button
-                type="button"
-                onClick={() => navigate("/promotions/history")}
-                className="font-bold text-blue-600 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              >
-                Promotion History
-              </button>
-            </p>
-          </div>
         </div>
       </Card>
 
@@ -554,7 +529,7 @@ const PromotionsPage = () => {
                   <td colSpan="5" className="app-table-empty">
                     {promotions.length === 0
                       ? "No promotions yet. Create one to get started."
-                      : "No campaigns match these filters. Ended campaigns are in Promotion History."}
+                      : "No campaigns match these filters."}
                   </td>
                 </tr>
               ) : pageItems.map((promotion) => (
