@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { CalendarClock, Copy, Plus, Search, Settings, Tag, Trash2 } from "lucide-react";
+import { CalendarClock, Copy, History, Plus, Search, Settings, Trash2 } from "lucide-react";
 
 import { branchesAPI } from "../../api/branches.api";
 import { promotionsAPI } from "../../api/promotions.api";
@@ -9,7 +9,7 @@ import Button from "../../components/common/Button";
 import Card from "../../components/common/Card";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import CustomSelect from "../../components/common/CustomSelect";
-import LoadingSpinner from "../../components/common/LoadingSpinner";
+import Skeleton from "../../components/common/Skeleton";
 import TablePagination from "../../components/common/TablePagination";
 import useClientPagination from "../../hooks/useClientPagination";
 import { DISCOUNT_TYPES } from "../../utils/constants";
@@ -17,15 +17,15 @@ import { formatCurrency } from "../../utils/formatters";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
 import PromotionSettingsModal from "./components/PromotionSettingsModal";
 import PromotionKpiStrip from "./components/PromotionKpiStrip";
-import StatusFilterGroup from "./components/StatusFilterGroup";
 import ActionOverflowMenu from "./components/ActionOverflowMenu";
 import { useAuth } from "../../context/AuthContext";
 import { hasPermission } from "../../utils/permissions";
 import { promotionStatus } from "./components/promotionStatus";
 
 /**
- * The campaign board: rows grouped by what each promotion is doing right now, so a live
- * campaign and a draft never carry the same weight on screen. The KPI strip reads the same
+ * The campaign board: one flat, paginated table of the work still in play. Ended and
+ * archived campaigns are deliberately absent - their numbers live in Promotion History,
+ * which is the page that answers "what did this campaign do". The KPI strip reads the same
  * list response plus one history call for the discount total; no new API.
  */
 const GROUP_ORDER = [
@@ -35,28 +35,21 @@ const GROUP_ORDER = [
   { key: "EXHAUSTED", label: "Limit reached", accent: "border-l-orange-500", dot: "bg-orange-500" },
   { key: "PAUSED", label: "Paused", accent: "border-l-slate-400", dot: "bg-slate-400" },
   { key: "DRAFT", label: "Drafts", accent: "border-l-slate-300", dot: "bg-slate-300" },
-  { key: "ENDED", label: "Ended", accent: "border-l-slate-200", dot: "bg-slate-200" },
 ];
 
 const STATUS_FILTERS = [
-  { key: "ALL", label: "All" },
-  { key: "LIVE", label: "Live" },
-  { key: "SCHEDULED", label: "Scheduled" },
-  { key: "PENDING_APPROVAL", label: "Awaiting approval" },
-  { key: "DRAFT", label: "Drafts" },
-  { key: "PAUSED", label: "Paused" },
-  { key: "ENDED", label: "Ended" },
+  { value: "ALL", label: "All Statuses" },
+  { value: "LIVE", label: "Live" },
+  { value: "SCHEDULED", label: "Scheduled" },
+  { value: "PENDING_APPROVAL", label: "Awaiting approval" },
+  { value: "DRAFT", label: "Drafts" },
+  { value: "PAUSED", label: "Paused" },
 ];
 
-/**
- * The group a row belongs in: derived status folded onto the axis the board is grouped by.
- * "Ending soon" is a live campaign with an amber date emphasis, not its own group, and
- * archived rows sit with ended ones.
- */
+/** The live accent a row carries: derived status, not the stored one. */
 const groupKeyOf = (promotion) => {
   const status = promotionStatus(promotion);
   if (status === "ENDING_SOON") return "LIVE";
-  if (status === "ARCHIVED") return "ENDED";
   return status;
 };
 
@@ -104,19 +97,18 @@ const CampaignRow = ({ promotion, ctx }) => {
   const left = daysLeft(promotion);
   const until = daysUntil(promotion);
   const isLive = groupKey === "LIVE";
-  const isEnded = groupKey === "ENDED";
   const isDraft = groupKey === "DRAFT";
   const matched = matchedItemNamesFor(ctx.search, promotion);
 
   return (
     <tr
-      className={`border-l-4 ${isLive ? group.accent : "border-l-transparent"} ${isEnded || isDraft ? "opacity-70" : ""} cursor-pointer transition-colors hover:bg-blue-50/40`}
+      className={`border-l-4 ${isLive ? group.accent : "border-l-transparent"} ${isDraft ? "opacity-70" : ""} cursor-pointer transition-colors hover:bg-blue-50/40`}
       onClick={() => ctx.onEdit(promotion.id)}
       title="Open this campaign"
     >
       <td className="app-table-cell align-top">
         <div className="min-w-0">
-          <div className={`truncate font-semibold ${isEnded || isDraft ? "text-slate-500" : "text-slate-800"}`}>
+          <div className={`truncate font-semibold ${isDraft ? "text-slate-500" : "text-slate-800"}`}>
             {promotion.name}
           </div>
           {!isDraft && (
@@ -239,7 +231,6 @@ const PromotionsPage = () => {
   const [branchFilter, setBranchFilter] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
-  const [endedExpanded, setEndedExpanded] = useState(false);
 
   const branchNameById = useMemo(() => {
     const map = new Map();
@@ -282,10 +273,13 @@ const PromotionsPage = () => {
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
     return promotions.filter((promotion) => {
+      // The board is the working set. Ended and archived campaigns live in Promotion
+      // History, where their numbers are, not at the foot of every page of live work.
+      const status = promotionStatus(promotion);
+      if (status === "ENDED" || status === "ARCHIVED") return false;
       if (term && !matchesTerm(promotion, term)) return false;
       if (branchFilter && Number(promotion.branchId) !== Number(branchFilter)) return false;
       if (statusFilter === "ALL") return true;
-      const status = promotionStatus(promotion);
       if (statusFilter === "LIVE") return status === "LIVE" || status === "ENDING_SOON";
       return status === statusFilter;
     });
@@ -305,25 +299,16 @@ const PromotionsPage = () => {
     if (Number.isFinite(parsed)) setPage(Math.min(Math.max(parsed - 1, 0), Math.max(totalPages - 1, 0)));
   };
 
-  const grouped = useMemo(() => {
-    const byGroup = new Map(GROUP_ORDER.map((group) => [group.key, []]));
-    pageItems.forEach((promotion) => {
-      const groupKey = groupKeyOf(promotion);
-      byGroup.get(groupKey)?.push(promotion);
-    });
-    return GROUP_ORDER
-      .map((group) => ({ ...group, rows: byGroup.get(group.key) }))
-      .filter((group) => group.rows.length > 0);
-  }, [pageItems]);
-
   const filterCounts = useMemo(() => {
     const counts = new Map();
     promotions.forEach((promotion) => {
+      const status = promotionStatus(promotion);
+      if (status === "ENDED" || status === "ARCHIVED") return;
       if (branchFilter && Number(promotion.branchId) !== Number(branchFilter)) return;
       const term = search.trim().toLowerCase();
       if (term && !matchesTerm(promotion, term)) return;
-      const status = groupKeyOf(promotion);
-      counts.set(status, (counts.get(status) || 0) + 1);
+      const key = status === "ENDING_SOON" ? "LIVE" : status;
+      counts.set(key, (counts.get(key) || 0) + 1);
       counts.set("ALL", (counts.get("ALL") || 0) + 1);
     });
     return counts;
@@ -456,12 +441,15 @@ const PromotionsPage = () => {
           <h1 className="text-3xl font-bold text-slate-800">Promotions</h1>
           <p className="mt-1 text-sm text-slate-500">Campaigns running now and scheduled to start.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {canEditSettings && (
             <Button variant="secondary" onClick={() => setSettingsOpen(true)} aria-label="Promotion settings">
               <Settings size={16} />
             </Button>
           )}
+          <Button variant="secondary" onClick={() => navigate("/promotions/history")}>
+            <History size={16} className="mr-2" /> History
+          </Button>
           <Button onClick={() => navigate("/promotions/new")}>
             <Plus size={16} className="mr-2" /> New promotion
           </Button>
@@ -470,133 +458,123 @@ const PromotionsPage = () => {
 
       <PromotionKpiStrip promotions={promotions} discountGiven={discountGiven} loading={loading} />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[220px] flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search promotions or items"
-            aria-label="Search promotions or items"
-            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm"
-          />
-        </div>
-        <StatusFilterGroup
-          options={STATUS_FILTERS.map((filter) => ({ ...filter, count: filterCounts.get(filter.key) || 0 }))}
-          value={statusFilter}
-          onChange={setStatusFilter}
-        />
-        <CustomSelect
-          value={branchFilter}
-          onChange={setBranchFilter}
-          options={[{ id: "", name: "All branches" }, ...branches]}
-          className="w-48"
-        />
-      </div>
-
-      {loading ? (
-        <Card className="overflow-hidden p-0">
-          <div className="py-12"><LoadingSpinner size="lg" text="Loading promotions..." /></div>
-        </Card>
-      ) : visible.length === 0 ? (
-        <Card className="overflow-hidden p-0">
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-              <Tag size={26} className="text-slate-400" />
-            </div>
-            <p className="mt-4 text-sm font-semibold text-slate-700">
-              {promotions.length === 0
-                ? "No promotions yet. Create one to get started."
-                : "No promotions match these filters."}
-            </p>
-            {promotions.length === 0 && (
-              <>
-                <p className="mt-1 max-w-sm text-xs text-slate-500">
-                  Simulate one against last month's sales before it goes live.
-                </p>
-                <Button className="mt-5" onClick={() => navigate("/promotions/new")}>
-                  <Plus size={15} className="mr-2" /> New promotion
-                </Button>
-              </>
-            )}
-            {promotions.length > 0 && (
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <Button variant="secondary" onClick={() => { setSearch(""); setStatusFilter("ALL"); setBranchFilter(""); }}>
-                  Clear filters
-                </Button>
-                <Button onClick={() => navigate("/promotions/new")}>
-                  <Plus size={15} className="mr-2" /> New promotion
-                </Button>
-              </div>
-            )}
-          </div>
-        </Card>
-      ) : (
-        <Card className="overflow-hidden p-0">
-          <div className="app-table-wrap">
-            <table className="app-table min-w-[900px]">
-              <thead className="app-table-head">
-                <tr>
-                  <th className="app-table-head-cell">Promotion</th>
-                  <th className="app-table-head-cell">Period</th>
-                  <th className="app-table-head-cell">Activity</th>
-                  <th className="app-table-head-cell text-center">Status</th>
-                  <th className="app-table-head-cell text-right">Actions</th>
-                </tr>
-              </thead>
-              {grouped.map((group) => {
-                // Ended campaigns collapse: they stay reachable, but 26 finished rows must not
-                // push the live board below the fold.
-                const isEndedGroup = group.key === "ENDED";
-                const collapsed = isEndedGroup && !endedExpanded;
-                return (
-                  <tbody
-                    key={group.key}
-                    id={group.key === "ENDED" ? "ended-campaign-rows" : undefined}
-                    className="app-table-body"
-                  >
-                    <tr>
-                      <td colSpan="5" className="bg-slate-50/80 px-4 py-2">
-                        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500">
-                          <span className={`h-2 w-2 rounded-full ${group.dot} ${group.key === "LIVE" ? "live-dot-pulse" : ""}`} aria-hidden="true" />
-                          <span>{group.label}</span>
-                          <span className="tabular-nums text-slate-400">({group.rows.length})</span>
-                          {isEndedGroup && (
-                            <button
-                              type="button"
-                              aria-expanded={endedExpanded}
-                              aria-controls="ended-campaign-rows"
-                              onClick={() => setEndedExpanded((open) => !open)}
-                              className="ml-auto font-semibold normal-case tracking-normal text-slate-500 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                            >
-                              {collapsed ? "Show" : "Hide"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    {!collapsed && group.rows.map((promotion) => (
-                      <CampaignRow key={promotion.id} promotion={promotion} ctx={rowContext} />
-                    ))}
-                  </tbody>
-                );
-              })}
-            </table>
-          </div>
-          {totalPages > 1 && (
-            <TablePagination
-              summary={`${visible.length} campaign${visible.length === 1 ? "" : "s"}`}
-              page={page}
-              pageInput={pageInput}
-              totalPages={totalPages}
-              loading={loading}
-              onPageChange={(next) => setPage(Math.min(Math.max(next, 0), totalPages - 1))}
-              onPageInputChange={setPageInput}
-              onGoToPage={goToPage}
+      <Card className="sales-panel-enter sales-panel-hover p-4" style={{ animationDelay: "130ms" }}>
+        <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
+          <div className="relative col-span-full min-[440px]:col-span-3 min-[620px]:col-span-4 xl:col-span-5">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
+            <input aria-label="Search campaigns or items"
+              type="text"
+              placeholder="Search campaigns or items..."
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
             />
-          )}
-        </Card>
-      )}
+          </div>
+
+          <div className="col-span-1 xl:col-span-2">
+            <CustomSelect
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setPage(0);
+              }}
+              options={STATUS_FILTERS.map((filter) => ({
+                ...filter,
+                label: filter.value === "ALL"
+                  ? filter.label
+                  : `${filter.label} (${filterCounts.get(filter.value) || 0})`,
+              }))}
+              valueKey="value"
+              labelKey="label"
+              buttonClassName="h-10 rounded-lg"
+            />
+          </div>
+
+          <div className="col-span-1 xl:col-span-2">
+            <CustomSelect
+              value={branchFilter}
+              onChange={(value) => {
+                setBranchFilter(value);
+                setPage(0);
+              }}
+              options={[{ id: "", name: "All branches" }, ...branches]}
+              buttonClassName="h-10 rounded-lg"
+            />
+          </div>
+
+          <div className="col-span-full min-[440px]:col-span-1 min-[620px]:col-span-2 xl:col-span-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => { setSearch(""); setStatusFilter("ALL"); setBranchFilter(""); }}
+              className="h-10 w-full px-4 text-sm"
+            >
+              Clear
+            </Button>
+          </div>
+
+          <div className="col-span-full xl:col-span-3">
+            <p className="h-10 truncate text-xs font-semibold leading-10 text-slate-500">
+              Ended campaigns live in{" "}
+              <button
+                type="button"
+                onClick={() => navigate("/promotions/history")}
+                className="font-bold text-blue-600 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              >
+                Promotion History
+              </button>
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="sales-panel-enter p-0 overflow-hidden border border-slate-200" style={{ animationDelay: "190ms" }}>
+        <div className="app-table-wrap w-full">
+          <table className="app-table min-w-[900px]">
+            <thead className="app-table-head">
+              <tr>
+                <th className="app-table-head-cell">Promotion</th>
+                <th className="app-table-head-cell">Period</th>
+                <th className="app-table-head-cell">Activity</th>
+                <th className="app-table-head-cell text-center">Status</th>
+                <th className="app-table-head-cell text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="app-table-body">
+              {loading ? (
+                Array.from({ length: 8 }).map((_, row) => (
+                  <tr key={`skeleton-${row}`}>
+                    {Array.from({ length: 5 }).map((_, cell) => (
+                      <td key={cell} className="app-table-cell"><Skeleton className="h-3.5 w-full" /></td>
+                    ))}
+                  </tr>
+                ))
+              ) : pageItems.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="app-table-empty">
+                    {promotions.length === 0
+                      ? "No promotions yet. Create one to get started."
+                      : "No campaigns match these filters. Ended campaigns are in Promotion History."}
+                  </td>
+                </tr>
+              ) : pageItems.map((promotion) => (
+                <CampaignRow key={promotion.id} promotion={promotion} ctx={rowContext} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <TablePagination
+          summary={`Showing ${pageItems.length} of ${visible.length} campaigns. Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          page={page}
+          pageInput={pageInput}
+          totalPages={totalPages}
+          loading={loading}
+          onPageChange={setPage}
+          onPageInputChange={setPageInput}
+          onGoToPage={goToPage}
+        />
+      </Card>
 
       <PromotionSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
