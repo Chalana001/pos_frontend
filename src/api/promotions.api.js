@@ -4,7 +4,12 @@ export const promotionsAPI = {
   bundle: (branchId) => api.get("/promotions/bundle", {
     params: (branchId !== undefined && branchId !== null) ? { branchId } : {},
   }),
-  list: () => api.get("/promotions"),
+  // The campaign board, one page at a time. Search and branch filtering belong in the
+  // request so the page is the server's page, not a slice of the whole shop afterwards.
+  list: (params = {}) => api.get("/promotions", { params }),
+  // The board's summary read. Bounded on purpose: the KPI strip needs more than one page of
+  // context but must not reintroduce the unbounded whole-list response.
+  summary: () => api.get("/promotions", { params: { page: 0, size: 100 } }),
   // One campaign with its item targets resolved; the edit screen's single read.
   get: (id) => api.get(`/promotions/${id}`),
   create: (payload) => api.post("/promotions", payload),

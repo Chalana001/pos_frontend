@@ -198,9 +198,8 @@ const PromotionBuilderPage = () => {
 
         if (!isEdit) return;
 
-        const listRes = await promotionsAPI.list();
-        const promotion = (Array.isArray(listRes.data) ? listRes.data : [])
-          .find((row) => Number(row.id) === Number(id));
+        const response = await promotionsAPI.get(id);
+        const promotion = response.data;
         if (!promotion) {
           toast.error("Promotion not found");
           navigate("/promotions");

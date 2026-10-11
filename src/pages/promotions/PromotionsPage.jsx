@@ -11,7 +11,6 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 import CustomSelect from "../../components/common/CustomSelect";
 import Skeleton from "../../components/common/Skeleton";
 import TablePagination from "../../components/common/TablePagination";
-import useClientPagination from "../../hooks/useClientPagination";
 import { DISCOUNT_TYPES } from "../../utils/constants";
 import { formatCurrency } from "../../utils/formatters";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
@@ -214,6 +213,7 @@ const PromotionsPage = () => {
   const canEditSettings = hasPermission(user?.role, "MANAGE_PROMOTION_SETTINGS");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [promotions, setPromotions] = useState([]);
+  const [summaryPromotions, setSummaryPromotions] = useState([]);
   const [branches, setBranches] = useState([]);
   const [discountGiven, setDiscountGiven] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -222,6 +222,11 @@ const PromotionsPage = () => {
   const [branchFilter, setBranchFilter] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
+  const [page, setPage] = useState(0);
+  const [pageInput, setPageInput] = useState("1");
+  const [pageSize] = useState(25);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   const branchNameById = useMemo(() => {
     const map = new Map();
@@ -229,81 +234,104 @@ const PromotionsPage = () => {
     return map;
   }, [branches]);
 
-  const loadData = async () => {
+  // Branches and the discount total are reference data: they change when someone edits a
+  // branch or a sale, not when the board's page moves, so they load once and are refreshed
+  // after the mutations that can change what the board shows.
+  const loadReferenceData = async () => {
+    const [branchRes, historyRes] = await Promise.all([
+      branchesAPI.getAll(true),
+      promotionsAPI.history().catch(() => null),
+    ]);
+    setBranches(Array.isArray(branchRes.data) ? branchRes.data : []);
+    const historyRows = Array.isArray(historyRes?.data) ? historyRes.data : null;
+    setDiscountGiven(historyRows == null
+      ? null
+      : historyRows.reduce((sum, row) => sum + Number(row.totalDiscountGiven || 0), 0));
+  };
+
+  const loadSummary = async () => {
+    // The KPI strip and status counts read a bounded summary, not the current page: page 2
+    // of the board must not make "Live now" read 25 when 40 campaigns are live.
+    const response = await promotionsAPI.summary().catch(() => null);
+    setSummaryPromotions(Array.isArray(response?.data?.items) ? response.data.items : []);
+  };
+
+  const loadPage = async () => {
     try {
       setLoading(true);
-      const [promotionRes, branchRes, historyRes] = await Promise.all([
-        promotionsAPI.list(),
-        branchesAPI.getAll(true),
-        promotionsAPI.history().catch(() => null),
-      ]);
-      setPromotions(Array.isArray(promotionRes.data) ? promotionRes.data : []);
-      setBranches(Array.isArray(branchRes.data) ? branchRes.data : []);
-      const historyRows = Array.isArray(historyRes?.data) ? historyRes.data : null;
-      setDiscountGiven(historyRows == null
-        ? null
-        : historyRows.reduce((sum, row) => sum + Number(row.totalDiscountGiven || 0), 0));
+      const response = await promotionsAPI.list({
+        page,
+        size: pageSize,
+        search: search.trim() || undefined,
+        branchId: branchFilter || undefined,
+      });
+      setPromotions(Array.isArray(response.data?.items) ? response.data.items : []);
+      setTotalPages(Number(response.data?.totalPages || 0));
+      setTotalElements(Number(response.data?.totalElements || 0));
     } catch (error) {
       console.error("Failed to load promotions", error);
       toast.error(error?.response?.data?.message || "Failed to load promotions");
+      setPromotions([]);
+      setTotalPages(0);
+      setTotalElements(0);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => { loadPage(); }, 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, search, statusFilter, branchFilter]);
 
-  // The search answers "which campaigns is this item in?" as well as "which campaign is this":
-  // a line matches on the promotion name or on any target item's name or barcode.
-  const matchesTerm = (promotion, term) => {
-    if (promotion.name?.toLowerCase().includes(term)) return true;
-    return (promotion.items || []).some((line) =>
-      line.name?.toLowerCase().includes(term) || line.barcode?.toLowerCase().includes(term));
-  };
-
-  const visible = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return promotions.filter((promotion) => {
-      // The board is the working set. Ended and archived campaigns live in Campaign
-      // History, where their numbers are, not at the foot of every page of live work.
-      const status = promotionStatus(promotion);
-      if (status === "ENDED" || status === "ARCHIVED") return false;
-      if (term && !matchesTerm(promotion, term)) return false;
-      if (branchFilter && Number(promotion.branchId) !== Number(branchFilter)) return false;
-      if (statusFilter === "ALL") return true;
-      if (statusFilter === "LIVE") return status === "LIVE" || status === "ENDING_SOON";
-      return status === statusFilter;
+  useEffect(() => {
+    Promise.all([loadReferenceData(), loadSummary()]).catch((error) => {
+      console.error("Failed to load promotion context", error);
     });
-  }, [promotions, search, statusFilter, branchFilter]);
+  }, []);
 
-  // Client-side pages over the filtered board: campaign counts are tens, not thousands,
-  // and the item-name search needs the whole list in memory anyway. The reset key means
-  // every filter change starts again at page one rather than an empty page N.
-  const {
-    page, setPage, totalPages, pageItems,
-  } = useClientPagination(visible, `${search}|${statusFilter}|${branchFilter}`, 25);
-  const [pageInput, setPageInput] = useState("1");
-  useEffect(() => setPageInput(String(page + 1)), [page]);
+  useEffect(() => {
+    setPageInput(String(page + 1));
+  }, [page]);
 
   const goToPage = () => {
     const parsed = Number.parseInt(pageInput, 10);
-    if (Number.isFinite(parsed)) setPage(Math.min(Math.max(parsed - 1, 0), Math.max(totalPages - 1, 0)));
+    if (!Number.isFinite(parsed)) {
+      setPageInput(String(page + 1));
+      return;
+    }
+    const maxPage = totalPages > 0 ? totalPages : 1;
+    setPage(Math.min(Math.max(parsed, 1), maxPage) - 1);
   };
+
+  const summaryRows = useMemo(() => summaryPromotions.filter((promotion) => {
+    const status = promotionStatus(promotion);
+    if (status === "ENDED" || status === "ARCHIVED") return false;
+    if (branchFilter && Number(promotion.branchId) !== Number(branchFilter)) return false;
+    return true;
+  }), [summaryPromotions, branchFilter]);
 
   const filterCounts = useMemo(() => {
     const counts = new Map();
-    promotions.forEach((promotion) => {
+    summaryRows.forEach((promotion) => {
       const status = promotionStatus(promotion);
-      if (status === "ENDED" || status === "ARCHIVED") return;
-      if (branchFilter && Number(promotion.branchId) !== Number(branchFilter)) return;
-      const term = search.trim().toLowerCase();
-      if (term && !matchesTerm(promotion, term)) return;
       const key = status === "ENDING_SOON" ? "LIVE" : status;
       counts.set(key, (counts.get(key) || 0) + 1);
       counts.set("ALL", (counts.get("ALL") || 0) + 1);
     });
     return counts;
-  }, [promotions, search, branchFilter]);
+  }, [summaryRows]);
+
+  // Derived statuses (live/scheduled/ended) stay client-side: the board's server filter is
+  // the row's branch and the typed search, and the derived state folds on top of the page.
+  const visible = useMemo(() => promotions.filter((promotion) => {
+    const status = promotionStatus(promotion);
+    if (status === "ENDED" || status === "ARCHIVED") return false;
+    if (statusFilter === "ALL") return true;
+    if (statusFilter === "LIVE") return status === "LIVE" || status === "ENDING_SOON";
+    return status === statusFilter;
+  }), [promotions, statusFilter]);
 
   const lifecycle = async (promotion, action, note) => {
     try {
@@ -322,7 +350,7 @@ const PromotionsPage = () => {
           : status === "PAUSED" ? "Promotion paused"
           : "Updated"
       );
-      await loadData();
+      await Promise.all([loadPage(), loadSummary()]);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to update promotion");
     }
@@ -361,7 +389,7 @@ const PromotionsPage = () => {
       await promotionsAPI.remove(promotion.id);
       toast.success("Campaign ended");
       setDeleteTarget(null);
-      await loadData();
+      await Promise.all([loadPage(), loadSummary()]);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to end campaign");
     }
@@ -444,7 +472,7 @@ const PromotionsPage = () => {
         </div>
       </div>
 
-      <PromotionKpiStrip promotions={promotions} discountGiven={discountGiven} loading={loading} />
+      <PromotionKpiStrip promotions={summaryRows} discountGiven={discountGiven} loading={loading} />
 
       <Card className="sales-panel-enter sales-panel-hover p-4" style={{ animationDelay: "130ms" }}>
         <div className="grid grid-cols-2 gap-3 min-[440px]:grid-cols-3 min-[620px]:grid-cols-4 xl:grid-cols-12 xl:items-center">
@@ -455,7 +483,10 @@ const PromotionsPage = () => {
               placeholder="Search campaigns or items..."
               className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(0);
+              }}
             />
           </div>
 
@@ -494,7 +525,7 @@ const PromotionsPage = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => { setSearch(""); setStatusFilter("ALL"); setBranchFilter(""); }}
+              onClick={() => { setSearch(""); setStatusFilter("ALL"); setBranchFilter(""); setPage(0); }}
               className="h-10 w-full px-4 text-sm"
             >
               Clear
@@ -524,15 +555,15 @@ const PromotionsPage = () => {
                     ))}
                   </tr>
                 ))
-              ) : pageItems.length === 0 ? (
+              ) : visible.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="app-table-empty">
-                    {promotions.length === 0
+                    {totalElements === 0
                       ? "No promotions yet. Create one to get started."
                       : "No campaigns match these filters."}
                   </td>
                 </tr>
-              ) : pageItems.map((promotion) => (
+              ) : visible.map((promotion) => (
                 <CampaignRow key={promotion.id} promotion={promotion} ctx={rowContext} />
               ))}
             </tbody>
@@ -540,7 +571,7 @@ const PromotionsPage = () => {
         </div>
 
         <TablePagination
-          summary={`Showing ${pageItems.length} of ${visible.length} campaigns. Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+          summary={`Showing ${visible.length} of ${totalElements} campaigns. Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
           page={page}
           pageInput={pageInput}
           totalPages={totalPages}
