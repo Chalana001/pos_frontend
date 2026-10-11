@@ -2894,7 +2894,7 @@ const POS = () => {
                     } catch { /* storage unavailable or malformed draft */ }
                     return (
                       <button key={slot} type="button" onClick={() => switchQuickSaleSlot(slot)} aria-label={`Quick Sale slot ${slot}`} aria-pressed={isActive}
-                        className={`relative inline-flex h-9 min-w-9 flex-shrink-0 items-center justify-center rounded-lg px-2 text-sm font-semibold transition ${isActive ? "bg-white shadow-sm" : "hover:bg-white/70"} ${hasDraft ? "text-sky-500" : isActive ? "text-slate-900" : "text-slate-500"}`}>
+                        className={`relative inline-flex h-9 min-w-9 flex-shrink-0 items-center justify-center rounded-lg px-2 text-sm font-semibold transition ${isActive ? "bg-white shadow-sm" : "hover:bg-white/70"} ${hasDraft ? "text-blue-500" : isActive ? "text-slate-900" : "text-slate-500"}`}>
                         {slot}
                       </button>
                     );
