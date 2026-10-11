@@ -57,48 +57,48 @@ const ReadinessRail = ({
       <section className="dashboard-rise-in rounded-xl border border-slate-200 bg-white p-3 shadow-sm" style={{ animationDelay: "40ms" }}>
         <h2 className="text-xs font-black text-slate-800">Exposure</h2>
         <dl className="mt-2 space-y-1.5 text-[11px]">
-          <div className="flex items-center justify-between gap-2">
-            <dt className="text-slate-500">{exposure.scopeLabel}</dt>
-            <dd className="font-black tabular-nums text-slate-800">{exposure.count}</dd>
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <dt className="min-w-0 break-words text-slate-500">{exposure.scopeLabel}</dt>
+            <dd className="shrink-0 font-black tabular-nums text-slate-800">{exposure.count}</dd>
           </div>
           {exposure.avgPercent != null && (
-            <div className="flex items-center justify-between gap-2">
-              <dt className="text-slate-500">Average discount</dt>
-              <dd className="font-black tabular-nums text-slate-800">{Number(exposure.avgPercent).toFixed(1)}%</dd>
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <dt className="min-w-0 break-words text-slate-500">Average discount</dt>
+              <dd className="shrink-0 font-black tabular-nums text-slate-800">{Number(exposure.avgPercent).toFixed(1)}%</dd>
             </div>
           )}
           {exposure.maxLine != null && Number(exposure.maxLine) > 0 && (
-            <div className="flex items-center justify-between gap-2">
-              <dt className="text-slate-500">Max off a line</dt>
-              <dd className="font-black tabular-nums text-slate-800">{formatCurrency(exposure.maxLine)}</dd>
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <dt className="min-w-0 break-words text-slate-500">Max off a line</dt>
+              <dd className="shrink-0 font-black tabular-nums text-slate-800">{formatCurrency(exposure.maxLine)}</dd>
             </div>
           )}
-          <div className="flex items-center justify-between gap-2">
-            <dt className="text-slate-500">Runs</dt>
-            <dd className="font-black tabular-nums text-slate-800">{exposure.days} day{exposure.days === 1 ? "" : "s"}</dd>
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <dt className="min-w-0 break-words text-slate-500">Runs</dt>
+            <dd className="shrink-0 font-black tabular-nums text-slate-800">{exposure.days} day{exposure.days === 1 ? "" : "s"}</dd>
           </div>
           {exposure.budget != null && (
-            <div className="flex items-center justify-between gap-2">
-              <dt className="text-slate-500">Budget</dt>
-              <dd className="font-black tabular-nums text-slate-800">{formatCurrency(exposure.budget)}</dd>
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <dt className="min-w-0 break-words text-slate-500">Budget</dt>
+              <dd className="shrink-0 font-black tabular-nums text-slate-800">{formatCurrency(exposure.budget)}</dd>
             </div>
           )}
         </dl>
         {exposure.belowCost > 0 && (
-          <p className="mt-2 flex items-center gap-1.5 rounded-md bg-red-50 px-2 py-1.5 text-[11px] font-bold text-red-700">
+          <p className="mt-2 flex min-w-0 items-start gap-1.5 break-words rounded-md bg-red-50 px-2 py-1.5 text-[11px] font-bold text-red-700">
             <AlertTriangle size={12} className="shrink-0" />
             {exposure.belowCost} priced below cost
           </p>
         )}
         {approvalRequired && (
-          <p className="mt-1.5 rounded-md bg-violet-50 px-2 py-1.5 text-[11px] font-bold text-violet-700">
+          <p className="mt-1.5 min-w-0 break-words rounded-md bg-violet-50 px-2 py-1.5 text-[11px] font-bold text-violet-700">
             Needs approval to activate
           </p>
         )}
         {warnings?.length > 0 && (
           <ul className="mt-2 space-y-1">
             {warnings.map((warning, index) => (
-              <li key={`${warning.code}-${warning.promotionId ?? index}`} className="rounded-md bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800">
+              <li key={`${warning.code}-${warning.promotionId ?? index}`} className="min-w-0 break-words rounded-md bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800">
                 ⚠ {warning.message}
               </li>
             ))}

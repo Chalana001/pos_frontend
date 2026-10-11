@@ -356,7 +356,7 @@ const ItemPriceTable = ({
                         {item?.barcode && <div className="text-xs text-slate-500">{item.barcode}</div>}
                       </td>
                       <td className="app-table-cell text-right text-slate-600">
-                        {formatCurrency(normalPriceOf(line))}
+                        <span className="whitespace-nowrap">{formatCurrency(normalPriceOf(line))}</span>
                         {/*
                           Two batches of one item are two prices, and the promotion means
                           something different against each. Only shown when they actually
@@ -365,7 +365,7 @@ const ItemPriceTable = ({
                         {check?.minBatchPrice != null && check?.maxBatchPrice != null
                           && Number(check.minBatchPrice) !== Number(check.maxBatchPrice) ? (
                           <div
-                            className="text-xs text-amber-600"
+                            className="max-w-full break-words text-xs text-amber-600"
                             title={`${check.batchCount} batches in stock, priced ${formatCurrency(check.minBatchPrice)} to ${formatCurrency(check.maxBatchPrice)}. The margin is judged on the worst of them.`}
                           >
                             batches {formatCurrency(check.minBatchPrice)}–{formatCurrency(check.maxBatchPrice)}
@@ -389,7 +389,7 @@ const ItemPriceTable = ({
                               .querySelectorAll('input[type="number"][aria-label^="Offer price"]');
                             inputs[index + 1]?.focus();
                           }}
-                          className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm"
+                          className="box-border w-28 max-w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm"
                         />
                       </td>
                       <td className="app-table-cell text-right">
@@ -402,7 +402,7 @@ const ItemPriceTable = ({
                           placeholder="-"
                           aria-label={`Percent off for ${item?.name || line.id}`}
                           onChange={(event) => setPercent(line, event.target.value)}
-                          className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm"
+                          className="box-border w-20 max-w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm"
                         />
                       </td>
                       <td className="app-table-cell text-center">

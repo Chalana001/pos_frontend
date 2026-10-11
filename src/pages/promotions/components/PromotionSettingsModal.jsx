@@ -75,8 +75,8 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
         <div className="py-6 text-center text-sm text-slate-500">Loading…</div>
       ) : (
         <div className="space-y-5">
-          <label className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 p-3">
-            <span>
+          <label className="flex min-w-0 items-start justify-between gap-4 rounded-lg border border-slate-200 p-3">
+            <span className="min-w-0 flex-1 break-words">
               <span className="block text-sm font-bold text-slate-800">Require approval for deep discounts</span>
               <span className="block text-xs text-slate-500">
                 A promotion at or over the threshold waits for a second admin. Someone other than whoever submitted it.
@@ -85,7 +85,7 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
             <input
               type="checkbox" checked={form.approvalRequired}
               onChange={(event) => update("approvalRequired", event.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
           </label>
 
@@ -112,8 +112,8 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
             </div>
           )}
 
-          <label className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 p-3">
-            <span>
+          <label className="flex min-w-0 items-start justify-between gap-4 rounded-lg border border-slate-200 p-3">
+            <span className="min-w-0 flex-1 break-words">
               <span className="block text-sm font-bold text-slate-800">Cashiers can discount a promoted line</span>
               <span className="block text-xs text-slate-500">
                 Off means only a manager or admin may add a manual discount on top of a promotion.
@@ -122,12 +122,12 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
             <input
               type="checkbox" checked={form.cashierManualStacking}
               onChange={(event) => update("cashierManualStacking", event.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
           </label>
 
-          <label className="flex items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-            <span>
+          <label className="flex min-w-0 items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+            <span className="min-w-0 flex-1 break-words">
               <span className="block text-sm font-bold text-slate-800">Allow promotions below cost</span>
               <span className="block text-xs text-amber-800">
                 Lets this shop publish offers below the item's cost price. Use only for deliberate loss leaders; it applies to new and edited campaigns.
