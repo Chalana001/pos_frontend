@@ -415,88 +415,88 @@ const ShiftCloseDialog = ({
           <div className="rounded-lg bg-white border border-slate-200 px-4 py-3 space-y-2 text-sm">
             <div className="flex justify-between text-slate-600"><span>Opening float</span><span className="font-semibold">{formatCurrency(shift.openingCash)}</span></div>
             <div className="flex justify-between text-slate-600"><span>Cash sales (drawer tender)</span><span className="font-semibold">{formatCurrency(shift.cashSales)}</span></div>
-            {(regularExpenses > 0 || expenses.length > 0) && (
-              <div className="pt-1">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
-                  aria-expanded={showExpenses}
-                  aria-controls="shiftclose-expenses"
-                  onClick={() => setShowExpenses((v) => !v)}
-                >
-                  <span className="flex items-center gap-1.5">
-                    {showExpenses ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    Expenses ({expenses.length})
-                  </span>
-                  <span className="font-semibold text-red-600">-{formatCurrency(regularExpenses)}</span>
-                </button>
-                {showExpenses && (
-                  <div id="shiftclose-expenses" className="mt-1.5 ml-5 space-y-1">
-                    {expenses.map((e) => (
-                      <div key={e.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                        <span className="truncate">{e.description || e.category}</span>
-                        <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(e.amount || 0)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {drawerPurchasesSum > 0 && (
-              <div className="pt-1">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
-                  aria-expanded={showDrawerPurchases}
-                  aria-controls="shiftclose-drawer-purchases"
-                  onClick={() => setShowDrawerPurchases((v) => !v)}
-                >
-                  <span className="flex items-center gap-1.5">
-                    {showDrawerPurchases ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    Purchases paid from drawer ({drawerPurchases.length})
-                  </span>
-                  <span className="font-semibold text-red-600">-{formatCurrency(drawerPurchasesSum)}</span>
-                </button>
-                {showDrawerPurchases && (
-                  <div id="shiftclose-drawer-purchases" className="mt-1.5 ml-5 space-y-1">
-                    {drawerPurchases.map((p) => (
-                      <div key={p.purchaseId} className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                        <span className="truncate">{p.invoiceNo} · {p.supplierName}</span>
-                        <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(p.cashSourceAmount || 0)}</span>
-                      </div>
-                    ))}
-                    <p className="text-[10px] text-slate-400">Included in the Expenses total above; shown separately so the drawer-money-to-suppliers is visible.</p>
-                  </div>
-                )}
-              </div>
-            )}
-            {(Number(shift?.totalCashDrops || 0) > 0 || cashDrops.length > 0) && (
-              <div className="pt-1">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
-                  aria-expanded={showCashDrops}
-                  aria-controls="shiftclose-cash-drops"
-                  onClick={() => setShowCashDrops((v) => !v)}
-                >
-                  <span className="flex items-center gap-1.5">
-                    {showCashDrops ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    Cash drops ({cashDrops.length})
-                  </span>
-                  <span className="font-semibold text-red-600">-{formatCurrency(shift.totalCashDrops)}</span>
-                </button>
-                {showCashDrops && (
-                  <div id="shiftclose-cash-drops" className="mt-1.5 ml-5 space-y-1">
-                    {cashDrops.map((d) => (
-                      <div key={d.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                        <span className="truncate">{d.reason || "Cash drop"}{d.bankAccountName ? ` · ${d.bankAccountName}` : ""}</span>
-                        <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(d.amount || 0)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="pt-1">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
+                aria-expanded={showExpenses}
+                aria-controls="shiftclose-expenses"
+                onClick={() => setShowExpenses((v) => !v)}
+              >
+                <span className="flex items-center gap-1.5">
+                  {showExpenses ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  Expenses ({expenses.length})
+                </span>
+                <span className="font-semibold text-red-600">-{formatCurrency(regularExpenses)}</span>
+              </button>
+              {showExpenses && (
+                <div id="shiftclose-expenses" className="mt-1.5 ml-5 space-y-1">
+                  {expenses.length === 0 ? (
+                    <p className="text-xs text-slate-400">No expenses in this shift</p>
+                  ) : expenses.map((e) => (
+                    <div key={e.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                      <span className="truncate">{e.description || e.category}</span>
+                      <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(e.amount || 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="pt-1">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
+                aria-expanded={showDrawerPurchases}
+                aria-controls="shiftclose-drawer-purchases"
+                onClick={() => setShowDrawerPurchases((v) => !v)}
+              >
+                <span className="flex items-center gap-1.5">
+                  {showDrawerPurchases ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  Purchases paid from drawer ({drawerPurchases.length})
+                </span>
+                <span className="font-semibold text-red-600">-{formatCurrency(drawerPurchasesSum)}</span>
+              </button>
+              {showDrawerPurchases && (
+                <div id="shiftclose-drawer-purchases" className="mt-1.5 ml-5 space-y-1">
+                  {drawerPurchases.length === 0 ? (
+                    <p className="text-xs text-slate-400">No purchases paid from this shift's drawer</p>
+                  ) : drawerPurchases.map((p) => (
+                    <div key={p.purchaseId} className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                      <span className="truncate">{p.invoiceNo} · {p.supplierName}</span>
+                      <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(p.cashSourceAmount || 0)}</span>
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-slate-400">Included in the Expenses total above; shown separately so the drawer-money-to-suppliers is visible.</p>
+                </div>
+              )}
+            </div>
+            <div className="pt-1">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
+                aria-expanded={showCashDrops}
+                aria-controls="shiftclose-cash-drops"
+                onClick={() => setShowCashDrops((v) => !v)}
+              >
+                <span className="flex items-center gap-1.5">
+                  {showCashDrops ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  Cash drops ({cashDrops.length})
+                </span>
+                <span className="font-semibold text-red-600">-{formatCurrency(shift.totalCashDrops)}</span>
+              </button>
+              {showCashDrops && (
+                <div id="shiftclose-cash-drops" className="mt-1.5 ml-5 space-y-1">
+                  {cashDrops.length === 0 ? (
+                    <p className="text-xs text-slate-400">No cash drops in this shift</p>
+                  ) : cashDrops.map((d) => (
+                    <div key={d.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                      <span className="truncate">{d.reason || "Cash drop"}{d.bankAccountName ? ` · ${d.bankAccountName}` : ""}</span>
+                      <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(d.amount || 0)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             {summary?.cashCollections > 0 && (
               <div className="flex justify-between text-slate-600">
                 <span>Credit collections (cash, informational)</span>
