@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { X, CreditCard, Banknote, Landmark, Printer, CheckCircle2, FileText, AlertTriangle, ReceiptText } from "lucide-react";
+import { X, CreditCard, Printer, CheckCircle2, FileText, AlertTriangle, ReceiptText } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
+import { resolvePaymentIcon } from "../../utils/paymentMethodIcons";
 import Button from "../common/Button";
 
 export const salePaymentMethods = new Set(["CASH", "CARD", "BANK", "CREDIT"]);
@@ -10,43 +11,53 @@ export const salePaymentMethods = new Set(["CASH", "CARD", "BANK", "CREDIT"]);
 // plus an optional second document; shops wanted the choice, not the extra paper.
 export const saleDocumentTypes = new Set(["RECEIPT", "INVOICE"]);
 
-const paymentMethodOptions = [
-  { value: "CASH", label: "Cash", hint: "F1" },
-  { value: "CARD", label: "Card" },
-  { value: "BANK", label: "Bank" },
-  { value: "CREDIT", label: "Credit", hint: "F2" },
+// Static fallback used only until the tenant's configured methods load; the
+// live list comes from the backend (usePaymentMethods) and is passed as a prop.
+const defaultPaymentMethods = [
+  { code: "CASH", displayName: "Cash", category: "CASH", referencePolicy: "NONE", includeInExpectedCash: true, allowsCredit: false, hint: "F1" },
+  { code: "CARD", displayName: "Card", category: "CARD", referencePolicy: "OPTIONAL", referenceLabel: "Approval Code", includeInExpectedCash: false, allowsCredit: false },
+  { code: "BANK", displayName: "Bank", category: "BANK_TRANSFER", referencePolicy: "REQUIRED", referenceLabel: "Bank Reference", includeInExpectedCash: false, allowsCredit: false },
+  { code: "CREDIT", displayName: "Credit", category: "CREDIT", referencePolicy: "NONE", includeInExpectedCash: false, allowsCredit: true, hint: "F2" },
 ];
-
-const paymentMethodIcons = {
-  CASH: Banknote,
-  CARD: CreditCard,
-  BANK: Landmark,
-  CREDIT: CheckCircle2,
-};
 
 const documentTypeOptions = [
   { value: "RECEIPT", label: "Receipt", icon: ReceiptText },
   { value: "INVOICE", label: "Invoice", icon: FileText },
 ];
 
-const CheckoutOverlay = ({ 
-  isOpen, 
-  onClose, 
-  total, 
+const CheckoutOverlay = ({
+  isOpen,
+  onClose,
+  total,
   paymentMethod = "CASH",
   onSelectPaymentMethod,
-  paidAmount, 
-  setPaidAmount, 
+  paidAmount,
+  setPaidAmount,
   bankReference = "",
   setBankReference,
-  onPlaceOrder, 
+  onPlaceOrder,
   loading,
   printDocumentType = "RECEIPT",
   onSelectPrintDocumentType,
   isOnline = true,
   customer = null,
   errorMessage = "",
+  paymentMethods = null,
 }) => {
+  // The active, sorted method list: backend-driven when provided, else fallback.
+  const methods = (Array.isArray(paymentMethods) && paymentMethods.length
+    ? paymentMethods
+    : defaultPaymentMethods
+  ).map((m) => ({
+    ...m,
+    hint: m.code === "CASH" ? "F1" : m.code === "CREDIT" ? "F2" : m.hint || undefined,
+  }));
+  const activeMethod = methods.find((m) => m.code === paymentMethod) || null;
+  const isCashLike = activeMethod ? activeMethod.includeInExpectedCash : paymentMethod === "CASH";
+  const isCredit = activeMethod ? activeMethod.allowsCredit : paymentMethod === "CREDIT";
+  const referencePolicy = activeMethod?.referencePolicy || "NONE";
+  const referenceLabel = activeMethod?.referenceLabel || "Reference";
+  const needsReference = referencePolicy !== "NONE";
   const inputRef = useRef(null);
   const roundToRupee = (value) => {
     const parsed = Number(value);
@@ -151,19 +162,19 @@ const CheckoutOverlay = ({
 
   if (!isOpen) return null;
 
-  const creditDueAmount = paymentMethod === "CREDIT"
+  const creditDueAmount = isCredit
     ? normalizedTotal
     : Math.max(0, normalizedTotal - normalizedPaidAmount);
-  const changeAmount = paymentMethod === "CASH"
+  const changeAmount = isCashLike
     ? normalizedPaidAmount - normalizedTotal
     : 0;
   const projectedDue = currentDue + creditDueAmount;
-  const isMixedPayment = paymentMethod === "CASH" && creditDueAmount > 0;
-  const needsCustomer = paymentMethod === "CREDIT" || isMixedPayment;
+  const isMixedPayment = isCashLike && creditDueAmount > 0;
+  const needsCustomer = isCredit || isMixedPayment;
   const canConfirm = !errorMessage
-    && (paymentMethod === "CREDIT"
+    && (isCredit
       ? (isOnline && !!customer)
-      : (paymentMethod === "CASH"
+      : (isCashLike
         ? (normalizedPaidAmount >= normalizedTotal || (isOnline && !!customer))
         : isOnline));
 
@@ -205,14 +216,14 @@ const CheckoutOverlay = ({
             {/* Four tiles in one row everywhere; the tile itself resizes between
                 phones and desktops, the row never reflows. */}
             <div className="checkout-methods grid" role="group" aria-label="Payment Method">
-              {paymentMethodOptions.map((option) => {
-                const MethodIcon = paymentMethodIcons[option.value];
-                const isSelected = paymentMethod === option.value;
+              {methods.map((option) => {
+                const MethodIcon = resolvePaymentIcon(option);
+                const isSelected = paymentMethod === option.code;
                 return (
                   <button
-                    key={option.value}
+                    key={option.code}
                     type="button"
-                    onClick={() => onSelectPaymentMethod?.(option.value)}
+                    onClick={() => onSelectPaymentMethod?.(option.code)}
                     aria-pressed={isSelected}
                     className={`checkout-method flex flex-col items-center justify-center rounded-xl border-2 font-black uppercase transition-all active:scale-[0.98] ${
                       isSelected
@@ -222,7 +233,7 @@ const CheckoutOverlay = ({
                   >
                     {MethodIcon ? <MethodIcon size={28} className={isSelected ? "text-blue-600" : "text-slate-500"} /> : null}
                     <span className="checkout-method-label">
-                      {option.label}
+                      {option.displayName}
                       {option.hint ? <sup className="ml-0.5 font-bold">{`(${option.hint})`}</sup> : null}
                     </span>
                   </button>
@@ -231,8 +242,8 @@ const CheckoutOverlay = ({
             </div>
           </div>
 
-          {/* Cash Input Section */}
-          {paymentMethod === "CASH" && (
+          {/* Cash Input Section (any cash-like method) */}
+          {isCashLike && (
             <div className="sales-panel-enter space-y-4" style={{ animationDelay: "220ms" }}>
               <label htmlFor="checkoutoverlay-cash-received" className="block text-sm font-black text-slate-700 uppercase">Cash Received</label>
               <div className="relative">
@@ -293,32 +304,36 @@ const CheckoutOverlay = ({
             </div>
           )}
 
-          {paymentMethod === "BANK" && (
+          {needsReference && (
             <div className="sales-panel-enter space-y-2" style={{ animationDelay: "220ms" }}>
-              <label htmlFor="checkoutoverlay-bank-reference" className="block text-sm font-black text-slate-700 uppercase">Bank Reference</label>
+              <label htmlFor="checkoutoverlay-bank-reference" className="block text-sm font-black text-slate-700 uppercase">
+                {referenceLabel}{referencePolicy === "REQUIRED" ? " *" : " (optional)"}
+              </label>
               <input
                 id="checkoutoverlay-bank-reference"
                 type="text"
                 value={bankReference}
                 onChange={(event) => setBankReference?.(event.target.value)}
                 className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-base font-bold text-slate-800 focus:border-blue-600 focus:bg-white outline-none transition-all"
-                placeholder="Enter transfer / cheque reference"
+                placeholder={`Enter ${referenceLabel.toLowerCase()}`}
                 autoComplete="off"
               />
-              <p className="text-sm font-medium text-slate-500">The full invoice total will be paid by bank transfer.</p>
+              {!isCashLike && (
+                <p className="text-sm font-medium text-slate-500">The full invoice total will be paid by {activeMethod?.displayName || "this method"}.</p>
+              )}
             </div>
           )}
 
-          {paymentMethod === "CARD" && (
+          {!isCashLike && !isCredit && !needsReference && (
             <div className="sales-panel-enter rounded-xl border-2 border-blue-100 bg-blue-50 px-5 py-4" style={{ animationDelay: "220ms" }}>
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-600">Card Payment</span>
+                <span className="font-bold text-slate-600">{activeMethod?.displayName || "Payment"}</span>
                 <span className="text-2xl font-black text-blue-600">{formatCurrency(normalizedTotal)}</span>
               </div>
             </div>
           )}
 
-          {paymentMethod === "CREDIT" && (
+          {isCredit && (
             <div className="sales-panel-enter bg-amber-50 border-2 border-amber-100 p-5 rounded-xl space-y-4" style={{ animationDelay: "220ms" }}>
               <div className="flex gap-4 items-start">
                 <CheckCircle2 className="text-amber-500 shrink-0" size={24} />

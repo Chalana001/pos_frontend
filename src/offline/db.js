@@ -74,6 +74,21 @@ class PosOfflineDatabase extends Dexie {
       heldBills: "heldId, [userId+branchId], userId, branchId, createdAt",
       appMeta: "key",
     });
+    // v6 caches the tenant's active payment methods so the till can render the
+    // configured tenders (and their cash-like / reference flags) while offline.
+    // One row per method code, replaced wholesale on each refresh.
+    this.version(6).stores({
+      cachedItems: "[branchId+itemId], branchId, itemId, syncedAt",
+      cachedBranches: "id, active",
+      cachedUsers: "userId, username, lastSyncedAt",
+      cachedReceiptSettings: "[branchId+templateType], branchId, templateType, syncedAt",
+      offlineSales: "clientSaleId, branchId, cashierUserId, createdAt",
+      promotionBundles: "branchId, version, syncedAt",
+      formDrafts: "draftId, [kind+userId], kind, userId, updatedAt",
+      heldBills: "heldId, [userId+branchId], userId, branchId, createdAt",
+      cachedPaymentMethods: "code, active, sortOrder",
+      appMeta: "key",
+    });
   }
 }
 
@@ -367,6 +382,39 @@ export const cachePromotionBundle = async (branchId, bundle) => {
 export const getPromotionBundle = async (branchId) => {
   if (!branchId) return null;
   return (await offlineDb.promotionBundles.get(Number(branchId))) || null;
+};
+
+/**
+ * Replace the cached active payment methods wholesale. The server list is the
+ * complete picture for the tenant, and merging would keep a method an admin has
+ * since deactivated available at the till.
+ */
+export const cachePaymentMethods = async (methods) => {
+  if (!Array.isArray(methods)) return;
+  const rows = methods
+    .filter((m) => m && m.code)
+    .map((m) => ({
+      code: String(m.code).toUpperCase(),
+      displayName: m.displayName || m.code,
+      category: m.category || "OTHER",
+      referencePolicy: m.referencePolicy || "NONE",
+      referenceLabel: m.referenceLabel || null,
+      includeInExpectedCash: m.includeInExpectedCash === true,
+      allowsCredit: m.allowsCredit === true,
+      iconKey: m.iconKey || null,
+      active: m.active !== false,
+      sortOrder: Number(m.sortOrder || 0),
+      syncedAt: new Date().toISOString(),
+    }));
+  await offlineDb.cachedPaymentMethods.clear();
+  if (rows.length) {
+    await offlineDb.cachedPaymentMethods.bulkPut(rows);
+  }
+};
+
+export const getCachedPaymentMethods = async () => {
+  const rows = await offlineDb.cachedPaymentMethods.orderBy("sortOrder").toArray();
+  return rows || [];
 };
 
 export const addOfflineSale = async (saleRecord) => {

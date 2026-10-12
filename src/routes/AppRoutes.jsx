@@ -61,6 +61,7 @@ const Reports = lazy(() => import('../pages/Reports'));
 const ProcurementPlanningPage = lazy(() => import('../pages/ProcurementPlanningPage'));
 const Branches = lazy(() => import('../pages/Branches'));
 const ReceiptSettingsPage = lazy(() => import('../pages/ReceiptSettingsPage'));
+const PaymentMethodsSettingsPage = lazy(() => import('../pages/PaymentMethodsSettingsPage'));
 const AppConfigurationPage = lazy(() => import('../pages/AppConfigurationPage'));
 const DiningTablesPage = lazy(() => import('../pages/DiningTablesPage'));
 const Users = lazy(() => import('../pages/Users'));
@@ -221,6 +222,7 @@ const AppRoutes = () => {
         <Route path="dining-tables" element={<ProtectedRoute permission="MANAGE_BRANCHES" feature="DINING_TABLES" requiresOnline>{withSuspense(<DiningTablesPage />)}</ProtectedRoute>} />
         <Route path="receipt-settings" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<ReceiptSettingsPage />)}</ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute permission="MANAGE_USERS" feature="USER_MANAGEMENT" requiresOnline>{withSuspense(<Users />)}</ProtectedRoute>} />
+        <Route path="settings/payment-methods" element={<ProtectedRoute permission="MANAGE_PAYMENT_METHODS" requiresOnline>{withSuspense(<PaymentMethodsSettingsPage />)}</ProtectedRoute>} />
         <Route path="version-history" element={withSuspense(<VersionHistoryPage />)} />
       </Route>
 

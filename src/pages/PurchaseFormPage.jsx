@@ -20,6 +20,7 @@ import { useAuth } from "../context/AuthContext";
 import { ItemType } from "../utils/constants";
 import { formatCurrency, getLocalDateString } from "../utils/formatters";
 import { useSearchOnType } from "../hooks/useSearchOnType";
+import usePaymentMethods from "../hooks/usePaymentMethods";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   formatDisplayStockQuantity,
@@ -69,7 +70,9 @@ const getPrimaryUnitQty = (item) => {
 // remembered by its phone number is otherwise unfindable in a list of a few hundred.
 const SUPPLIER_SEARCH_KEYS = ["name", "phone"];
 
-const paymentMethodOptions = [
+// Static fallback until the configured methods load; live options come from
+// usePaymentMethods inside the component.
+const FALLBACK_PAYMENT_OPTIONS = [
   { value: "CASH", label: "Cash" },
   { value: "CARD", label: "Card" },
   { value: "BANK", label: "Bank" },
@@ -116,6 +119,17 @@ const PurchaseFormPage = () => {
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [cashSource, setCashSource] = useState("BRANCH_CASH");
   const [cashSourceBranchId, setCashSourceBranchId] = useState("");
+
+  // Configured payment methods drive the tender list. The drawer/cash-source
+  // logic below reads each method's cash-like flag rather than its code.
+  const { methods: configuredMethods } = usePaymentMethods();
+  const paymentMethodOptions = configuredMethods.length
+    ? configuredMethods.map((m) => ({ value: m.code, label: m.displayName }))
+    : FALLBACK_PAYMENT_OPTIONS;
+  const purchaseMethodConfig = configuredMethods.find((m) => m.code === paymentMethod) || null;
+  const purchaseIsCashLike = purchaseMethodConfig
+    ? purchaseMethodConfig.includeInExpectedCash
+    : paymentMethod === "CASH";
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [selectionPanelWidth, setSelectionPanelWidth] = useState(null);
@@ -623,7 +637,7 @@ const PurchaseFormPage = () => {
     const effectiveCashSource = normalizedPaidAmount > 0
       ? (autoCashSource || cashSource || "BRANCH_CASH")
       : "NONE";
-    if (normalizedPaidAmount > 0 && paymentMethod === "CASH" && !cashSource) return toast.error("Please select a cash source");
+    if (normalizedPaidAmount > 0 && purchaseIsCashLike && !cashSource) return toast.error("Please select a cash source");
     const branchIdsInPurchase = [...new Set(cartItems.map((item) => Number(item.branchId)))];
     const needsDrawerBranch = effectiveCashSource === "CASH_DRAWER" && branchIdsInPurchase.length > 1;
     if (needsDrawerBranch && !cashSourceBranchId) return toast.error("Please select the drawer branch");
@@ -694,7 +708,7 @@ const PurchaseFormPage = () => {
   const effectiveDisplayCashSource = normalizedPaidAmount > 0
     ? (autoCashSource || cashSource || "BRANCH_CASH")
     : "NONE";
-  const canSelectCashSource = normalizedPaidAmount > 0 && paymentMethod === "CASH";
+  const canSelectCashSource = normalizedPaidAmount > 0 && purchaseIsCashLike;
   const drawerBranchOptions = branches
     .filter((branch) => branchIdsInPurchase.includes(Number(branch.id)))
     .map((branch) => ({ value: String(branch.id), label: branch.name }));
@@ -875,7 +889,7 @@ const PurchaseFormPage = () => {
               <p className="mt-1 text-xs text-slate-500">
                 {canSelectCashSource
                   ? "Cash payments can use branch cash or your open drawer shift."
-                  : paymentMethod === "CASH"
+                  : purchaseIsCashLike
                     ? "Enter a paid amount to select a cash source."
                     : "Cash source is set automatically for this payment method."}
               </p>

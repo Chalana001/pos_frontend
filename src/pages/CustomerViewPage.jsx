@@ -3,6 +3,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { customersAPI } from "../api/customers.api";
+import usePaymentMethods from "../hooks/usePaymentMethods";
 import Button from "../components/common/Button";
 import Card from "../components/common/Card";
 import CustomSelect from "../components/common/CustomSelect";
@@ -12,7 +13,7 @@ import CustomerLoyaltyPanel from "../components/customers/CustomerLoyaltyPanel";
 import CustomerOrdersTab from "../components/customers/CustomerOrdersTab";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
-const paymentMethodOptions = [
+const FALLBACK_PAYMENT_OPTIONS = [
   { value: "CASH", label: "Cash" },
   { value: "CARD", label: "Card" },
   { value: "BANK", label: "Bank" },
@@ -22,6 +23,13 @@ const paymentMethodOptions = [
 const CustomerViewPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+
+  // Customer due payments settle a balance, so deferred (credit) methods are
+  // excluded here, mirroring the backend's settlement rule.
+  const { methods: configuredMethods } = usePaymentMethods();
+  const paymentMethodOptions = configuredMethods.length
+    ? configuredMethods.filter((m) => !m.allowsCredit).map((m) => ({ value: m.code, label: m.displayName }))
+    : FALLBACK_PAYMENT_OPTIONS;
 
   const [tab, setTab] = useState("orders");
   const [loading, setLoading] = useState(false);

@@ -16,6 +16,7 @@ import { warrantyTemplatesAPI } from "../api/warrantyTemplates.api";
 import Cart from "../components/pos/Cart";
 import CustomerSelect from "../components/pos/CustomerSelect";
 import CheckoutOverlay, { salePaymentMethods, saleDocumentTypes } from "../components/pos/CheckoutOverlay";
+import usePaymentMethods from "../hooks/usePaymentMethods";
 import BatchSelectModal from "../components/pos/BatchSelectModal";
 import { formatCurrency, localDateTimeStamp } from "../utils/formatters";
 import { ORDER_TYPES, DISCOUNT_TYPES, ItemType, SALE_MODES } from "../utils/constants";
@@ -337,6 +338,15 @@ const POS = () => {
   const [paidAmount, setPaidAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [bankReference, setBankReference] = useState("");
+  // The tenant's configured payment methods (backend-driven, offline-cached).
+  const { methods: paymentMethods } = usePaymentMethods();
+  // Flag-driven accessors: cash-like / credit behaviour come from the method's
+  // flags, falling back to the literal code while the list is still loading.
+  const activePaymentConfig = paymentMethods.find((m) => m.code === paymentMethod) || null;
+  const isCashLikeMethod = activePaymentConfig ? activePaymentConfig.includeInExpectedCash : paymentMethod === "CASH";
+  const isCreditMethod = activePaymentConfig ? activePaymentConfig.allowsCredit : paymentMethod === "CREDIT";
+  const activeReferencePolicy = activePaymentConfig?.referencePolicy || "NONE";
+  const activeReferenceLabel = activePaymentConfig?.referenceLabel || "Reference";
   const [paymentError, setPaymentError] = useState("");
   const [stockOverrideDialog, setStockOverrideDialog] = useState(null);
   const [receiptSettings, setReceiptSettings] = useState(null);
@@ -862,8 +872,8 @@ const POS = () => {
   const getCheckoutCreditAmount = (total = calculateTotal()) => {
     const normalizedTotal = roundToRupee(total || 0);
     const normalizedPaidAmount = roundToRupee(paidAmount || 0);
-    if (paymentMethod === "CREDIT") return normalizedTotal;
-    if (paymentMethod === "CASH") return Math.max(0, normalizedTotal - normalizedPaidAmount);
+    if (isCreditMethod) return normalizedTotal;
+    if (isCashLikeMethod) return Math.max(0, normalizedTotal - normalizedPaidAmount);
     return 0;
   };
 
@@ -2154,11 +2164,20 @@ const POS = () => {
   };
 
   const selectPaymentMethod = (nextMethod) => {
-    if (!salePaymentMethods.has(nextMethod) || nextMethod === paymentMethod) return;
+    // Accept any configured active method, not just the original hardcoded four:
+    // the backend list (paymentMethods) is the authority, with the static set as
+    // the pre-load fallback so a tap during the first fetch is never dropped.
+    const known = paymentMethods.length
+      ? paymentMethods.some((m) => m.code === nextMethod)
+      : salePaymentMethods.has(nextMethod);
+    if (!known || nextMethod === paymentMethod) return;
+    const config = paymentMethods.find((m) => m.code === nextMethod) || null;
+    const cashLike = config ? config.includeInExpectedCash : nextMethod === "CASH";
+    const credit = config ? config.allowsCredit : nextMethod === "CREDIT";
     setPaymentMethod(nextMethod);
-    setOrderType(nextMethod === "CREDIT" ? ORDER_TYPES.CREDIT : ORDER_TYPES.CASH);
+    setOrderType(credit ? ORDER_TYPES.CREDIT : ORDER_TYPES.CASH);
     setBankReference("");
-    setPaidAmount(nextMethod === "CREDIT" ? 0 : roundToRupee(calculateTotal()));
+    setPaidAmount(credit ? 0 : cashLike ? roundToRupee(calculateTotal()) : roundToRupee(calculateTotal()));
   };
 
   const selectPrintDocumentType = (nextType) => {
@@ -2346,32 +2365,29 @@ const POS = () => {
     const normalizedTotal = roundToRupee(total || 0);
     const normalizedPaidAmount = roundToRupee(paidAmount || 0);
     const creditAmount = getCheckoutCreditAmount(total);
-    if (paymentMethod === "CASH" && normalizedPaidAmount < normalizedTotal && !customer) {
+    if (isCashLikeMethod && normalizedPaidAmount < normalizedTotal && !customer) {
       return failCheckout("Select customer to save the remaining balance as credit");
     }
-    if (paymentMethod === "CARD" && normalizedPaidAmount !== normalizedTotal) {
-      return failCheckout("Card amount must equal the invoice total");
+    if (!isCashLikeMethod && !isCreditMethod && normalizedPaidAmount !== normalizedTotal) {
+      return failCheckout(`${activePaymentConfig?.displayName || "This"} amount must equal the invoice total`);
     }
-    if (paymentMethod === "BANK") {
-      if (normalizedPaidAmount !== normalizedTotal) {
-        return failCheckout("Bank amount must equal the invoice total");
-      }
-      if (!bankReference.trim()) return failCheckout("Enter bank reference for bank payment");
+    if (activeReferencePolicy === "REQUIRED" && !bankReference.trim()) {
+      return failCheckout(`Enter ${activeReferenceLabel.toLowerCase()} for this payment`);
     }
-    if (paymentMethod === "CREDIT" && normalizedPaidAmount !== 0) {
+    if (isCreditMethod && normalizedPaidAmount !== 0) {
       return failCheckout("Credit sales cannot include a payment amount");
     }
     if (creditAmount > 0 && !customer) return failCheckout("Select customer for credit sale");
     const creditLimitMessage = getCreditLimitValidationMessage(total);
     if (creditLimitMessage) return failCheckout(creditLimitMessage);
     if (!shouldUseServerForCheckout && creditAmount > 0) return failCheckout("Queue mode supports fully paid cash sales only");
-    if (!shouldUseServerForCheckout && paymentMethod !== "CASH") return failCheckout("Queue mode supports cash sales only");
+    if (!shouldUseServerForCheckout && !isCashLikeMethod) return failCheckout("Queue mode supports cash sales only");
     if (!shouldUseServerForCheckout && saleMode !== SALE_MODES.TAKEAWAY) return failCheckout("Queue mode supports takeaway sales only");
-    const saleOrderType = paymentMethod === "CREDIT" ? ORDER_TYPES.CREDIT : ORDER_TYPES.CASH;
-    const paymentAmount = paymentMethod === "CASH" ? normalizedPaidAmount
-      : paymentMethod === "CREDIT" ? 0
+    const saleOrderType = isCreditMethod ? ORDER_TYPES.CREDIT : ORDER_TYPES.CASH;
+    const paymentAmount = isCashLikeMethod ? normalizedPaidAmount
+      : isCreditMethod ? 0
       : normalizedTotal;
-    const trimmedBankReference = paymentMethod === "BANK" ? bankReference.trim() : "";
+    const trimmedBankReference = activeReferencePolicy !== "NONE" ? bankReference.trim() : "";
     setLoading(true);
     try {
       // One key per checkout attempt, held until the sale is actually banked.
@@ -2431,8 +2447,8 @@ const POS = () => {
         items: orderItems,
         note: "",
       };
-      if (paymentMethod === "CASH") orderData.tenderedAmount = normalizedPaidAmount;
-      if (paymentMethod === "BANK") orderData.bankReference = trimmedBankReference;
+      if (isCashLikeMethod) orderData.tenderedAmount = normalizedPaidAmount;
+      if (activeReferencePolicy !== "NONE") orderData.bankReference = trimmedBankReference;
 
       if (!useServerForThisCheckout) {
         // Reused, not regenerated: offlineSales is keyed by clientSaleId and
@@ -3242,6 +3258,7 @@ const POS = () => {
         isOnline={shouldUseServerForCheckout}
         customer={customer}
         errorMessage={checkoutError}
+        paymentMethods={paymentMethods}
       />
       <ConfirmDialog
         isOpen={!!stockOverrideDialog}

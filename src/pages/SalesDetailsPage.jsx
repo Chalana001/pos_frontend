@@ -20,13 +20,8 @@ import { toast } from "react-hot-toast"; // 🟢 Toast එක Import කළා
 import { hasPermission } from "../utils/permissions";
 import { hasPlanFeature } from "../utils/subscriptionFeatures";
 import { BRAND_NAME_UPPER } from "../utils/branding";
+import usePaymentMethods from "../hooks/usePaymentMethods";
 import ConfirmDialog from "../components/common/ConfirmDialog";
-
-const paymentMethodOptions = [
-  { value: "CASH", label: "Cash" },
-  { value: "BANK", label: "Bank" },
-  { value: "CARD", label: "Card" },
-];
 
 const getPaymentLabel = (sale) => {
   const paidAmount = Number(sale?.paidAmount || 0);
@@ -42,7 +37,16 @@ const SalesDetailsPage = () => {
   const { id } = useParams(); 
   const navigate = useNavigate();
   
-  const { user } = useAuth(); 
+  const { user } = useAuth();
+  // Settlement (credit-collection) methods, backend-driven. Credit itself is
+  // excluded server-side: a deferred method cannot settle a balance.
+  const { methods: settlementMethods } = usePaymentMethods();
+  const paymentMethodOptions = settlementMethods
+    .filter((m) => !m.allowsCredit)
+    .map((m) => ({ value: m.code, label: m.displayName }));
+  const selectedSettlement = settlementMethods.find((m) => m.code === paymentMethod) || null;
+  const settlementNeedsReference = selectedSettlement?.referencePolicy === "REQUIRED";
+  const settlementReferenceLabel = selectedSettlement?.referenceLabel || "Reference";
 
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -270,8 +274,8 @@ const SalesDetailsPage = () => {
       toast.error("Payment amount cannot exceed this sale due amount");
       return;
     }
-    if (paymentMethod === "BANK" && !paymentBankReference.trim()) {
-      toast.error("Bank reference is required for BANK payments");
+    if (settlementNeedsReference && !paymentBankReference.trim()) {
+      toast.error(`${settlementReferenceLabel} is required for ${selectedSettlement.displayName} payments`);
       return;
     }
 
@@ -280,7 +284,7 @@ const SalesDetailsPage = () => {
       await salesAPI.recordPayment(sale.invoiceNo, {
         amount,
         paymentMethod,
-        bankReference: paymentMethod === "BANK" ? paymentBankReference.trim() : undefined,
+        bankReference: selectedSettlement?.referencePolicy !== "NONE" ? paymentBankReference.trim() : undefined,
         note: paymentNote || `Payment for sale ${sale.invoiceNo}`,
       });
       toast.success("Sale payment recorded");
@@ -709,10 +713,10 @@ const SalesDetailsPage = () => {
               className="mb-4"
               buttonClassName="py-2 focus:ring-blue-100"
             />
-            {paymentMethod === "BANK" && (
+            {selectedSettlement?.referencePolicy !== "NONE" && (
               <>
                 <label htmlFor="salesdetailspage-bank-reference" className="mb-1 block text-xs font-semibold uppercase text-slate-600">
-                  Bank Reference
+                  {settlementReferenceLabel}
                 </label>
                 <input
                   id="salesdetailspage-bank-reference"

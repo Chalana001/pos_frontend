@@ -69,7 +69,8 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
     location.pathname.startsWith("/dining-tables") ||
     location.pathname.startsWith("/receipt-settings") ||
     location.pathname.startsWith("/users") ||
-    location.pathname.startsWith("/warranties/settings");
+    location.pathname.startsWith("/warranties/settings") ||
+    location.pathname.startsWith("/settings/payment-methods");
   const isReportsRoute = location.pathname.startsWith("/reports");
 
   // 🟢 අලුතින් එකතු කළ Sales Route Detection
@@ -767,7 +768,8 @@ return (
                 hasPermission(role, "MANAGE_APP_CONFIGURATION") ||
                 hasPermission(role, "MANAGE_BRANCHES") ||
                 hasPermission(role, "MANAGE_USERS") ||
-                hasPermission(role, "MANAGE_WARRANTY_SETTINGS");
+                hasPermission(role, "MANAGE_WARRANTY_SETTINGS") ||
+                hasPermission(role, "MANAGE_PAYMENT_METHODS");
 
               if (!canSeeConfigurationMenu) return null;
 
@@ -838,6 +840,19 @@ return (
                           }
                         >
                           {t("Receipt Design")}
+                        </NavLink>
+                      )}
+
+                      {hasPermission(role, "MANAGE_PAYMENT_METHODS") && (
+                        <NavLink
+                          to="/settings/payment-methods"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Payment Methods")}
                         </NavLink>
                       )}
 
