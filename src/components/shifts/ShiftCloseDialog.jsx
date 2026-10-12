@@ -15,6 +15,7 @@ import {
 import { toast } from "react-hot-toast";
 
 import { shiftsAPI } from "../../api/shifts.api";
+import { cashDropsAPI } from "../../api/cashDrops.api";
 import { resolvePaymentIcon } from "../../utils/paymentMethodIcons";
 import { formatCurrency, formatDateTime } from "../../utils/formatters";
 import { calculateExpectedCash } from "../../utils/shiftCash";
@@ -81,7 +82,11 @@ const ShiftCloseDialog = ({
   const [summaryError, setSummaryError] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [drawerPurchases, setDrawerPurchases] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [cashDrops, setCashDrops] = useState([]);
   const [showDrawerPurchases, setShowDrawerPurchases] = useState(false);
+  const [showExpenses, setShowExpenses] = useState(false);
+  const [showCashDrops, setShowCashDrops] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState(() => new Set());
   const [countedCash, setCountedCash] = useState("");
   const [note, setNote] = useState("");
@@ -96,19 +101,28 @@ const ShiftCloseDialog = ({
     setSummaryLoading(true);
     setSummaryError(false);
 
-    // Payment-method breakdown and the drawer purchases load together; the
-    // purchases explain part of totalExpenses, they do not change any number.
+    // Payment-method breakdown and the itemized drawer movements load
+    // together; expenses, drops and purchases explain the totals, they never
+    // change any number.
     Promise.all([
       shiftsAPI.getPaymentSummary(shiftId).then((res) => res.data),
       shiftsAPI.getPurchases(shiftId, { page: 0, size: SECTION_FETCH_SIZE })
         .then((res) => (res.data?.content || [])
           .filter((p) => p.status !== "CANCELED"))
         .catch(() => []),
+      shiftsAPI.getExpenses(shiftId, { page: 0, size: SECTION_FETCH_SIZE })
+        .then((res) => res.data?.content || [])
+        .catch(() => []),
+      cashDropsAPI.getAll({ shiftId, page: 0, size: SECTION_FETCH_SIZE })
+        .then((res) => res.data?.content || [])
+        .catch(() => []),
     ])
-      .then(([summaryData, purchases]) => {
+      .then(([summaryData, purchases, expenseRows, dropRows]) => {
         if (cancelled) return;
         setSummary(summaryData);
         setDrawerPurchases(purchases);
+        setExpenses(expenseRows);
+        setCashDrops(dropRows);
       })
       .catch(() => {
         if (!cancelled) setSummaryError(true);
@@ -401,8 +415,32 @@ const ShiftCloseDialog = ({
           <div className="rounded-lg bg-white border border-slate-200 px-4 py-3 space-y-2 text-sm">
             <div className="flex justify-between text-slate-600"><span>Opening float</span><span className="font-semibold">{formatCurrency(shift.openingCash)}</span></div>
             <div className="flex justify-between text-slate-600"><span>Cash sales (drawer tender)</span><span className="font-semibold">{formatCurrency(shift.cashSales)}</span></div>
-            {regularExpenses > 0 && (
-              <div className="flex justify-between text-slate-600"><span>Expenses</span><span className="font-semibold text-red-600">-{formatCurrency(regularExpenses)}</span></div>
+            {(regularExpenses > 0 || expenses.length > 0) && (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
+                  aria-expanded={showExpenses}
+                  aria-controls="shiftclose-expenses"
+                  onClick={() => setShowExpenses((v) => !v)}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {showExpenses ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    Expenses ({expenses.length})
+                  </span>
+                  <span className="font-semibold text-red-600">-{formatCurrency(regularExpenses)}</span>
+                </button>
+                {showExpenses && (
+                  <div id="shiftclose-expenses" className="mt-1.5 ml-5 space-y-1">
+                    {expenses.map((e) => (
+                      <div key={e.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                        <span className="truncate">{e.description || e.category}</span>
+                        <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(e.amount || 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
             {drawerPurchasesSum > 0 && (
               <div className="pt-1">
@@ -432,7 +470,33 @@ const ShiftCloseDialog = ({
                 )}
               </div>
             )}
-            <div className="flex justify-between text-slate-600"><span>Cash drops</span><span className="font-semibold text-red-600">-{formatCurrency(shift.totalCashDrops)}</span></div>
+            {(Number(shift?.totalCashDrops || 0) > 0 || cashDrops.length > 0) && (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
+                  aria-expanded={showCashDrops}
+                  aria-controls="shiftclose-cash-drops"
+                  onClick={() => setShowCashDrops((v) => !v)}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {showCashDrops ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    Cash drops ({cashDrops.length})
+                  </span>
+                  <span className="font-semibold text-red-600">-{formatCurrency(shift.totalCashDrops)}</span>
+                </button>
+                {showCashDrops && (
+                  <div id="shiftclose-cash-drops" className="mt-1.5 ml-5 space-y-1">
+                    {cashDrops.map((d) => (
+                      <div key={d.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                        <span className="truncate">{d.reason || "Cash drop"}{d.bankAccountName ? ` · ${d.bankAccountName}` : ""}</span>
+                        <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(d.amount || 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {summary?.cashCollections > 0 && (
               <div className="flex justify-between text-slate-600">
                 <span>Credit collections (cash, informational)</span>
