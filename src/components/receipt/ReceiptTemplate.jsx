@@ -320,7 +320,15 @@ const ReceiptTemplate = ({
     ? Math.round(listTotal * 100) / 100
     : Number(orderData?.subTotal ?? 0);
   const grandTotal = Number(orderData?.netTotal ?? orderData?.grandTotal ?? 0);
-  const paidAmount = Number(orderData?.paidAmount ?? 0);
+  // "Paid" is what the customer handed over. Since the payment-ledger change the server's
+  // paidAmount is capped at the total; the tendered cash sits in tenderedAmount. A caller
+  // without it falls back to paidAmount, which is what it used to mean.
+  const tenderedAmount = orderData?.tenderedAmount !== null
+    && orderData?.tenderedAmount !== undefined
+    && Number.isFinite(Number(orderData.tenderedAmount))
+    ? Number(orderData.tenderedAmount)
+    : Number(orderData?.paidAmount ?? 0);
+  const paidAmount = tenderedAmount;
   const dueAmount = Math.max(0, Number(orderData?.dueAmount ?? 0));
   const normalizedPaymentMethod = String(orderData?.paymentMethod || '').trim().toUpperCase();
   const bankReference = String(orderData?.bankReference || '').trim();

@@ -2637,6 +2637,11 @@ const POS = () => {
         orderType: responseDueAmount > 0 && responsePaidAmount > 0
           ? `${responsePaymentMethod} + CREDIT`
           : (response.data.orderType || saleOrderType),
+        // What the customer handed over; the slip's "Paid" line is this, not the amount
+        // applied to the bill, which paidAmount is capped to.
+        ...(response.data?.tenderedAmount !== null && response.data?.tenderedAmount !== undefined
+          ? { tenderedAmount: Number(response.data.tenderedAmount) }
+          : {}),
         ...(hasServerChangeAmount ? { changeAmount: Number(responseChangeAmount) } : {}),
         ...(response.data?.bankReference ? { bankReference: response.data.bankReference } : {}),
         saleMode,
