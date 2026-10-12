@@ -445,6 +445,36 @@ const ShiftCloseDialog = ({
     );
   };
 
+  // Other-Summary row: icon + label + count + amount, independently
+  // expandable to its own records. Amounts come from the shift's ledger, the
+  // list below only explains them.
+  const SummaryRow = ({ icon, label, count, amount, open, onToggle, domId, renderDetails }) => (
+    <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50/50">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={domId}
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-slate-100 transition-colors"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          {open ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
+          {icon}
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-700 truncate">{label}</p>
+            <p className="text-xs text-slate-500">{count} record{count === 1 ? "" : "s"}</p>
+          </div>
+        </div>
+        <p className="text-sm font-bold text-red-600 shrink-0">-{formatCurrency(amount)}</p>
+      </button>
+      {open && (
+        <div id={domId} className="mt-0 border-t border-slate-200 bg-white px-3 py-2 space-y-1.5">
+          {renderDetails()}
+        </div>
+      )}
+    </div>
+  );
+
   const GroupRow = ({ group }) => {
     const open = expandedGroups.has(group.key);
     return (
@@ -508,194 +538,207 @@ const ShiftCloseDialog = ({
           </div>
         </div>
 
-        {/* Sales by payment method — dynamic, backend-aggregated */}
-        <div className="page-section-enter" style={{ animationDelay: "70ms" }}>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Sales by Payment Method</h3>
-            <span className="text-sm font-bold text-emerald-700">
-              Total {formatCurrency(summary?.totalSales ?? 0)}
-            </span>
-          </div>
+        {/* Two-column reference layout; single column below lg */}
+        <div className="page-section-enter grid grid-cols-1 lg:grid-cols-2 gap-5" style={{ animationDelay: "70ms" }}>
 
-          {summaryLoading ? (
-            <div className="flex items-center justify-center py-8 rounded-lg border border-slate-200">
-              <LoadingSpinner size="sm" text="Loading sales breakdown..." />
+          {/* LEFT — Sales by Payment Method (All Tenders) */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 self-start">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">Sales by Payment Method</h3>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">All tenders</span>
             </div>
-          ) : summaryError ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-red-600 shrink-0" />
-              <p className="text-sm text-red-700">Could not load the payment breakdown. The cash reconciliation below is still accurate.</p>
-            </div>
-          ) : groupedRows.single.length + groupedRows.groups.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-center">
-              <Wallet size={20} className="mx-auto text-slate-400 mb-1" />
-              <p className="text-sm text-slate-600">No sales in this shift</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {groupedRows.groups.map((group) => (
-                <GroupRow key={group.key} group={group} />
-              ))}
-              {groupedRows.single.map((row) => (
-                <MethodRowInner key={row.code} row={row} />
-              ))}
-              <p className="text-xs text-slate-500 px-1">
-                Tap a method to list its sales. Grouped by payment category; only tenders marked
-                <span className="font-semibold text-emerald-600"> in drawer</span> count toward expected cash.
-              </p>
-            </div>
-          )}
-        </div>
+            <p className="text-2xl font-black text-emerald-600 -mt-1">{formatCurrency(summary?.totalSales ?? 0)}</p>
 
-        {/* Physical cash reconciliation — the drawer, not total sales */}
-        <div className="page-section-enter rounded-xl border-2 border-blue-200 bg-blue-50/40 p-4 space-y-3" style={{ animationDelay: "100ms" }}>
-          <div className="flex items-center gap-2">
-            <Banknote size={18} className="text-blue-700" />
-            <h3 className="text-sm font-bold uppercase tracking-wide text-blue-800">Cash Reconciliation</h3>
-          </div>
-          <div className="rounded-lg bg-white border border-slate-200 px-4 py-3 space-y-2 text-sm">
-            <div className="flex justify-between text-slate-600"><span>Opening float</span><span className="font-semibold">{formatCurrency(shift.openingCash)}</span></div>
-            <div className="flex justify-between text-slate-600"><span>Cash sales (drawer tender)</span><span className="font-semibold">{formatCurrency(shift.cashSales)}</span></div>
-            <div className="pt-1">
-              <button
-                type="button"
-                className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
-                aria-expanded={showExpenses}
-                aria-controls="shiftclose-expenses"
-                onClick={() => setShowExpenses((v) => !v)}
-              >
-                <span className="flex items-center gap-1.5">
-                  {showExpenses ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  Expenses ({expenses.length})
-                </span>
-                <span className="font-semibold text-red-600">-{formatCurrency(regularExpenses)}</span>
-              </button>
-              {showExpenses && (
-                <div id="shiftclose-expenses" className="mt-1.5 ml-5 space-y-1">
-                  {expenses.length === 0 ? (
-                    <p className="text-xs text-slate-400">No expenses in this shift</p>
-                  ) : expenses.map((e) => (
-                    <div key={e.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                      <span className="truncate">{e.description || e.category}</span>
-                      <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(e.amount || 0)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="pt-1">
-              <button
-                type="button"
-                className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
-                aria-expanded={showDrawerPurchases}
-                aria-controls="shiftclose-drawer-purchases"
-                onClick={() => setShowDrawerPurchases((v) => !v)}
-              >
-                <span className="flex items-center gap-1.5">
-                  {showDrawerPurchases ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  Purchases paid from drawer ({drawerPurchases.length})
-                </span>
-                <span className="font-semibold text-red-600">-{formatCurrency(drawerPurchasesSum)}</span>
-              </button>
-              {showDrawerPurchases && (
-                <div id="shiftclose-drawer-purchases" className="mt-1.5 ml-5 space-y-1">
-                  {drawerPurchases.length === 0 ? (
-                    <p className="text-xs text-slate-400">No purchases paid from this shift's drawer</p>
-                  ) : drawerPurchases.map((p) => (
-                    <div key={p.purchaseId} className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                      <span className="truncate">{p.invoiceNo} · {p.supplierName}</span>
-                      <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(p.cashSourceAmount || 0)}</span>
-                    </div>
-                  ))}
-                  <p className="text-[10px] text-slate-400">Included in the Expenses total above; shown separately so the drawer-money-to-suppliers is visible.</p>
-                </div>
-              )}
-            </div>
-            <div className="pt-1">
-              <button
-                type="button"
-                className="w-full flex items-center justify-between text-slate-600 hover:text-slate-800"
-                aria-expanded={showCashDrops}
-                aria-controls="shiftclose-cash-drops"
-                onClick={() => setShowCashDrops((v) => !v)}
-              >
-                <span className="flex items-center gap-1.5">
-                  {showCashDrops ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  Cash drops ({cashDrops.length})
-                </span>
-                <span className="font-semibold text-red-600">-{formatCurrency(shift.totalCashDrops)}</span>
-              </button>
-              {showCashDrops && (
-                <div id="shiftclose-cash-drops" className="mt-1.5 ml-5 space-y-1">
-                  {cashDrops.length === 0 ? (
-                    <p className="text-xs text-slate-400">No cash drops in this shift</p>
-                  ) : cashDrops.map((d) => (
-                    <div key={d.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
-                      <span className="truncate">{d.reason || "Cash drop"}{d.bankAccountName ? ` · ${d.bankAccountName}` : ""}</span>
-                      <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(d.amount || 0)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {summary?.cashCollections > 0 && (
-              <div className="flex justify-between text-slate-600">
-                <span>Credit collections (cash, informational)</span>
-                <span className="font-semibold">{formatCurrency(summary.cashCollections)}</span>
+            {summaryLoading ? (
+              <div className="flex items-center justify-center py-8 rounded-lg border border-slate-200">
+                <LoadingSpinner size="sm" text="Loading sales breakdown..." />
               </div>
-            )}
-            <div className="flex justify-between pt-2 border-t border-slate-200">
-              <span className="font-bold text-blue-800">Expected Cash in Drawer</span>
-              <span className="text-lg font-black text-blue-700">{formatCurrency(expectedCash)}</span>
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="shiftclose-counted-cash" className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
-            <input
-              id="shiftclose-counted-cash"
-              type="number"
-              step="0.01"
-              min="0"
-              value={countedCash}
-              onChange={(e) => setCountedCash(e.target.value)}
-              className="input"
-              placeholder="0.00"
-              required
-              autoFocus
-            />
-          </div>
-
-          {difference !== null && (
-            <div className={`rounded-lg p-3 flex items-center justify-between gap-3 border ${
-              isExact ? "bg-emerald-50 border-emerald-200" : difference < 0 ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
-            }`}>
-              <div className="flex items-center gap-2">
-                {isExact ? <Banknote size={16} className="text-emerald-600" />
-                  : difference < 0 ? <TrendingDown size={16} className="text-red-600" />
-                  : <TrendingUp size={16} className="text-amber-600" />}
-                <p className="text-sm font-bold text-slate-700">
-                  {isExact ? "Drawer reconciled" : difference < 0 ? "Shortage" : "Excess"}
+            ) : summaryError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 flex items-center gap-2">
+                <AlertTriangle size={16} className="text-red-600 shrink-0" />
+                <p className="text-sm text-red-700">Could not load the payment breakdown. The cash reconciliation on the right is still accurate.</p>
+              </div>
+            ) : groupedRows.single.length + groupedRows.groups.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-center">
+                <Wallet size={20} className="mx-auto text-slate-400 mb-1" />
+                <p className="text-sm text-slate-600">No sales in this shift</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="grid grid-cols-[1fr_auto] gap-2 px-1 pb-1 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  <span>Payment Method · Transactions</span>
+                  <span>Amount (LKR)</span>
+                </div>
+                {groupedRows.groups.map((group) => (
+                  <GroupRow key={group.key} group={group} />
+                ))}
+                {groupedRows.single.map((row) => (
+                  <MethodRowInner key={row.code} row={row} />
+                ))}
+                <div className="grid grid-cols-[1fr_auto] gap-2 px-3 py-2.5 rounded-lg bg-slate-800 text-white">
+                  <div>
+                    <p className="text-sm font-bold">Total Sales (All Payment Methods)</p>
+                    <p className="text-xs text-slate-300">{summary?.totalTransactions ?? 0} transactions</p>
+                  </div>
+                  <p className="text-sm font-black text-emerald-400 self-center">{formatCurrency(summary?.totalSales ?? 0)}</p>
+                </div>
+                <p className="text-xs text-slate-500 px-1">
+                  Tap a method to list its sales. Only tenders marked
+                  <span className="font-semibold text-emerald-600"> in drawer</span> count toward expected cash.
                 </p>
               </div>
-              <p className={`text-lg font-black ${
-                isExact ? "text-emerald-700" : difference < 0 ? "text-red-700" : "text-amber-700"
-              }`}>
-                {formatCurrency(Math.abs(difference))}
+            )}
+          </div>
+
+          {/* RIGHT — Other Summary above the cash cards */}
+          <div className="space-y-4">
+
+            {/* Other Summary */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+              <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">Other Summary</h3>
+
+              <SummaryRow
+                icon={<TrendingDown size={18} className="text-red-500 shrink-0" />}
+                label="Expenses"
+                count={expenses.length}
+                amount={regularExpenses}
+                open={showExpenses}
+                onToggle={() => setShowExpenses((v) => !v)}
+                domId="shiftclose-expenses"
+                renderDetails={() => expenses.length === 0 ? (
+                  <p className="text-xs text-slate-400">No expenses in this shift</p>
+                ) : expenses.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                    <span className="truncate"><span className="text-slate-400">{formatDateTime(e.createdAt)}</span> {e.description || e.category}</span>
+                    <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(e.amount || 0)}</span>
+                  </div>
+                ))}
+              />
+
+              <SummaryRow
+                icon={<Banknote size={18} className="text-red-500 shrink-0" />}
+                label="Purchases Paid from This Drawer"
+                count={drawerPurchases.length}
+                amount={drawerPurchasesSum}
+                open={showDrawerPurchases}
+                onToggle={() => setShowDrawerPurchases((v) => !v)}
+                domId="shiftclose-drawer-purchases"
+                renderDetails={() => drawerPurchases.length === 0 ? (
+                  <p className="text-xs text-slate-400">No purchases paid from this shift's drawer</p>
+                ) : drawerPurchases.map((p) => (
+                  <div key={p.purchaseId} className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                    <span className="truncate">{p.invoiceNo} · {p.supplierName}</span>
+                    <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(p.cashSourceAmount || 0)}</span>
+                  </div>
+                ))}
+              />
+
+              <SummaryRow
+                icon={<TrendingUp size={18} className="text-red-500 shrink-0" />}
+                label="Cash Drops"
+                count={cashDrops.length}
+                amount={Number(shift?.totalCashDrops || 0)}
+                open={showCashDrops}
+                onToggle={() => setShowCashDrops((v) => !v)}
+                domId="shiftclose-cash-drops"
+                renderDetails={() => cashDrops.length === 0 ? (
+                  <p className="text-xs text-slate-400">No cash drops in this shift</p>
+                ) : cashDrops.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                    <span className="truncate"><span className="text-slate-400">{formatDateTime(d.createdAt)}</span> {d.reason || "Cash drop"}{d.bankAccountName ? ` · ${d.bankAccountName}` : ""}</span>
+                    <span className="font-semibold text-slate-700 shrink-0">{formatCurrency(d.amount || 0)}</span>
+                  </div>
+                ))}
+              />
+
+              {summary?.cashCollections > 0 && (
+                <div className="flex items-center justify-between gap-3 pt-1 text-sm">
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Banknote size={18} className="text-emerald-500 shrink-0" />
+                    <span>Credit collections (cash, informational)</span>
+                  </div>
+                  <span className="font-bold text-emerald-700">{formatCurrency(summary.cashCollections)}</span>
+                </div>
+              )}
+              <p className="text-xs text-slate-400 px-1 pt-1">
+                Drawer purchases and cash drops already reduce Expected Cash; each row expands to its own records.
               </p>
             </div>
-          )}
 
-          <div>
-            <label htmlFor="shiftclose-note" className="block text-sm font-medium text-slate-700 mb-1">Note (optional)</label>
-            <textarea
-              id="shiftclose-note"
-              rows="2"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="input"
-              placeholder="Anything worth recording about this shift"
-            />
+            {/* Expected Cash in Drawer */}
+            <div className="rounded-xl border-2 border-blue-200 bg-blue-50/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Banknote size={18} className="text-blue-700" />
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-blue-800">Expected Cash in Drawer</h3>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${shift.status === "OPEN" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
+              </div>
+              <p className="text-3xl font-black text-blue-700">{formatCurrency(expectedCash)}</p>
+              <div className="rounded-lg bg-white border border-slate-200 px-4 py-3 space-y-1.5 text-sm">
+                <div className="flex justify-between text-slate-600"><span>Opening float</span><span className="font-semibold">{formatCurrency(shift.openingCash)}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Cash sales (drawer tender)</span><span className="font-semibold">{formatCurrency(shift.cashSales)}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Total drawer movements</span><span className="font-semibold text-red-600">-{formatCurrency(Number(shift?.totalExpenses || 0) + Number(shift?.totalCashDrops || 0))}</span></div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Only payments that contribute to physical drawer cash are included. Card, bank and other non-cash tenders never enter this figure.
+              </p>
+            </div>
+
+            {/* Cash Count */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Banknote size={18} className="text-slate-600" />
+                <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">Cash Count</h3>
+              </div>
+              <div>
+                <label htmlFor="shiftclose-counted-cash" className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
+                <input
+                  id="shiftclose-counted-cash"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={countedCash}
+                  onChange={(e) => setCountedCash(e.target.value)}
+                  className="input"
+                  placeholder="0.00"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              {difference !== null && (
+                <div className={`rounded-lg p-3 flex items-center justify-between gap-3 border ${
+                  isExact ? "bg-emerald-50 border-emerald-200" : difference < 0 ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {isExact ? <Banknote size={16} className="text-emerald-600" />
+                      : difference < 0 ? <TrendingDown size={16} className="text-red-600" />
+                      : <TrendingUp size={16} className="text-amber-600" />}
+                    <p className="text-sm font-bold text-slate-700">
+                      {isExact ? "Drawer reconciled" : difference < 0 ? "Shortage" : "Excess"}
+                    </p>
+                  </div>
+                  <p className={`text-lg font-black ${
+                    isExact ? "text-emerald-700" : difference < 0 ? "text-red-700" : "text-amber-700"
+                  }`}>
+                    {formatCurrency(Math.abs(difference))}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="shiftclose-note" className="block text-sm font-medium text-slate-700 mb-1">Note (optional)</label>
+                <textarea
+                  id="shiftclose-note"
+                  rows="2"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="input"
+                  placeholder="Anything worth recording about this shift"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
