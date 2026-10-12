@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Clock, User, Store } from "lucide-react"; 
+import { Clock, User, Store } from "lucide-react";
 import { shiftsAPI } from "../api/shifts.api";
 import { useAuth } from "../context/AuthContext";
 import { useBranch } from "../context/BranchContext";
@@ -11,7 +11,7 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import ShiftCloseSummary from "../components/shifts/ShiftCloseSummary";
+import ShiftCloseDialog from "../components/shifts/ShiftCloseDialog";
 
 const Shifts = () => {
   const { user } = useAuth();
@@ -32,7 +32,6 @@ const Shifts = () => {
   const [selectedShiftToClose, setSelectedShiftToClose] = useState(null); 
 
   const [openingCash, setOpeningCash] = useState("");
-  const [countedCash, setCountedCash] = useState("");
 
   const handleOpenClick = async () => {
     if (isAdmin) {
@@ -76,31 +75,21 @@ const Shifts = () => {
     }
   };
 
-  const handleCloseShift = async (e) => {
-    e.preventDefault();
-    const shiftId = isAdmin ? selectedShiftToClose?.id : activeShift?.id;
-
-    if (!shiftId) {
-      toast.error("No active shift selected");
-      return;
+  const handleCloseShift = async (shiftId, payload) => {
+    // The dialog supplies the payload; the authorization split (cashier closes
+    // their own shift vs admin closes by id) stays here, where it has always
+    // lived, so no existing rule changes.
+    if (isAdmin) {
+      await shiftsAPI.closeById(shiftId, payload);
+    } else {
+      await shiftsAPI.closeMine(payload);
     }
+  };
 
-    try {
-      const payload = { countedCash: parseFloat(countedCash), note: "" };
-      if (isAdmin) {
-        await shiftsAPI.closeById(shiftId, payload);
-      } else {
-        await shiftsAPI.closeMine(payload);
-      }
-      toast.success("Shift closed successfully");
-      setShowCloseModal(false);
-      setCountedCash("");
-      setSelectedShiftToClose(null);
-      refreshShift();
-    } catch (error) {
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to close shift";
-      toast.error(errorMessage);
-    }
+  const handleShiftClosed = () => {
+    setShowCloseModal(false);
+    setSelectedShiftToClose(null);
+    refreshShift();
   };
 
   if (loadingShift) {
@@ -253,72 +242,16 @@ const Shifts = () => {
         </form>
       </Modal>
 
-      <Modal 
-        isOpen={showCloseModal} 
+      <ShiftCloseDialog
+        isOpen={showCloseModal}
         onClose={() => {
           setShowCloseModal(false);
           setSelectedShiftToClose(null);
-        }} 
-        // ✅ 🔴 Close Modal එකෙත් නම පෙන්නන්න හැදුවා
-        title={`Close Shift ${isAdmin ? `(Cashier: ${selectedShiftToClose?.cashierName || selectedShiftToClose?.cashierUserId})` : ''}`}
-      >
-        <form onSubmit={handleCloseShift} className="space-y-4">
-          <div className="page-section-enter space-y-2 rounded-lg bg-slate-50 p-4" style={{ animationDelay: "60ms" }}>
-            <div className="flex justify-between text-sm">
-              <span>Expected Cash:</span>
-              <span className="font-bold text-blue-600">
-                {formatCurrency(calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift))}
-              </span>
-            </div>
-            {(() => {
-              const shiftForModal = isAdmin ? selectedShiftToClose : activeShift;
-              const { cardSales, bankSales, cashCollections } = nonCashTotals(shiftForModal);
-              if (!cardSales && !bankSales && !cashCollections) return null;
-              return (
-                <div className="text-xs text-slate-600 space-y-0.5 pt-1 border-t border-slate-200">
-                  <p>Not in the drawer: Card {formatCurrency(cardSales)} · Bank {formatCurrency(bankSales)}</p>
-                  {cashCollections > 0 && (
-                    <p>Cash collected on old credit dues: {formatCurrency(cashCollections)} (in the drawer, shown for reconciliation)</p>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-
-          {showCloseModal && (
-            <div className="page-section-enter" style={{ animationDelay: "80ms" }}>
-              <ShiftCloseSummary shiftId={(isAdmin ? selectedShiftToClose : activeShift)?.id} />
-            </div>
-          )}
-
-          <div className="page-section-enter" style={{ animationDelay: "100ms" }}>
-            <label htmlFor="shifts-counted-cash-amount" className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
-            <input id="shifts-counted-cash-amount"
-              type="number"
-              step="0.01"
-              value={countedCash}
-              onChange={(e) => setCountedCash(e.target.value)}
-              className="input"
-              placeholder="0.00"
-              required
-              autoFocus
-            />
-          </div>
-
-          {countedCash && (
-            <div className={`page-section-enter rounded-lg p-4 ${parseFloat(countedCash) === calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift) ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`} style={{ animationDelay: "140ms" }}>
-              <p className="text-sm font-medium">
-                Difference: {formatCurrency(Math.abs(parseFloat(countedCash) - calculateExpectedCash(isAdmin ? selectedShiftToClose : activeShift)))}
-              </p>
-            </div>
-          )}
-
-          <div className="page-section-enter flex gap-2" style={{ animationDelay: "180ms" }}>
-            <Button type="submit" variant="danger" className="flex-1">Confirm Close</Button>
-            <Button type="button" variant="secondary" onClick={() => setShowCloseModal(false)}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
+        }}
+        shift={isAdmin ? selectedShiftToClose : activeShift}
+        closeShift={handleCloseShift}
+        onClosed={handleShiftClosed}
+      />
     </div>
   );
 };

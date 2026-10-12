@@ -23,6 +23,10 @@ export const shiftsAPI = {
 
   getById: (shiftId) => api.get(`/shifts/${shiftId}`),
 
+  // Per-payment-method sales for one shift (Close Shift dialog): the backend
+  // groups the order_payments ledger over the shift window in one query.
+  getPaymentSummary: (shiftId) => api.get(`/shifts/${shiftId}/payment-summary`),
+
   getOrders: (shiftId, params = {}) => api.get(`/shifts/${shiftId}/orders`, { params }),
 
   getExpenses: (shiftId, params = {}) => api.get(`/shifts/${shiftId}/expenses`, { params }),

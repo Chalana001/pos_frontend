@@ -7,10 +7,10 @@ import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import ShiftCloseSummary from "../components/shifts/ShiftCloseSummary";
+import ShiftCloseDialog from "../components/shifts/ShiftCloseDialog";
 import TablePagination from "../components/common/TablePagination";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
-import { calculateExpectedCash, nonCashTotals } from "../utils/shiftCash";
+import { nonCashTotals } from "../utils/shiftCash";
 
 const formatCategoryLabel = (value) => value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 
@@ -44,24 +44,23 @@ const ShiftDetailsPage = () => {
   const [expensesTotalPages, setExpensesTotalPages] = useState(0);
   const [expensesTotalElements, setExpensesTotalElements] = useState(0);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [countedCash, setCountedCash] = useState("");
-  const [closing, setClosing] = useState(false);
+
+  const loadShift = async () => {
+    setLoading(true);
+    try {
+      const response = await shiftsAPI.getById(id);
+      setShift(response.data);
+    } catch (error) {
+      console.error("Failed to load shift", error);
+      setShift(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadShift = async () => {
-      setLoading(true);
-      try {
-        const response = await shiftsAPI.getById(id);
-        setShift(response.data);
-      } catch (error) {
-        console.error("Failed to load shift", error);
-        setShift(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadShift();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -138,23 +137,19 @@ const ShiftDetailsPage = () => {
     setExpensesPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
   };
 
-  const handleCloseShift = async (e) => {
-    e.preventDefault();
-    setClosing(true);
+  const handleCloseShift = async (shiftId, payload) => {
+    // Shift details is the admin/manager surface; closeById has always been
+    // its path and stays that way. Errors propagate to the dialog so the
+    // modal stays open on a failed close.
     try {
-      const response = await shiftsAPI.closeById(shift.id, {
-        countedCash: parseFloat(countedCash),
-        note: "",
-      });
+      const response = await shiftsAPI.closeById(shiftId, payload);
       setShift(response.data);
       toast.success("Shift closed successfully");
       setShowCloseModal(false);
-      setCountedCash("");
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to close shift";
       toast.error(errorMessage);
-    } finally {
-      setClosing(false);
+      throw error;
     }
   };
 
@@ -377,56 +372,13 @@ const ShiftDetailsPage = () => {
         />
       </Card>
 
-      <Modal
+      <ShiftCloseDialog
         isOpen={showCloseModal}
-        onClose={() => {
-          setShowCloseModal(false);
-          setCountedCash("");
-        }}
-        title={`Close Shift #${shift.id} (Cashier: ${shift.cashierName || shift.cashierUserId})`}
-      >
-        <form onSubmit={handleCloseShift} className="space-y-4">
-          <div className="space-y-2 rounded-lg bg-slate-50 p-4">
-            <div className="flex justify-between text-sm">
-              <span>Expected Cash:</span>
-              <span className="font-bold text-blue-600">{formatCurrency(calculateExpectedCash(shift))}</span>
-            </div>
-          </div>
-
-          {showCloseModal && <ShiftCloseSummary shiftId={shift.id} />}
-
-          <div>
-            <label htmlFor="shiftdetailspage-counted-cash-amount" className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
-            <input id="shiftdetailspage-counted-cash-amount"
-              type="number"
-              step="0.01"
-              value={countedCash}
-              onChange={(e) => setCountedCash(e.target.value)}
-              className="input"
-              placeholder="0.00"
-              required
-              autoFocus
-            />
-          </div>
-
-          {countedCash && (
-            <div className={`rounded-lg p-4 ${parseFloat(countedCash) === calculateExpectedCash(shift) ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
-              <p className="text-sm font-medium">
-                Difference: {formatCurrency(Math.abs(parseFloat(countedCash) - calculateExpectedCash(shift)))}
-              </p>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button type="submit" variant="danger" className="flex-1" disabled={closing}>
-              {closing ? "Closing..." : "Confirm Close"}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => { setShowCloseModal(false); setCountedCash(""); }}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onClose={() => setShowCloseModal(false)}
+        shift={shift}
+        closeShift={handleCloseShift}
+        onClosed={() => loadShift()}
+      />
     </div>
   );
 };
