@@ -233,61 +233,133 @@ const ShiftCloseDialog = ({
     }
   };
 
-  const handlePrint = () => {
-    const frame = printFrameRef.current;
-    if (!frame || !shift) return;
-    const methodRows = [...groupedRows.single, ...groupedRows.groups.flatMap((g) => g.members)]
-      .map((m) => `
-        <tr>
-          <td>${m.displayName}</td>
-          <td style="text-align:right">${m.transactionCount}</td>
-          <td style="text-align:right">${formatCurrency(m.amount)}</td>
-        </tr>`)
-      .join("");
-    const html = `<!doctype html>
-      <html><head><title>Shift Report</title>
-      <style>
-        body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; margin: 24px; }
-        h1 { font-size: 18px; margin: 0 0 4px; }
-        .sub { color: #64748b; font-size: 12px; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        th, td { padding: 6px 4px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
-        th { text-align: left; font-size: 11px; text-transform: uppercase; color: #475569; }
-        td.num, th.num { text-align: right; }
-        .total td { font-weight: bold; border-top: 2px solid #94a3b8; }
-      </style></head><body>
-      <h1>Shift Report</h1>
-      <div class="sub">
-        ${shift.cashierName || `User ${shift.cashierUserId}`} · ${shift.branchName || `Branch ${shift.branchId}`}<br/>
-        Opened ${formatDateTime(shift.openedAt)}${shift.closedAt ? ` · Closed ${formatDateTime(shift.closedAt)}` : ""}
-      </div>
-      <table>
-        <thead><tr><th>Payment method</th><th class="num">Txns</th><th class="num">Amount</th></tr></thead>
-        <tbody>
-          ${methodRows || '<tr><td colspan="3">No sales in this shift</td></tr>'}
-          <tr class="total"><td>Total sales</td><td class="num">${summary?.totalTransactions ?? 0}</td><td class="num">${formatCurrency(summary?.totalSales ?? 0)}</td></tr>
-        </tbody>
-      </table>
-      <table>
-        <tbody>
-          <tr><td>Opening float</td><td class="num">${formatCurrency(shift.openingCash)}</td></tr>
-          <tr><td>Cash sales</td><td class="num">${formatCurrency(shift.cashSales)}</td></tr>
-          <tr><td>Expenses</td><td class="num">-${formatCurrency(regularExpenses)}</td></tr>
-          <tr><td>Purchases paid from drawer</td><td class="num">-${formatCurrency(drawerPurchasesSum)}</td></tr>
-          <tr><td>Cash drops</td><td class="num">-${formatCurrency(shift.totalCashDrops)}</td></tr>
-          <tr class="total"><td>Expected cash in drawer</td><td class="num">${formatCurrency(expectedCash)}</td></tr>
-        </tbody>
-      </table>
-      </body></html>`;
-    printHtmlInFrame(frame, html);
-  };
-
-  if (!isOpen || !shift) return null;
+  // Print-time HTML escaping: the report is a document written into an
+  // iframe, so user-entered text (descriptions, references, notes) must not
+  // be able to break its markup.
+  const escapeHtml = (value) => String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
   // The per-method sales list comes from the shift's order list (already
   // fetched, one page) filtered by the row's code — the same sales the
   // aggregated row above counted, itemized.
   const salesForMethod = (code) => sales.filter((s) => s.paymentMethod === code);
+
+  const handlePrint = () => {
+    const frame = printFrameRef.current;
+    if (!frame || !shift) return;
+
+    const allMethodRows = [...groupedRows.single, ...groupedRows.groups.flatMap((g) => g.members)];
+    // Per-method block: the summary row plus that method's individual sales
+    // (invoice, time, reference with its configured label, amount).
+    const methodBlocks = allMethodRows.map((m) => {
+      const list = salesForMethod(m.code);
+      const saleRows = list.map((sale) => `
+          <tr>
+            <td>${sale.invoiceNo}</td>
+            <td>${formatDateTime(sale.createdAt)}</td>
+            <td>${sale.bankReference ? `${escapeHtml(m.referenceLabel || "Reference")}: ${escapeHtml(sale.bankReference)}` : ""}</td>
+            <td style="text-align:right">${formatCurrency(sale.grandTotal || 0)}</td>
+          </tr>`).join("");
+      return `
+        <tr class="method-head">
+          <td>${escapeHtml(m.displayName)}${m.unknown ? " (unknown)" : ""}</td>
+          <td style="text-align:right">${m.transactionCount}</td>
+          <td style="text-align:right">${Number(m.percentage || 0).toFixed(1)}%</td>
+          <td style="text-align:right">${formatCurrency(m.amount)}</td>
+        </tr>
+        ${saleRows || '<tr><td colspan="4" class="muted">No sales loaded for this method</td></tr>'}`;
+    }).join("");
+
+    const expenseRows = expenses.map((e) => `
+        <tr><td>${escapeHtml(e.description || e.category)}</td><td style="text-align:right">${formatCurrency(e.amount || 0)}</td></tr>`)
+      .join("") || '<tr><td class="muted">No expenses</td><td></td></tr>';
+    const purchaseRows = drawerPurchases.map((p) => `
+        <tr><td>${escapeHtml(p.invoiceNo)} · ${escapeHtml(p.supplierName)}</td><td style="text-align:right">${formatCurrency(p.cashSourceAmount || 0)}</td></tr>`)
+      .join("") || '<tr><td class="muted">No purchases from drawer</td><td></td></tr>';
+    const dropRows = cashDrops.map((d) => `
+        <tr><td>${escapeHtml(d.reason || "Cash drop")}${d.bankAccountName ? " · " + escapeHtml(d.bankAccountName) : ""}</td><td style="text-align:right">${formatCurrency(d.amount || 0)}</td></tr>`)
+      .join("") || '<tr><td class="muted">No cash drops</td><td></td></tr>';
+
+    const html = `<!doctype html>
+      <html><head><title>Shift Report</title>
+      <style>
+        body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; margin: 24px; }
+        h1 { font-size: 18px; margin: 0 0 4px; }
+        h2 { font-size: 13px; text-transform: uppercase; color: #475569; margin: 14px 0 6px; }
+        .sub { color: #64748b; font-size: 12px; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        th, td { padding: 5px 4px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
+        th { text-align: left; font-size: 10px; text-transform: uppercase; color: #475569; }
+        td.num, th.num { text-align: right; }
+        .total td { font-weight: bold; border-top: 2px solid #94a3b8; }
+        .method-head td { font-weight: bold; background: #f1f5f9; }
+        .muted { color: #94a3b8; }
+      </style></head><body>
+      <h1>Shift Report</h1>
+      <div class="sub">
+        ${escapeHtml(shift.cashierName || `User ${shift.cashierUserId}`)} · ${escapeHtml(shift.branchName || `Branch ${shift.branchId}`)}<br/>
+        Opened ${formatDateTime(shift.openedAt)}${shift.closedAt ? ` · Closed ${formatDateTime(shift.closedAt)}` : ""}
+        ${shift.closedAt ? "" : " · (still open at print time)"}
+      </div>
+
+      <h2>Sales by payment method</h2>
+      <table>
+        <thead><tr><th>Method / Sale</th><th class="num">Txns</th><th class="num">%</th><th class="num">Amount</th></tr></thead>
+        <tbody>
+          ${methodBlocks || '<tr><td colspan="4" class="muted">No sales in this shift</td></tr>'}
+          <tr class="total"><td>Total sales</td><td class="num">${summary?.totalTransactions ?? 0}</td><td class="num">100%</td><td class="num">${formatCurrency(summary?.totalSales ?? 0)}</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Cash drawer movements</h2>
+      <table>
+        <tbody>
+          <tr><td>Opening float</td><td class="num">${formatCurrency(shift.openingCash)}</td></tr>
+          <tr><td>Cash sales (drawer tender)</td><td class="num">${formatCurrency(shift.cashSales)}</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Expenses</h2>
+      <table>
+        <tbody>
+          ${expenseRows}
+          <tr class="total"><td>Expenses total</td><td class="num">-${formatCurrency(regularExpenses)}</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Purchases paid from drawer</h2>
+      <table>
+        <tbody>
+          ${purchaseRows}
+          <tr class="total"><td>Purchases total</td><td class="num">-${formatCurrency(drawerPurchasesSum)}</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Cash drops</h2>
+      <table>
+        <tbody>
+          ${dropRows}
+          <tr class="total"><td>Cash drops total</td><td class="num">-${formatCurrency(shift.totalCashDrops)}</td></tr>
+        </tbody>
+      </table>
+
+      <table>
+        <tbody>
+          <tr class="total"><td>Expected cash in drawer</td><td class="num">${formatCurrency(expectedCash)}</td></tr>
+          ${shift.countedCash != null ? `<tr><td>Counted cash</td><td class="num">${formatCurrency(shift.countedCash)}</td></tr>` : ""}
+          ${shift.cashDifference != null ? `<tr><td>Difference</td><td class="num">${formatCurrency(shift.cashDifference)}</td></tr>` : ""}
+        </tbody>
+      </table>
+      ${note.trim() ? `<p class="sub">Note: ${escapeHtml(note.trim())}</p>` : ""}
+      </body></html>`;
+    printHtmlInFrame(frame, html);
+  };
+
+  if (!isOpen || !shift) return null;
 
   const MethodSalesList = ({ row }) => {
     const list = salesForMethod(row.code);
