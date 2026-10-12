@@ -84,10 +84,12 @@ const ShiftCloseDialog = ({
   const [drawerPurchases, setDrawerPurchases] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [cashDrops, setCashDrops] = useState([]);
+  const [sales, setSales] = useState([]);
   const [showDrawerPurchases, setShowDrawerPurchases] = useState(false);
   const [showExpenses, setShowExpenses] = useState(false);
   const [showCashDrops, setShowCashDrops] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState(() => new Set());
+  const [expandedMethods, setExpandedMethods] = useState(() => new Set());
   const [countedCash, setCountedCash] = useState("");
   const [note, setNote] = useState("");
   const [closing, setClosing] = useState(false);
@@ -101,11 +103,15 @@ const ShiftCloseDialog = ({
     setSummaryLoading(true);
     setSummaryError(false);
 
-    // Payment-method breakdown and the itemized drawer movements load
-    // together; expenses, drops and purchases explain the totals, they never
-    // change any number.
+    // Payment-method breakdown, the per-method drill-down sales list and the
+    // itemized drawer movements load together; none of these change any
+    // number, they only explain them.
     Promise.all([
       shiftsAPI.getPaymentSummary(shiftId).then((res) => res.data),
+      shiftsAPI.getOrders(shiftId, { page: 0, size: SECTION_FETCH_SIZE })
+        .then((res) => (res.data?.content || [])
+          .filter((s) => s.status !== "CANCELED"))
+        .catch(() => []),
       shiftsAPI.getPurchases(shiftId, { page: 0, size: SECTION_FETCH_SIZE })
         .then((res) => (res.data?.content || [])
           .filter((p) => p.status !== "CANCELED"))
@@ -117,9 +123,10 @@ const ShiftCloseDialog = ({
         .then((res) => res.data?.content || [])
         .catch(() => []),
     ])
-      .then(([summaryData, purchases, expenseRows, dropRows]) => {
+      .then(([summaryData, salesRows, purchases, expenseRows, dropRows]) => {
         if (cancelled) return;
         setSummary(summaryData);
+        setSales(salesRows);
         setDrawerPurchases(purchases);
         setExpenses(expenseRows);
         setCashDrops(dropRows);
@@ -277,30 +284,94 @@ const ShiftCloseDialog = ({
 
   if (!isOpen || !shift) return null;
 
-  const MethodRowInner = ({ row, indent }) => (
-    <div className={`flex items-center justify-between gap-3 ${indent ? "pl-11" : "px-3"} py-2.5`}>
-      <div className="flex items-center gap-3 min-w-0">
-        {(() => {
-          const Icon = resolvePaymentIcon({ iconKey: row.iconKey, category: row.category });
-          return <Icon size={18} className="text-slate-500 shrink-0" />;
-        })()}
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-700 truncate flex items-center gap-2">
-            {row.displayName}
-            {row.unknown && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">UNKNOWN</span>}
-            {row.inactive && !row.unknown && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">INACTIVE</span>}
+  // The per-method sales list comes from the shift's order list (already
+  // fetched, one page) filtered by the row's code — the same sales the
+  // aggregated row above counted, itemized.
+  const salesForMethod = (code) => sales.filter((s) => s.paymentMethod === code);
+
+  const MethodSalesList = ({ row }) => {
+    const list = salesForMethod(row.code);
+    if (list.length === 0) {
+      return <p className="px-11 py-2 text-xs text-slate-400">No sales loaded for this method</p>;
+    }
+    return (
+      <div className="divide-y divide-slate-100 border-t border-slate-200 bg-white">
+        {list.map((sale) => (
+          <div key={sale.id} className="flex items-center justify-between gap-2 px-11 py-2 text-xs">
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-600 truncate">{sale.invoiceNo}</p>
+              <p className="text-slate-400">{formatDateTime(sale.createdAt)}</p>
+              {sale.bankReference && (
+                <p className="text-slate-400 truncate">
+                  {row.referenceLabel || "Reference"}: {sale.bankReference}
+                </p>
+              )}
+            </div>
+            <p className="font-bold text-slate-700 shrink-0">{formatCurrency(sale.grandTotal || 0)}</p>
+          </div>
+        ))}
+        {sales.length >= SECTION_FETCH_SIZE && (
+          <p className="px-11 py-1.5 text-[10px] text-slate-400">
+            First {SECTION_FETCH_SIZE} sales shown; see shift history for the rest
           </p>
-          <p className="text-xs text-slate-500">{row.transactionCount} txn{row.transactionCount === 1 ? "" : "s"} · {Number(row.percentage || 0).toFixed(1)}%</p>
-        </div>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-sm font-bold text-slate-800">{formatCurrency(row.amount)}</p>
-        {row.includeInExpectedCash && (
-          <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">in drawer</p>
         )}
       </div>
-    </div>
-  );
+    );
+  };
+
+  const toggleMethod = (code) => {
+    setExpandedMethods((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) {
+        next.delete(code);
+      } else {
+        next.add(code);
+      }
+      return next;
+    });
+  };
+
+  const MethodRowInner = ({ row, indent }) => {
+    const methodOpen = expandedMethods.has(row.code);
+    return (
+      <div className={indent ? "" : "rounded-lg border border-slate-200 overflow-hidden bg-slate-50/50"}>
+        <button
+          type="button"
+          aria-expanded={methodOpen}
+          aria-controls={`shiftclose-method-${row.code}`}
+          onClick={() => toggleMethod(row.code)}
+          className={`w-full flex items-center justify-between gap-3 ${indent ? "pl-7 pr-3" : "px-3"} py-2.5 text-left hover:bg-slate-100 transition-colors`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {methodOpen ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
+            {(() => {
+              const Icon = resolvePaymentIcon({ iconKey: row.iconKey, category: row.category });
+              return <Icon size={18} className="text-slate-500 shrink-0" />;
+            })()}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-700 truncate flex items-center gap-2">
+                {row.displayName}
+                {row.unknown && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">UNKNOWN</span>}
+                {row.inactive && !row.unknown && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">INACTIVE</span>}
+              </p>
+              <p className="text-xs text-slate-500">{row.transactionCount} txn{row.transactionCount === 1 ? "" : "s"} · {Number(row.percentage || 0).toFixed(1)}%</p>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-sm font-bold text-slate-800">{formatCurrency(row.amount)}</p>
+            {row.includeInExpectedCash && (
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">in drawer</p>
+            )}
+          </div>
+        </button>
+        {methodOpen && (
+          <div id={`shiftclose-method-${row.code}`}>
+            <MethodSalesList row={row} />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const GroupRow = ({ group }) => {
     const open = expandedGroups.has(group.key);
@@ -394,12 +465,10 @@ const ShiftCloseDialog = ({
                 <GroupRow key={group.key} group={group} />
               ))}
               {groupedRows.single.map((row) => (
-                <div key={row.code} className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50/50">
-                  <MethodRowInner row={row} />
-                </div>
+                <MethodRowInner key={row.code} row={row} />
               ))}
               <p className="text-xs text-slate-500 px-1">
-                Grouped by payment category; expand for the individual methods. Only tenders marked
+                Tap a method to list its sales. Grouped by payment category; only tenders marked
                 <span className="font-semibold text-emerald-600"> in drawer</span> count toward expected cash.
               </p>
             </div>
