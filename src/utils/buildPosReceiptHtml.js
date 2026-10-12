@@ -167,11 +167,27 @@ const renderLine = (line, data, items) => {
     ? Math.round(listTotal * 100) / 100
     : Number(orderData?.subTotal ?? 0);
   const grandTotal   = Number(orderData?.netTotal ?? orderData?.grandTotal ?? 0);
-  const paidAmount   = Number(orderData?.paidAmount ?? 0);
   const dueAmount    = Math.max(0, Number(orderData?.dueAmount ?? 0));
-  const changeAmt    = Math.max(0, paidAmount - grandTotal);
-  const balanceShow  = dueAmount > 0 ? dueAmount : changeAmt;
   const paymentMethod = String(orderData?.paymentMethod || '').trim().toUpperCase();
+  // The slip's "Paid" is what the customer handed over, not the amount applied to the bill.
+  // Since the payment-ledger change the server's paidAmount is capped at the total
+  // (min(tendered, total)); the tendered cash sits in tenderedAmount and the balance to hand
+  // back sits in changeAmount. A historical slip without those fields falls back to the old
+  // arithmetic, which was paidAmount itself and paidAmount - total.
+  const tendered     = orderData?.tenderedAmount !== null
+    && orderData?.tenderedAmount !== undefined
+    && Number.isFinite(Number(orderData.tenderedAmount))
+      ? Number(orderData.tenderedAmount)
+      : Number(orderData?.paidAmount ?? 0);
+  const paidAmount   = tendered;
+  const serverChange = Number(orderData?.changeAmount);
+  const hasServerChange = orderData?.changeAmount !== null
+    && orderData?.changeAmount !== undefined
+    && Number.isFinite(serverChange);
+  const changeAmt    = paymentMethod === 'CASH' && dueAmount === 0 && hasServerChange
+    ? Math.max(0, serverChange)
+    : Math.max(0, paidAmount - grandTotal);
+  const balanceShow  = dueAmount > 0 ? dueAmount : changeAmt;
   const bankReference = String(orderData?.bankReference || '').trim();
 
   // ── Loyalty ───────────────────────────────────────────────────────────────
