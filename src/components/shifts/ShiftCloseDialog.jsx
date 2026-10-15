@@ -2,17 +2,19 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Banknote,
+  Calculator,
   ChevronDown,
   ChevronRight,
   Clock,
   Printer,
   ReceiptText,
+  Settings,
   TrendingDown,
   TrendingUp,
-  User,
   Wallet,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { Link } from "react-router-dom";
 
 import { shiftsAPI } from "../../api/shifts.api";
 import { cashDropsAPI } from "../../api/cashDrops.api";
@@ -20,12 +22,29 @@ import { resolvePaymentIcon } from "../../utils/paymentMethodIcons";
 import { formatCurrency, formatDateTime } from "../../utils/formatters";
 import { calculateExpectedCash } from "../../utils/shiftCash";
 import { printHtmlInFrame } from "../../utils/printFrame";
+import { hasShopModule } from "../../utils/subscriptionFeatures";
 import Button from "../common/Button";
 import LoadingSpinner from "../common/LoadingSpinner";
 import Modal from "../common/Modal";
 
 // One page per section is enough for a real shift; the footer says so if not.
 const SECTION_FETCH_SIZE = 100;
+
+const fetchAllPages = async (fetchPage) => {
+  const firstPage = await fetchPage(0);
+  const firstData = firstPage?.data || {};
+  const firstContent = Array.isArray(firstData.content) ? firstData.content : [];
+  const pageCount = Number(firstData.totalPages || 1);
+  if (pageCount <= 1) return firstContent;
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: pageCount - 1 }, (_, index) => fetchPage(index + 1))
+  );
+  return [
+    ...firstContent,
+    ...remainingPages.flatMap((response) => Array.isArray(response?.data?.content) ? response.data.content : []),
+  ];
+};
 
 // Categories that render as a group when the shift genuinely contains two or
 // more distinct methods of that category. Membership is the method's
@@ -40,6 +59,15 @@ const CATEGORY_LABELS = {
   MOBILE_DIGITAL: "Mobile / Digital",
   CREDIT: "Credit / Deferred",
   OTHER: "Other",
+};
+
+const PAYMENT_TONES = {
+  CASH: { icon: "bg-emerald-100 text-emerald-700", badge: "bg-emerald-50 text-emerald-800" },
+  CARD: { icon: "bg-blue-100 text-blue-700", badge: "bg-blue-50 text-blue-800" },
+  BANK_TRANSFER: { icon: "bg-violet-100 text-violet-700", badge: "bg-violet-50 text-violet-800" },
+  MOBILE_DIGITAL: { icon: "bg-rose-100 text-rose-700", badge: "bg-rose-50 text-rose-800" },
+  CREDIT: { icon: "bg-orange-100 text-orange-700", badge: "bg-orange-50 text-orange-800" },
+  OTHER: { icon: "bg-slate-100 text-slate-700", badge: "bg-slate-100 text-slate-800" },
 };
 
 const shiftDuration = (openedAt, closedAt) => {
@@ -88,14 +116,45 @@ const ShiftCloseDialog = ({
   const [showDrawerPurchases, setShowDrawerPurchases] = useState(false);
   const [showExpenses, setShowExpenses] = useState(false);
   const [showCashDrops, setShowCashDrops] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState(() => new Set());
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set(["CARD"]));
   const [expandedMethods, setExpandedMethods] = useState(() => new Set());
   const [countedCash, setCountedCash] = useState("");
+  const [cashCountSettings, setCashCountSettings] = useState({ enabled: false, denominations: [] });
+  const [cashCountSettingsLoading, setCashCountSettingsLoading] = useState(true);
+  const [countByDenomination, setCountByDenomination] = useState(false);
+  const [denominationQuantities, setDenominationQuantities] = useState({});
   const [note, setNote] = useState("");
   const [closing, setClosing] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const printFrameRef = useRef(null);
 
   const shiftId = shift?.id ?? null;
+
+  useEffect(() => {
+    if (!isOpen || !shiftId || !hasShopModule("SHIFTS_DENOMINATION_COUNT")) {
+      setCashCountSettings({ enabled: false, denominations: [] });
+      setCashCountSettingsLoading(false);
+      setCountByDenomination(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setCashCountSettingsLoading(true);
+    shiftsAPI.getCashCountSettings()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const denominations = Array.isArray(data?.denominations) ? data.denominations : [];
+        setCashCountSettings({ enabled: data?.enabled === true, denominations });
+        setCountByDenomination(data?.enabled === true);
+        setDenominationQuantities(Object.fromEntries(denominations.map((denomination) => [denomination, 0])));
+      })
+      .catch(() => {
+        if (!cancelled) setCashCountSettings({ enabled: false, denominations: [] });
+      })
+      .finally(() => {
+        if (!cancelled) setCashCountSettingsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [isOpen, shiftId]);
 
   useEffect(() => {
     if (!isOpen || !shiftId) return undefined;
@@ -188,7 +247,18 @@ const ShiftCloseDialog = ({
     () => Math.max(0, Number(shift?.totalExpenses || 0) - drawerPurchasesSum),
     [shift?.totalExpenses, drawerPurchasesSum]
   );
-  const counted = countedCash === "" ? null : Number(countedCash);
+  const denominationCounts = cashCountSettings.denominations.map((denomination) => ({
+    denomination,
+    quantity: Number(denominationQuantities[denomination] || 0),
+  }));
+  const denominationTotal = denominationCounts.reduce(
+    (total, row) => total + row.denomination * row.quantity,
+    0
+  );
+  const useDenominationCount = cashCountSettings.enabled && countByDenomination;
+  const counted = useDenominationCount
+    ? denominationTotal
+    : countedCash === "" ? null : Number(countedCash);
   const difference = counted === null ? null : counted - expectedCash;
   const isExact = difference !== null && Math.abs(difference) < 0.005;
 
@@ -216,9 +286,14 @@ const ShiftCloseDialog = ({
     }
     try {
       setClosing(true);
-      await closeShift(shiftId, { countedCash: counted, note: note.trim() });
+      await closeShift(shiftId, {
+        countedCash: counted,
+        note: note.trim(),
+        denominationCounts: useDenominationCount ? denominationCounts : undefined,
+      });
       toast.success("Shift closed successfully");
       setCountedCash("");
+      setDenominationQuantities(Object.fromEntries(cashCountSettings.denominations.map((denomination) => [denomination, 0])));
       setNote("");
       onClosed?.();
     } catch (error) {
@@ -248,118 +323,201 @@ const ShiftCloseDialog = ({
   // aggregated row above counted, itemized.
   const salesForMethod = (code) => sales.filter((s) => s.paymentMethod === code);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const frame = printFrameRef.current;
-    if (!frame || !shift) return;
+    if (!frame || !shift || printing) return;
+
+    setPrinting(true);
+    let reportSales;
+    let reportPurchases;
+    let reportExpenses;
+    let reportCashDrops;
+    try {
+      [reportSales, reportPurchases, reportExpenses, reportCashDrops] = await Promise.all([
+        fetchAllPages((page) => shiftsAPI.getOrders(shiftId, { page, size: SECTION_FETCH_SIZE })),
+        fetchAllPages((page) => shiftsAPI.getPurchases(shiftId, { page, size: SECTION_FETCH_SIZE })),
+        fetchAllPages((page) => shiftsAPI.getExpenses(shiftId, { page, size: SECTION_FETCH_SIZE })),
+        fetchAllPages((page) => cashDropsAPI.getAll({ shiftId, page, size: SECTION_FETCH_SIZE })),
+      ]);
+      reportSales = reportSales.filter((sale) => sale.status !== "CANCELED");
+      reportPurchases = reportPurchases.filter((purchase) => purchase.status !== "CANCELED");
+    } catch (error) {
+      toast.error("Could not load all shift records for the report. Please try again.");
+      setPrinting(false);
+      return;
+    }
 
     const allMethodRows = [...groupedRows.single, ...groupedRows.groups.flatMap((g) => g.members)];
-    // Per-method block: the summary row plus that method's individual sales
-    // (invoice, time, reference with its configured label, amount).
-    const methodBlocks = allMethodRows.map((m) => {
-      const list = salesForMethod(m.code);
-      const saleRows = list.map((sale) => `
-          <tr>
-            <td>${sale.invoiceNo}</td>
-            <td>${formatDateTime(sale.createdAt)}</td>
-            <td>${sale.bankReference ? `${escapeHtml(m.referenceLabel || "Reference")}: ${escapeHtml(sale.bankReference)}` : ""}</td>
-            <td style="text-align:right">${formatCurrency(sale.grandTotal || 0)}</td>
-          </tr>`).join("");
+    const methodByCode = new Map(allMethodRows.map((method) => [method.code, method]));
+    const methodRows = allMethodRows.map((method) => `
+      <tr>
+        <td>${escapeHtml(method.displayName)}${method.unknown ? " <span class=\"muted\">(unknown)</span>" : ""}</td>
+        <td class="num">${Number(method.transactionCount || 0)}</td>
+        <td class="num">${formatCurrency(method.amount || 0)}</td>
+      </tr>`).join("") || '<tr><td colspan="3" class="muted">No sales in this shift</td></tr>';
+    const saleRows = reportSales.map((sale) => {
+      const method = methodByCode.get(sale.paymentMethod);
+      const tender = method?.displayName || sale.paymentMethod || "Unknown";
+      const reference = sale.bankReference
+        ? `${method?.referenceLabel || "Reference"}: ${sale.bankReference}`
+        : "—";
       return `
-        <tr class="method-head">
-          <td>${escapeHtml(m.displayName)}${m.unknown ? " (unknown)" : ""}</td>
-          <td style="text-align:right">${m.transactionCount}</td>
-          <td style="text-align:right">${Number(m.percentage || 0).toFixed(1)}%</td>
-          <td style="text-align:right">${formatCurrency(m.amount)}</td>
-        </tr>
-        ${saleRows || '<tr><td colspan="4" class="muted">No sales loaded for this method</td></tr>'}`;
-    }).join("");
+        <tr>
+          <td>${escapeHtml(sale.invoiceNo || "—")}</td>
+          <td>${escapeHtml(formatDateTime(sale.createdAt))}</td>
+          <td>${escapeHtml(tender)}</td>
+          <td>${escapeHtml(reference)}</td>
+          <td class="num">${formatCurrency(sale.grandTotal || 0)}</td>
+        </tr>`;
+    }).join("") || '<tr><td colspan="5" class="muted">No sale details loaded</td></tr>';
 
-    const expenseRows = expenses.map((e) => `
-        <tr><td>${escapeHtml(e.description || e.category)}</td><td style="text-align:right">${formatCurrency(e.amount || 0)}</td></tr>`)
-      .join("") || '<tr><td class="muted">No expenses</td><td></td></tr>';
-    const purchaseRows = drawerPurchases.map((p) => `
-        <tr><td>${escapeHtml(p.invoiceNo)} · ${escapeHtml(p.supplierName)}</td><td style="text-align:right">${formatCurrency(p.cashSourceAmount || 0)}</td></tr>`)
-      .join("") || '<tr><td class="muted">No purchases from drawer</td><td></td></tr>';
-    const dropRows = cashDrops.map((d) => `
-        <tr><td>${escapeHtml(d.reason || "Cash drop")}${d.bankAccountName ? " · " + escapeHtml(d.bankAccountName) : ""}</td><td style="text-align:right">${formatCurrency(d.amount || 0)}</td></tr>`)
-      .join("") || '<tr><td class="muted">No cash drops</td><td></td></tr>';
+    const expenseRows = reportExpenses.map((expense) => `
+      <tr><td>${escapeHtml(expense.description || expense.category || "Expense")}</td><td class="num">${formatCurrency(expense.amount || 0)}</td></tr>`)
+      .join("") || '<tr><td class="muted">No expenses recorded</td><td class="num">—</td></tr>';
+    const purchaseRows = reportPurchases.map((purchase) => `
+      <tr><td>${escapeHtml(purchase.invoiceNo || "Purchase")} · ${escapeHtml(purchase.supplierName || "Supplier")}</td><td class="num">${formatCurrency(purchase.cashSourceAmount || 0)}</td></tr>`)
+      .join("") || '<tr><td class="muted">No drawer purchases recorded</td><td class="num">—</td></tr>';
+    const dropRows = reportCashDrops.map((drop) => `
+      <tr><td>${escapeHtml(drop.reason || "Cash drop")}${drop.bankAccountName ? ` · ${escapeHtml(drop.bankAccountName)}` : ""}</td><td class="num">${formatCurrency(drop.amount || 0)}</td></tr>`)
+      .join("") || '<tr><td class="muted">No cash drops recorded</td><td class="num">—</td></tr>';
+
+    const rawCountedCash = counted ?? (shift.countedCash == null ? null : Number(shift.countedCash));
+    const countedCash = Number.isFinite(rawCountedCash) ? rawCountedCash : null;
+    const cashDifference = countedCash === null ? null : countedCash - expectedCash;
+    const printedDenominations = useDenominationCount ? denominationCounts : (shift.denominationCounts || []);
+    const denominationRows = printedDenominations.map(({ denomination, quantity }) => `
+      <tr><td>${formatCurrency(denomination)}</td><td class="num">${Number(quantity || 0)}</td><td class="num">${formatCurrency(Number(denomination) * Number(quantity || 0))}</td></tr>`)
+      .join("") || '<tr><td colspan="3" class="muted">No denomination count recorded</td></tr>';
+    const openedAt = formatDateTime(shift.openedAt);
+    const closedAt = shift.closedAt ? formatDateTime(shift.closedAt) : "Not closed yet";
+    const duration = shiftDuration(shift.openedAt, shift.closedAt);
+    const openingNote = shift.openNote || "—";
+    const closingNote = note.trim() || shift.closeNote || "—";
 
     const html = `<!doctype html>
-      <html><head><title>Shift Report</title>
+      <html><head><meta charset="utf-8"><title>Shift Z Report</title>
       <style>
-        body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; margin: 24px; }
-        h1 { font-size: 18px; margin: 0 0 4px; }
-        h2 { font-size: 13px; text-transform: uppercase; color: #475569; margin: 14px 0 6px; }
-        .sub { color: #64748b; font-size: 12px; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-        th, td { padding: 5px 4px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
-        th { text-align: left; font-size: 10px; text-transform: uppercase; color: #475569; }
-        td.num, th.num { text-align: right; }
-        .total td { font-weight: bold; border-top: 2px solid #94a3b8; }
-        .method-head td { font-weight: bold; background: #f1f5f9; }
-        .muted { color: #94a3b8; }
+        @page { size: A4 portrait; margin: 12mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #172554; margin: 0; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .brand { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #dbeafe; padding-bottom:10px; }
+        .brand-name { color:#0f766e; font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+        h1 { color:#0f172a; font-size:22px; margin:3px 0 0; letter-spacing:.4px; }
+        .shift-meta { color:#475569; text-align:right; line-height:1.55; font-size:10px; }
+        .columns { display:grid; grid-template-columns:1.03fr .97fr; gap:10px; align-items:start; }
+        .section { margin:0 0 9px; border:1px solid #dbe3ef; border-radius:7px; overflow:hidden; break-inside:avoid; }
+        h2 { margin:0; padding:7px 9px; border-bottom:1px solid #dbe3ef; background:#f8fafc; color:#1e3a8a; font-size:11px; }
+        table { width:100%; border-collapse:collapse; }
+        th, td { padding:4px 6px; border-bottom:1px solid #e8eef6; font-size:9px; vertical-align:top; }
+        th { background:#f8fafc; color:#475569; font-size:8px; text-align:left; text-transform:uppercase; letter-spacing:.3px; }
+        td.num, th.num { text-align:right; white-space:nowrap; }
+        tbody tr:last-child td { border-bottom:0; }
+        .total td { background:#ecfdf5; color:#047857; font-weight:700; }
+        .recon td:first-child { color:#475569; }
+        .recon .expected-row td { color:#1d4ed8; font-weight:700; background:#eff6ff; }
+        .recon .counted-row td { color:#047857; font-weight:700; background:#ecfdf5; }
+        .recon .difference-row td { color:#be123c; font-weight:700; background:#fff1f2; }
+        .muted { color:#94a3b8; }
+        .notes { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:8px; }
+        .note-label { color:#64748b; font-size:8px; font-weight:700; text-transform:uppercase; }
+        .note-value { margin-top:3px; color:#334155; white-space:pre-wrap; }
+        .notice { color:#64748b; font-size:8px; padding:0 7px 6px; }
+        .page-break { break-before:page; page-break-before:always; }
+        .footer { display:flex; justify-content:space-between; color:#64748b; border-top:1px solid #dbe3ef; padding-top:6px; margin-top:8px; font-size:8px; }
+        thead { display:table-header-group; }
+        tr { break-inside:avoid; }
       </style></head><body>
-      <h1>Shift Report</h1>
-      <div class="sub">
-        ${escapeHtml(shift.cashierName || `User ${shift.cashierUserId}`)} · ${escapeHtml(shift.branchName || `Branch ${shift.branchId}`)}<br/>
-        Opened ${formatDateTime(shift.openedAt)}${shift.closedAt ? ` · Closed ${formatDateTime(shift.closedAt)}` : ""}
-        ${shift.closedAt ? "" : " · (still open at print time)"}
-      </div>
+      <header class="brand">
+        <div><div class="brand-name">ZenSys POS · Shift Close</div><h1>SHIFT Z REPORT</h1></div>
+        <div class="shift-meta"><strong>Shift #${escapeHtml(shift.id)}</strong> · ${escapeHtml(shift.status || "OPEN")}<br/>Cashier: ${escapeHtml(shift.cashierName || `User ${shift.cashierUserId}`)} · ${escapeHtml(shift.branchName || `Branch ${shift.branchId}`)}</div>
+      </header>
+      <div class="shift-meta" style="text-align:left;margin:9px 0">Opened ${escapeHtml(openedAt)} · Closed ${escapeHtml(closedAt)} · Duration ${escapeHtml(duration)}</div>
 
-      <h2>Sales by payment method</h2>
-      <table>
-        <thead><tr><th>Method / Sale</th><th class="num">Txns</th><th class="num">%</th><th class="num">Amount</th></tr></thead>
-        <tbody>
-          ${methodBlocks || '<tr><td colspan="4" class="muted">No sales in this shift</td></tr>'}
-          <tr class="total"><td>Total sales</td><td class="num">${summary?.totalTransactions ?? 0}</td><td class="num">100%</td><td class="num">${formatCurrency(summary?.totalSales ?? 0)}</td></tr>
-        </tbody>
-      </table>
+      <main class="columns">
+        <div>
+          <section class="section"><h2>Sales by Payment Method</h2>
+            <table><thead><tr><th>Payment Method</th><th class="num">Transactions</th><th class="num">Amount (LKR)</th></tr></thead>
+              <tbody>${methodRows}<tr class="total"><td>Total Sales</td><td class="num">${summary?.totalTransactions ?? reportSales.length}</td><td class="num">${formatCurrency(summary?.totalSales ?? 0)}</td></tr></tbody>
+            </table>
+          </section>
+          <section class="section"><h2>Shift Notes</h2><div class="notes">
+            <div><div class="note-label">Opening Note</div><div class="note-value">${escapeHtml(openingNote)}</div></div>
+            <div><div class="note-label">Closing Note</div><div class="note-value">${escapeHtml(closingNote)}</div></div>
+          </div></section>
+        </div>
+        <div>
+          <section class="section"><h2>Cash Drawer Reconciliation</h2>
+            <table class="recon"><tbody>
+              <tr><td>Opening Float</td><td class="num">${formatCurrency(shift.openingCash || 0)}</td></tr>
+              <tr><td>Cash Sales (drawer tender)</td><td class="num">${formatCurrency(shift.cashSales || 0)}</td></tr>
+              <tr><td>Expenses from drawer</td><td class="num">−${formatCurrency(regularExpenses)}</td></tr>
+              <tr><td>Drawer purchases</td><td class="num">−${formatCurrency(drawerPurchasesSum)}</td></tr>
+              <tr><td>Cash drops</td><td class="num">−${formatCurrency(shift.totalCashDrops || 0)}</td></tr>
+              <tr class="expected-row"><td>Expected Cash</td><td class="num">${formatCurrency(expectedCash)}</td></tr>
+              ${countedCash === null ? "" : `<tr class="counted-row"><td>Counted Cash</td><td class="num">${formatCurrency(countedCash)}</td></tr>`}
+              ${cashDifference === null ? "" : `<tr class="difference-row"><td>Difference ${cashDifference < 0 ? "(shortage)" : cashDifference > 0 ? "(surplus)" : "(balanced)"}</td><td class="num">${cashDifference > 0 ? "+" : cashDifference < 0 ? "−" : ""}${formatCurrency(Math.abs(cashDifference))}</td></tr>`}
+            </tbody></table>
+            <div class="notice">Only cash tenders affect the drawer balance; card, bank, mobile, and credit tenders are excluded.</div>
+          </section>
+          <section class="section"><h2>Counter Cash · Denomination Count</h2>
+            <table><thead><tr><th>Denomination</th><th class="num">Qty</th><th class="num">Subtotal (LKR)</th></tr></thead>
+              <tbody>${denominationRows}</tbody>
+            </table>
+            ${printedDenominations.length ? '<div class="notice">Count entered at shift close</div>' : '<div class="notice">No denomination count was entered for this shift.</div>'}
+          </section>
+        </div>
+      </main>
+      <div class="footer"><span>Printed ${escapeHtml(formatDateTime(new Date().toISOString()))}</span><span>Shift #${escapeHtml(shift.id)}</span></div>
 
-      <h2>Cash drawer movements</h2>
-      <table>
-        <tbody>
-          <tr><td>Opening float</td><td class="num">${formatCurrency(shift.openingCash)}</td></tr>
-          <tr><td>Cash sales (drawer tender)</td><td class="num">${formatCurrency(shift.cashSales)}</td></tr>
-        </tbody>
-      </table>
-
-      <h2>Expenses</h2>
-      <table>
-        <tbody>
-          ${expenseRows}
-          <tr class="total"><td>Expenses total</td><td class="num">-${formatCurrency(regularExpenses)}</td></tr>
-        </tbody>
-      </table>
-
-      <h2>Purchases paid from drawer</h2>
-      <table>
-        <tbody>
-          ${purchaseRows}
-          <tr class="total"><td>Purchases total</td><td class="num">-${formatCurrency(drawerPurchasesSum)}</td></tr>
-        </tbody>
-      </table>
-
-      <h2>Cash drops</h2>
-      <table>
-        <tbody>
-          ${dropRows}
-          <tr class="total"><td>Cash drops total</td><td class="num">-${formatCurrency(shift.totalCashDrops)}</td></tr>
-        </tbody>
-      </table>
-
-      <table>
-        <tbody>
-          <tr class="total"><td>Expected cash in drawer</td><td class="num">${formatCurrency(expectedCash)}</td></tr>
-          ${shift.countedCash != null ? `<tr><td>Counted cash</td><td class="num">${formatCurrency(shift.countedCash)}</td></tr>` : ""}
-          ${shift.cashDifference != null ? `<tr><td>Difference</td><td class="num">${formatCurrency(shift.cashDifference)}</td></tr>` : ""}
-        </tbody>
-      </table>
-      ${note.trim() ? `<p class="sub">Note: ${escapeHtml(note.trim())}</p>` : ""}
+      <section class="page-break">
+        <header class="brand"><div><div class="brand-name">ZenSys POS · Shift Close</div><h1>SHIFT ACTIVITY DETAILS</h1></div><div class="shift-meta">Shift #${escapeHtml(shift.id)}<br/>${escapeHtml(openedAt)} – ${escapeHtml(closedAt)}</div></header>
+        <section class="section" style="margin-top:10px"><h2>Sale Details (${reportSales.length} transactions)</h2>
+          <table><thead><tr><th>Invoice</th><th>Time</th><th>Tender</th><th>Reference</th><th class="num">Amount (LKR)</th></tr></thead><tbody>${saleRows}</tbody></table>
+          <div class="notice">Complete shift sale list</div>
+        </section>
+        <div class="columns">
+          <section class="section"><h2>Expense Records</h2><table><thead><tr><th>Description</th><th class="num">Amount (LKR)</th></tr></thead><tbody>${expenseRows}</tbody></table></section>
+          <section class="section"><h2>Drawer Purchase Records</h2><table><thead><tr><th>Purchase · Supplier</th><th class="num">Amount (LKR)</th></tr></thead><tbody>${purchaseRows}</tbody></table></section>
+        </div>
+        <section class="section"><h2>Cash Drop Records</h2><table><thead><tr><th>Reason · Destination</th><th class="num">Amount (LKR)</th></tr></thead><tbody>${dropRows}</tbody></table></section>
+        <div class="footer"><span>Printed ${escapeHtml(formatDateTime(new Date().toISOString()))}</span><span>Shift #${escapeHtml(shift.id)} · Details</span></div>
+      </section>
       </body></html>`;
     printHtmlInFrame(frame, html);
+    setPrinting(false);
   };
 
   if (!isOpen || !shift) return null;
+
+  const cashierLabel = shift.cashierName || `User ${shift.cashierUserId}`;
+  const cashDenominations = Array.isArray(cashCountSettings.denominations) ? cashCountSettings.denominations : [];
+  const denominationSplitIndex = Math.ceil(cashDenominations.length / 2);
+  const denominationColumns = [
+    cashDenominations.slice(0, denominationSplitIndex),
+    cashDenominations.slice(denominationSplitIndex),
+  ];
+  const renderDenominationRow = (denomination) => {
+    const quantity = Number(denominationQuantities[denomination] || 0);
+    return (
+      <div key={denomination} className="grid grid-cols-[minmax(0,1fr)_3.5rem_0.75rem_minmax(4.5rem,auto)] items-center gap-1 border-b border-slate-100 px-1.5 py-0 text-[11px] last:border-b-0">
+        <span className="font-medium text-slate-700">Rs {denomination.toLocaleString("en-LK")}</span>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={quantity}
+          onChange={(event) => setDenominationQuantities((current) => ({
+            ...current,
+            [denomination]: event.target.value === "" ? 0 : Number(event.target.value),
+          }))}
+          aria-label={`Quantity of Rs ${denomination.toLocaleString("en-LK")}`}
+          className="h-5 w-full rounded border border-slate-300 px-1 text-center text-[11px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <span className="text-center text-slate-400">×</span>
+        <span className="text-right font-semibold text-slate-700">{formatCurrency(denomination * quantity)}</span>
+      </div>
+    );
+  };
 
   const MethodSalesList = ({ row }) => {
     const list = salesForMethod(row.code);
@@ -405,35 +563,34 @@ const ShiftCloseDialog = ({
 
   const MethodRowInner = ({ row, indent }) => {
     const methodOpen = expandedMethods.has(row.code);
+    const tone = PAYMENT_TONES[row.category] || PAYMENT_TONES.OTHER;
     return (
-      <div className={indent ? "" : "rounded-lg border border-slate-200 overflow-hidden bg-slate-50/50"}>
+      <div className={indent ? "" : "overflow-hidden border-b border-slate-200 last:border-b-0 bg-white"}>
         <button
           type="button"
           aria-expanded={methodOpen}
           aria-controls={`shiftclose-method-${row.code}`}
           onClick={() => toggleMethod(row.code)}
-          className={`w-full flex items-center justify-between gap-3 ${indent ? "pl-7 pr-3" : "px-3"} py-2.5 text-left hover:bg-slate-100 transition-colors`}
+          className={`w-full grid grid-cols-[minmax(0,1fr)_5rem_8.5rem] items-center gap-2 ${indent ? "pl-9 pr-3 bg-blue-50/80 hover:bg-blue-100/70" : "px-4 hover:bg-slate-50"} py-2.5 text-left transition-colors`}
         >
           <div className="flex items-center gap-2 min-w-0">
             {methodOpen ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
             {(() => {
               const Icon = resolvePaymentIcon({ iconKey: row.iconKey, category: row.category });
-              return <Icon size={18} className="text-slate-500 shrink-0" />;
+              return <span className={`inline-flex h-9 w-9 items-center justify-center rounded-lg shrink-0 ${tone.icon}`}><Icon size={19} /></span>;
             })()}
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-700 truncate flex items-center gap-2">
-                {row.displayName}
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-700 truncate flex items-center gap-2">
+                <span className={`rounded-md px-2.5 py-1 ${tone.badge}`}>{row.displayName}</span>
                 {row.unknown && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">UNKNOWN</span>}
                 {row.inactive && !row.unknown && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">INACTIVE</span>}
               </p>
-              <p className="text-xs text-slate-500">{row.transactionCount} txn{row.transactionCount === 1 ? "" : "s"} · {Number(row.percentage || 0).toFixed(1)}%</p>
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-sm font-bold text-slate-800">{formatCurrency(row.amount)}</p>
-            {row.includeInExpectedCash && (
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">in drawer</p>
-            )}
+          <p className="text-sm text-center text-slate-600">{row.transactionCount}</p>
+          <div className="text-right min-w-0">
+            <p className="text-sm font-bold text-slate-800 truncate">{formatCurrency(row.amount)}</p>
+            {row.includeInExpectedCash && <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">in drawer</p>}
           </div>
         </button>
         {methodOpen && (
@@ -449,23 +606,24 @@ const ShiftCloseDialog = ({
   // expandable to its own records. Amounts come from the shift's ledger, the
   // list below only explains them.
   const SummaryRow = ({ icon, label, count, amount, open, onToggle, domId, renderDetails }) => (
-    <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50/50">
+    <div className="overflow-hidden bg-white">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={domId}
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-slate-100 transition-colors"
+        className="w-full grid grid-cols-[minmax(0,1fr)_2rem_auto_1rem] items-center gap-2 px-2.5 py-1 text-left hover:bg-slate-50 transition-colors"
       >
         <div className="flex items-center gap-2.5 min-w-0">
           {open ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
-          {icon}
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0">{icon}</span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-700 truncate">{label}</p>
-            <p className="text-xs text-slate-500">{count} record{count === 1 ? "" : "s"}</p>
           </div>
         </div>
-        <p className="text-sm font-bold text-red-600 shrink-0">-{formatCurrency(amount)}</p>
+        <span className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-center text-[11px] text-slate-700">{count}</span>
+        <p className="text-xs font-bold text-red-600 shrink-0">{formatCurrency(amount)}</p>
+        <ChevronRight size={16} className="text-slate-500" />
       </button>
       {open && (
         <div id={domId} className="mt-0 border-t border-slate-200 bg-white px-3 py-2 space-y-1.5">
@@ -477,30 +635,31 @@ const ShiftCloseDialog = ({
 
   const GroupRow = ({ group }) => {
     const open = expandedGroups.has(group.key);
+    const tone = PAYMENT_TONES[group.category] || PAYMENT_TONES.OTHER;
     return (
-      <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50/50">
+      <div className="overflow-hidden border-b border-slate-200 last:border-b-0 bg-white">
         <button
           type="button"
           aria-expanded={open}
           aria-controls={`shiftclose-group-${group.key}`}
           onClick={() => toggleGroup(group.key)}
-          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-slate-100 transition-colors"
+          className="w-full grid grid-cols-[minmax(0,1fr)_5rem_8.5rem] items-center gap-2 px-4 py-2.5 text-left hover:bg-slate-50 transition-colors"
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             {open ? <ChevronDown size={16} className="text-slate-600 shrink-0" /> : <ChevronRight size={16} className="text-slate-600 shrink-0" />}
             {(() => {
               const Icon = resolvePaymentIcon({ category: group.category });
-              return <Icon size={18} className="text-slate-500 shrink-0" />;
+              return <span className={`inline-flex h-9 w-9 items-center justify-center rounded-lg shrink-0 ${tone.icon}`}><Icon size={19} /></span>;
             })()}
             <div className="min-w-0">
-              <p className="text-sm font-bold text-slate-700">{group.label}</p>
-              <p className="text-xs text-slate-500">{group.transactionCount} txn{group.transactionCount === 1 ? "" : "s"} · {group.members.length} methods</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-700 truncate"><span className={`inline-block rounded-md px-2.5 py-1 ${tone.badge}`}>{group.label}</span></p>
             </div>
           </div>
-          <p className="text-sm font-bold text-slate-800 shrink-0">{formatCurrency(group.amount)}</p>
+          <p className="text-sm text-center text-slate-600">{group.transactionCount}</p>
+          <p className="text-sm font-bold text-right text-slate-800 truncate">{formatCurrency(group.amount)}</p>
         </button>
         {open && (
-          <div id={`shiftclose-group-${group.key}`} className="divide-y divide-slate-100 border-t border-slate-200 bg-white">
+          <div id={`shiftclose-group-${group.key}`} className="divide-y divide-blue-100 border-t border-blue-100 bg-blue-50/80">
             {group.members.map((member) => (
               <MethodRowInner key={member.code} row={member} indent />
             ))}
@@ -514,40 +673,39 @@ const ShiftCloseDialog = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      size="lg"
-      title="Close Shift"
+      size="3xl"
+      title={`Close Shift (Cashier: ${cashierLabel})`}
     >
-      <form onSubmit={handleConfirm} className="space-y-5">
+      <form onSubmit={handleConfirm} className="space-y-2 sm:space-y-3">
         {/* Shift information — genuine record values, nothing invented */}
-        <div className="page-section-enter grid grid-cols-2 sm:grid-cols-4 gap-3" style={{ animationDelay: "40ms" }}>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 flex items-center gap-1"><User size={12} /> Cashier</p>
-            <p className="text-sm font-semibold text-slate-800 truncate">{shift.cashierName || `User ${shift.cashierUserId}`}</p>
+        <div className="page-section-enter grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 rounded-xl border border-slate-200 bg-white divide-y sm:divide-y-0 sm:divide-x divide-slate-200" style={{ animationDelay: "40ms" }}>
+          <div className="flex items-center gap-2.5 px-3 py-2 min-w-0">
+            <span className="h-9 w-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><Clock size={17} /></span>
+            <div className="min-w-0"><p className="text-sm font-semibold text-slate-500">Shift Opened</p><p className="text-sm font-medium text-slate-800 truncate">{formatDateTime(shift.openedAt)}</p></div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 flex items-center gap-1"><Clock size={12} /> Opened</p>
-            <p className="text-sm font-semibold text-slate-800 truncate">{formatDateTime(shift.openedAt)}</p>
+          <div className="flex items-center gap-2.5 px-3 py-2 min-w-0">
+            <span className="h-9 w-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><Wallet size={17} /></span>
+            <div><p className="text-sm font-semibold text-slate-500">Status</p><span className={`mt-0.5 inline-flex rounded-md px-2.5 py-1 text-xs font-bold ${shift.status === "OPEN" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>{shift.status || "—"}</span></div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 flex items-center gap-1"><Clock size={12} /> Duration</p>
-            <p className="text-sm font-semibold text-slate-800">{shiftDuration(shift.openedAt, shift.closedAt)}</p>
+          <div className="flex items-center gap-2.5 px-3 py-2 min-w-0">
+            <span className="h-9 w-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Clock size={17} /></span>
+            <div><p className="text-sm font-semibold text-slate-500">Duration</p><p className="text-sm font-medium text-slate-800">{shiftDuration(shift.openedAt, shift.closedAt)}</p></div>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 flex items-center gap-1"><ReceiptText size={12} /> Transactions</p>
-            <p className="text-sm font-semibold text-slate-800">{summary?.totalTransactions ?? (summaryLoading ? "…" : 0)}</p>
+          <div className="flex items-center gap-2.5 px-3 py-2 min-w-0">
+            <span className="h-9 w-9 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0"><ReceiptText size={17} /></span>
+            <div><p className="text-sm font-semibold text-slate-500">Total Transactions</p><p className="text-sm font-medium text-slate-800">{summary?.totalTransactions ?? (summaryLoading ? "…" : 0)}</p></div>
           </div>
         </div>
 
         {/* Two-column reference layout; single column below lg */}
-        <div className="page-section-enter grid grid-cols-1 lg:grid-cols-2 gap-5" style={{ animationDelay: "70ms" }}>
-
-          {/* LEFT — Sales by Payment Method (All Tenders) */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 self-start">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">Sales by Payment Method</h3>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">All tenders</span>
+        <div className="page-section-enter grid grid-cols-1 lg:grid-cols-2 items-start gap-2 sm:gap-3" style={{ animationDelay: "70ms" }}>
+          <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-3">
+          <div className="order-1 min-w-0">
+          <div className="rounded-xl border border-slate-200 bg-white p-2 sm:p-2.5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold text-slate-800">Sales by Payment Method (All Tenders)</h3>
+              <p className="flex items-center gap-2 text-lg font-black text-emerald-700 whitespace-nowrap"><Wallet size={19} />{formatCurrency(summary?.totalSales ?? 0)}</p>
             </div>
-            <p className="text-2xl font-black text-emerald-600 -mt-1">{formatCurrency(summary?.totalSales ?? 0)}</p>
 
             {summaryLoading ? (
               <div className="flex items-center justify-center py-8 rounded-lg border border-slate-200">
@@ -564,10 +722,11 @@ const ShiftCloseDialog = ({
                 <p className="text-sm text-slate-600">No sales in this shift</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="grid grid-cols-[1fr_auto] gap-2 px-1 pb-1 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                  <span>Payment Method · Transactions</span>
-                  <span>Amount (LKR)</span>
+              <div className="overflow-hidden rounded-lg border border-slate-200">
+                <div className="grid grid-cols-[minmax(0,1fr)_5rem_8.5rem] gap-2 bg-slate-50 px-4 py-2.5 border-b border-slate-200 text-xs font-bold text-slate-600">
+                  <span>Payment Method</span>
+                  <span className="text-center">Transactions</span>
+                  <span className="text-right">Amount (LKR)</span>
                 </div>
                 {groupedRows.groups.map((group) => (
                   <GroupRow key={group.key} group={group} />
@@ -575,12 +734,12 @@ const ShiftCloseDialog = ({
                 {groupedRows.single.map((row) => (
                   <MethodRowInner key={row.code} row={row} />
                 ))}
-                <div className="grid grid-cols-[1fr_auto] gap-2 px-3 py-2.5 rounded-lg bg-slate-800 text-white">
+                <div className="grid grid-cols-[minmax(0,1fr)_5rem_8.5rem] items-center gap-2 px-3 py-2 bg-emerald-50 text-slate-800 border-t border-emerald-100">
                   <div>
                     <p className="text-sm font-bold">Total Sales (All Payment Methods)</p>
-                    <p className="text-xs text-slate-300">{summary?.totalTransactions ?? 0} transactions</p>
                   </div>
-                  <p className="text-sm font-black text-emerald-400 self-center">{formatCurrency(summary?.totalSales ?? 0)}</p>
+                  <p className="text-sm text-center text-slate-600">{summary?.totalTransactions ?? 0}</p>
+                  <p className="text-sm font-black text-right text-emerald-700 truncate">{formatCurrency(summary?.totalSales ?? 0)}</p>
                 </div>
                 <p className="text-xs text-slate-500 px-1">
                   Tap a method to list its sales. Only tenders marked
@@ -590,15 +749,33 @@ const ShiftCloseDialog = ({
             )}
           </div>
 
-          {/* RIGHT — Other Summary above the cash cards */}
-          <div className="space-y-4">
+          </div>
 
+          {/* Mobile stack order: Sales, Other Summary, Expected Cash, Cash Count. */}
+          <div className="order-3 min-w-0 rounded-xl border border-slate-200 bg-white p-2 sm:p-2.5 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700"><Banknote size={19} /></span>
+                <div><h3 className="text-base font-bold text-slate-800">Expected Cash in Drawer</h3><p className="text-xs text-slate-500">Cash sales only (based on records)</p></div>
+              </div>
+              <span className="text-xl font-black text-blue-700">{formatCurrency(expectedCash)}</span>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+              <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+              <p>Only cash sales are included in expected cash. Card, bank and other payment methods never enter the cash drawer.</p>
+            </div>
+          </div>
+
+          </div>
+
+          <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-3">
             {/* Other Summary */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
-              <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">Other Summary</h3>
+            <div className="order-2 min-w-0 rounded-xl border border-slate-200 bg-white p-2 sm:p-2.5 space-y-1.5">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800"><Calculator size={17} /> Other Summary</h3>
 
+              <div className="overflow-hidden rounded-lg border border-slate-200 divide-y divide-slate-200">
               <SummaryRow
-                icon={<TrendingDown size={18} className="text-red-500 shrink-0" />}
+                icon={<TrendingDown size={18} className="text-orange-600 shrink-0" />}
                 label="Expenses"
                 count={expenses.length}
                 amount={regularExpenses}
@@ -614,9 +791,8 @@ const ShiftCloseDialog = ({
                   </div>
                 ))}
               />
-
               <SummaryRow
-                icon={<Banknote size={18} className="text-red-500 shrink-0" />}
+                icon={<Banknote size={18} className="text-rose-600 shrink-0" />}
                 label="Purchases Paid from This Drawer"
                 count={drawerPurchases.length}
                 amount={drawerPurchasesSum}
@@ -634,7 +810,7 @@ const ShiftCloseDialog = ({
               />
 
               <SummaryRow
-                icon={<TrendingUp size={18} className="text-red-500 shrink-0" />}
+                icon={<TrendingUp size={18} className="text-blue-600 shrink-0" />}
                 label="Cash Drops"
                 count={cashDrops.length}
                 amount={Number(shift?.totalCashDrops || 0)}
@@ -650,6 +826,7 @@ const ShiftCloseDialog = ({
                   </div>
                 ))}
               />
+              </div>
 
               {summary?.cashCollections > 0 && (
                 <div className="flex items-center justify-between gap-3 pt-1 text-sm">
@@ -660,99 +837,126 @@ const ShiftCloseDialog = ({
                   <span className="font-bold text-emerald-700">{formatCurrency(summary.cashCollections)}</span>
                 </div>
               )}
-              <p className="text-xs text-slate-400 px-1 pt-1">
-                Drawer purchases and cash drops already reduce Expected Cash; each row expands to its own records.
-              </p>
-            </div>
-
-            {/* Expected Cash in Drawer */}
-            <div className="rounded-xl border-2 border-blue-200 bg-blue-50/40 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Banknote size={18} className="text-blue-700" />
-                  <h3 className="text-sm font-bold uppercase tracking-wide text-blue-800">Expected Cash in Drawer</h3>
-                </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${shift.status === "OPEN" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
-              </div>
-              <p className="text-3xl font-black text-blue-700">{formatCurrency(expectedCash)}</p>
-              <div className="rounded-lg bg-white border border-slate-200 px-4 py-3 space-y-1.5 text-sm">
-                <div className="flex justify-between text-slate-600"><span>Opening float</span><span className="font-semibold">{formatCurrency(shift.openingCash)}</span></div>
-                <div className="flex justify-between text-slate-600"><span>Cash sales (drawer tender)</span><span className="font-semibold">{formatCurrency(shift.cashSales)}</span></div>
-                <div className="flex justify-between text-slate-600"><span>Total drawer movements</span><span className="font-semibold text-red-600">-{formatCurrency(Number(shift?.totalExpenses || 0) + Number(shift?.totalCashDrops || 0))}</span></div>
-              </div>
-              <p className="text-xs text-slate-500">
-                Only payments that contribute to physical drawer cash are included. Card, bank and other non-cash tenders never enter this figure.
-              </p>
+              <p className="text-[10px] leading-4 text-slate-400 px-1">Drawer purchases and cash drops already reduce Expected Cash.</p>
             </div>
 
             {/* Cash Count */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Banknote size={18} className="text-slate-600" />
-                <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">Cash Count</h3>
+            <div className="order-4 min-w-0 rounded-xl border border-slate-200 bg-white p-2 sm:p-2.5 space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700"><Banknote size={17} /></span>
+                <h3 className="text-sm font-bold text-slate-800">Cash Count</h3>
+                </div>
+                {cashCountSettings.enabled && (
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={countByDenomination}
+                      onChange={(event) => setCountByDenomination(event.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="hidden sm:inline text-xs">Count by denomination (optional)</span>
+                    <span className="sm:hidden">Count by denomination</span>
+                  </label>
+                )}
               </div>
-              <div>
-                <label htmlFor="shiftclose-counted-cash" className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
-                <input
-                  id="shiftclose-counted-cash"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={countedCash}
-                  onChange={(e) => setCountedCash(e.target.value)}
-                  className="input"
-                  placeholder="0.00"
-                  required
-                  autoFocus
-                />
-              </div>
+              {cashCountSettingsLoading ? (
+                <p className="text-sm text-slate-500">Loading cash count options...</p>
+              ) : (
+                <>
+                  {useDenominationCount && (
+                    <div>
+                      <div className="sm:hidden">
+                        <div className="grid grid-cols-[minmax(0,1fr)_3.5rem_0.75rem_minmax(4.5rem,auto)] gap-1 border-b border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                          <span>Denomination</span><span className="text-center">Qty</span><span /><span className="text-right">Subtotal</span>
+                        </div>
+                        {cashDenominations.map(renderDenominationRow)}
+                      </div>
+                      <div className="hidden gap-1.5 sm:grid sm:grid-cols-2 sm:divide-x sm:divide-slate-200">
+                        {denominationColumns.map((column, columnIndex) => (
+                          <div key={columnIndex} className={columnIndex === 1 ? "sm:pl-2" : "sm:pr-2"}>
+                            <div className="grid grid-cols-[minmax(0,1fr)_3.5rem_0.75rem_minmax(4.5rem,auto)] gap-1 border-b border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                              <span>Denomination</span><span className="text-center">Qty</span><span /><span className="text-right">Subtotal</span>
+                            </div>
+                            {column.map(renderDenominationRow)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!useDenominationCount && <div>
+                    <label htmlFor="shiftclose-counted-cash" className="mb-1 block text-sm font-medium text-slate-700">Counted Cash {useDenominationCount ? "(Total)" : "*"}</label>
+                    <input
+                      id="shiftclose-counted-cash"
+                      type={useDenominationCount ? "text" : "number"}
+                      step={useDenominationCount ? undefined : "0.01"}
+                      min={useDenominationCount ? undefined : "0"}
+                      value={useDenominationCount ? formatCurrency(denominationTotal) : countedCash}
+                      onChange={useDenominationCount ? undefined : (event) => setCountedCash(event.target.value)}
+                      className="input !h-12 !border-2 !border-blue-500 !text-lg"
+                      placeholder="0.00"
+                      readOnly={useDenominationCount}
+                      required
+                      autoFocus
+                    />
+                  </div>}
+                </>
+              )}
+
+              {useDenominationCount && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-2 py-1">
+                  <div className="flex items-center gap-2 text-[11px] font-bold text-slate-800">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100 text-emerald-700"><Wallet size={13} /></span>
+                    Counted Cash (Total)
+                  </div>
+                  <span className="text-sm font-black text-emerald-700">{formatCurrency(denominationTotal)}</span>
+                </div>
+              )}
+
+              {useDenominationCount && (
+                <Link to="/settings/cash-denominations" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700">
+                  <Settings size={14} /> Manage denominations in Settings
+                </Link>
+              )}
 
               {difference !== null && (
-                <div className={`rounded-lg p-3 flex items-center justify-between gap-3 border ${
+                <div className={`rounded-lg p-1.5 flex items-center justify-between gap-3 border ${
                   isExact ? "bg-emerald-50 border-emerald-200" : difference < 0 ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
                 }`}>
-                  <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
                     {isExact ? <Banknote size={16} className="text-emerald-600" />
                       : difference < 0 ? <TrendingDown size={16} className="text-red-600" />
                       : <TrendingUp size={16} className="text-amber-600" />}
-                    <p className="text-sm font-bold text-slate-700">
+                    <div><p className={`text-xs font-bold ${isExact ? "text-emerald-700" : difference < 0 ? "text-red-700" : "text-amber-700"}`}>
                       {isExact ? "Drawer reconciled" : difference < 0 ? "Shortage" : "Excess"}
-                    </p>
+                    </p><p className="text-xs text-slate-500">(Counted - Expected)</p></div>
                   </div>
-                  <p className={`text-lg font-black ${
+                  <p className={`text-sm font-black ${
                     isExact ? "text-emerald-700" : difference < 0 ? "text-red-700" : "text-amber-700"
                   }`}>
-                    {formatCurrency(Math.abs(difference))}
+                    {formatCurrency(difference)}
                   </p>
                 </div>
               )}
 
-              <div>
-                <label htmlFor="shiftclose-note" className="block text-sm font-medium text-slate-700 mb-1">Note (optional)</label>
-                <textarea
-                  id="shiftclose-note"
-                  rows="2"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="input"
-                  placeholder="Anything worth recording about this shift"
-                />
-              </div>
+              <details className="group">
+                <summary className="cursor-pointer text-sm font-medium text-slate-600">Add a note (optional)</summary>
+                <textarea id="shiftclose-note" rows="2" value={note} onChange={(e) => setNote(e.target.value)} className="input mt-2" placeholder="Anything worth recording about this shift" />
+              </details>
             </div>
           </div>
         </div>
 
         {/* Footer actions */}
-        <div className="page-section-enter flex flex-col sm:flex-row gap-2 pt-1" style={{ animationDelay: "130ms" }}>
-          <Button type="submit" variant="danger" className="flex-1" disabled={closing}>
-            {closing ? "Closing..." : "Confirm Close"}
+        <div className="page-section-enter sticky bottom-[-12px] z-10 -mx-3 -mb-3 mt-2 flex items-center justify-between gap-2 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur sm:px-3" style={{ animationDelay: "130ms" }}>
+          <Button type="button" variant="outline" onClick={handlePrint} disabled={closing || printing} className="min-w-0 flex-1 whitespace-nowrap px-2 text-xs sm:flex-none sm:min-w-56 sm:px-4 sm:text-sm">
+            <Printer size={16} className="mr-1.5 sm:mr-2" />
+            <span className="sm:hidden">{printing ? "Printing..." : "Print"}</span>
+            <span className="hidden sm:inline">{printing ? "Preparing Z Report..." : "Print Z Report"}</span>
           </Button>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={closing}>
-            Cancel
-          </Button>
-          <Button type="button" variant="outline" onClick={handlePrint} disabled={closing}>
-            <Printer size={16} className="mr-1" />
-            Print Shift Report
+          <Button type="submit" variant="danger" className="min-w-0 flex-1 whitespace-nowrap px-2 text-xs sm:flex-none sm:min-w-64 sm:px-4 sm:text-sm" disabled={closing || cashCountSettingsLoading}>
+              {closing ? "Closing..." : "✓  Confirm Close"}
           </Button>
         </div>
 

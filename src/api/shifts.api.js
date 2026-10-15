@@ -1,6 +1,8 @@
 import api from "./axios";
 
 export const shiftsAPI = {
+  getCashCountSettings: () => api.get("/shifts/cash-count-settings"),
+  updateCashCountSettings: (payload) => api.put("/shifts/cash-count-settings", payload),
   openMine: (data) => api.post("/shifts/open", data),
   getMine: () => api.get("/shifts/me"),
   closeMine: (data) => api.post("/shifts/close", data),

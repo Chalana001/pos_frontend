@@ -96,6 +96,8 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     md: 'max-w-2xl',
     lg: 'max-w-4xl',
     xl: 'max-w-6xl',
+    '2xl': 'max-w-7xl',
+    '3xl': 'max-w-[min(96vw,1440px)]',
   };
 
   return createPortal(
@@ -113,9 +115,9 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
           aria-labelledby={title ? titleId : undefined}
           aria-label={title ? undefined : 'Dialog'}
           tabIndex={-1}
-          className={`modal-panel-enter shell-surface relative w-full max-h-[90vh] overflow-hidden rounded-xl focus:outline-none ${sizes[size]}`}
+          className={`modal-panel-enter shell-surface relative w-full ${size === '3xl' ? 'max-h-[calc(100dvh-16px)]' : 'max-h-[90vh]'} overflow-hidden rounded-xl focus:outline-none ${sizes[size]}`}
         >
-          <div className="flex items-center justify-between p-6 border-b border-slate-200">
+          <div className={`flex items-center justify-between border-b border-slate-200 ${size === '3xl' ? 'p-3' : 'p-6'}`}>
             {title ? <h2 id={titleId} className="text-xl font-semibold text-slate-800">{title}</h2> : <div />}
             <button
               type="button"
@@ -127,7 +129,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
             </button>
           </div>
 
-          <div className="p-6 overflow-y-auto overflow-x-hidden max-h-[calc(90vh-140px)]">
+          <div className={`overflow-y-auto overflow-x-hidden ${size === '3xl' ? 'min-h-0 p-3 max-h-[calc(100dvh-80px)]' : 'p-6 max-h-[calc(90vh-140px)]'}`}>
             {children}
           </div>
         </div>

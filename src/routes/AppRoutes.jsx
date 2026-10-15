@@ -63,6 +63,7 @@ const Branches = lazy(() => import('../pages/Branches'));
 const ReceiptSettingsPage = lazy(() => import('../pages/ReceiptSettingsPage'));
 const PaymentMethodsSettingsPage = lazy(() => import('../pages/PaymentMethodsSettingsPage'));
 const AppConfigurationPage = lazy(() => import('../pages/AppConfigurationPage'));
+const CashDenominationsSettingsPage = lazy(() => import('../pages/CashDenominationsSettingsPage'));
 const DiningTablesPage = lazy(() => import('../pages/DiningTablesPage'));
 const Users = lazy(() => import('../pages/Users'));
 const SubscriptionPage = lazy(() => import('../pages/SubscriptionPage'));
@@ -218,6 +219,7 @@ const AppRoutes = () => {
         <Route path="reports/suppliers" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="supplier" />)}</ProtectedRoute>} />
         <Route path="reports/returns" element={<ProtectedRoute permission="VIEW_REPORTS" feature="RETURNS_REPORTS" requiresOnline>{withSuspense(<Reports mode="returns" />)}</ProtectedRoute>} />
         <Route path="app-configuration" element={<ProtectedRoute permission="MANAGE_APP_CONFIGURATION" requiresOnline>{withSuspense(<AppConfigurationPage />)}</ProtectedRoute>} />
+        <Route path="settings/cash-denominations" element={<ProtectedRoute permission="MANAGE_APP_CONFIGURATION" requiresOnline>{withSuspense(<CashDenominationsSettingsPage />)}</ProtectedRoute>} />
         <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<Branches />)}</ProtectedRoute>} />
         <Route path="dining-tables" element={<ProtectedRoute permission="MANAGE_BRANCHES" feature="DINING_TABLES" requiresOnline>{withSuspense(<DiningTablesPage />)}</ProtectedRoute>} />
         <Route path="receipt-settings" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<ReceiptSettingsPage />)}</ProtectedRoute>} />

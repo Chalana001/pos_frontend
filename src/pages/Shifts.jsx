@@ -32,6 +32,7 @@ const Shifts = () => {
   const [selectedShiftToClose, setSelectedShiftToClose] = useState(null); 
 
   const [openingCash, setOpeningCash] = useState("");
+  const [openingNote, setOpeningNote] = useState("");
 
   const handleOpenClick = async () => {
     if (isAdmin) {
@@ -40,6 +41,7 @@ const Shifts = () => {
         return;
       }
     }
+    setOpeningNote("");
     setShowOpenModal(true);
   };
 
@@ -56,7 +58,7 @@ const Shifts = () => {
     try {
       const payload = { 
         openingCash: parseFloat(openingCash), 
-        note: "",
+        note: openingNote.trim(),
       };
 
       if (isAdmin) {
@@ -68,6 +70,7 @@ const Shifts = () => {
       toast.success("Shift opened successfully");
       setShowOpenModal(false);
       setOpeningCash("");
+      setOpeningNote("");
       refreshShift();
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to open shift";
@@ -234,6 +237,19 @@ const Shifts = () => {
               required
               autoFocus
             />
+          </div>
+          <div className="page-section-enter" style={{ animationDelay: "80ms" }}>
+            <label htmlFor="shifts-opening-note" className="mb-1 block text-sm font-medium text-slate-700">Opening Note (optional)</label>
+            <textarea
+              id="shifts-opening-note"
+              value={openingNote}
+              onChange={(e) => setOpeningNote(e.target.value)}
+              className="input min-h-20 resize-y"
+              placeholder="Add a note about this shift"
+              maxLength={255}
+              rows={3}
+            />
+            <p className="mt-1 text-right text-xs text-slate-500">{openingNote.length}/255</p>
           </div>
           <div className="page-section-enter flex gap-2" style={{ animationDelay: "100ms" }}>
             <Button type="submit" className="flex-1">Open Shift</Button>

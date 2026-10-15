@@ -70,7 +70,8 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
     location.pathname.startsWith("/receipt-settings") ||
     location.pathname.startsWith("/users") ||
     location.pathname.startsWith("/warranties/settings") ||
-    location.pathname.startsWith("/settings/payment-methods");
+    location.pathname.startsWith("/settings/payment-methods") ||
+    location.pathname.startsWith("/settings/cash-denominations");
   const isReportsRoute = location.pathname.startsWith("/reports");
 
   // 🟢 අලුතින් එකතු කළ Sales Route Detection
@@ -853,6 +854,19 @@ return (
                           }
                         >
                           {t("Payment Methods")}
+                        </NavLink>
+                      )}
+
+                      {hasPermission(role, "MANAGE_APP_CONFIGURATION") && canOpenPath("/settings/cash-denominations") && (
+                        <NavLink
+                          to="/settings/cash-denominations"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${
+                              isActive ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Cash Denominations")}
                         </NavLink>
                       )}
 
