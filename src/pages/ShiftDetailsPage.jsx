@@ -411,7 +411,7 @@ const ShiftDetailsPage = () => {
   ];
 
   return (
-    <div className="page-enter space-y-5 p-4">
+    <div className="page-enter space-y-4 p-4">
       {/* A. Shift header */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center print:hidden">
         <div>
@@ -448,19 +448,22 @@ const ShiftDetailsPage = () => {
         ))}
       </div>
 
-      {/* C. Upper information grid: reconciliation | payment methods | denominations */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 print:hidden">
+      {/* C. Upper information grid: reconciliation | payment methods | denominations.
+          items-start keeps each card at its own content height — the grid's
+          default stretch is what ballooned the two left cards to match the
+          denomination table's tall list. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start print:hidden">
         <Card className="overflow-hidden border border-slate-200 p-0">
-          <div className="flex items-center gap-3 border-b border-slate-100 p-4">
+          <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
             <span className="rounded-xl bg-blue-50 p-2.5 text-blue-700"><Receipt size={19} /></span>
             <div>
               <h2 className="font-bold text-slate-900">Cash Reconciliation</h2>
               <p className="text-xs text-slate-500">Drawer movements and validation</p>
             </div>
           </div>
-          <div className="max-h-72 overflow-y-auto custom-scrollbar divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100">
             {[["Opening cash", shift.openingCash, ""], ["Cash sales", shift.cashSales, "text-blue-700"], ["Expenses", -Number(shift.totalExpenses || 0), "text-rose-700"], ["Cash drops", -Number(shift.totalCashDrops || 0), "text-rose-700"], ["Expected cash", shift.expectedCash, "text-blue-700 font-bold"], ["Counted cash", shift.countedCash, ""], ["Variance", shiftVariance, shiftVariance === 0 ? "text-emerald-700 font-bold" : "text-rose-700 font-bold"]].map(([label, amount, tone]) => (
-              <div key={label} className="flex items-center justify-between px-4 py-2.5 text-sm">
+              <div key={label} className="flex items-center justify-between px-4 py-2 text-sm">
                 <span className="text-slate-600">{label}</span>
                 <span className={`font-semibold ${tone}`}>{formatCurrency(amount || 0)}</span>
               </div>
@@ -475,7 +478,7 @@ const ShiftDetailsPage = () => {
         </Card>
 
         <Card className="overflow-hidden border border-slate-200 p-0">
-          <div className="flex items-center justify-between border-b border-slate-100 p-4">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <div className="flex items-center gap-3">
               <span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><Wallet size={19} /></span>
               <div>
@@ -485,11 +488,11 @@ const ShiftDetailsPage = () => {
             </div>
             <span className="text-sm font-black text-emerald-700">{formatCurrency(totalSalesAmount)}</span>
           </div>
-          <div className="max-h-72 overflow-y-auto custom-scrollbar divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100">
             {paymentRows.length > 0 ? paymentRows.map((method) => {
               const Icon = resolvePaymentIcon(method);
               return (
-                <div key={method.code} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                <div key={method.code} className="flex items-center justify-between gap-2 px-4 py-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <Icon size={16} className="shrink-0 text-blue-700" />
                     <p className="truncate text-sm font-semibold text-slate-700">{method.displayName}</p>
@@ -505,7 +508,7 @@ const ShiftDetailsPage = () => {
               </div>
             )}
             {paymentSummary?.cashCollections > 0 && (
-              <div className="flex items-center justify-between px-4 py-2.5 text-sm">
+              <div className="flex items-center justify-between px-4 py-2 text-sm">
                 <span className="text-slate-600">Credit collections (cash)</span>
                 <span className="font-bold text-emerald-700">{formatCurrency(paymentSummary.cashCollections)}</span>
               </div>
@@ -513,35 +516,51 @@ const ShiftDetailsPage = () => {
           </div>
         </Card>
 
-        <Card className="overflow-hidden border border-slate-200 p-0">
-          <div className="flex items-center gap-3 border-b border-slate-100 p-4">
+        {/* Content-driven height; mobile order puts the physical count first
+            per the approved mobile reference. Only the rows scroll when a long
+            denomination list would otherwise grow the page. */}
+        <Card className="order-first overflow-hidden border border-slate-200 p-0 lg:order-none print:hidden">
+          <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
             <span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><Banknote size={19} /></span>
             <div>
               <h2 className="font-bold text-slate-900">Cash Count by Denomination</h2>
               <p className="text-xs text-slate-500">Physical count at shift close</p>
             </div>
           </div>
-          {/* Header and total stay pinned; only the rows scroll. */}
-          <Table columns={denominationColumns} data={denominationRows} compact emptyMessage="No denomination count recorded." />
-          <div className="m-3 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-3">
+          <div className="max-h-56 overflow-y-auto custom-scrollbar">
+            <Table columns={denominationColumns} data={denominationRows} compact emptyMessage="No denomination count recorded." />
+          </div>
+          <div className="mx-3 mb-3 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2.5">
             <span className="text-sm font-bold text-blue-900">Counted Cash Total</span>
             <span className="text-base font-black text-blue-900">{formatCurrency(shift.countedCash || 0)}</span>
           </div>
         </Card>
 
-        {/* Cashier & Shift Timeline beneath the left and middle panels */}
-        <div className="lg:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-3 print:hidden">
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 flex items-center gap-1.5"><User size={12} /> Cashier</p>
-            <p className="mt-1.5 text-sm font-semibold text-slate-800 truncate">{shift.cashierName || `User ${shift.cashierUserId}`}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 flex items-center gap-1.5"><Clock size={12} /> Opened</p>
-            <p className="mt-1.5 text-sm font-semibold text-slate-800">{formatDateTime(shift.openedAt)}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 flex items-center gap-1.5"><Clock size={12} /> Closed</p>
-            <p className="mt-1.5 text-sm font-semibold text-slate-800">{shift.closedAt ? formatDateTime(shift.closedAt) : "—"}</p>
+        {/* Compact Cashier & Shift Timeline: one cohesive full-width row
+            beneath the upper grid, not three oversized cards. */}
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 lg:col-span-3 print:hidden">
+          <div className="grid grid-cols-1 gap-3 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
+            <div className="flex items-center gap-2.5 sm:pr-4">
+              <User size={15} className="shrink-0 text-slate-500" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Cashier</p>
+                <p className="truncate text-sm font-semibold text-slate-800">{shift.cashierName || `User ${shift.cashierUserId}`}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 sm:px-4">
+              <Clock size={15} className="shrink-0 text-emerald-600" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Opened</p>
+                <p className="text-sm font-semibold text-slate-800">{formatDateTime(shift.openedAt)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 sm:pl-4">
+              <Clock size={15} className="shrink-0 text-slate-400" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Closed</p>
+                <p className="text-sm font-semibold text-slate-800">{shift.closedAt ? formatDateTime(shift.closedAt) : "—"}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
