@@ -390,12 +390,6 @@ const ShiftDetailsPage = () => {
     { key: "supplier", header: "Supplier", className: "max-w-[130px] truncate text-xs", render: (purchase) => purchase.supplierName || "—" },
     { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right text-xs font-bold text-slate-800", render: (purchase) => formatCurrency(purchase.cashSourceAmount || 0) },
   ];
-  const denominationColumns = [
-    { key: "denomination", header: "Denomination", headerClassName: "whitespace-nowrap", render: (row) => <span className="inline-flex items-center gap-2"><Banknote size={15} className="text-emerald-600" />Rs {Number(row.denomination).toLocaleString("en-LK")}</span> },
-    { key: "quantity", header: "Count", headerClassName: "text-center", className: "text-center text-slate-600", accessor: "quantity" },
-    { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right font-semibold text-slate-900", render: (row) => formatCurrency(Number(row.denomination) * Number(row.quantity)) },
-  ];
-
   const summaryCards = [
     { label: "Total Sales", value: totalSalesAmount, tone: "text-slate-900", sub: `${paymentSummary?.totalTransactions ?? totalElements} transactions` },
     { label: "Expected Drawer Cash", value: expectedCash, tone: "text-blue-700", sub: "Only drawer tenders counted" },
@@ -517,8 +511,10 @@ const ShiftDetailsPage = () => {
         </Card>
 
         {/* Content-driven height; mobile order puts the physical count first
-            per the approved mobile reference. Only the rows scroll when a long
-            denomination list would otherwise grow the page. */}
+            per the approved mobile reference. Denominations render as a
+            two-column chip grid instead of a table: a table's minimum column
+            widths forced horizontal scrolling inside this panel, which read
+            badly; chips never scroll either way. */}
         <Card className="order-first overflow-hidden border border-slate-200 p-0 lg:order-none print:hidden">
           <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
             <span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><Banknote size={19} /></span>
@@ -527,9 +523,27 @@ const ShiftDetailsPage = () => {
               <p className="text-xs text-slate-500">Physical count at shift close</p>
             </div>
           </div>
-          <div className="max-h-56 overflow-y-auto custom-scrollbar">
-            <Table columns={denominationColumns} data={denominationRows} compact emptyMessage="No denomination count recorded." />
-          </div>
+          {denominationRows.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-slate-500">No denomination count recorded.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 p-3">
+              {denominationRows.map((row) => {
+                const amount = Number(row.denomination) * Number(row.quantity);
+                return (
+                  <div key={row.denomination} className={`flex items-center justify-between rounded-lg border px-3 py-2 ${amount > 0 ? "border-slate-200 bg-white" : "border-slate-100 bg-slate-50/60"}`}>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <Banknote size={13} className={amount > 0 ? "text-emerald-600" : "text-slate-300"} />
+                      <span className="text-xs font-bold text-slate-700">Rs {Number(row.denomination).toLocaleString("en-LK")}</span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="text-xs font-semibold text-slate-600">×{Number(row.quantity)}</span>
+                      <span className={`ml-1.5 text-xs font-bold ${amount > 0 ? "text-slate-900" : "text-slate-400"}`}>{formatCurrency(amount)}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <div className="mx-3 mb-3 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2.5">
             <span className="text-sm font-bold text-blue-900">Counted Cash Total</span>
             <span className="text-base font-black text-blue-900">{formatCurrency(shift.countedCash || 0)}</span>
