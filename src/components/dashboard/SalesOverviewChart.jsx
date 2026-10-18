@@ -37,9 +37,15 @@ const formatLabel = (label, chartMode) => {
 // screens. It previously carried its own hex values, a dashed grid, a 3px stroke,
 // and a "Rs." y-axis prefix while the rest of the app said "LKR", the same drift
 // that had accumulated across the reports section.
-const SalesOverviewChart = ({ data, chartMode, animate }) => (
-  <ResponsiveContainer width="100%" height="100%">
-    <AreaChart data={data} margin={CHART_MARGIN}>
+const SalesOverviewChart = ({ data, chartMode, animate }) => {
+  // Recharts' internals call .map on data and measurement happens before
+  // mount settles; a non-array or zero-size container would otherwise take
+  // the dashboard's error boundary down instead of rendering nothing.
+  const rows = Array.isArray(data) ? data : [];
+  if (rows.length === 0) return null;
+  return (
+  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+    <AreaChart data={rows} margin={CHART_MARGIN}>
       <defs>
         <linearGradient id="colorSalesDash" x1="0" y1="0" x2="0" y2="1">
           <stop offset="5%" stopColor={seriesColor(0)} stopOpacity={0.28} />
@@ -71,6 +77,7 @@ const SalesOverviewChart = ({ data, chartMode, animate }) => (
       />
     </AreaChart>
   </ResponsiveContainer>
-);
+  );
+};
 
 export default memo(SalesOverviewChart);

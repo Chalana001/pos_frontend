@@ -129,7 +129,9 @@ const Dashboard = () => {
         ]);
         if (!active) return;
         setKpis(kpiRes.data);
-        setChartData(chartRes.data);
+        // An error payload (object) must never reach the chart: recharts
+        // calls .map on it and the error boundary takes the whole page down.
+        setChartData(Array.isArray(chartRes.data) ? chartRes.data : []);
       } catch (error) {
         if (!active) return;
         console.error("Failed to fetch dashboard data:", error);
@@ -165,10 +167,12 @@ const Dashboard = () => {
         ? await dashboardAPI.getDailyChart(params)
         : await dashboardAPI.getMonthlyChart(params);
       // The monthly endpoint keys buckets as { month: "2026-09" }, but the
-      // chart reads { date } - remap or the plot stays empty.
+      // chart reads { date } - remap or the plot stays empty. Same array
+      // guard: a failed request resolving as an object must not reach state.
+      const rows = Array.isArray(response.data) ? response.data : [];
       setChartData(mode === "daily"
-        ? response.data
-        : response.data.map(({ month, sales }) => ({ date: `${month}-01`, sales })));
+        ? rows
+        : rows.map(({ month, sales }) => ({ date: `${month}-01`, sales })));
     } catch (error) {
       console.error(`Failed to fetch ${mode} chart data:`, error);
       setChartData([]);
