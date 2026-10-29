@@ -153,7 +153,7 @@ const LoyaltySettingsPage = () => {
     <div className="page-enter space-y-6 pb-10">
       <div>
         <h1 className="flex items-center gap-2 text-3xl font-bold text-slate-800">
-          <Sparkles size={26} className="text-violet-600" /> Loyalty
+          <Sparkles size={26} className="text-info" /> Loyalty
         </h1>
         <p className="mt-1 text-sm text-slate-500">
           Points customers earn on a sale and spend against a later one.
@@ -172,7 +172,7 @@ const LoyaltySettingsPage = () => {
             <input
               type="checkbox" checked={settings.enabled} disabled={!canEdit}
               onChange={(event) => update("enabled", event.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-info focus:ring-accent"
             />
           </label>
 
@@ -195,7 +195,7 @@ const LoyaltySettingsPage = () => {
             </label>
           </div>
           {returnRate != null && (
-            <p className={`rounded-lg px-3 py-2 text-sm ${returnRate >= 10 ? "bg-amber-50 text-amber-900" : "bg-slate-50 text-slate-700"}`}>
+            <p className={`rounded-lg px-3 py-2 text-sm ${returnRate >= 10 ? "bg-warning-soft text-warning" : "bg-slate-50 text-slate-700"}`}>
               This gives back <strong>{returnRate.toFixed(1)}%</strong> of what customers spend.
               {returnRate >= 10 && " That is a large scheme. Check it is what you meant."}
             </p>
@@ -225,7 +225,7 @@ const LoyaltySettingsPage = () => {
               <input
                 type="checkbox" checked={settings.roundEarnedDown} disabled={!canEdit}
                 onChange={(event) => update("roundEarnedDown", event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                className="h-4 w-4 rounded border-slate-300 text-info focus:ring-accent"
               />
             </label>
           </div>

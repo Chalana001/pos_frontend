@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { ArrowLeft, CheckCircle2, FlaskConical, Save, Search } from "lucide-react";
+import { CheckCircle2, FlaskConical, Save, Search } from "lucide-react";
 
 import { categoriesAPI } from "../../api/categories.api";
 import { customersAPI } from "../../api/customers.api";
@@ -14,18 +14,19 @@ import useUnsavedWork from "../../hooks/useUnsavedWork";
 import { useAppConfiguration } from "../../context/AppConfigurationContext";
 import { useBranch } from "../../context/BranchContext";
 import { DISCOUNT_TYPES } from "../../utils/constants";
+import { formatCurrency } from "../../utils/formatters";
 import ItemPriceTable from "./components/ItemPriceTable";
 import PromotionCodesPanel from "./components/PromotionCodesPanel";
 import PromotionAuditPanel from "./components/PromotionAuditPanel";
 import PromotionSimulateModal from "./components/PromotionSimulateModal";
 import PromotionStatusBadge from "./components/PromotionStatusBadge";
-import AccordionSection from "./components/AccordionSection";
+import BuilderStepSection from "./components/BuilderStepSection";
 import MechanicPicker from "./components/MechanicPicker";
 import ScheduleComposer from "./components/ScheduleComposer";
 import ReadinessRail from "./components/ReadinessRail";
-import RailSheet from "./components/RailSheet";
-import PromotionActionBar from "./components/PromotionActionBar";
 import ScopePicker from "./components/ScopePicker";
+import BuilderTabBar from "./components/BuilderTabBar";
+import OfferSummaryStrip from "./components/OfferSummaryStrip";
 import CustomSelect from "../../components/common/CustomSelect";
 
 const DISCOUNT_TYPE_OPTIONS = [
@@ -105,7 +106,7 @@ const PromotionBuilderPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { configuration } = useAppConfiguration();
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, branches } = useBranch();
   const singleCategoryMode = configuration?.categoryMode === "SINGLE_CATEGORY";
   const isEdit = Boolean(id);
 
@@ -122,18 +123,9 @@ const PromotionBuilderPage = () => {
   const [check, setCheck] = useState(null);
   const [simulateOpen, setSimulateOpen] = useState(false);
   const [codeCount, setCodeCount] = useState(0);
-  const [openSections, setOpenSections] = useState({ offer: true, coverage: true, schedule: true, limits: false, codes: false, activity: false });
-  const [railSheetOpen, setRailSheetOpen] = useState(false);
-
-  const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  const openAndScroll = (key) => {
-    setOpenSections((prev) => ({ ...prev, [key]: true }));
-    setRailSheetOpen(false);
-    // Wait a frame so the section's contents exist before scrolling to them.
-    requestAnimationFrame(() => {
-      document.getElementById(`builder-${key}-section`)?.scrollIntoView({ block: "center", behavior: "smooth" });
-    });
-  };
+  // Which step the tab bar is showing. Replaces the six accordions: one step at a time is
+  // what gives the price table the width it needs, which is the reason for this screen.
+  const [activeStep, setActiveStep] = useState("offer");
 
   const updateForm = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -742,10 +734,156 @@ const PromotionBuilderPage = () => {
     },
     warnings: check?.warnings || [],
     approvalRequired: !!check?.approvalRequired,
-    onJump: (item) => item.section && openAndScroll(item.section),
+    // The checklist item names the step that owns the gap; jumping there is switching tabs.
+    onJump: (item) => item.section && setActiveStep(item.section),
   };
 
-  const railIssues = readinessItems.filter((item) => item.state !== "done").length;
+  // ── the offer in one line ────────────────────────────────────────────────────────────
+  //
+  // The sentence under the tabs. Tabs hide the fields from each other, so this is what keeps
+  // the campaign itself visible while the operator works on one step at a time.
+
+  // Guarded on activeBranchId, not just on the lookup: Number(null) is 0, and the branch
+  // list's "All Branches" entry is id 0, so an unset branch would otherwise resolve to it
+  // and read "at All Branches" in a sentence meant to say where this campaign sells.
+  const branchName = useMemo(() => {
+    if (!activeBranchId) return "no branch";
+    const list = Array.isArray(branches) ? branches : [];
+    return list.find((branch) => Number(branch.id) === Number(activeBranchId))?.name || "this branch";
+  }, [branches, activeBranchId]);
+
+  /** Mon=1, Tue=2, ... Sun=64. 0 and 127 both mean every day. */
+  const dayPhrase = (daysOfWeek) => {
+    if (daysOfWeek === 0 || daysOfWeek === 127) return "";
+    if (daysOfWeek === 31) return " on weekdays";
+    if (daysOfWeek === 96) return " at weekends";
+    const names = ["Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays", "Sundays"];
+    const picked = names.filter((_, index) => (daysOfWeek & (1 << index)) !== 0);
+    if (picked.length === 0) return "";
+    return ` on ${picked.length === 1 ? picked[0] : `${picked.slice(0, -1).join(", ")} and ${picked.at(-1)}`}`;
+  };
+
+  const scopeNoun = () => {
+    if (form.scope === "ITEM") return itemLines.length === 1 ? "item" : "items";
+    if (form.scope === "CATEGORY") return selectedTargetIds.length === 1 ? "category" : "categories";
+    if (form.scope === "CUSTOMER") return selectedTargetIds.length === 1 ? "customer" : "customers";
+    return "qualifying bills";
+  };
+
+  const targetCount = form.scope === "ITEM"
+    ? itemLines.length
+    : form.scope === "BILL"
+      ? null
+      : selectedTargetIds.length;
+
+  // True when every line carries its own offer price, so the campaign's own discount value
+  // is never what reaches the till.
+  const allLinesPriced = itemLines.length > 0
+    && itemLines.every((line) => line.offerPrice !== "" && line.offerPrice != null);
+
+  const offerSentence = useMemo(() => {
+    const value = Number(form.discountValue);
+    const buy = Number(form.buyQty);
+    const get = Number(form.getQty);
+    const hasValue = Number.isFinite(value) && value > 0;
+    const what = targetCount == null ? scopeNoun() : `${targetCount} ${scopeNoun()}`;
+    const where = ` at ${branchName}${dayPhrase(form.scheduleDays)}`;
+
+    // A price list where every line carries its own offer price never uses the campaign's
+    // own discount, so stating "5% off 12 items" would describe something that never
+    // happens. Say what the prices actually are instead.
+    if (allLinesPriced && effect === "DISCOUNT") {
+      return `${itemLines.length} item${itemLines.length === 1 ? "" : "s"} at their own price${where}`;
+    }
+
+    switch (effect) {
+      case "DISCOUNT":
+        if (!hasValue) return null;
+        return form.discountType === DISCOUNT_TYPES.PERCENT
+          ? `${value}% off ${what}${where}`
+          : `LKR ${value} off ${what}${where}`;
+      case "FIXED_PRICE":
+        return hasValue ? `Every ${what} at LKR ${value}${where}` : null;
+      case "BUY_X_GET_Y_FREE":
+        return buy > 0 && get > 0
+          ? `Buy ${buy}, get ${get} free on ${what}${where}`
+          : null;
+      case "TIERED":
+        return form.tiers.length > 0
+          ? `Spend tiers on ${what}${where}`
+          : null;
+      case "BUNDLE":
+        return hasValue && buy >= 2 ? `Any ${buy} for LKR ${value}${where}` : null;
+      case "CHEAPEST_FREE":
+        return buy >= 2 ? `Buy ${buy}, the cheapest is free${where}` : null;
+      case "PROFIT_SHARE":
+        return hasValue ? `Give ${value}% of the margin on ${what}${where}` : null;
+      default:
+        return null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.effectType, form.discountType, form.discountValue, form.buyQty, form.getQty,
+      form.tiers.length, form.scheduleDays, effect, branchName, targetCount,
+      itemLines.length, allLinesPriced]);
+
+  const offerSubline = useMemo(() => {
+    const when = requiresCode
+      ? "applies only when a code is presented"
+      : "applies automatically at the till";
+    const days = summary.days > 0 ? ` · runs ${summary.days} day${summary.days === 1 ? "" : "s"}` : "";
+    return `${when}${days}`;
+  }, [requiresCode, summary.days]);
+
+  const offerMetrics = useMemo(() => {
+    const rows = [{ label: "Items", value: String(summary.count) }];
+    if (summary.avgPercent != null) rows.push({ label: "Avg discount", value: `${Number(summary.avgPercent).toFixed(1)}%` });
+    if (summary.maxLine != null && Number(summary.maxLine) > 0) rows.push({ label: "Largest cut", value: formatCurrency(summary.maxLine) });
+    if (check?.deepestDiscountPercent != null) rows.push({ label: "Deepest cut", value: `${Number(check.deepestDiscountPercent).toFixed(1)}%` });
+    rows.push({ label: "Runs", value: `${summary.days} day${summary.days === 1 ? "" : "s"}` });
+    return rows;
+  }, [summary.count, summary.avgPercent, summary.maxLine, summary.days, check?.deepestDiscountPercent]);
+
+  const belowCostCount = priceCheck?.belowCostCount || 0;
+
+  const builderTabs = useMemo(() => {
+    const itemsFor = (section) => readinessItems.filter((item) => item.section === section);
+    const stateOf = (section) => {
+      const items = itemsFor(section);
+      if (items.some((item) => item.state === "error")) return "error";
+      return "done";
+    };
+    return [
+      { key: "offer", number: "01", label: "Offer", state: stateOf("offer") },
+      { key: "coverage", number: "02", label: "Coverage", state: stateOf("coverage"), count: itemLines.length || null },
+      { key: "schedule", number: "03", label: "Schedule", state: stateOf("schedule") },
+      { key: "guardrails", number: "04", label: "Guardrails", state: "done" },
+      { key: "codes", number: "05", label: "Codes", state: stateOf("codes"), count: codeCount || null },
+      ...(isEdit ? [{ key: "activity", number: "06", label: "Activity", state: "done" }] : []),
+    ];
+  }, [readinessItems, itemLines.length, codeCount, isEdit]);
+
+  const readiness = useMemo(() => {
+    const done = readinessItems.filter((item) => item.state === "done").length;
+    const missing = readinessItems.filter((item) => item.state !== "done");
+    return {
+      done,
+      total: readinessItems.length,
+      missing: missing.length,
+      flag: belowCostCount > 0 ? `${belowCostCount} below cost` : null,
+      onJump: () => setActiveStep("codes"),
+    };
+  }, [readinessItems, belowCostCount]);
+
+  const builderMeta = useMemo(() => {
+    const parts = [];
+    parts.push(branchName);
+    if (form.startAt && form.endAt) {
+      const fmt = (iso) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      parts.push(`${fmt(form.startAt)} – ${fmt(form.endAt)}`);
+    }
+    parts.push(requiresCode ? "applies with a code" : "applies automatically");
+    return parts.join(" · ");
+  }, [branchName, form.startAt, form.endAt, requiresCode]);
 
   // --- DRAFT RECOVERY ---
   //
@@ -790,38 +928,42 @@ const PromotionBuilderPage = () => {
   }
 
   return (
-    <div className="page-enter space-y-6 pb-24">
+    <div className="campaign-builder page-enter pb-24">
       <DraftRestoreBar
         draft={pendingDraft}
         label={isEdit ? "Unsaved changes to this promotion" : "Unsaved promotion"}
         onRestore={restoreDraft}
         onDiscard={discardDraft}
       />
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <Button variant="secondary" size="sm" onClick={() => navigate("/promotions")}>
-            <ArrowLeft size={15} />
-          </Button>
-          <div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-start justify-between gap-3 pb-4">
+        <div className="min-w-0 flex-1">
+          <nav className="flex items-center gap-1.5 text-xs text-slate-500" aria-label="Breadcrumb">
+            <button type="button" onClick={() => navigate("/promotions")} className="hover:text-slate-800 hover:underline">
+              Campaigns
+            </button>
+            <span aria-hidden="true" className="text-slate-300">/</span>
+            <span>{isEdit ? "Edit campaign" : "New campaign"}</span>
+          </nav>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
             <input
               value={form.name}
               onChange={(event) => updateForm("name", event.target.value)}
               placeholder="Campaign name"
               aria-label="Campaign name"
-              className="w-full border-0 bg-transparent px-0 text-2xl font-black text-slate-900 outline-none placeholder:text-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:rounded-md focus-visible:px-2"
+              className="min-w-0 flex-1 border-0 bg-transparent px-0 text-2xl font-semibold tracking-tight text-slate-900 outline-none placeholder:text-slate-300 focus-visible:rounded-md focus-visible:px-2 focus-visible:ring-2 focus-visible:ring-accent/30"
             />
-            <p className="mt-0.5 text-xs font-medium text-slate-500">
-              One campaign can hold a different price for every item in it.
-              {isDraftDirty && lastSavedAt && (
-                <span className="ml-2 inline-flex items-center gap-1 font-semibold text-emerald-600">
-                  <CheckCircle2 size={11} /> Saved locally {new Date(lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              )}
-            </p>
+            {isEdit && form.lifecycle && <PromotionStatusBadge status={form.lifecycle} />}
           </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {builderMeta}
+            {isDraftDirty && lastSavedAt && (
+              <span className="ml-2 inline-flex items-center gap-1 font-semibold text-success">
+                <CheckCircle2 size={11} /> Saved locally {new Date(lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isEdit && form.lifecycle && <PromotionStatusBadge status={form.lifecycle} />}
           <Button variant="secondary" disabled={branchMissing} onClick={() => { if (validate()) { toast.error(validate()); return; } setSimulateOpen(true); }}>
             <FlaskConical size={16} className="mr-2" /> Simulate
           </Button>
@@ -836,21 +978,34 @@ const PromotionBuilderPage = () => {
       </div>
 
       {branchMissing && (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="mb-3 rounded-lg border border-warning-border bg-warning-soft px-3 py-2 text-sm text-warning">
           The top bar is on <strong>All Branches</strong>. Choose this campaign's branch there:
           its prices, items and margin check all belong to one branch.
         </p>
       )}
 
-      <div className="flex flex-col gap-6 xl:flex-row xl:items-stretch xl:gap-6">
-        <div className="min-w-0 custom-scrollbar space-y-6 pb-24 xl:w-3/4 xl:shrink-0 xl:max-h-[calc(100vh-11rem)] xl:overflow-y-auto">
-          {/* 2. What's on offer */}
-      <AccordionSection
+      <BuilderTabBar
+        steps={builderTabs}
+        active={activeStep}
+        onChange={setActiveStep}
+        readiness={readiness}
+      />
+
+      <OfferSummaryStrip
+        sentence={offerSentence}
+        subline={offerSubline}
+        metrics={offerMetrics}
+        flag={belowCostCount > 0 ? `${belowCostCount} item${belowCostCount === 1 ? "" : "s"} below cost` : null}
+        onFlagClick={belowCostCount > 0 ? () => setActiveStep("coverage") : null}
+      />
+
+      <div className="min-w-0 space-y-8">
+        {activeStep === "offer" && (
+      <BuilderStepSection
+        step="01"
+        title="Offer"
+        hint="What the campaign does, and to whom."
         id="builder-offer-section"
-        title="What's on offer?"
-        hint="Scope, mechanic and value"
-        open={openSections.offer}
-        onToggle={() => toggleSection("offer")}
       >
         <ScopePicker value={form.scope} onChange={changeScope} />
 
@@ -883,10 +1038,10 @@ const PromotionBuilderPage = () => {
                   disabled={codeGated}
                   onClick={() => updateForm("requiresCode", option.key)}
                   className={`rounded-lg border px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-60 ${
-                    selected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20" : "border-slate-200 bg-white hover:border-slate-300"
+                    selected ? "border-accent bg-accent-soft ring-2 ring-accent/20" : "border-slate-200 bg-white hover:border-slate-300"
                   }`}
                 >
-                  <div className={`text-sm font-bold ${selected ? "text-blue-700" : "text-slate-800"}`}>{option.label}</div>
+                  <div className={`text-sm font-bold ${selected ? "text-accent" : "text-slate-800"}`}>{option.label}</div>
                   <div className="text-xs text-slate-500">{option.hint}</div>
                 </button>
               );
@@ -898,7 +1053,7 @@ const PromotionBuilderPage = () => {
             </p>
           ) : null}
           {needsItsFirstCode ? (
-            <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <p className="mt-2 rounded-lg border border-warning-border bg-warning-soft px-3 py-2 text-sm text-warning">
               It has no codes yet, so it would apply to <strong>every</strong> matching sale if it went
               live now. Save it as a draft, add a code in section 6, then activate it.
             </p>
@@ -1066,18 +1221,22 @@ const PromotionBuilderPage = () => {
             Used for any item you leave without its own offer price.
           </p>
         )}
-      </AccordionSection>
+      </BuilderStepSection>
+        )}
 
-      {/* 3. What it covers */}
-      {form.scope === "ITEM" ? (
-        <AccordionSection
+      {activeStep === "coverage" && (
+        <BuilderStepSection
+          step="02"
+          title="Coverage"
+          hint={form.scope === "ITEM" ? "Items and their offer prices"
+            : form.scope === "CUSTOMER" ? "Customers and segments"
+            : form.scope === "BILL" ? "What qualifies" : "Categories"}
+          badge={form.scope === "ITEM"
+            ? `${itemLines.length} item${itemLines.length === 1 ? "" : "s"}`
+            : form.scope === "BILL" ? null : `${selectedTargetIds.length} selected`}
           id="builder-coverage-section"
-          title="What does it cover?"
-          hint="Items and their offer prices"
-          badge={`${itemLines.length} item${itemLines.length === 1 ? "" : "s"}`}
-          open={openSections.coverage}
-          onToggle={() => toggleSection("coverage")}
         >
+      {form.scope === "ITEM" ? (
           <ItemPriceTable
             lines={itemLines}
             itemsById={itemsById}
@@ -1093,23 +1252,15 @@ const PromotionBuilderPage = () => {
             onRoundTo99={roundTo99}
             onClearPrices={clearPrices}
           />
-        </AccordionSection>
       ) : form.scope === "BILL" ? (
-        <section className="rounded-xl border border-blue-100 bg-blue-50 p-5 text-sm font-medium text-blue-800">
-          Applies to every qualifying bill in the selected branch and date range.
-        </section>
+          <section className="rounded-lg border border-slate-200 bg-accent-soft px-4 py-3 text-sm font-medium text-slate-800">
+            Applies to every qualifying bill in the selected branch and date range.
+          </section>
       ) : (
-        <AccordionSection
-          id="builder-coverage-section"
-          title="What does it cover?"
-          hint={form.scope === "CUSTOMER" ? "Customers and segments" : "Categories"}
-          badge={`${selectedTargetIds.length} selected`}
-          open={openSections.coverage}
-          onToggle={() => toggleSection("coverage")}
-        >
+          <>
 
           {form.scope === "CUSTOMER" && (
-            <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/40 p-3">
+            <div className="mb-4 rounded-lg border border-slate-200 bg-accent-soft/40 p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-bold text-slate-800">
                   Segments ({form.segmentIds.length})
@@ -1117,7 +1268,7 @@ const PromotionBuilderPage = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/promotions/segments")}
-                  className="text-xs font-semibold text-blue-700 hover:underline"
+                  className="text-xs font-semibold text-accent hover:underline"
                 >
                   Manage segments
                 </button>
@@ -1135,7 +1286,7 @@ const PromotionBuilderPage = () => {
                       <label
                         key={segment.id}
                         className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${
-                          checked ? "bg-blue-100 text-blue-800" : "hover:bg-white"
+                          checked ? "bg-slate-100 text-slate-800" : "hover:bg-white"
                         }`}
                       >
                         <span className="min-w-0">
@@ -1151,7 +1302,7 @@ const PromotionBuilderPage = () => {
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleSegment(segment.id)}
-                          className="h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          className="h-4 w-4 shrink-0 rounded border-slate-300 text-accent focus:ring-accent"
                         />
                       </label>
                     );
@@ -1179,7 +1330,7 @@ const PromotionBuilderPage = () => {
                 <label
                   key={target.id}
                   className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm ${
-                    checked ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50"
+                    checked ? "bg-accent-soft text-accent" : "hover:bg-slate-50"
                   }`}
                 >
                   <span className="min-w-0 truncate font-medium">{target.name}</span>
@@ -1187,22 +1338,23 @@ const PromotionBuilderPage = () => {
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleTarget(target.id)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                   />
                 </label>
               );
             })}
           </div>
-        </AccordionSection>
+          </>
+      )}
+        </BuilderStepSection>
       )}
 
-      {/* 4. When it runs */}
-      <AccordionSection
+      {activeStep === "schedule" && (
+      <BuilderStepSection
+        step="03"
+        title="Schedule"
+        hint="Dates, days and the time window it runs in."
         id="builder-schedule-section"
-        title="When does it run?"
-        hint="Dates, days and time window"
-        open={openSections.schedule}
-        onToggle={() => toggleSection("schedule")}
       >
         <ScheduleComposer
           startAt={form.startAt}
@@ -1212,15 +1364,15 @@ const PromotionBuilderPage = () => {
           endTime={form.scheduleEnd}
           onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
         />
-      </AccordionSection>
+      </BuilderStepSection>
+      )}
 
-      {/* 5. How far it can go */}
-      <AccordionSection
+      {activeStep === "guardrails" && (
+      <BuilderStepSection
+        step="04"
+        title="Guardrails"
+        hint="Caps, limits, budget and how it combines."
         id="builder-limits-section"
-        title="How far can it go?"
-        hint="Caps, limits, budget and combining"
-        open={openSections.limits}
-        onToggle={() => toggleSection("limits")}
       >
         <div className="grid gap-4 md:grid-cols-4">
           <label>
@@ -1257,7 +1409,7 @@ const PromotionBuilderPage = () => {
             <input
               type="checkbox" checked={form.allowBelowCost}
               onChange={(event) => updateForm("allowBelowCost", event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
             />
           </label>
         </div>
@@ -1313,10 +1465,10 @@ const PromotionBuilderPage = () => {
                     aria-pressed={selected}
                     onClick={() => updateForm("stackingMode", mode.key)}
                     className={`rounded-lg border px-3 py-2 text-left ${
-                      selected ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20" : "border-slate-200 bg-white hover:border-slate-300"
+                      selected ? "border-accent bg-accent-soft ring-2 ring-accent/20" : "border-slate-200 bg-white hover:border-slate-300"
                     }`}
                   >
-                    <div className={`text-sm font-bold ${selected ? "text-blue-700" : "text-slate-800"}`}>{mode.label}</div>
+                    <div className={`text-sm font-bold ${selected ? "text-accent" : "text-slate-800"}`}>{mode.label}</div>
                     <div className="text-xs text-slate-500">{mode.hint}</div>
                   </button>
                 );
@@ -1328,61 +1480,55 @@ const PromotionBuilderPage = () => {
             <input
               type="checkbox" checked={form.allowManualStacking}
               onChange={(event) => updateForm("allowManualStacking", event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
             />
           </label>
         </div>
-      </AccordionSection>
-
-      {isEdit && (
-        <AccordionSection
-          id="builder-activity-section"
-          title="Activity"
-          hint="Who changed what"
-          open={openSections.activity}
-          onToggle={() => toggleSection("activity")}
-        >
-          <PromotionAuditPanel promotionId={Number(id)} className="border-0 p-0 shadow-none" />
-        </AccordionSection>
+      </BuilderStepSection>
       )}
 
-      {isEdit ? (
-        <AccordionSection
-          id="builder-codes-section"
-          title="Promo codes"
-          hint={`${codeCount} code${codeCount === 1 ? "" : "s"} gate this promotion`}
-          open={openSections.codes}
-          onToggle={() => toggleSection("codes")}
-          keepMounted
-        >
+      {isEdit && activeStep === "activity" && (
+      <BuilderStepSection
+        step="06"
+        title="Activity"
+        hint="Who changed what, and when."
+        id="builder-activity-section"
+      >
+        <PromotionAuditPanel promotionId={Number(id)} className="border-0 p-0 shadow-none" />
+      </BuilderStepSection>
+      )}
+
+      {/* Codes is kept mounted while another step is showing, hidden rather than removed.
+          The panel reports its code count upward and starts from an empty list before its
+          first load returns, so a switch away and back would briefly report zero codes and
+          let a code-gated campaign activate. Every other step's state lives in the page. */}
+      <div hidden={activeStep !== "codes"}>
+      <BuilderStepSection
+        step="05"
+        title="Promo codes"
+        hint={isEdit
+          ? `${codeCount} code${codeCount === 1 ? "" : "s"} gate this promotion`
+          : "Codes are added once the campaign is saved."}
+        id="builder-codes-section"
+      >
+        {isEdit ? (
           <PromotionCodesPanel promotionId={Number(id)} onCountChange={setCodeCount} />
-        </AccordionSection>
-      ) : (
-        <section id="builder-codes-section" className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
-          <span className="font-bold text-slate-600">Promo codes</span>. Save the promotion first, then add
-          codes here.{" "}
-          {requiresCode
-            ? "It is set to apply only with a code, so it cannot go live until it has one."
-            : "With no codes it applies automatically; adding one makes it apply only when a code is presented."}
-        </section>
-      )}
-        </div>
+        ) : (
+          <section className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+            <span className="font-bold text-slate-600">Promo codes</span>. Save the promotion first, then add
+            codes here.{" "}
+            {requiresCode
+              ? "It is set to apply only with a code, so it cannot go live until it has one."
+              : "With no codes it applies automatically; adding one makes it apply only when a code is presented."}
+          </section>
+        )}
 
-        <div className="hidden xl:block xl:w-1/4">
-          <ReadinessRail {...railProps} />
+        <div className="mt-6">
+          <ReadinessRail {...railProps} variant="inline" />
         </div>
+      </BuilderStepSection>
       </div>
-
-      {railSheetOpen && (
-        <RailSheet onClose={() => setRailSheetOpen(false)}>
-          <ReadinessRail {...railProps} />
-        </RailSheet>
-      )}
-
-      <PromotionActionBar
-        issues={railIssues}
-        onOpenSheet={() => setRailSheetOpen(true)}
-      />
+      </div>
 
       <PromotionSimulateModal
         isOpen={simulateOpen}

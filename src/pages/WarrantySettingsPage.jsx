@@ -138,7 +138,7 @@ const WarrantySettingsPage = () => {
                 value={form.label}
                 onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
                 placeholder="1 Year Warranty"
-                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
             </div>
 
@@ -151,7 +151,7 @@ const WarrantySettingsPage = () => {
                   step="1"
                   value={form.periodValue}
                   onChange={(event) => setForm((prev) => ({ ...prev, periodValue: event.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
 
@@ -177,7 +177,7 @@ const WarrantySettingsPage = () => {
                 type="checkbox"
                 checked={form.active}
                 onChange={(event) => setForm((prev) => ({ ...prev, active: event.target.checked }))}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
               />
             </label>
 
@@ -216,7 +216,7 @@ const WarrantySettingsPage = () => {
                       <tr key={template.id}>
                         <td className="app-table-cell">
                           <div className="flex items-center gap-2">
-                            <ShieldCheck size={16} className="text-blue-600" />
+                            <ShieldCheck size={16} className="text-accent" />
                             <span className="font-semibold text-slate-800">{template.label}</span>
                           </div>
                         </td>
@@ -225,7 +225,7 @@ const WarrantySettingsPage = () => {
                         </td>
                         <td className="app-table-cell text-center">
                           <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                            template.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                            template.active ? "bg-success-soft text-success" : "bg-slate-100 text-slate-600"
                           }`}>
                             {template.active ? "Active" : "Inactive"}
                           </span>
@@ -235,7 +235,7 @@ const WarrantySettingsPage = () => {
                             <button aria-label="Edit warranty period"
                               type="button"
                               onClick={() => handleEdit(template)}
-                              className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-blue-600"
+                              className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-accent"
                               title="Edit warranty period"
                             >
                               <Pencil size={16} />
@@ -244,7 +244,7 @@ const WarrantySettingsPage = () => {
                               type="button"
                               onClick={() => handleDelete(template.id)}
                               disabled={deletingId === template.id}
-                              className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-red-600 disabled:opacity-50"
+                              className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-danger disabled:opacity-50"
                               title="Delete warranty period"
                             >
                               <Trash2 size={16} />

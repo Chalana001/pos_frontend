@@ -165,7 +165,7 @@ const PaymentMethodsSettingsPage = () => {
                 value={form.displayName}
                 onChange={(e) => setForm((p) => ({ ...p, displayName: e.target.value }))}
                 placeholder="Cash, Card Payment, QR Payment"
-                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
             </div>
 
@@ -184,7 +184,7 @@ const PaymentMethodsSettingsPage = () => {
                   value={form.code}
                   onChange={(e) => setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
                   placeholder="Auto-generated from the name if blank"
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 font-mono focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 font-mono focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
             )}
@@ -194,7 +194,7 @@ const PaymentMethodsSettingsPage = () => {
               <select id="pm-category"
                 value={form.category}
                 onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
                 {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
@@ -205,7 +205,7 @@ const PaymentMethodsSettingsPage = () => {
               <select id="pm-refpolicy"
                 value={form.referencePolicy}
                 onChange={(e) => setForm((p) => ({ ...p, referencePolicy: e.target.value }))}
-                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
                 {REFERENCE_POLICIES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
@@ -218,7 +218,7 @@ const PaymentMethodsSettingsPage = () => {
                   value={form.referenceLabel}
                   onChange={(e) => setForm((p) => ({ ...p, referenceLabel: e.target.value }))}
                   placeholder="Transaction ID, Bank Slip Number, Approval Code"
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
             )}
@@ -229,7 +229,7 @@ const PaymentMethodsSettingsPage = () => {
                 <select id="pm-icon"
                   value={form.iconKey}
                   onChange={(e) => setForm((p) => ({ ...p, iconKey: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 >
                   <option value="">Auto (from category)</option>
                   {PAYMENT_ICON_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
@@ -247,7 +247,7 @@ const PaymentMethodsSettingsPage = () => {
               </div>
               <input type="checkbox" checked={form.includeInExpectedCash}
                 onChange={(e) => setForm((p) => ({ ...p, includeInExpectedCash: e.target.checked }))}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent" />
             </label>
 
             <label className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
@@ -257,7 +257,7 @@ const PaymentMethodsSettingsPage = () => {
               </div>
               <input type="checkbox" checked={form.allowsCredit}
                 onChange={(e) => setForm((p) => ({ ...p, allowsCredit: e.target.checked }))}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent" />
             </label>
 
             <label className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
@@ -267,7 +267,7 @@ const PaymentMethodsSettingsPage = () => {
               </div>
               <input type="checkbox" checked={form.active}
                 onChange={(e) => setForm((p) => ({ ...p, active: e.target.checked }))}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent" />
             </label>
 
             <Button onClick={handleSave} disabled={saving} className="w-full">
@@ -307,7 +307,7 @@ const PaymentMethodsSettingsPage = () => {
                         <tr key={method.id}>
                           <td className="app-table-cell">
                             <div className="flex items-center gap-2">
-                              <MethodIcon size={16} className="text-blue-600" />
+                              <MethodIcon size={16} className="text-accent" />
                               <div>
                                 <div className="font-semibold text-slate-800">{method.displayName}</div>
                                 <div className="font-mono text-xs text-slate-400">{method.code}</div>
@@ -317,8 +317,8 @@ const PaymentMethodsSettingsPage = () => {
                           <td className="app-table-cell text-slate-600">{categoryLabel(method.category)}</td>
                           <td className="app-table-cell text-center">
                             <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                              method.referencePolicy === "REQUIRED" ? "bg-red-100 text-red-700"
-                                : method.referencePolicy === "OPTIONAL" ? "bg-amber-100 text-amber-800"
+                              method.referencePolicy === "REQUIRED" ? "bg-danger-soft text-danger"
+                                : method.referencePolicy === "OPTIONAL" ? "bg-warning-soft text-warning"
                                 : "bg-slate-100 text-slate-600"
                             }`}>
                               {method.referencePolicy === "REQUIRED" ? "Required"
@@ -327,14 +327,14 @@ const PaymentMethodsSettingsPage = () => {
                           </td>
                           <td className="app-table-cell text-center">
                             <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                              method.includeInExpectedCash ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                              method.includeInExpectedCash ? "bg-success-soft text-success" : "bg-slate-100 text-slate-600"
                             }`}>
                               {method.includeInExpectedCash ? "Yes" : "No"}
                             </span>
                           </td>
                           <td className="app-table-cell text-center">
                             <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                              method.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                              method.active ? "bg-success-soft text-success" : "bg-slate-100 text-slate-600"
                             }`}>
                               {method.active ? "Active" : "Inactive"}
                             </span>
@@ -343,7 +343,7 @@ const PaymentMethodsSettingsPage = () => {
                             <div className="flex justify-end gap-2">
                               <button type="button" aria-label={`Edit ${method.displayName}`}
                                 onClick={() => handleEdit(method)}
-                                className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-blue-600"
+                                className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-accent"
                                 title="Edit payment method">
                                 <Pencil size={16} />
                               </button>
@@ -351,7 +351,7 @@ const PaymentMethodsSettingsPage = () => {
                                 onClick={() => handleToggleActive(method)}
                                 disabled={togglingId === method.id}
                                 className={`rounded-lg bg-slate-50 p-2 transition disabled:opacity-50 ${
-                                  method.active ? "text-slate-500 hover:text-red-600" : "text-slate-500 hover:text-emerald-600"
+                                  method.active ? "text-slate-500 hover:text-danger" : "text-slate-500 hover:text-success"
                                 }`}
                                 title={method.active ? "Deactivate" : "Activate"}>
                                 <Power size={16} />

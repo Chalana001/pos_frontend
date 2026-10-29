@@ -87,7 +87,7 @@ const NumberField = ({ label, value, onCommit, min, max, step = 1, suffix }) => 
           value={text}
           onChange={(e) => setText(e.target.value)}
           onBlur={commit}
-          className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
         />
         {suffix ? (
           <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-600">
@@ -131,7 +131,7 @@ const SizeField = ({ label, mmValue, unit, onCommitMm }) => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onBlur={commit}
-          className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
         />
         <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-600">
           {unit === 'in' ? 'in' : 'mm'}
@@ -149,7 +149,7 @@ const ToggleButton = ({ active, onClick, title, children }) => (
     title={title}
     className={`flex h-11 w-11 items-center justify-center rounded-lg border text-sm font-bold transition ${
       active
-        ? 'border-blue-500 bg-blue-50 text-blue-600'
+        ? 'border-accent bg-accent-soft text-accent'
         : 'border-slate-300 bg-white text-slate-500 hover:border-slate-400'
     }`}
   >
@@ -179,7 +179,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
           checked={el.enabled !== false}
           onChange={(e) => updateElement(index, 'enabled', e.target.checked)}
           title={el.enabled === false ? 'Hidden. Click to show' : 'Visible. Click to hide'}
-          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
         />
 
         <span className="flex-1 min-w-[110px] text-sm font-semibold text-slate-700">
@@ -243,7 +243,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
           type="button"
           onClick={() => removeElement(index)}
           title="Remove element"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-500 transition hover:border-red-400 hover:bg-red-100"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-danger-border bg-danger-soft text-danger transition hover:border-danger-border hover:bg-danger-soft"
         >
           <Trash2 size={14} />
         </button>
@@ -261,7 +261,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
             placeholder={
               el.type === 'SHOP_NAME' && shopName ? `Leave empty for "${shopName}"` : textCfg.placeholder
             }
-            className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
+            className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm placeholder-slate-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
           />
         </div>
       ) : null}
@@ -277,7 +277,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
               max={60}
               value={el.maxChars ?? 22}
               onChange={(e) => updateElement(index, 'maxChars', Number(e.target.value))}
-              className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none"
+              className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-accent focus:outline-none"
             />
           </div>
           <div>
@@ -340,7 +340,7 @@ const ElementRow = ({ element, index, count, shopName, updateElement, moveElemen
                 type="checkbox"
                 checked={el.showBarcodeValue !== false}
                 onChange={(e) => updateElement(index, 'showBarcodeValue', e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
               />
             </label>
             <NumberField label="Number Font Size" suffix="px" min={6} max={20} value={el.barcodeValueFontSize} onCommit={(v) => updateElement(index, 'barcodeValueFontSize', v)} />
@@ -498,7 +498,7 @@ const BarcodeSettingsPanel = ({
             <button
               type="button"
               onClick={() => addElement(addElementType)}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-4 text-sm font-semibold text-blue-600 transition hover:bg-blue-100"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-accent bg-accent-soft px-4 text-sm font-semibold text-accent transition hover:bg-slate-100"
             >
               <Plus size={14} />
               Add Element
@@ -525,7 +525,7 @@ const BarcodeSettingsPanel = ({
               type="checkbox"
               checked={!!form.directPrintEnabled}
               onChange={(event) => updateField('directPrintEnabled', event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
             />
           </label>
 

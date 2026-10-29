@@ -29,6 +29,7 @@ const WarrantyDetailsPage = lazy(() => import('../pages/WarrantyDetailsPage'));
 const WarrantySettingsPage = lazy(() => import('../pages/WarrantySettingsPage'));
 const ItemsPage = lazy(() => import('../pages/ItemsPage'));
 const ItemFormPage = lazy(() => import('../pages/ItemFormPage'));
+const CategoryManagementPage = lazy(() => import('../pages/CategoryManagementPage'));
 const BulkAddItems = lazy(() => import('../pages/BulkAddItems'));
 const ItemExcelImportPage = lazy(() => import('../pages/ItemExcelImportPage'));
 const BarcodePrintPage = lazy(() => import('../pages/BarcodePrintPage'));
@@ -156,6 +157,7 @@ const AppRoutes = () => {
         <Route path="warranties/:id" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantyDetailsPage />)}</ProtectedRoute>} />
 
         <Route path="items" element={<ProtectedRoute permission="VIEW_ITEMS" requiresOnline>{withSuspense(<ItemsPage />)}</ProtectedRoute>} />
+        <Route path="items/categories" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline>{withSuspense(<CategoryManagementPage />)}</ProtectedRoute>} />
         <Route path="items/new" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline>{withSuspense(<ItemFormPage mode="create" />)}</ProtectedRoute>} />
         <Route path="items/:id/edit" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline>{withSuspense(<ItemFormPage mode="edit" />)}</ProtectedRoute>} />
         <Route path="items/bulk-add" element={<ProtectedRoute permission="MANAGE_ITEMS" feature="BULK_ITEMS" requiresOnline>{withSuspense(<BulkAddItems />)}</ProtectedRoute>} />

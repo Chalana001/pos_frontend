@@ -15,11 +15,11 @@ import { formatCurrency, formatDate, formatDateTime, formatQuantityWithUnit } fr
 const getStatusClassName = (status) => {
   switch (status) {
     case "ACTIVE":
-      return "border-emerald-200 bg-emerald-100 text-emerald-700";
+      return "border-success-border bg-success-soft text-success";
     case "EXPIRED":
-      return "border-amber-200 bg-amber-100 text-amber-700";
+      return "border-warning-border bg-warning-soft text-warning";
     case "CLAIMED":
-      return "border-blue-200 bg-blue-100 text-blue-700";
+      return "border-slate-200 bg-slate-100 text-accent";
     case "VOID":
       return "border-slate-200 bg-slate-100 text-slate-600";
     default:
@@ -42,13 +42,13 @@ const claimStatusOptions = [
 const getClaimStatusClassName = (status) => {
   switch (status) {
     case "OPEN":
-      return "border-blue-200 bg-blue-100 text-blue-700";
+      return "border-slate-200 bg-slate-100 text-accent";
     case "IN_PROGRESS":
-      return "border-violet-200 bg-violet-100 text-violet-700";
+      return "border-info-border bg-info-soft text-info";
     case "COMPLETED":
-      return "border-emerald-200 bg-emerald-100 text-emerald-700";
+      return "border-success-border bg-success-soft text-success";
     case "REJECTED":
-      return "border-red-200 bg-red-100 text-red-700";
+      return "border-danger-border bg-danger-soft text-danger";
     case "CANCELED":
       return "border-slate-200 bg-slate-100 text-slate-600";
     default:
@@ -176,7 +176,7 @@ const WarrantyDetailsPage = () => {
   }
 
   if (!warranty) {
-    return <div className="p-10 text-center text-red-500">Warranty record not found.</div>;
+    return <div className="p-10 text-center text-danger">Warranty record not found.</div>;
   }
 
   return (
@@ -206,7 +206,7 @@ const WarrantyDetailsPage = () => {
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+              <div className="rounded-xl bg-accent-soft p-3 text-accent">
                 <ShieldCheck size={24} />
               </div>
               <div>
@@ -291,11 +291,11 @@ const WarrantyDetailsPage = () => {
               </div>
               <div>
                 <div className="text-slate-500">Paid</div>
-                <div className="font-semibold text-emerald-700">{formatCurrency(sale.paidAmount)}</div>
+                <div className="font-semibold text-success">{formatCurrency(sale.paidAmount)}</div>
               </div>
               <div>
                 <div className="text-slate-500">Due</div>
-                <div className={`font-semibold ${Number(sale.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-800"}`}>
+                <div className={`font-semibold ${Number(sale.dueAmount || 0) > 0 ? "text-danger" : "text-slate-800"}`}>
                   {formatCurrency(sale.dueAmount)}
                 </div>
               </div>
@@ -398,7 +398,7 @@ const WarrantyDetailsPage = () => {
               rows="4"
               value={claimIssue}
               onChange={(event) => setClaimIssue(event.target.value)}
-              className="mb-6 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+              className="mb-6 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-accent"
               placeholder="Describe the problem reported by the customer"
               autoFocus
             />
@@ -431,7 +431,7 @@ const WarrantyDetailsPage = () => {
               rows="4"
               value={claimResolutionNote}
               onChange={(event) => setClaimResolutionNote(event.target.value)}
-              className="mb-6 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+              className="mb-6 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-accent"
               placeholder="Repair note, replacement note, or rejection reason"
             />
 

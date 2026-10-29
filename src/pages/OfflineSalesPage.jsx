@@ -317,7 +317,7 @@ const OfflineSalesPage = () => {
         <div className="flex flex-wrap items-center gap-2">
           <div
             className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
-              isOnline ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+              isOnline ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
             }`}
           >
             {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
@@ -370,36 +370,36 @@ const OfflineSalesPage = () => {
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Queued</div>
           <div className="mt-2 text-2xl font-semibold text-slate-900">{rows.length}</div>
         </div>
-        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3" style={{ animationDelay: "170ms" }}>
-          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Ready</div>
-          <div className="mt-2 text-2xl font-semibold text-emerald-800">{readyRows.length}</div>
+        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-success-border bg-success-soft px-4 py-3" style={{ animationDelay: "170ms" }}>
+          <div className="text-xs font-semibold uppercase tracking-wide text-success">Ready</div>
+          <div className="mt-2 text-2xl font-semibold text-success">{readyRows.length}</div>
         </div>
-        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-amber-200 bg-amber-50 px-4 py-3" style={{ animationDelay: "220ms" }}>
-          <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-warning-border bg-warning-soft px-4 py-3" style={{ animationDelay: "220ms" }}>
+          <div className="text-xs font-semibold uppercase tracking-wide text-warning">
             Need Shift
           </div>
-          <div className="mt-2 text-2xl font-semibold text-amber-800">
+          <div className="mt-2 text-2xl font-semibold text-warning">
             {rowsNeedingShift.length}
           </div>
         </div>
-        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-red-200 bg-red-50 px-4 py-3" style={{ animationDelay: "270ms" }}>
-          <div className="text-xs font-semibold uppercase tracking-wide text-red-700">
+        <div className="sales-panel-enter sales-panel-hover rounded-xl border border-danger-border bg-danger-soft px-4 py-3" style={{ animationDelay: "270ms" }}>
+          <div className="text-xs font-semibold uppercase tracking-wide text-danger">
             Stock Issues
           </div>
-          <div className="mt-2 text-2xl font-semibold text-red-800">
+          <div className="mt-2 text-2xl font-semibold text-danger">
             {rowsWithStockIssues.length}
           </div>
         </div>
       </div>
 
       {!isOnline ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
           Connection is offline. Review the queue now and import it after the system is back online.
         </div>
       ) : !hasOnlineSession ? (
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
           Your offline queue is ready. Sign in online before importing.{" "}
-          <Link to="/login" className="font-semibold text-blue-600">
+          <Link to="/login" className="font-semibold text-accent">
             Open login
           </Link>
         </div>
@@ -408,20 +408,20 @@ const OfflineSalesPage = () => {
           Refreshing live stock and shift availability for queued branches...
         </div>
       ) : rowsNeedingShift.length > 0 ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
           {rowsNeedingShift.length} queued sale{rowsNeedingShift.length === 1 ? "" : "s"} need an
           open shift before import.{" "}
-          <Link to="/shifts" className="font-semibold text-amber-900 underline">
+          <Link to="/shifts" className="font-semibold text-warning underline">
             Open shifts
           </Link>
         </div>
       ) : rowsWithStockIssues.length > 0 ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="rounded-xl border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger">
           {rowsWithStockIssues.length} queued sale{rowsWithStockIssues.length === 1 ? "" : "s"} have
           stock or batch conflicts. Fix those rows before pushing.
         </div>
       ) : (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div className="rounded-xl border border-success-border bg-success-soft px-4 py-3 text-sm text-success">
           Live stock check passed for the current queue snapshot.
         </div>
       )}
@@ -429,8 +429,8 @@ const OfflineSalesPage = () => {
       {lastImportSummary ? (
         <div className={`rounded-xl border px-4 py-3 text-sm ${
           lastImportSummary.failed > 0
-            ? "border-amber-200 bg-amber-50 text-amber-900"
-            : "border-emerald-200 bg-emerald-50 text-emerald-900"
+            ? "border-warning-border bg-warning-soft text-warning"
+            : "border-success-border bg-success-soft text-success"
         }`}>
           <div className="font-semibold">{lastImportSummary.message}</div>
           <div className="mt-1 text-xs">
@@ -478,17 +478,17 @@ const OfflineSalesPage = () => {
                         {row.branchName || `Branch ${row.branchId}`}
                       </div>
                       {rowHasOpenShift && validation.hasShortfall ? (
-                        <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                        <div className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning">
                           <ShieldAlert size={12} />
                           Ready, will go short
                         </div>
                       ) : rowHasOpenShift ? (
-                        <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                        <div className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success">
                           <CheckCircle2 size={12} />
                           Ready
                         </div>
                       ) : (
-                        <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                        <div className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning">
                           <AlertCircle size={12} />
                           Open shift required
                         </div>
@@ -503,7 +503,7 @@ const OfflineSalesPage = () => {
                     <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                       {formatCurrency(Number(row.total || 0))}
                     </div>
-                    <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                    <div className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
                       {row.itemCount || displayItems.length} items
                     </div>
                     <Button
@@ -535,13 +535,13 @@ const OfflineSalesPage = () => {
                 </div>
 
                 {!rowHasOpenShift && isOnline && hasOnlineSession ? (
-                  <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft px-3 py-2 text-sm text-warning">
                     Open a shift for this branch, then retry this import.
                   </div>
                 ) : null}
 
                 {validation.hasShortfall ? (
-                  <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  <div className="mt-4 rounded-lg border border-warning-border bg-warning-soft px-3 py-2 text-sm text-warning">
                     <div className="font-semibold">Live stock will go short on import:</div>
                     <ul className="mt-2 list-disc pl-5">
                       {validation.issues.map((issue) => (
@@ -557,7 +557,7 @@ const OfflineSalesPage = () => {
                 ) : null}
 
                 {row.lastError ? (
-                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  <div className="mt-4 rounded-lg border border-danger-border bg-danger-soft px-3 py-2 text-sm text-danger">
                     {row.lastError}
                   </div>
                 ) : null}
@@ -576,7 +576,7 @@ const OfflineSalesPage = () => {
                         key={`${row.clientSaleId}-${item.itemId}-${index}`}
                         className={`rounded-lg border px-4 py-3 ${
                           itemIssue
-                            ? "border-red-200 bg-red-50"
+                            ? "border-danger-border bg-danger-soft"
                             : "border-slate-200 bg-slate-50"
                         }`}
                       >
@@ -589,9 +589,9 @@ const OfflineSalesPage = () => {
                               Qty {formatStockQuantity(item.qty)} {item.qtyUnit || cachedItem?.defaultUnit || ""}
                             </div>
                             {itemIssue ? (
-                              <div className="mt-2 text-xs font-medium text-red-700">{itemIssue}</div>
+                              <div className="mt-2 text-xs font-medium text-danger">{itemIssue}</div>
                             ) : (
-                              <div className="mt-2 text-xs font-medium text-emerald-700">
+                              <div className="mt-2 text-xs font-medium text-success">
                                 Stock check passed for this item.
                               </div>
                             )}

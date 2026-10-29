@@ -102,7 +102,7 @@ const ShiftCashCountSettings = () => {
     <section className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex gap-3">
-          <span className="mt-0.5 rounded-lg bg-emerald-50 p-2 text-emerald-700"><Coins size={18} /></span>
+          <span className="mt-0.5 rounded-lg bg-success-soft p-2 text-success"><Coins size={18} /></span>
           <div>
             <h3 className="font-semibold text-slate-800">Shift Cash Denominations</h3>
             <p className="mt-1 text-xs leading-5 text-slate-500">Let cashiers count notes and coins at shift close. The counted cash total is calculated automatically and saved with the shift.</p>
@@ -114,12 +114,12 @@ const ShiftCashCountSettings = () => {
           checked={settings.enabled}
           onChange={(event) => setSettings((current) => ({ ...current, enabled: event.target.checked }))}
           disabled={loading || loadError || saving}
-          className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          className="mt-1 h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
         />
       </div>
 
       <div className={`mt-4 ${settings.enabled ? "" : "opacity-60"}`}>
-        {loadError && <p role="alert" className="mb-3 text-sm text-red-600">Could not load the saved settings. Refresh this page before making changes.</p>}
+        {loadError && <p role="alert" className="mb-3 text-sm text-danger">Could not load the saved settings. Refresh this page before making changes.</p>}
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-sm font-medium text-slate-700">Available denominations</p>
           <span className="text-xs text-slate-500">Saved for this shop</span>
@@ -133,7 +133,7 @@ const ShiftCashCountSettings = () => {
                 aria-label={`Remove ${formatRupees(amount)}`}
                 onClick={() => removeDenomination(amount)}
                 disabled={loading || loadError || saving || settings.denominations.length <= 1}
-                className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed"
+                className="rounded p-1 text-slate-400 hover:bg-danger-soft hover:text-danger disabled:cursor-not-allowed"
               ><Trash2 size={13} /></button>
             </span>
           ))}

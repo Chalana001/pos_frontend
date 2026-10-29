@@ -126,7 +126,7 @@ const BankAccountsPage = () => {
       header: "Account",
       render: (bankAccount) => (
         <div className="flex items-center gap-2">
-          <Landmark size={16} className="text-blue-600" />
+          <Landmark size={16} className="text-accent" />
           <div>
             <div className="font-semibold text-slate-800">{bankAccount.name}</div>
             {bankAccount.bankName && (
@@ -146,7 +146,7 @@ const BankAccountsPage = () => {
       className: "text-center",
       render: (bankAccount) => (
         <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-          bankAccount.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+          bankAccount.active ? "bg-success-soft text-success" : "bg-slate-100 text-slate-600"
         }`}>
           {bankAccount.active ? "Active" : "Inactive"}
         </span>
@@ -170,7 +170,7 @@ const BankAccountsPage = () => {
               event.stopPropagation();
               openEditModal(bankAccount);
             }}
-            className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-blue-600"
+            className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-accent"
             title="Edit bank account"
           >
             <Pencil size={16} />
@@ -183,7 +183,7 @@ const BankAccountsPage = () => {
             }}
             aria-label={`Delete bank account ${bankAccount.accountName || bankAccount.bankName}`}
             disabled={deletingId === bankAccount.id}
-            className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-red-600 disabled:opacity-50"
+            className="rounded-lg bg-slate-50 p-2 text-slate-500 transition hover:text-danger disabled:opacity-50"
             title={bankAccount.usageCount > 0 ? "In-use accounts will be deactivated" : "Delete bank account"}
           >
             <Trash2 size={16} />
@@ -228,7 +228,7 @@ const BankAccountsPage = () => {
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
               placeholder="e.g. Commercial Bank - 001"
-              className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
               autoFocus
               required
             />
@@ -240,7 +240,7 @@ const BankAccountsPage = () => {
               value={form.bankName}
               onChange={(event) => setForm((prev) => ({ ...prev, bankName: event.target.value }))}
               placeholder="e.g. Commercial Bank"
-              className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
           </div>
 
@@ -250,7 +250,7 @@ const BankAccountsPage = () => {
               value={form.accountNumber}
               onChange={(event) => setForm((prev) => ({ ...prev, accountNumber: event.target.value }))}
               placeholder="e.g. 8001234567"
-              className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
           </div>
 
@@ -263,7 +263,7 @@ const BankAccountsPage = () => {
               type="checkbox"
               checked={form.active}
               onChange={(event) => setForm((prev) => ({ ...prev, active: event.target.checked }))}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
             />
           </label>
 

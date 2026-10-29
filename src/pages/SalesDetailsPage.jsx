@@ -327,7 +327,7 @@ const SalesDetailsPage = () => {
   };
 
   if (loading) return <div className="p-10 text-center text-slate-500">Loading details...</div>;
-  if (!sale) return <div className="p-10 text-center text-red-500">Sale record not found!</div>;
+  if (!sale) return <div className="p-10 text-center text-danger">Sale record not found!</div>;
 
   const isCanceled = sale.status === 'CANCELED';
   const canCancelOrder =
@@ -382,13 +382,13 @@ const SalesDetailsPage = () => {
             {/* Process Return button */}
             {canProcessReturn && (
                 <Button
-                    className="bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 shadow-sm"
+                    className="bg-warning-soft text-warning hover:bg-warning-soft border border-warning-border shadow-sm"
                     onClick={() => navigate(`/sales/${sale.invoiceNo}/return`)}
                 >
-                    <RotateCcw size={18} className="mr-2 text-orange-500" />
+                    <RotateCcw size={18} className="mr-2 text-warning" />
                     Process Return
                     {existingReturns.length > 0 && (
-                        <span className="ml-2 bg-orange-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">
+                        <span className="ml-2 bg-accent text-white text-xs rounded-full px-1.5 py-0.5 font-bold">
                             {existingReturns.length}
                         </span>
                     )}
@@ -433,7 +433,7 @@ const SalesDetailsPage = () => {
       </div>
 
       {/* --- MAIN INVOICE HEADER --- */}
-      <Card className={`sales-panel-enter sales-panel-hover p-6 border-t-4 shadow-md transition-all ${isCanceled ? 'border-t-slate-400 bg-slate-50' : 'border-t-green-500'}`} style={{ animationDelay: "130ms" }}>
+      <Card className={`sales-panel-enter sales-panel-hover p-6 border-t-4 shadow-md transition-all ${isCanceled ? 'border-t-slate-400 bg-slate-50' : 'border-t-success-border'}`} style={{ animationDelay: "130ms" }}>
         <div className="flex flex-col md:flex-row justify-between gap-6">
           
           {/* Left: Invoice Info */}
@@ -449,7 +449,7 @@ const SalesDetailsPage = () => {
                         CANCELED
                     </span>
                 ) : (
-                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                    <span className="px-2 py-0.5 rounded text-xs font-bold bg-success-soft text-success border border-success-border">
                         {getPaymentLabel(sale)}
                     </span>
                 )}
@@ -485,7 +485,7 @@ const SalesDetailsPage = () => {
                 <div className={`font-bold text-lg ${isCanceled ? 'text-slate-500' : 'text-slate-700'}`}>
                     {sale.customerName || "Walk-in Customer"}
                 </div>
-                <div className="bg-blue-100 p-1.5 rounded-full text-blue-600">
+                <div className="bg-slate-100 p-1.5 rounded-full text-accent">
                     <User size={18} />
                 </div>
             </div>
@@ -501,13 +501,13 @@ const SalesDetailsPage = () => {
                     {itemDiscounts > 0.004 ? (
                         <div className="flex justify-between gap-8">
                             <span className="text-slate-500">Item Discounts</span>
-                            <span className="font-semibold text-amber-700">-{money(itemDiscounts)} LKR</span>
+                            <span className="font-semibold text-warning">-{money(itemDiscounts)} LKR</span>
                         </div>
                     ) : null}
                     {itemOffers > 0.004 ? (
                         <div className="flex justify-between gap-8">
                             <span className="text-slate-500">Item Offers</span>
-                            <span className="font-semibold text-emerald-700">-{money(itemOffers)} LKR</span>
+                            <span className="font-semibold text-success">-{money(itemOffers)} LKR</span>
                         </div>
                     ) : null}
                     {billDiscountAmount > 0.004 ? (
@@ -515,32 +515,32 @@ const SalesDetailsPage = () => {
                             <span className="min-w-0 truncate text-slate-500" title={billOfferName || undefined}>
                                 {billOfferName ? `Bill Offer (${billOfferName})` : "Bill Discount"}
                             </span>
-                            <span className={`shrink-0 font-semibold ${billOfferName ? 'text-emerald-700' : 'text-amber-700'}`}>-{money(billDiscountAmount)} LKR</span>
+                            <span className={`shrink-0 font-semibold ${billOfferName ? 'text-success' : 'text-warning'}`}>-{money(billDiscountAmount)} LKR</span>
                         </div>
                     ) : null}
                     {pointsDiscount > 0.004 ? (
                         <div className="flex justify-between gap-8">
                             <span className="text-slate-500">Points Used{pointsRedeemed > 0 ? ` (${pointsRedeemed.toLocaleString()})` : ""}</span>
-                            <span className="font-semibold text-blue-700">-{money(pointsDiscount)} LKR</span>
+                            <span className="font-semibold text-accent">-{money(pointsDiscount)} LKR</span>
                         </div>
                     ) : null}
                 </div>
                 <div className="mt-3 border-t border-slate-200 pt-3">
                     <div className="text-xs text-slate-500 uppercase font-bold">Grand Total</div>
-                    <div className={`text-2xl font-bold ${isCanceled ? 'text-slate-500 line-through' : 'text-emerald-600'}`}>
+                    <div className={`text-2xl font-bold ${isCanceled ? 'text-slate-500 line-through' : 'text-success'}`}>
                         {sale.grandTotal?.toLocaleString(undefined, {minimumFractionDigits: 2})} <span className="text-sm text-slate-500">LKR</span>
                     </div>
                 </div>
                 <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-sm">
                     <div className="flex justify-between gap-8">
                         <span className="text-slate-500">Paid</span>
-                        <span className="font-semibold text-emerald-700">
+                        <span className="font-semibold text-success">
                             {(sale.paidAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} LKR
                         </span>
                     </div>
                     <div className="flex justify-between gap-8">
                         <span className="text-slate-500">Due</span>
-                        <span className={`font-semibold ${(sale.dueAmount || 0) > 0 ? 'text-red-600' : 'text-slate-500'}`}>
+                        <span className={`font-semibold ${(sale.dueAmount || 0) > 0 ? 'text-danger' : 'text-slate-500'}`}>
                             {(sale.dueAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} LKR
                         </span>
                     </div>
@@ -600,14 +600,14 @@ const SalesDetailsPage = () => {
                                 <td className="p-4 text-right text-xs">
                                     {lineCut(item) > 0.004 ? (
                                         <div className="space-y-0.5">
-                                            <div className="font-semibold text-red-500">- {money(lineCut(item))}</div>
+                                            <div className="font-semibold text-danger">- {money(lineCut(item))}</div>
                                             {lineOfferCut(item) > 0.004 ? (
-                                                <div className="text-emerald-700" title={item.promotionName || undefined}>
+                                                <div className="text-success" title={item.promotionName || undefined}>
                                                     {item.promotionName || "Offer"}: -{money(lineOfferCut(item))}
                                                 </div>
                                             ) : null}
                                             {lineOfferCut(item) > 0.004 && lineManualCut(item) > 0.004 ? (
-                                                <div className="text-amber-700">Discount: -{money(lineManualCut(item))}</div>
+                                                <div className="text-warning">Discount: -{money(lineManualCut(item))}</div>
                                             ) : null}
                                             {item.finalUnitPrice != null && lineCut(item) > 0.004 ? (
                                                 <div className="text-slate-500">@ {money(item.finalUnitPrice)}</div>
@@ -642,13 +642,13 @@ const SalesDetailsPage = () => {
             {existingReturns.map((ret) => (
               <div
                 key={ret.id}
-                className="rounded-2xl border border-orange-200 bg-orange-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                className="rounded-2xl border border-warning-border bg-warning-soft p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <RotateCcw size={14} className="text-orange-500" />
-                    <span className="font-mono font-bold text-orange-700 text-sm">{ret.returnNo}</span>
-                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-orange-200 text-orange-800">
+                    <RotateCcw size={14} className="text-warning" />
+                    <span className="font-mono font-bold text-warning text-sm">{ret.returnNo}</span>
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-warning-soft text-warning">
                       {ret.refundMethod}
                     </span>
                   </div>
@@ -659,7 +659,7 @@ const SalesDetailsPage = () => {
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
                     <div className="text-xs text-slate-600 uppercase font-semibold">Refunded</div>
-                    <div className="font-bold text-red-600 text-base">
+                    <div className="font-bold text-danger text-base">
                       -{Number(ret.totalRefundAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} LKR
                     </div>
                   </div>
@@ -680,7 +680,7 @@ const SalesDetailsPage = () => {
             <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Invoice Due</span>
-                <span className="font-bold text-red-600">
+                <span className="font-bold text-danger">
                   {saleDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} LKR
                 </span>
               </div>
@@ -701,7 +701,7 @@ const SalesDetailsPage = () => {
               max={saleDue}
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
-              className="mb-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+              className="mb-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-sm outline-none transition focus:ring-2 focus:ring-accent"
               autoFocus
             />
 
@@ -711,7 +711,7 @@ const SalesDetailsPage = () => {
               onChange={setPaymentMethod}
               options={paymentMethodOptions}
               className="mb-4"
-              buttonClassName="py-2 focus:ring-blue-100"
+              buttonClassName="py-2 focus:ring-accent"
             />
             {selectedSettlement?.referencePolicy !== "NONE" && (
               <>
@@ -723,7 +723,7 @@ const SalesDetailsPage = () => {
                   type="text"
                   value={paymentBankReference}
                   onChange={(e) => setPaymentBankReference(e.target.value)}
-                  className="mb-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+                  className="mb-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-accent"
                   placeholder="Transaction reference"
                   maxLength={120}
                   autoFocus
@@ -736,7 +736,7 @@ const SalesDetailsPage = () => {
               rows="2"
               value={paymentNote}
               onChange={(e) => setPaymentNote(e.target.value)}
-              className="mb-6 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-500"
+              className="mb-6 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-accent"
               placeholder="Optional note"
             />
 
@@ -749,7 +749,7 @@ const SalesDetailsPage = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                className="bg-accent text-white hover:bg-accent"
                 onClick={executeSalePayment}
                 disabled={paymentLoading}
               >

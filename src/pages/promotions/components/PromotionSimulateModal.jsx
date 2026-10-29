@@ -66,7 +66,7 @@ const PromotionSimulateModal = ({ isOpen, onClose, payload, branchId }) => {
                 type="button"
                 onClick={() => setDays(option)}
                 className={`rounded-md px-3 py-1.5 text-xs font-bold ${
-                  days === option ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                  days === option ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 {option} days
@@ -84,19 +84,19 @@ const PromotionSimulateModal = ({ isOpen, onClose, payload, branchId }) => {
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <Stat label="Orders scanned" value={result.ordersScanned} />
               <Stat label="Orders affected" value={`${result.ordersAffected} (${result.affectedRatePercent}%)`} />
-              <Stat label="Projected discount" value={formatCurrency(result.projectedDiscount)} tone="text-red-600" />
-              <Stat label="Worst single order" value={formatCurrency(result.maxOrderDiscount)} tone="text-amber-700" />
+              <Stat label="Projected discount" value={formatCurrency(result.projectedDiscount)} tone="text-danger" />
+              <Stat label="Worst single order" value={formatCurrency(result.maxOrderDiscount)} tone="text-warning" />
               <Stat label="Per affected order" value={formatCurrency(result.averageDiscountPerAffectedOrder)} />
               <Stat label="Per day" value={formatCurrency(result.projectedDailyDiscount)} />
               <Stat
                 label="Budget lasts"
                 value={result.budgetDaysRemaining != null ? `${result.budgetDaysRemaining} days` : "No budget set"}
-                tone={result.budgetDaysRemaining != null && Number(result.budgetDaysRemaining) < 7 ? "text-red-600" : undefined}
+                tone={result.budgetDaysRemaining != null && Number(result.budgetDaysRemaining) < 7 ? "text-danger" : undefined}
               />
               <Stat
                 label="Margin erosion"
                 value={result.marginErosionPercent != null ? `${result.marginErosionPercent}%` : "-"}
-                tone={result.marginErosionPercent != null && Number(result.marginErosionPercent) > 50 ? "text-red-600" : undefined}
+                tone={result.marginErosionPercent != null && Number(result.marginErosionPercent) > 50 ? "text-danger" : undefined}
               />
             </div>
 
@@ -105,7 +105,7 @@ const PromotionSimulateModal = ({ isOpen, onClose, payload, branchId }) => {
               <span className="font-bold">{formatCurrency(result.grossMarginBefore)}</span> to{" "}
               <span className="font-bold">{formatCurrency(result.grossMarginAfter)}</span>.
               {result.truncated && (
-                <span className="ml-1 text-amber-700">Only the newest {result.ordersScanned} orders were scanned.</span>
+                <span className="ml-1 text-warning">Only the newest {result.ordersScanned} orders were scanned.</span>
               )}
             </div>
 

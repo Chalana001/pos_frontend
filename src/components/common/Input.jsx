@@ -40,7 +40,7 @@ const Input = forwardRef(({
         id={inputId}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}
-        className={`input ${error ? 'border-red-500 focus:ring-red-500' : ''} ${className}`}
+        className={`input ${error ? 'border-danger-border focus:ring-danger' : ''} ${className}`}
         {...props}
       />
       {helperText && !error && (
@@ -49,7 +49,7 @@ const Input = forwardRef(({
         </p>
       )}
       {error && (
-        <p id={errorId} className="mt-1 text-sm text-red-600">
+        <p id={errorId} className="mt-1 text-sm text-danger">
           {error}
         </p>
       )}

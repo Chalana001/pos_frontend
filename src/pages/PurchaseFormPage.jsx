@@ -14,11 +14,11 @@ import { suppliersAPI } from "../api/suppliers.api";
 import { itemsAPI } from "../api/items.api";
 import { branchesAPI } from "../api/branches.api";
 import { purchasesAPI } from "../api/purchases.api";
-import { Plus, Trash2, Save, Copy, Search } from "lucide-react";
+import { Plus, Trash2, Save, Copy, Search, Pencil, Check, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import { ItemType } from "../utils/constants";
-import { formatCurrency, getLocalDateString } from "../utils/formatters";
+import { formatCurrency, formatDate, getLocalDateString } from "../utils/formatters";
 import { useSearchOnType } from "../hooks/useSearchOnType";
 import usePaymentMethods from "../hooks/usePaymentMethods";
 import ConfirmDialog from "../components/common/ConfirmDialog";
@@ -47,9 +47,14 @@ const volumeUnitOptions = [
   { value: "L", label: "L" },
 ];
 
-const getMeasuredUnitOptions = (item) => item?.itemType === ItemType.VOLUME || item?.defaultUnit === "L" || item?.defaultUnit === "ML"
-  ? volumeUnitOptions
-  : weightUnitOptions;
+const getMeasuredUnitOptions = (item) =>
+  item?.itemType === ItemType.VOLUME ||
+  item?.defaultUnit === "L" ||
+  item?.defaultUnit === "ML" ||
+  item?.qtyUnit === "L" ||
+  item?.qtyUnit === "ML"
+    ? volumeUnitOptions
+    : weightUnitOptions;
 
 const calculateMeasuredLineTotal = (qty, unit, costPrice, measuredItem) => {
   const normalizedQty = Number(qty || 0);
@@ -147,6 +152,7 @@ const PurchaseFormPage = () => {
 
   // --- CART STATE ---
   const [cartItems, setCartItems] = useState([]);
+  const [editingRow, setEditingRow] = useState(null);
 
   // --- CANCEL & REBUILD ---
   //
@@ -619,12 +625,98 @@ const PurchaseFormPage = () => {
     setBranchInputs({});
   };
 
+  const startEditingRow = (item) => {
+    if (editingRow && editingRow.uniqueId !== item.uniqueId) {
+      toast.error("Save or cancel the current item edit first");
+      return;
+    }
+    setEditingRow({
+      uniqueId: item.uniqueId,
+      cost: String(item.costPrice ?? ""),
+      sell: String(item.sellingPrice ?? ""),
+      qty: String(item.qty ?? ""),
+      free: String(item.freeQty ?? ""),
+      qtyUnit: item.qtyUnit || (item.weightItem ? getMeasuredUnitOptions(item)[0].value : ""),
+      expiry: item.expiryDate || "",
+    });
+  };
+
+  const cancelEditingRow = () => setEditingRow(null);
+
+  const handleEditKeyDown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveEditedRow();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      cancelEditingRow();
+    }
+  };
+
+  const saveEditedRow = () => {
+    if (!editingRow) return;
+
+    const item = cartItems.find((row) => row.uniqueId === editingRow.uniqueId);
+    if (!item) {
+      setEditingRow(null);
+      return;
+    }
+
+    const parseRowNumber = (value) => {
+      if (String(value).trim() === "") return 0;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : NaN;
+    };
+    const cost = parseRowNumber(editingRow.cost);
+    const sell = parseRowNumber(editingRow.sell);
+    const qty = parseRowNumber(editingRow.qty);
+    const freeQty = parseRowNumber(editingRow.free);
+    const qtyUnit = item.weightItem ? editingRow.qtyUnit : item.qtyUnit;
+
+    if (!Number.isFinite(cost) || cost < 0) return toast.error("Cost must be zero or greater");
+    if (!Number.isFinite(sell) || sell < 0) return toast.error("Selling price must be zero or greater");
+    if (!Number.isFinite(qty) || qty < 0) return toast.error("Quantity must be zero or greater");
+    if (!Number.isFinite(freeQty) || freeQty < 0) return toast.error("Free quantity must be zero or greater");
+    if (qty <= 0 && freeQty <= 0) return toast.error("Enter a paid or free quantity");
+
+    const updatedItem = {
+      ...item,
+      costPrice: cost,
+      sellingPrice: sell,
+      qty,
+      freeQty,
+      qtyUnit,
+      expiryDate: editingRow.expiry || null,
+      lineTotal: calculateMeasuredLineTotal(qty, qtyUnit, cost, item.weightItem),
+    };
+
+    const nextItems = cartItems.map((row) =>
+      row.uniqueId === editingRow.uniqueId ? updatedItem : row
+    );
+    const nextSubtotal = nextItems.reduce((sum, row) => sum + row.lineTotal, 0);
+    const nextDiscount = Number(discountAmount || 0);
+    if (nextDiscount > nextSubtotal) {
+      return toast.error("Supplier discount now exceeds the updated subtotal");
+    }
+    if (Number(paidAmount || 0) > Math.max(0, nextSubtotal - nextDiscount)) {
+      return toast.error("Paid amount now exceeds the updated grand total");
+    }
+
+    setCartItems(nextItems);
+    setEditingRow(null);
+  };
+
   const handleRemoveItem = (index) => {
+    const removedItem = cartItems[index];
+    if (removedItem && editingRow?.uniqueId === removedItem.uniqueId) {
+      setEditingRow(null);
+    }
     setCartItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   // --- 4. SUBMIT ---
   const handleSubmit = async () => {
+    if (editingRow) return toast.error("Save or cancel the item you are editing first");
     if (!supplierId) return toast.error("Please select a Supplier");
     if (cartItems.length === 0) return toast.error("No items in the list");
     const normalizedDiscountAmount = Number(discountAmount || 0);
@@ -712,6 +804,8 @@ const PurchaseFormPage = () => {
   const drawerBranchOptions = branches
     .filter((branch) => branchIdsInPurchase.includes(Number(branch.id)))
     .map((branch) => ({ value: String(branch.id), label: branch.name }));
+  const showBranchColumn = branches.length > 1;
+  const purchaseTableColumnCount = showBranchColumn ? 8 : 7;
   const effectiveCostForLine = (item, index) => {
     // Free units dilute the unit cost even when there is no invoice discount:
     // the money paid is spread over everything received (paid + free).
@@ -746,11 +840,11 @@ const PurchaseFormPage = () => {
         onDiscard={discardDraft}
       />
       {replacing && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+        <div className="rounded-xl border border-slate-200 bg-accent-soft px-4 py-3 text-sm text-slate-900">
           <p className="font-semibold">
             Replacing {replacing.invoiceNo}. The old bill is canceled when you save.
           </p>
-          <p className="mt-1 text-blue-800">
+          <p className="mt-1 text-slate-800">
             Both bills are kept and linked, so the original stays in the audit trail. Check
             expiry dates before saving. They only carry over where a line matched exactly
             one stock batch.
@@ -766,13 +860,13 @@ const PurchaseFormPage = () => {
         </div>
         <div className="purchase-summary-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white px-5 py-3 text-right shadow-sm" style={{ animationDelay: "90ms" }}>
           <p className="text-sm font-medium text-slate-500">Grand Total</p>
-          <p className="text-2xl font-bold text-emerald-600">{formatCurrency(grandTotal)}</p>
+          <p className="text-2xl font-bold text-success">{formatCurrency(grandTotal)}</p>
           {normalizedDiscountAmount > 0 ? (
             <p className="mt-1 text-xs font-semibold text-slate-500">
               Subtotal {formatCurrency(subtotal)} - Discount {formatCurrency(normalizedDiscountAmount)}
             </p>
           ) : null}
-          <p className={`mt-1 text-sm font-semibold ${dueAmount > 0 ? "text-red-600" : "text-emerald-600"}`}>
+          <p className={`mt-1 text-sm font-semibold ${dueAmount > 0 ? "text-danger" : "text-success"}`}>
             Supplier Due: {formatCurrency(dueAmount)}
           </p>
         </div>
@@ -916,8 +1010,11 @@ const PurchaseFormPage = () => {
 
       <div ref={panelsContainerRef} className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         <div
-          className="purchase-split-panel custom-scrollbar w-full min-w-0 flex-shrink-0 space-y-4 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto"
-          style={{ width: selectionPanelWidth ? `min(100%, ${selectionPanelWidth}px, 65%)` : "40%", animationDelay: "190ms" }}
+          className="purchase-split-panel custom-scrollbar w-full min-w-0 flex-shrink-0 space-y-4 lg:w-[var(--purchase-panel-width)] lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto"
+          style={{
+            "--purchase-panel-width": selectionPanelWidth ? `min(100%, ${selectionPanelWidth}px, 65%)` : "40%",
+            animationDelay: "190ms",
+          }}
         >
           <Card className="sales-panel-enter overflow-visible p-0" style={{ animationDelay: "180ms" }}>
             <div className="border-b border-slate-100 bg-slate-50/50 p-4">
@@ -934,10 +1031,14 @@ const PurchaseFormPage = () => {
                   value={search}
                   onChange={(e) => searchItems(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
-                  className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 {searchResults.length > 0 && (
-                  <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-100 bg-white py-1 shadow-xl custom-scrollbar">
+                  /* Below lg the results sit in normal flow: an absolutely
+                     positioned list ran past the bottom of the Select Item card
+                     and covered the panel underneath on a phone. From lg there is
+                     room to float it over the page as before. */
+                  <div className="z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-100 bg-white py-1 shadow-xl custom-scrollbar lg:absolute lg:inset-x-0">
                     {searchResults.map((item, index) => {
                       return (
                         <button
@@ -955,7 +1056,7 @@ const PurchaseFormPage = () => {
                             <div className="truncate text-xs text-slate-500">{item.barcode}</div>
                           </div>
                           <div className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold ${
-                            Number(item.availableQty) < 0 ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-600"
+                            Number(item.availableQty) < 0 ? "bg-danger-soft text-danger" : "bg-slate-100 text-slate-600"
                           }`}>
                             Stock: {formatStockQty(item)}
                           </div>
@@ -976,66 +1077,71 @@ const PurchaseFormPage = () => {
                       )}
                       <div className="truncate text-xs text-slate-500">{selectedItem.barcode}</div>
                       {Number(selectedItem.availableQty) < 0 && (
-                        <div className="mt-0.5 text-xs font-semibold text-red-600">
+                        <div className="mt-0.5 text-xs font-semibold text-danger">
                           Current stock: {formatDisplayStockQuantity(selectedItem)}
                           {selectedItem.zeroNegativeStock ? " (will be adjusted to 0)" : ""}
                         </div>
                       )}
                     </div>
-                    <button onClick={() => { setSelectedItem(null); }} className="shrink-0 text-xs font-semibold text-red-500 hover:underline">
+                    <button onClick={() => { setSelectedItem(null); }} className="shrink-0 text-xs font-semibold text-danger hover:underline">
                       Cancel
                     </button>
                   </div>
 
-                  <div className="custom-scrollbar max-h-[520px] overflow-auto rounded-xl border border-slate-200">
-                    <table className="w-full min-w-[760px] text-left text-sm">
-                      <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase text-slate-500">
-                        <tr>
-                          <th className="w-[190px] px-3 py-2">Branch</th>
-                          <th className="w-[120px] px-2 py-2 text-right">Cost</th>
-                          <th className="w-[120px] px-2 py-2 text-right">Sell</th>
-                          <th className="w-[110px] px-2 py-2 text-center">Qty</th>
-                          <th className="w-[96px] px-2 py-2 text-center">Free</th>
-                          {isMeasuredItem(selectedItem) && <th className="w-[92px] px-2 py-2 text-center">Unit</th>}
-                          <th className="w-[160px] px-2 py-2 text-center">Expiry</th>
-                          <th className="w-[42px] px-2 py-2 text-center"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
-                        {branches.map((branch, idx) => {
-                          const inputs = branchInputs[branch.id] || {};
-                          const weightItem = isMeasuredItem(selectedItem);
-                          return (
-                            <tr key={branch.id} className="hover:bg-slate-50">
-                              <td className="px-3 py-2">
-                                <div className="max-w-[170px] truncate text-sm font-semibold text-slate-700" title={branch.name}>
-                                  {branch.name}
-                                </div>
-                              </td>
-                              <td className="px-2 py-2">
+                  <div className="max-h-[520px] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 custom-scrollbar">
+                    <div className="divide-y divide-slate-100">
+                      {branches.map((branch, idx) => {
+                        const inputs = branchInputs[branch.id] || {};
+                        const weightItem = isMeasuredItem(selectedItem);
+                        return (
+                          <div key={branch.id} className="purchase-branch-row px-3 py-2.5">
+                            {/* Branch gets the full line to itself, so the fields below
+                                always start on a clean row: Cost/Sell/Qty, then
+                                Free/Unit/Expiry with Free directly under Cost. */}
+                            <div className="mb-2 flex items-center gap-2 border-b border-slate-100 pb-1.5">
+                              <span className="min-w-0 truncate text-sm font-semibold text-slate-700" title={branch.name}>
+                                {branch.name}
+                              </span>
+                              {idx === 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => applyPricesToAll(branch.id)}
+                                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                                  title="Copy prices to all branches"
+                                  aria-label="Copy prices to all branches"
+                                >
+                                  <Copy size={14} />
+                                </button>
+                              )}
+                            </div>
+                            <div className="purchase-branch-fields">
+                              <label className="min-w-0">
+                                <span className="mb-1 block text-xs font-semibold text-slate-500">Cost</span>
                                 <input aria-label="Cost"
                                   type="number"
-                                  className="input h-9 w-full min-w-[100px] px-2 text-right text-sm"
+                                  className="input h-9 w-full min-w-0 px-2 text-right text-sm tabular-nums"
                                   placeholder="Cost"
                                   value={inputs.cost}
                                   onChange={(e) => handleInputChange(branch.id, 'cost', e.target.value)}
                                 />
-                              </td>
-                              <td className="px-2 py-2">
+                              </label>
+                              <label className="min-w-0">
+                                <span className="mb-1 block text-xs font-semibold text-slate-500">Sell</span>
                                 <input aria-label="Sell"
                                   type="number"
-                                  className="input h-9 w-full min-w-[100px] px-2 text-right text-sm"
+                                  className="input h-9 w-full min-w-0 px-2 text-right text-sm tabular-nums"
                                   placeholder="Sell"
                                   value={inputs.sell}
                                   onChange={(e) => handleInputChange(branch.id, 'sell', e.target.value)}
                                 />
-                              </td>
-                              <td className="px-2 py-2">
+                              </label>
+                              <label className="min-w-0">
+                                <span className="mb-1 block text-xs font-semibold text-slate-500">Qty</span>
                                 <input aria-label="Qty"
                                   ref={idx === 0 ? firstQtyInputRef : null}
                                   type="number"
                                   step={weightItem ? "0.1" : "1"}
-                                  className={`input h-9 w-full min-w-[92px] px-2 text-center text-sm font-bold ${inputs.qty > 0 ? 'border-emerald-500 bg-emerald-50' : ''}`}
+                                  className={`input h-9 w-full min-w-0 px-2 text-center text-sm font-bold tabular-nums ${inputs.qty > 0 ? 'border-success-border bg-success-soft' : ''}`}
                                   placeholder="Qty"
                                   value={inputs.qty}
                                   onChange={(e) => handleInputChange(branch.id, 'qty', e.target.value)}
@@ -1043,12 +1149,13 @@ const PurchaseFormPage = () => {
                                     if (e.key === 'Enter') handleAddToList();
                                   }}
                                 />
-                              </td>
-                              <td className="px-2 py-2">
+                              </label>
+                              <label className="min-w-0">
+                                <span className="mb-1 block text-xs font-semibold text-slate-500">Free</span>
                                 <input aria-label="Free qty"
                                   type="number"
                                   step={weightItem ? "0.1" : "1"}
-                                  className={`input h-9 w-full min-w-[80px] px-2 text-center text-sm font-bold ${inputs.free > 0 ? 'border-cyan-500 bg-cyan-50' : ''}`}
+                                  className={`input h-9 w-full min-w-0 px-2 text-center text-sm font-bold tabular-nums ${inputs.free > 0 ? 'border-info-border bg-info-soft' : ''}`}
                                   placeholder="Free"
                                   title="Free-of-charge units from the supplier (not billed)"
                                   value={inputs.free}
@@ -1057,39 +1164,35 @@ const PurchaseFormPage = () => {
                                     if (e.key === 'Enter') handleAddToList();
                                   }}
                                 />
-                              </td>
-                              {weightItem && (
-                                <td className="px-2 py-2">
+                              </label>
+                              <div className="min-w-0">
+                                <span className="mb-1 block text-xs font-semibold text-slate-500">Unit</span>
+                                {weightItem ? (
                                   <CustomSelect
                                     value={inputs.qtyUnit || selectedItem.defaultUnit}
                                     onChange={(value) => handleInputChange(branch.id, 'qtyUnit', value)}
                                     options={getMeasuredUnitOptions(selectedItem)}
                                     valueKey="value"
                                     labelKey="label"
-                                    buttonClassName="h-9 px-2 py-1 text-xs shadow-none"
-                                    className="min-w-[78px]"
+                                    buttonClassName="h-9 min-w-0 px-2 py-1 text-sm shadow-none"
                                   />
-                                </td>
-                              )}
-                              <td className="px-2 py-2">
+                                ) : (
+                                  <div className="flex h-9 items-center justify-center px-2 text-sm text-slate-400">—</div>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <span className="mb-1 block text-xs font-semibold text-slate-500">Expiry</span>
                                 <DatePicker
                                   value={inputs.expiry}
                                   onChange={(value) => handleInputChange(branch.id, 'expiry', value)}
-                                  buttonClassName="input h-9 w-full min-w-[140px] px-2 text-sm"
+                                  buttonClassName="input h-9 w-full min-w-0 px-2 text-sm"
                                 />
-                              </td>
-                              <td className="px-2 py-2 text-center">
-                                {idx === 0 && (
-                                  <button onClick={() => applyPricesToAll(branch.id)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-700" title="Copy prices to all branches">
-                                    <Copy size={14} />
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <Button onClick={handleAddToList} className="mt-3 inline-flex w-full items-center justify-center shadow-sm">
@@ -1114,74 +1217,239 @@ const PurchaseFormPage = () => {
                 <div className="text-right text-sm">
                   <p className="font-medium text-slate-500">Subtotal: {formatCurrency(subtotal)}</p>
                   <p className="font-semibold text-slate-700">Total: {formatCurrency(grandTotal)}</p>
-                  <p className={dueAmount > 0 ? "font-semibold text-red-600" : "font-medium text-emerald-600"}>
+                  <p className={dueAmount > 0 ? "font-semibold text-danger" : "font-medium text-success"}>
                     Due: {formatCurrency(dueAmount)}
                   </p>
                 </div>
               </div>
             </div>
             <div className="custom-scrollbar min-h-0 flex-1 overflow-x-auto lg:overflow-y-auto">
-              <table className="w-full min-w-[900px] text-left text-sm">
-                <thead className="border-b bg-white text-slate-500">
+              {/* Phones scroll this table sideways rather than crushing eight columns into
+                  ~380px; from lg the panel is wide enough to fit and no bar appears. */}
+              <table className="w-full table-fixed text-left text-sm min-w-[600px] lg:min-w-[440px]">
+                {/* Numeric columns are fixed so a long amount can never squeeze the item
+                    name to nothing; the name column takes whatever is left. Branch is
+                    dropped entirely for single-branch users, which hands its width back
+                    to the name. */}
+                <colgroup>
+                  {showBranchColumn && <col style={{ width: "48px" }} />}
+                  <col />
+                  <col style={{ width: "60px" }} />
+                  <col style={{ width: "60px" }} />
+                  <col style={{ width: "46px" }} />
+                  <col style={{ width: "62px" }} />
+                  <col style={{ width: "74px" }} />
+                  <col style={{ width: "58px" }} />
+                </colgroup>
+                <thead className="border-b bg-white text-xs text-slate-500">
                   <tr>
-                    <th className="p-3">Branch</th>
-                    <th className="p-3">Item Name</th>
-                    <th className="p-3 text-right">Cost</th>
-                    <th className="p-3 text-right">Sell</th>
-                    <th className="p-3 text-center">Qty</th>
-                    <th className="p-3 text-right">Line Total</th>
-                    <th className="p-3 text-center">Action</th>
+                    {showBranchColumn && <th className="px-1 py-2">Branch</th>}
+                    <th className="px-1 py-2">Item Name</th>
+                    <th className="px-0.5 py-2 text-right">Cost</th>
+                    <th className="px-0.5 py-2 text-right">Sell</th>
+                    <th className="px-0.5 py-2 text-center">Qty</th>
+                    <th className="px-0.5 py-2 text-center">Expiry</th>
+                    <th className="px-0.5 py-2 text-right">Total</th>
+                    <th className="px-0.5 py-2 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {cartItems.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="p-10 text-center text-slate-600">
-                        No items added. Search and distribute items to branches.
+                      <td colSpan={purchaseTableColumnCount} className="p-6 text-center text-xs text-slate-600">
+                        No items added. Search and add items to this purchase.
                       </td>
                     </tr>
                   ) : (
-                    cartItems.map((item, index) => (
-                      <tr
-                        key={item.uniqueId}
-                        className="purchase-line-card group transition-colors hover:bg-slate-50"
-                        style={{ animationDelay: `${80 + Math.min(index, 6) * 35}ms` }}
-                      >
-                        <td className="p-3">
-                          <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700">
-                            {item.branchName}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <div className="font-medium text-slate-700">{item.name}</div>
-                          <div className="text-xs text-slate-600">{item.barcode}</div>
-                        </td>
-                        <td className="p-3 text-right text-slate-600">
-                          <div>{item.costPrice.toFixed(2)}</div>
-                          {normalizedDiscountAmount > 0 || item.freeQty > 0 ? (
-                            <div className="text-xs font-semibold text-emerald-600">
-                              Eff. {effectiveCostForLine(item, index).toFixed(2)}
-                            </div>
-                          ) : null}
-                        </td>
-                        <td className="p-3 text-right text-slate-600">{item.sellingPrice.toFixed(2)}</td>
-                        <td className="p-3 text-center font-bold text-slate-800">
-                          {item.weightItem ? item.qty.toFixed(2) : item.qty}
-                          {item.qtyUnit && <span className="text-xs text-slate-500 ml-1">{item.qtyUnit}</span>}
-                          {item.freeQty > 0 && (
-                            <div className="text-xs font-semibold text-cyan-600">
-                              +{item.weightItem ? item.freeQty.toFixed(2) : item.freeQty} free
-                            </div>
+                    cartItems.map((item, index) => {
+                      const isEditing = editingRow?.uniqueId === item.uniqueId;
+                      const previewLineTotal = isEditing
+                        ? calculateMeasuredLineTotal(editingRow.qty, editingRow.qtyUnit, editingRow.cost, item.weightItem)
+                        : item.lineTotal;
+
+                      return (
+                        <React.Fragment key={item.uniqueId}>
+                          <tr
+                            className={`purchase-line-card group transition-colors ${isEditing ? "bg-accent-soft/40" : "hover:bg-slate-50"}`}
+                            style={{ animationDelay: `${80 + Math.min(index, 6) * 35}ms` }}
+                          >
+                            {showBranchColumn && (
+                              <td className="px-1 py-2 align-top">
+                                <span
+                                  className="block truncate rounded-md border border-slate-200 bg-slate-50 px-1 py-0.5 text-xs font-bold leading-tight text-slate-700"
+                                  title={item.branchName}
+                                >
+                                  {item.branchName}
+                                </span>
+                              </td>
+                            )}
+                            <td className="px-1 py-2 align-top">
+                              <div className="line-clamp-3 break-words font-medium leading-tight text-slate-700" title={item.name}>
+                                {item.name}
+                              </div>
+                              <div className="truncate text-xs leading-tight text-slate-600" title={item.barcode}>{item.barcode}</div>
+                            </td>
+                            <td className="px-0.5 py-2 text-right align-top tabular-nums text-slate-600">
+                              <div className="leading-tight">{item.costPrice.toFixed(2)}</div>
+                              {normalizedDiscountAmount > 0 || item.freeQty > 0 ? (
+                                <div className="text-[11px] font-semibold leading-tight text-success">
+                                  Eff. {effectiveCostForLine(item, index).toFixed(2)}
+                                </div>
+                              ) : null}
+                            </td>
+                            <td className="px-0.5 py-2 text-right align-top tabular-nums text-slate-600">
+                              <span className="leading-tight">{item.sellingPrice.toFixed(2)}</span>
+                            </td>
+                            <td className="px-0.5 py-2 text-center align-top font-bold tabular-nums text-slate-800">
+                              <div className="leading-tight">{item.weightItem ? item.qty.toFixed(2) : item.qty}</div>
+                              {item.qtyUnit && <div className="text-[11px] leading-tight text-slate-500">{item.qtyUnit}</div>}
+                              {item.freeQty > 0 && (
+                                <div className="text-[11px] font-semibold leading-tight text-info">
+                                  +{item.weightItem ? item.freeQty.toFixed(2) : item.freeQty} free
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-0.5 py-2 text-center align-top text-slate-600">
+                              {item.expiryDate ? (
+                                <span className="block leading-tight">{formatDate(item.expiryDate)}</span>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              )}
+                            </td>
+                            <td className="px-0.5 py-2 text-right align-top font-bold tabular-nums text-slate-800">
+                              <span className="leading-tight">{previewLineTotal.toLocaleString()}</span>
+                            </td>
+                            <td className="px-1 py-2 text-center align-top">
+                              <div className="flex items-center justify-center gap-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => (isEditing ? cancelEditingRow() : startEditingRow(item))}
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-accent-soft hover:text-accent"
+                                  title={isEditing ? "Cancel editing" : "Edit item"}
+                                  aria-label={isEditing ? `Cancel changes to ${item.name}` : `Edit ${item.name}`}
+                                >
+                                  {isEditing ? <X size={14} /> : <Pencil size={14} />}
+                                </button>
+                                {!isEditing && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveItem(index)}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-danger-soft hover:text-danger"
+                                    title="Remove item"
+                                    aria-label={`Remove ${item.name}`}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                          {isEditing && (
+                            <tr className="bg-accent-soft/30">
+                              <td colSpan={purchaseTableColumnCount} className="px-1 pb-2 pt-0">
+                                <div className="rounded-lg border border-border bg-white p-2">
+                                  <div className="flex flex-wrap items-end gap-2">
+                                    <label className="min-w-[72px] flex-1">
+                                      <span className="mb-1 block text-xs font-semibold text-slate-500">Cost</span>
+                                      <input
+                                        aria-label={`Cost price for ${item.name}`}
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={editingRow.cost}
+                                        onChange={(event) => setEditingRow((current) => ({ ...current, cost: event.target.value }))}
+                                        onKeyDown={handleEditKeyDown}
+                                        className="input h-9 w-full min-w-0 px-2 text-right text-sm tabular-nums"
+                                      />
+                                    </label>
+                                    <label className="min-w-[72px] flex-1">
+                                      <span className="mb-1 block text-xs font-semibold text-slate-500">Sell</span>
+                                      <input
+                                        aria-label={`Selling price for ${item.name}`}
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={editingRow.sell}
+                                        onChange={(event) => setEditingRow((current) => ({ ...current, sell: event.target.value }))}
+                                        onKeyDown={handleEditKeyDown}
+                                        className="input h-9 w-full min-w-0 px-2 text-right text-sm tabular-nums"
+                                      />
+                                    </label>
+                                    <label className="min-w-[62px] flex-1">
+                                      <span className="mb-1 block text-xs font-semibold text-slate-500">Qty</span>
+                                      <input
+                                        aria-label={`Quantity for ${item.name}`}
+                                        type="number"
+                                        min="0"
+                                        step={item.weightItem ? "0.001" : "1"}
+                                        value={editingRow.qty}
+                                        onChange={(event) => setEditingRow((current) => ({ ...current, qty: event.target.value }))}
+                                        onKeyDown={handleEditKeyDown}
+                                        className="input h-9 w-full min-w-0 px-2 text-center text-sm font-bold tabular-nums"
+                                      />
+                                    </label>
+                                    <label className="min-w-[62px] flex-1">
+                                      <span className="mb-1 block text-xs font-semibold text-slate-500">Free</span>
+                                      <input
+                                        aria-label={`Free quantity for ${item.name}`}
+                                        type="number"
+                                        min="0"
+                                        step={item.weightItem ? "0.001" : "1"}
+                                        value={editingRow.free}
+                                        onChange={(event) => setEditingRow((current) => ({ ...current, free: event.target.value }))}
+                                        onKeyDown={handleEditKeyDown}
+                                        className="input h-9 w-full min-w-0 px-2 text-center text-sm font-bold tabular-nums"
+                                      />
+                                    </label>
+                                    {item.weightItem && (
+                                      <div className="min-w-[72px] flex-1">
+                                        <span className="mb-1 block text-xs font-semibold text-slate-500">Unit</span>
+                                        <CustomSelect
+                                          value={editingRow.qtyUnit}
+                                          onChange={(value) => setEditingRow((current) => ({ ...current, qtyUnit: value }))}
+                                          options={getMeasuredUnitOptions(item)}
+                                          valueKey="value"
+                                          labelKey="label"
+                                          buttonClassName="h-9 min-w-0 px-2 py-1 text-sm shadow-none"
+                                        />
+                                      </div>
+                                    )}
+                                    <div className="min-w-[116px] flex-1">
+                                      <span className="mb-1 block text-xs font-semibold text-slate-500">Expiry</span>
+                                      <DatePicker
+                                        value={editingRow.expiry}
+                                        onChange={(value) => setEditingRow((current) => ({ ...current, expiry: value }))}
+                                        buttonClassName="input h-9 w-full min-w-0 px-2 text-sm"
+                                      />
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={saveEditedRow}
+                                        className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-success-soft text-success transition-colors hover:bg-success hover:text-white"
+                                        title="Save item changes"
+                                        aria-label={`Save changes to ${item.name}`}
+                                      >
+                                        <Check size={15} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={cancelEditingRow}
+                                        className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                                        title="Cancel editing"
+                                        aria-label={`Discard changes to ${item.name}`}
+                                      >
+                                        <X size={15} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                        <td className="p-3 text-right font-bold text-slate-800">{item.lineTotal.toLocaleString()}</td>
-                        <td className="p-3 text-center">
-                          <button onClick={() => handleRemoveItem(index)} className="text-slate-600 hover:text-red-500 transition-colors">
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -1192,7 +1460,7 @@ const PurchaseFormPage = () => {
             <Button
               onClick={handleSubmit}
               size="lg"
-              className="finalize-purchase-btn bg-emerald-600 hover:bg-emerald-700 shadow-lg w-full md:w-auto px-8"
+              className="finalize-purchase-btn bg-success hover:bg-success shadow-lg w-full md:w-auto px-8"
               disabled={cartItems.length === 0}
             >
               <Save size={18} className="mr-2" /> Finalize Purchase
@@ -1216,7 +1484,7 @@ const PurchaseFormPage = () => {
         message={pendingNegativeStockItem ? (
           <>
             <span className="font-semibold text-slate-800">{pendingNegativeStockItem.name}</span> currently has{" "}
-            <span className="font-bold text-red-600">{formatDisplayStockQuantity(pendingNegativeStockItem)}</span> stock.
+            <span className="font-bold text-danger">{formatDisplayStockQuantity(pendingNegativeStockItem)}</span> stock.
           </>
         ) : null}
         detail="Do you want to adjust this back to 0 before adding the new purchase quantity? If you choose No, the purchased quantity will simply be added on top of the current negative stock."

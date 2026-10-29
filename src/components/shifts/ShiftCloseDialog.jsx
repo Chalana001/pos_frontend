@@ -62,11 +62,11 @@ const CATEGORY_LABELS = {
 };
 
 const PAYMENT_TONES = {
-  CASH: { icon: "bg-emerald-100 text-emerald-700", badge: "bg-emerald-50 text-emerald-800" },
-  CARD: { icon: "bg-blue-100 text-blue-700", badge: "bg-blue-50 text-blue-800" },
-  BANK_TRANSFER: { icon: "bg-violet-100 text-violet-700", badge: "bg-violet-50 text-violet-800" },
-  MOBILE_DIGITAL: { icon: "bg-rose-100 text-rose-700", badge: "bg-rose-50 text-rose-800" },
-  CREDIT: { icon: "bg-orange-100 text-orange-700", badge: "bg-orange-50 text-orange-800" },
+  CASH: { icon: "bg-success-soft text-success", badge: "bg-success-soft text-success" },
+  CARD: { icon: "bg-slate-100 text-accent", badge: "bg-accent-soft text-slate-800" },
+  BANK_TRANSFER: { icon: "bg-info-soft text-info", badge: "bg-info-soft text-info" },
+  MOBILE_DIGITAL: { icon: "bg-danger-soft text-danger", badge: "bg-danger-soft text-danger" },
+  CREDIT: { icon: "bg-warning-soft text-warning", badge: "bg-warning-soft text-warning" },
   OTHER: { icon: "bg-slate-100 text-slate-700", badge: "bg-slate-100 text-slate-800" },
 };
 
@@ -511,7 +511,7 @@ const ShiftCloseDialog = ({
             [denomination]: event.target.value === "" ? 0 : Number(event.target.value),
           }))}
           aria-label={`Quantity of Rs ${denomination.toLocaleString("en-LK")}`}
-          className="h-5 w-full rounded border border-slate-300 px-1 text-center text-[11px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="h-5 w-full rounded border border-slate-300 px-1 text-center text-[11px] focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
         />
         <span className="text-center text-slate-400">×</span>
         <span className="text-right font-semibold text-slate-700">{formatCurrency(denomination * quantity)}</span>
@@ -571,7 +571,7 @@ const ShiftCloseDialog = ({
           aria-expanded={methodOpen}
           aria-controls={`shiftclose-method-${row.code}`}
           onClick={() => toggleMethod(row.code)}
-          className={`w-full grid grid-cols-[minmax(0,1fr)_5rem_8.5rem] items-center gap-2 ${indent ? "pl-9 pr-3 bg-blue-50/80 hover:bg-blue-100/70" : "px-4 hover:bg-slate-50"} py-2.5 text-left transition-colors`}
+          className={`w-full grid grid-cols-[minmax(0,1fr)_5rem_8.5rem] items-center gap-2 ${indent ? "pl-9 pr-3 bg-accent-soft/80 hover:bg-slate-100/70" : "px-4 hover:bg-slate-50"} py-2.5 text-left transition-colors`}
         >
           <div className="flex items-center gap-2 min-w-0">
             {methodOpen ? <ChevronDown size={14} className="text-slate-400 shrink-0" /> : <ChevronRight size={14} className="text-slate-400 shrink-0" />}
@@ -583,14 +583,14 @@ const ShiftCloseDialog = ({
               <p className="text-xs font-bold uppercase tracking-wide text-slate-700 truncate flex items-center gap-2">
                 <span className={`rounded-md px-2.5 py-1 ${tone.badge}`}>{row.displayName}</span>
                 {row.unknown && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">UNKNOWN</span>}
-                {row.inactive && !row.unknown && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">INACTIVE</span>}
+                {row.inactive && !row.unknown && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-warning-soft text-warning">INACTIVE</span>}
               </p>
             </div>
           </div>
           <p className="text-sm text-center text-slate-600">{row.transactionCount}</p>
           <div className="text-right min-w-0">
             <p className="text-sm font-bold text-slate-800 truncate">{formatCurrency(row.amount)}</p>
-            {row.includeInExpectedCash && <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">in drawer</p>}
+            {row.includeInExpectedCash && <p className="text-[10px] font-bold text-success uppercase tracking-wide">in drawer</p>}
           </div>
         </button>
         {methodOpen && (
@@ -622,7 +622,7 @@ const ShiftCloseDialog = ({
           </div>
         </div>
         <span className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-center text-[11px] text-slate-700">{count}</span>
-        <p className="text-xs font-bold text-red-600 shrink-0">{formatCurrency(amount)}</p>
+        <p className="text-xs font-bold text-danger shrink-0">{formatCurrency(amount)}</p>
         <ChevronRight size={16} className="text-slate-500" />
       </button>
       {open && (
@@ -659,7 +659,7 @@ const ShiftCloseDialog = ({
           <p className="text-sm font-bold text-right text-slate-800 truncate">{formatCurrency(group.amount)}</p>
         </button>
         {open && (
-          <div id={`shiftclose-group-${group.key}`} className="divide-y divide-blue-100 border-t border-blue-100 bg-blue-50/80">
+          <div id={`shiftclose-group-${group.key}`} className="divide-y divide-slate-200 border-t border-slate-200 bg-accent-soft/80">
             {group.members.map((member) => (
               <MethodRowInner key={member.code} row={member} indent />
             ))}
@@ -680,19 +680,19 @@ const ShiftCloseDialog = ({
         {/* Shift information — genuine record values, nothing invented */}
         <div className="page-section-enter grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 rounded-xl border border-slate-200 bg-white divide-y sm:divide-y-0 sm:divide-x divide-slate-200" style={{ animationDelay: "40ms" }}>
           <div className="flex items-center gap-2.5 px-3 py-2 min-w-0">
-            <span className="h-9 w-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><Clock size={17} /></span>
+            <span className="h-9 w-9 rounded-full bg-accent-soft text-accent flex items-center justify-center shrink-0"><Clock size={17} /></span>
             <div className="min-w-0"><p className="text-sm font-semibold text-slate-500">Shift Opened</p><p className="text-sm font-medium text-slate-800 truncate">{formatDateTime(shift.openedAt)}</p></div>
           </div>
           <div className="flex items-center gap-2.5 px-3 py-2 min-w-0">
-            <span className="h-9 w-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><Wallet size={17} /></span>
-            <div><p className="text-sm font-semibold text-slate-500">Status</p><span className={`mt-0.5 inline-flex rounded-md px-2.5 py-1 text-xs font-bold ${shift.status === "OPEN" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"}`}>{shift.status || "—"}</span></div>
+            <span className="h-9 w-9 rounded-full bg-success-soft text-success flex items-center justify-center shrink-0"><Wallet size={17} /></span>
+            <div><p className="text-sm font-semibold text-slate-500">Status</p><span className={`mt-0.5 inline-flex rounded-md px-2.5 py-1 text-xs font-bold ${shift.status === "OPEN" ? "bg-success-soft text-success" : "bg-slate-100 text-slate-700"}`}>{shift.status || "—"}</span></div>
           </div>
           <div className="flex items-center gap-2.5 px-3 py-2 min-w-0">
-            <span className="h-9 w-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><Clock size={17} /></span>
+            <span className="h-9 w-9 rounded-full bg-info-soft text-info flex items-center justify-center shrink-0"><Clock size={17} /></span>
             <div><p className="text-sm font-semibold text-slate-500">Duration</p><p className="text-sm font-medium text-slate-800">{shiftDuration(shift.openedAt, shift.closedAt)}</p></div>
           </div>
           <div className="flex items-center gap-2.5 px-3 py-2 min-w-0">
-            <span className="h-9 w-9 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0"><ReceiptText size={17} /></span>
+            <span className="h-9 w-9 rounded-full bg-warning-soft text-warning flex items-center justify-center shrink-0"><ReceiptText size={17} /></span>
             <div><p className="text-sm font-semibold text-slate-500">Total Transactions</p><p className="text-sm font-medium text-slate-800">{summary?.totalTransactions ?? (summaryLoading ? "…" : 0)}</p></div>
           </div>
         </div>
@@ -704,7 +704,7 @@ const ShiftCloseDialog = ({
           <div className="rounded-xl border border-slate-200 bg-white p-2 sm:p-2.5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3 className="text-base font-bold text-slate-800">Sales by Payment Method (All Tenders)</h3>
-              <p className="flex items-center gap-2 text-lg font-black text-emerald-700 whitespace-nowrap"><Wallet size={19} />{formatCurrency(summary?.totalSales ?? 0)}</p>
+              <p className="flex items-center gap-2 text-lg font-black text-success whitespace-nowrap"><Wallet size={19} />{formatCurrency(summary?.totalSales ?? 0)}</p>
             </div>
 
             {summaryLoading ? (
@@ -712,9 +712,9 @@ const ShiftCloseDialog = ({
                 <LoadingSpinner size="sm" text="Loading sales breakdown..." />
               </div>
             ) : summaryError ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 flex items-center gap-2">
-                <AlertTriangle size={16} className="text-red-600 shrink-0" />
-                <p className="text-sm text-red-700">Could not load the payment breakdown. The cash reconciliation on the right is still accurate.</p>
+              <div className="rounded-lg border border-danger-border bg-danger-soft px-4 py-3 flex items-center gap-2">
+                <AlertTriangle size={16} className="text-danger shrink-0" />
+                <p className="text-sm text-danger">Could not load the payment breakdown. The cash reconciliation on the right is still accurate.</p>
               </div>
             ) : groupedRows.single.length + groupedRows.groups.length === 0 ? (
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-center">
@@ -734,16 +734,16 @@ const ShiftCloseDialog = ({
                 {groupedRows.single.map((row) => (
                   <MethodRowInner key={row.code} row={row} />
                 ))}
-                <div className="grid grid-cols-[minmax(0,1fr)_5rem_8.5rem] items-center gap-2 px-3 py-2 bg-emerald-50 text-slate-800 border-t border-emerald-100">
+                <div className="grid grid-cols-[minmax(0,1fr)_5rem_8.5rem] items-center gap-2 px-3 py-2 bg-success-soft text-slate-800 border-t border-success-border">
                   <div>
                     <p className="text-sm font-bold">Total Sales (All Payment Methods)</p>
                   </div>
                   <p className="text-sm text-center text-slate-600">{summary?.totalTransactions ?? 0}</p>
-                  <p className="text-sm font-black text-right text-emerald-700 truncate">{formatCurrency(summary?.totalSales ?? 0)}</p>
+                  <p className="text-sm font-black text-right text-success truncate">{formatCurrency(summary?.totalSales ?? 0)}</p>
                 </div>
                 <p className="text-xs text-slate-500 px-1">
                   Tap a method to list its sales. Only tenders marked
-                  <span className="font-semibold text-emerald-600"> in drawer</span> count toward expected cash.
+                  <span className="font-semibold text-success"> in drawer</span> count toward expected cash.
                 </p>
               </div>
             )}
@@ -758,9 +758,9 @@ const ShiftCloseDialog = ({
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700"><Banknote size={19} /></span>
                 <div><h3 className="text-base font-bold text-slate-800">Expected Cash in Drawer</h3><p className="text-xs text-slate-500">Cash sales only (based on records)</p></div>
               </div>
-              <span className="text-xl font-black text-blue-700">{formatCurrency(expectedCash)}</span>
+              <span className="text-xl font-black text-accent">{formatCurrency(expectedCash)}</span>
             </div>
-            <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+            <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-accent-soft px-3 py-2 text-xs text-accent">
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
               <p>Only cash sales are included in expected cash. Card, bank and other payment methods never enter the cash drawer.</p>
             </div>
@@ -775,7 +775,7 @@ const ShiftCloseDialog = ({
 
               <div className="overflow-hidden rounded-lg border border-slate-200 divide-y divide-slate-200">
               <SummaryRow
-                icon={<TrendingDown size={18} className="text-orange-600 shrink-0" />}
+                icon={<TrendingDown size={18} className="text-warning shrink-0" />}
                 label="Expenses"
                 count={expenses.length}
                 amount={regularExpenses}
@@ -792,7 +792,7 @@ const ShiftCloseDialog = ({
                 ))}
               />
               <SummaryRow
-                icon={<Banknote size={18} className="text-rose-600 shrink-0" />}
+                icon={<Banknote size={18} className="text-danger shrink-0" />}
                 label="Purchases Paid from This Drawer"
                 count={drawerPurchases.length}
                 amount={drawerPurchasesSum}
@@ -810,7 +810,7 @@ const ShiftCloseDialog = ({
               />
 
               <SummaryRow
-                icon={<TrendingUp size={18} className="text-blue-600 shrink-0" />}
+                icon={<TrendingUp size={18} className="text-accent shrink-0" />}
                 label="Cash Drops"
                 count={cashDrops.length}
                 amount={Number(shift?.totalCashDrops || 0)}
@@ -831,10 +831,10 @@ const ShiftCloseDialog = ({
               {summary?.cashCollections > 0 && (
                 <div className="flex items-center justify-between gap-3 pt-1 text-sm">
                   <div className="flex items-center gap-2 text-slate-600">
-                    <Banknote size={18} className="text-emerald-500 shrink-0" />
+                    <Banknote size={18} className="text-success shrink-0" />
                     <span>Credit collections (cash, informational)</span>
                   </div>
-                  <span className="font-bold text-emerald-700">{formatCurrency(summary.cashCollections)}</span>
+                  <span className="font-bold text-success">{formatCurrency(summary.cashCollections)}</span>
                 </div>
               )}
               <p className="text-[10px] leading-4 text-slate-400 px-1">Drawer purchases and cash drops already reduce Expected Cash.</p>
@@ -853,7 +853,7 @@ const ShiftCloseDialog = ({
                       type="checkbox"
                       checked={countByDenomination}
                       onChange={(event) => setCountByDenomination(event.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                     />
                     <span className="hidden sm:inline text-xs">Count by denomination (optional)</span>
                     <span className="sm:hidden">Count by denomination</span>
@@ -894,7 +894,7 @@ const ShiftCloseDialog = ({
                       min={useDenominationCount ? undefined : "0"}
                       value={useDenominationCount ? formatCurrency(denominationTotal) : countedCash}
                       onChange={useDenominationCount ? undefined : (event) => setCountedCash(event.target.value)}
-                      className="input !h-12 !border-2 !border-blue-500 !text-lg"
+                      className="input !h-12 !border-2 !border-accent !text-lg"
                       placeholder="0.00"
                       readOnly={useDenominationCount}
                       required
@@ -905,35 +905,35 @@ const ShiftCloseDialog = ({
               )}
 
               {useDenominationCount && (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-100 bg-emerald-50 px-2 py-1">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-success-border bg-success-soft px-2 py-1">
                   <div className="flex items-center gap-2 text-[11px] font-bold text-slate-800">
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-emerald-100 text-emerald-700"><Wallet size={13} /></span>
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-success-soft text-success"><Wallet size={13} /></span>
                     Counted Cash (Total)
                   </div>
-                  <span className="text-sm font-black text-emerald-700">{formatCurrency(denominationTotal)}</span>
+                  <span className="text-sm font-black text-success">{formatCurrency(denominationTotal)}</span>
                 </div>
               )}
 
               {useDenominationCount && (
-                <Link to="/settings/cash-denominations" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700">
+                <Link to="/settings/cash-denominations" className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent">
                   <Settings size={14} /> Manage denominations in Settings
                 </Link>
               )}
 
               {difference !== null && (
                 <div className={`rounded-lg p-1.5 flex items-center justify-between gap-3 border ${
-                  isExact ? "bg-emerald-50 border-emerald-200" : difference < 0 ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
+                  isExact ? "bg-success-soft border-success-border" : difference < 0 ? "bg-danger-soft border-danger-border" : "bg-warning-soft border-warning-border"
                 }`}>
           <div className="flex items-center gap-2">
-                    {isExact ? <Banknote size={16} className="text-emerald-600" />
-                      : difference < 0 ? <TrendingDown size={16} className="text-red-600" />
-                      : <TrendingUp size={16} className="text-amber-600" />}
-                    <div><p className={`text-xs font-bold ${isExact ? "text-emerald-700" : difference < 0 ? "text-red-700" : "text-amber-700"}`}>
+                    {isExact ? <Banknote size={16} className="text-success" />
+                      : difference < 0 ? <TrendingDown size={16} className="text-danger" />
+                      : <TrendingUp size={16} className="text-warning" />}
+                    <div><p className={`text-xs font-bold ${isExact ? "text-success" : difference < 0 ? "text-danger" : "text-warning"}`}>
                       {isExact ? "Drawer reconciled" : difference < 0 ? "Shortage" : "Excess"}
                     </p><p className="text-xs text-slate-500">(Counted - Expected)</p></div>
                   </div>
                   <p className={`text-sm font-black ${
-                    isExact ? "text-emerald-700" : difference < 0 ? "text-red-700" : "text-amber-700"
+                    isExact ? "text-success" : difference < 0 ? "text-danger" : "text-warning"
                   }`}>
                     {formatCurrency(difference)}
                   </p>

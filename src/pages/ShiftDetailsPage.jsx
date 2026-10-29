@@ -358,7 +358,7 @@ const ShiftDetailsPage = () => {
   }
 
   if (!shift) {
-    return <div className="p-10 text-center text-red-500">Shift not found.</div>;
+    return <div className="p-10 text-center text-danger">Shift not found.</div>;
   }
 
   const totalSalesAmount = paymentSummary?.totalSales
@@ -369,16 +369,16 @@ const ShiftDetailsPage = () => {
   const denominationRows = shift.denominationCounts || [];
 
   const salesColumns = [
-    { key: "invoice", header: "Invoice", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap font-bold text-blue-700", render: (sale) => sale.invoiceNo },
+    { key: "invoice", header: "Invoice", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap font-bold text-accent", render: (sale) => sale.invoiceNo },
     { key: "time", header: "Time", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap text-xs text-slate-600", render: (sale) => formatTime(sale.createdAt) },
     { key: "payment", header: "Payment", headerClassName: "text-center", className: "whitespace-nowrap text-center", render: (sale) => <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-700">{getPaymentLabel(sale)}</span> },
-    { key: "status", header: "Status", headerClassName: "text-center", className: "whitespace-nowrap text-center", render: (sale) => <span className={`rounded px-2 py-1 text-[10px] font-bold ${sale.status === "CANCELED" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>{sale.status || "COMPLETED"}</span> },
+    { key: "status", header: "Status", headerClassName: "text-center", className: "whitespace-nowrap text-center", render: (sale) => <span className={`rounded px-2 py-1 text-[10px] font-bold ${sale.status === "CANCELED" ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}>{sale.status || "COMPLETED"}</span> },
     { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right font-bold text-slate-900", render: (sale) => formatCurrency(sale.grandTotal || 0) },
   ];
   const expenseColumns = [
     { key: "time", header: "Time", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap text-xs text-slate-600", render: (expense) => formatTime(expense.createdAt) },
     { key: "category", header: "Category", className: "whitespace-nowrap text-xs", render: (expense) => formatCategoryLabel(expense.category || "") },
-    { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right text-xs font-bold text-rose-700", render: (expense) => formatCurrency(expense.amount || 0) },
+    { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right text-xs font-bold text-danger", render: (expense) => formatCurrency(expense.amount || 0) },
   ];
   const cashDropColumns = [
     { key: "time", header: "Time", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap text-xs text-slate-600", render: (drop) => formatTime(drop.createdAt) },
@@ -386,20 +386,20 @@ const ShiftDetailsPage = () => {
     { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right text-xs font-bold text-slate-800", render: (drop) => formatCurrency(drop.amount || 0) },
   ];
   const purchaseColumns = [
-    { key: "invoice", header: "Purchase", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap text-xs font-semibold text-blue-700", render: (purchase) => purchase.invoiceNo || `Purchase #${purchase.purchaseId}` },
+    { key: "invoice", header: "Purchase", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap text-xs font-semibold text-accent", render: (purchase) => purchase.invoiceNo || `Purchase #${purchase.purchaseId}` },
     { key: "supplier", header: "Supplier", className: "max-w-[130px] truncate text-xs", render: (purchase) => purchase.supplierName || "—" },
     { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right text-xs font-bold text-slate-800", render: (purchase) => formatCurrency(purchase.cashSourceAmount || 0) },
   ];
   const summaryCards = [
     { label: "Total Sales", value: totalSalesAmount, tone: "text-slate-900", sub: `${paymentSummary?.totalTransactions ?? totalElements} transactions` },
-    { label: "Expected Drawer Cash", value: expectedCash, tone: "text-blue-700", sub: "Only drawer tenders counted" },
+    { label: "Expected Drawer Cash", value: expectedCash, tone: "text-accent", sub: "Only drawer tenders counted" },
     { label: "Closing Counted Cash", value: countedCash, tone: "text-slate-900", sub: shift.countedCash != null ? "Physical count at close" : "Not closed yet" },
     {
       label: "Cash Variance",
       value: shiftVariance,
-      tone: shiftVariance === 0 ? "text-emerald-700" : shiftVariance < 0 ? "text-rose-700" : "text-amber-700",
+      tone: shiftVariance === 0 ? "text-success" : shiftVariance < 0 ? "text-danger" : "text-warning",
       sub: shiftVariance === 0 ? "Reconciled" : shiftVariance < 0 ? "Shortage" : "Overage",
-      cardTone: shiftVariance === 0 ? "bg-emerald-50/60 border-emerald-200" : shiftVariance < 0 ? "bg-rose-50/60 border-rose-200" : "bg-amber-50/60 border-amber-200",
+      cardTone: shiftVariance === 0 ? "bg-success-soft/60 border-success-border" : shiftVariance < 0 ? "bg-danger-soft/60 border-danger-border" : "bg-warning-soft/60 border-warning-border",
       icon: shiftVariance === 0 ? <CheckCircle2 size={18} /> : shiftVariance < 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />,
     },
   ];
@@ -412,7 +412,7 @@ const ShiftDetailsPage = () => {
           <Button variant="secondary" onClick={() => navigate("/shifts/history")} className="mb-3"><ArrowLeft size={17} className="mr-2" /> Back to Shift History</Button>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-3xl font-black text-slate-900">Shift #{shift.id}</h1>
-            <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${shift.status === "OPEN" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${shift.status === "OPEN" ? "bg-success-soft text-success" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
             <span className="inline-flex items-center gap-1.5"><MapPin size={15} />{shift.branchName || `Branch #${shift.branchId}`}</span>
@@ -449,14 +449,14 @@ const ShiftDetailsPage = () => {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start print:hidden">
         <Card className="overflow-hidden border border-slate-200 p-0">
           <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-            <span className="rounded-xl bg-blue-50 p-2.5 text-blue-700"><Receipt size={19} /></span>
+            <span className="rounded-xl bg-accent-soft p-2.5 text-accent"><Receipt size={19} /></span>
             <div>
               <h2 className="font-bold text-slate-900">Cash Reconciliation</h2>
               <p className="text-xs text-slate-500">Drawer movements and validation</p>
             </div>
           </div>
           <div className="divide-y divide-slate-100">
-            {[["Opening cash", shift.openingCash, ""], ["Cash sales", shift.cashSales, "text-blue-700"], ["Expenses", -Number(shift.totalExpenses || 0), "text-rose-700"], ["Cash drops", -Number(shift.totalCashDrops || 0), "text-rose-700"], ["Expected cash", shift.expectedCash, "text-blue-700 font-bold"], ["Counted cash", shift.countedCash, ""], ["Variance", shiftVariance, shiftVariance === 0 ? "text-emerald-700 font-bold" : "text-rose-700 font-bold"]].map(([label, amount, tone]) => (
+            {[["Opening cash", shift.openingCash, ""], ["Cash sales", shift.cashSales, "text-accent"], ["Expenses", -Number(shift.totalExpenses || 0), "text-danger"], ["Cash drops", -Number(shift.totalCashDrops || 0), "text-danger"], ["Expected cash", shift.expectedCash, "text-accent font-bold"], ["Counted cash", shift.countedCash, ""], ["Variance", shiftVariance, shiftVariance === 0 ? "text-success font-bold" : "text-danger font-bold"]].map(([label, amount, tone]) => (
               <div key={label} className="flex items-center justify-between px-4 py-2 text-sm">
                 <span className="text-slate-600">{label}</span>
                 <span className={`font-semibold ${tone}`}>{formatCurrency(amount || 0)}</span>
@@ -474,13 +474,13 @@ const ShiftDetailsPage = () => {
         <Card className="overflow-hidden border border-slate-200 p-0">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <div className="flex items-center gap-3">
-              <span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><Wallet size={19} /></span>
+              <span className="rounded-xl bg-success-soft p-2.5 text-success"><Wallet size={19} /></span>
               <div>
                 <h2 className="font-bold text-slate-900">Sales by Payment Method</h2>
                 <p className="text-xs text-slate-500">{paymentSummary?.totalTransactions ?? 0} transactions</p>
               </div>
             </div>
-            <span className="text-sm font-black text-emerald-700">{formatCurrency(totalSalesAmount)}</span>
+            <span className="text-sm font-black text-success">{formatCurrency(totalSalesAmount)}</span>
           </div>
           <div className="divide-y divide-slate-100">
             {paymentRows.length > 0 ? paymentRows.map((method) => {
@@ -488,7 +488,7 @@ const ShiftDetailsPage = () => {
               return (
                 <div key={method.code} className="flex items-center justify-between gap-2 px-4 py-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <Icon size={16} className="shrink-0 text-blue-700" />
+                    <Icon size={16} className="shrink-0 text-accent" />
                     <p className="truncate text-sm font-semibold text-slate-700">{method.displayName}</p>
                     <span className="shrink-0 text-xs text-slate-400">{method.transactionCount} txn</span>
                   </div>
@@ -504,7 +504,7 @@ const ShiftDetailsPage = () => {
             {paymentSummary?.cashCollections > 0 && (
               <div className="flex items-center justify-between px-4 py-2 text-sm">
                 <span className="text-slate-600">Credit collections (cash)</span>
-                <span className="font-bold text-emerald-700">{formatCurrency(paymentSummary.cashCollections)}</span>
+                <span className="font-bold text-success">{formatCurrency(paymentSummary.cashCollections)}</span>
               </div>
             )}
           </div>
@@ -517,7 +517,7 @@ const ShiftDetailsPage = () => {
             badly; chips never scroll either way. */}
         <Card className="order-first overflow-hidden border border-slate-200 p-0 lg:order-none print:hidden">
           <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-            <span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><Banknote size={19} /></span>
+            <span className="rounded-xl bg-success-soft p-2.5 text-success"><Banknote size={19} /></span>
             <div>
               <h2 className="font-bold text-slate-900">Cash Count by Denomination</h2>
               <p className="text-xs text-slate-500">Physical count at shift close</p>
@@ -532,7 +532,7 @@ const ShiftDetailsPage = () => {
                 return (
                   <div key={row.denomination} className={`flex items-center justify-between rounded-lg border px-3 py-2 ${amount > 0 ? "border-slate-200 bg-white" : "border-slate-100 bg-slate-50/60"}`}>
                     <span className="flex min-w-0 items-center gap-1.5">
-                      <Banknote size={13} className={amount > 0 ? "text-emerald-600" : "text-slate-300"} />
+                      <Banknote size={13} className={amount > 0 ? "text-success" : "text-slate-300"} />
                       <span className="text-xs font-bold text-slate-700">Rs {Number(row.denomination).toLocaleString("en-LK")}</span>
                     </span>
                     <span className="shrink-0 text-right">
@@ -544,9 +544,9 @@ const ShiftDetailsPage = () => {
               })}
             </div>
           )}
-          <div className="mx-3 mb-3 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2.5">
-            <span className="text-sm font-bold text-blue-900">Counted Cash Total</span>
-            <span className="text-base font-black text-blue-900">{formatCurrency(shift.countedCash || 0)}</span>
+          <div className="mx-3 mb-3 flex items-center justify-between rounded-lg bg-accent-soft px-3 py-2.5">
+            <span className="text-sm font-bold text-slate-900">Counted Cash Total</span>
+            <span className="text-base font-black text-slate-900">{formatCurrency(shift.countedCash || 0)}</span>
           </div>
         </Card>
 
@@ -562,7 +562,7 @@ const ShiftDetailsPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-2.5 sm:px-4">
-              <Clock size={15} className="shrink-0 text-emerald-600" />
+              <Clock size={15} className="shrink-0 text-success" />
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Opened</p>
                 <p className="text-sm font-semibold text-slate-800">{formatDateTime(shift.openedAt)}</p>
@@ -583,7 +583,7 @@ const ShiftDetailsPage = () => {
       <Card className="sales-panel-enter overflow-hidden border border-slate-200 p-0 print:hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
           <div className="flex items-center gap-3">
-            <span className="rounded-xl bg-blue-50 p-2.5 text-blue-700"><ShoppingCart size={19} /></span>
+            <span className="rounded-xl bg-accent-soft p-2.5 text-accent"><ShoppingCart size={19} /></span>
             <div>
               <h2 className="font-bold text-slate-900">Sales in This Shift</h2>
               <p className="text-xs text-slate-500">Showing {filteredSales.length} of {totalElements} sales</p>
@@ -598,7 +598,7 @@ const ShiftDetailsPage = () => {
                 value={invoiceSearch}
                 onChange={(e) => setInvoiceSearch(e.target.value)}
                 placeholder="Search invoice…"
-                className="h-9 w-44 rounded-lg border border-slate-300 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 w-44 rounded-lg border border-slate-300 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
             <div className="w-40">
@@ -610,9 +610,9 @@ const ShiftDetailsPage = () => {
                 menuClassName="min-w-[160px]"
               />
             </div>
-            <div className="rounded-lg bg-blue-50 px-3 py-2">
-              <p className="text-[10px] font-medium text-blue-600">Total Sales</p>
-              <p className="text-base font-black text-blue-700">{formatCurrency(totalSalesAmount)}</p>
+            <div className="rounded-lg bg-accent-soft px-3 py-2">
+              <p className="text-[10px] font-medium text-accent">Total Sales</p>
+              <p className="text-base font-black text-accent">{formatCurrency(totalSalesAmount)}</p>
             </div>
           </div>
         </div>
@@ -640,13 +640,13 @@ const ShiftDetailsPage = () => {
         <Card className="overflow-hidden border border-slate-200 p-0">
           <div className="flex items-center justify-between gap-2 border-b border-slate-100 p-3">
             <div className="flex items-center gap-2.5">
-              <span className="rounded-lg bg-orange-50 p-2 text-orange-700"><Banknote size={17} /></span>
+              <span className="rounded-lg bg-warning-soft p-2 text-warning"><Banknote size={17} /></span>
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Purchases Paid from This Drawer</h2>
                 <p className="text-[11px] text-slate-500">{purchasesTotal} purchases</p>
               </div>
             </div>
-            <span className="rounded-lg bg-orange-50 px-2 py-1 text-xs font-bold text-orange-700">{formatCurrency(purchasesAmount)}</span>
+            <span className="rounded-lg bg-warning-soft px-2 py-1 text-xs font-bold text-warning">{formatCurrency(purchasesAmount)}</span>
           </div>
           <div className="max-h-64 overflow-y-auto custom-scrollbar">
             <Table columns={purchaseColumns} data={purchases} loading={purchasesLoading} skeletonRows={3} compact emptyMessage="No drawer-paid purchases for this shift." />
@@ -668,13 +668,13 @@ const ShiftDetailsPage = () => {
         <Card className="overflow-hidden border border-slate-200 p-0">
           <div className="flex items-center justify-between gap-2 border-b border-slate-100 p-3">
             <div className="flex items-center gap-2.5">
-              <span className="rounded-lg bg-rose-50 p-2 text-rose-700"><FileText size={17} /></span>
+              <span className="rounded-lg bg-danger-soft p-2 text-danger"><FileText size={17} /></span>
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Expenses</h2>
                 <p className="text-[11px] text-slate-500">{expensesTotalElements} records</p>
               </div>
             </div>
-            <span className="rounded-lg bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700">{formatCurrency(expensesAmount)}</span>
+            <span className="rounded-lg bg-danger-soft px-2 py-1 text-xs font-bold text-danger">{formatCurrency(expensesAmount)}</span>
           </div>
           <div className="max-h-64 overflow-y-auto custom-scrollbar">
             <Table columns={expenseColumns} data={expenses} loading={expensesLoading} skeletonRows={3} compact emptyMessage="No expenses for this shift." />
@@ -696,13 +696,13 @@ const ShiftDetailsPage = () => {
         <Card className="overflow-hidden border border-slate-200 p-0">
           <div className="flex items-center justify-between gap-2 border-b border-slate-100 p-3">
             <div className="flex items-center gap-2.5">
-              <span className="rounded-lg bg-blue-50 p-2 text-blue-700"><TrendingDown size={17} /></span>
+              <span className="rounded-lg bg-accent-soft p-2 text-accent"><TrendingDown size={17} /></span>
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Cash Drops</h2>
                 <p className="text-[11px] text-slate-500">{cashDropsTotal} drops</p>
               </div>
             </div>
-            <span className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700">{formatCurrency(shift.totalCashDrops || 0)}</span>
+            <span className="rounded-lg bg-accent-soft px-2 py-1 text-xs font-bold text-accent">{formatCurrency(shift.totalCashDrops || 0)}</span>
           </div>
           <div className="max-h-64 overflow-y-auto custom-scrollbar">
             <Table columns={cashDropColumns} data={cashDrops} loading={cashDropsLoading} skeletonRows={3} compact emptyMessage="No cash drops for this shift." />

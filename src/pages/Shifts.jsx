@@ -138,18 +138,18 @@ const Shifts = () => {
               {isAdmin && (
                 <div className="flex flex-wrap items-center gap-3 mb-4">
                   {/* Cashier Name (ID එක වෙනුවට නම පෙන්නනවා) */}
-                  <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg w-fit border border-blue-100">
-                    <User size={16} className="text-blue-600" />
-                    <span className="font-semibold text-sm text-blue-800">
+                  <div className="flex items-center gap-2 bg-accent-soft px-3 py-2 rounded-lg w-fit border border-slate-200">
+                    <User size={16} className="text-accent" />
+                    <span className="font-semibold text-sm text-slate-800">
                       Cashier: {shift.cashierName || `User ID ${shift.cashierUserId}`}
                     </span>
                   </div>
 
                   {/* Branch Name (All Branches (0) තෝරලා තියෙද්දි විතරක් පෙන්නනවා) */}
                   {selectedBranchId === 0 && (
-                    <div className="flex items-center gap-2 bg-indigo-50 px-3 py-2 rounded-lg w-fit border border-indigo-100">
-                      <Store size={16} className="text-indigo-600" />
-                      <span className="font-semibold text-sm text-indigo-800">
+                    <div className="flex items-center gap-2 bg-info-soft px-3 py-2 rounded-lg w-fit border border-info-border">
+                      <Store size={16} className="text-info" />
+                      <span className="font-semibold text-sm text-info">
                         {shift.branchName || `Branch ${shift.branchId}`}
                       </span>
                     </div>
@@ -164,7 +164,7 @@ const Shifts = () => {
                 <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "150ms" }}>
                   <h3 className="text-xs lg:text-sm font-medium text-slate-600 mb-2">Status & Time</h3>
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-1 lg:gap-0">
-                    <span className="w-fit px-2 py-1 rounded text-xs font-bold bg-emerald-100 text-emerald-800 uppercase">
+                    <span className="w-fit px-2 py-1 rounded text-xs font-bold bg-success-soft text-success uppercase">
                       {shift.status}
                     </span>
                     <p className="text-xs text-slate-500">{formatDateTime(shift.openedAt)}</p>
@@ -180,7 +180,7 @@ const Shifts = () => {
                 {/* 3. Net Cash */}
                 <Card className="ops-summary-card shell-panel shell-panel-hover flex flex-col justify-center" style={{ animationDelay: "230ms" }}>
                   <h3 className="text-xs lg:text-sm font-medium text-slate-600 mb-1 lg:mb-2">Net Cash (Sales - Exp)</h3>
-                  <p className="text-sm lg:text-xl font-bold text-emerald-600">
+                  <p className="text-sm lg:text-xl font-bold text-success">
                     {formatCurrency((shift.cashSales || 0) - (shift.totalExpenses || 0))}
                   </p>
                   {(() => {
@@ -196,11 +196,11 @@ const Shifts = () => {
                 </Card>
 
                 {/* 4. Expected Drawer */}
-                <Card className="ops-summary-card shell-panel shell-panel-hover border-blue-200 bg-blue-50/30 flex flex-col justify-center" style={{ animationDelay: "270ms" }}>
+                <Card className="ops-summary-card shell-panel shell-panel-hover border-slate-200 bg-accent-soft/30 flex flex-col justify-center" style={{ animationDelay: "270ms" }}>
                   <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2 lg:gap-0">
                     <div>
-                      <h3 className="text-xs lg:text-sm font-medium text-blue-700 mb-1">Expected in Drawer</h3>
-                      <p className="text-base lg:text-2xl font-bold text-blue-800">{formatCurrency(calculateExpectedCash(shift))}</p>
+                      <h3 className="text-xs lg:text-sm font-medium text-accent mb-1">Expected in Drawer</h3>
+                      <p className="text-base lg:text-2xl font-bold text-slate-800">{formatCurrency(calculateExpectedCash(shift))}</p>
                     </div>
                     <Button 
                       size="sm" 

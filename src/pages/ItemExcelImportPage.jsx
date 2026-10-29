@@ -22,9 +22,9 @@ import RecipeIngredientsImportPage from "./RecipeIngredientsImportPage";
 const ROW_PAGE_SIZE = 100;
 
 const rowStatusClasses = {
-  READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  IMPORTED: "border-blue-200 bg-blue-50 text-blue-700",
-  ERROR: "border-red-200 bg-red-50 text-red-700",
+  READY: "border-success-border bg-success-soft text-success",
+  IMPORTED: "border-slate-200 bg-accent-soft text-accent",
+  ERROR: "border-danger-border bg-danger-soft text-danger",
   SKIPPED: "border-slate-200 bg-slate-100 text-slate-600",
 };
 
@@ -382,7 +382,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
           type="button"
           onClick={() => setActiveTab("items")}
           className={`h-10 flex-1 rounded-md px-3 text-sm font-medium transition-colors ${
-            activeTab === "items" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            activeTab === "items" ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           }`}
         >
           Items
@@ -391,7 +391,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
           type="button"
           onClick={() => setActiveTab("recipe-ingredients")}
           className={`h-10 flex-1 rounded-md px-3 text-sm font-medium transition-colors ${
-            activeTab === "recipe-ingredients" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            activeTab === "recipe-ingredients" ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           }`}
         >
           Recipe Ingredients
@@ -462,7 +462,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                   if (rowScrollRef.current) rowScrollRef.current.scrollTop = 0;
                 }}
                 className={`h-10 flex-1 rounded-md px-3 text-sm font-medium transition-colors ${
-                  statusFilter === tab.key ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  statusFilter === tab.key ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 {tab.label} ({tab.count})
@@ -506,7 +506,7 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                           type="checkbox"
                           checked={row.selected ?? true}
                           onChange={() => toggleSelected(row.rowNumber)}
-                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                         />
                       </td>
                       <td className="px-3 py-3 font-medium text-slate-700">{row.rowNumber}</td>
@@ -585,9 +585,9 @@ export default function ItemExcelImportPage({ initialTab = "items" }) {
                       <td className="px-3 py-3">
                         <div className={`flex min-w-[240px] items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
                           row.status === "ERROR"
-                            ? "border-red-200 bg-red-50 text-red-700"
+                            ? "border-danger-border bg-danger-soft text-danger"
                             : row.status === "READY"
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              ? "border-success-border bg-success-soft text-success"
                               : "border-slate-200 bg-slate-50 text-slate-600"
                         }`}>
                           {row.status === "ERROR" ? <AlertCircle size={14} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={14} className="mt-0.5 shrink-0" />}

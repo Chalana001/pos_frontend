@@ -306,7 +306,7 @@ const SearchSelect = ({
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className={`w-full rounded-lg border border-slate-300 bg-white py-2 pl-2.5 pr-7 text-xs font-medium text-slate-700 shadow-sm transition-all duration-200 hover:border-blue-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:opacity-70 ${inputClassName}`}
+          className={`w-full rounded-lg border border-slate-300 bg-white py-2 pl-2.5 pr-7 text-xs font-medium text-slate-700 shadow-sm transition-all duration-200 hover:border-border-strong focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:opacity-70 ${inputClassName}`}
         />
         <ChevronDown
           size={14}
@@ -337,7 +337,7 @@ const SearchSelect = ({
                   <span className="truncate">
                     {selectedHintLabel}: <span className="font-semibold text-slate-600">{selectedLabel}</span>
                   </span>
-                  <Check size={13} className="shrink-0 text-blue-600" />
+                  <Check size={13} className="shrink-0 text-accent" />
                 </div>
               ) : null}
 
@@ -367,11 +367,11 @@ const SearchSelect = ({
                         handleSelect(option);
                       }}
                       className={`custom-select-option flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
-                        isSelected ? "bg-blue-50/50 font-bold text-blue-700" : "font-medium text-slate-700"
+                        isSelected ? "bg-accent-soft/50 font-bold text-accent" : "font-medium text-slate-700"
                       } ${isActive && !isSelected ? "bg-slate-100" : ""} ${optionClassName}`}
                     >
                       <span className="truncate">{option.label}</span>
-                      {isSelected ? <Check size={14} className="shrink-0 text-blue-600" /> : null}
+                      {isSelected ? <Check size={14} className="shrink-0 text-accent" /> : null}
                     </button>
                   );
                 })

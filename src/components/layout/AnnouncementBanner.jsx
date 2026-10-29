@@ -5,18 +5,18 @@ import { useAuth } from "../../context/AuthContext";
 
 const STYLES = {
   INFO: {
-    wrap: "bg-blue-50 border-blue-200 text-blue-900",
-    icon: "text-blue-600",
+    wrap: "bg-accent-soft border-slate-200 text-slate-900",
+    icon: "text-accent",
     Icon: Info,
   },
   WARNING: {
-    wrap: "bg-amber-50 border-amber-200 text-amber-900",
-    icon: "text-amber-600",
+    wrap: "bg-warning-soft border-warning-border text-warning",
+    icon: "text-warning",
     Icon: TriangleAlert,
   },
   CRITICAL: {
-    wrap: "bg-red-50 border-red-300 text-red-900",
-    icon: "text-red-600",
+    wrap: "bg-danger-soft border-danger-border text-danger",
+    icon: "text-danger",
     Icon: AlertTriangle,
   },
 };

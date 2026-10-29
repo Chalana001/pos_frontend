@@ -29,15 +29,15 @@ export default function ProfitAndLossReportView({ data: reportData }) {
   const costCoverage = Number(current.costCoveragePercent || 0);
 
   const qualityBars = [
-    { label: "Gross margin", value: current.grossMarginPercent, color: "bg-blue-600" },
-    { label: "Net margin", value: current.netMarginPercent, color: "bg-blue-400" },
-    { label: "Cost coverage", value: costCoverage, color: costCoverage < 95 ? "bg-amber-500" : "bg-blue-600" },
+    { label: "Gross margin", value: current.grossMarginPercent, color: "bg-accent" },
+    { label: "Net margin", value: current.netMarginPercent, color: "bg-accent" },
+    { label: "Cost coverage", value: costCoverage, color: costCoverage < 95 ? "bg-warning" : "bg-accent" },
   ];
 
   return (
     <div className="space-y-6">
       {costCoverage < 95 && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="rounded-xl border border-warning-border bg-warning-soft p-4 text-sm text-warning">
           <p className="font-black">Profit confidence warning</p>
           <p className="mt-1">
             Only {costCoverage.toFixed(1)}% of revenue lines have recorded cost.{" "}
@@ -81,7 +81,7 @@ export default function ProfitAndLossReportView({ data: reportData }) {
                 </span>
                 <span
                   className={`font-black tabular-nums ${
-                    deduction ? "text-red-700" : Number(value || 0) < 0 ? "text-red-700" : "text-slate-900"
+                    deduction ? "text-danger" : Number(value || 0) < 0 ? "text-danger" : "text-slate-900"
                   }`}
                 >
                   {formatCurrency(value)}

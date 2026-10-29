@@ -131,7 +131,7 @@ const BankAccountDetailsPage = () => {
                   className="profile-detail-card shell-panel shell-panel-hover flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
                   style={{ animationDelay: "130ms" }}
                 >
-                  <Landmark size={56} className="text-blue-600" />
+                  <Landmark size={56} className="text-accent" />
                 </div>
               </div>
 
@@ -149,7 +149,7 @@ const BankAccountDetailsPage = () => {
                   <div>
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        account?.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                        account?.active ? "bg-success-soft text-success" : "bg-slate-100 text-slate-600"
                       }`}
                     >
                       {account?.active ? "Active" : "Inactive"}
@@ -163,7 +163,7 @@ const BankAccountDetailsPage = () => {
                     style={{ animationDelay: "210ms" }}
                   >
                     <div className="text-xs text-slate-500">Total Deposited</div>
-                    <div className="mt-1 text-xl font-bold text-emerald-700">
+                    <div className="mt-1 text-xl font-bold text-success">
                       {summaryLoading ? formatCurrency(0) : formatCurrency(summary.totalAmount)}
                     </div>
                   </div>
@@ -225,14 +225,14 @@ const BankAccountDetailsPage = () => {
                             <td className="app-table-cell !px-4 text-slate-600">{drop.cashierName}</td>
                             <td className="app-table-cell !px-4 text-center">
                               {drop.outsideShift || !drop.shiftId ? (
-                                <span className="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-700">
+                                <span className="px-2 py-1 rounded text-xs font-semibold bg-info-soft text-info">
                                   Outside Shift
                                 </span>
                               ) : (
                                 <span className="text-slate-500">#{drop.shiftId}</span>
                               )}
                             </td>
-                            <td className="app-table-cell !px-4 text-right font-semibold text-blue-600">
+                            <td className="app-table-cell !px-4 text-right font-semibold text-accent">
                               {formatCurrency(drop.amount)}
                             </td>
                           </tr>

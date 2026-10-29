@@ -81,13 +81,13 @@ const LoyaltyPanel = ({ customerId, billTotal, points, setPoints, refreshKey, fo
   }
 
   return (
-    <div className="space-y-1.5 rounded-lg border border-violet-100 bg-violet-50/60 px-2.5 py-2">
+    <div className="space-y-1.5 rounded-lg border border-info-border bg-info-soft/60 px-2.5 py-2">
       <div className="flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1 font-bold text-violet-800">
+        <span className="flex items-center gap-1 font-bold text-info">
           <Sparkles size={12} /> Points
-          {account.tierName && <span className="rounded-full bg-violet-200 px-1.5 py-0.5 text-[10px]">{account.tierName}</span>}
+          {account.tierName && <span className="rounded-full bg-info-soft px-1.5 py-0.5 text-[10px]">{account.tierName}</span>}
         </span>
-        <span className="text-violet-700">
+        <span className="text-info">
           {account.pointsBalance}, worth {formatCurrency(account.pointsValue)}
         </span>
       </div>
@@ -103,23 +103,23 @@ const LoyaltyPanel = ({ customerId, billTotal, points, setPoints, refreshKey, fo
           onBlur={focusSearch}
           onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
           placeholder="Redeem"
-          className="w-24 rounded border border-violet-200 bg-white px-2 py-1 text-right font-bold text-slate-800 outline-none focus:ring-2 focus:ring-violet-500"
+          className="w-24 rounded border border-info-border bg-white px-2 py-1 text-right font-bold text-slate-800 outline-none focus:ring-2 focus:ring-accent"
         />
         <button
           type="button"
           onClick={() => setPoints(maxSpendable)}
           disabled={maxSpendable <= 0}
-          className="rounded bg-violet-600 px-2 py-1 text-xs font-bold text-white disabled:opacity-40"
+          className="rounded bg-accent px-2 py-1 text-xs font-bold text-white disabled:opacity-40"
         >
           Use max
         </button>
         {entered > 0 && (
-          <span className="ml-auto text-xs font-black text-violet-800">-{formatCurrency(enteredValue)}</span>
+          <span className="ml-auto text-xs font-black text-info">-{formatCurrency(enteredValue)}</span>
         )}
       </div>
 
       {belowMinimum && (
-        <p className="text-[11px] text-red-700">
+        <p className="text-[11px] text-danger">
           At least {account.minRedemptionPoints} points are needed to redeem.
         </p>
       )}

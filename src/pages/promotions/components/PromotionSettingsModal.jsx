@@ -85,7 +85,7 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
             <input
               type="checkbox" checked={form.approvalRequired}
               onChange={(event) => update("approvalRequired", event.target.checked)}
-              className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-accent focus:ring-accent"
             />
           </label>
 
@@ -122,21 +122,21 @@ const PromotionSettingsModal = ({ isOpen, onClose, onSaved }) => {
             <input
               type="checkbox" checked={form.cashierManualStacking}
               onChange={(event) => update("cashierManualStacking", event.target.checked)}
-              className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-accent focus:ring-accent"
             />
           </label>
 
-          <label className="flex min-w-0 items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+          <label className="flex min-w-0 items-start justify-between gap-4 rounded-lg border border-warning-border bg-warning-soft/60 p-3">
             <span className="min-w-0 flex-1 break-words">
               <span className="block text-sm font-bold text-slate-800">Allow promotions below cost</span>
-              <span className="block text-xs text-amber-800">
+              <span className="block text-xs text-warning">
                 Lets this shop publish offers below the item's cost price. Use only for deliberate loss leaders; it applies to new and edited campaigns.
               </span>
             </span>
             <input
               type="checkbox" checked={form.allowBelowCostPromotions}
               onChange={(event) => update("allowBelowCostPromotions", event.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-warning focus:ring-warning"
             />
           </label>
 

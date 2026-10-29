@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
-import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal";
 import CustomSelect from "../components/common/CustomSelect";
@@ -15,23 +14,65 @@ import { useAuth } from "../context/AuthContext";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
 import { ItemType, ItemTypeLabels, OVERHEAD_COST_MODES } from "../utils/constants";
 
-import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon, ChefHat, Search, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, X, Image as ImageIcon, ChefHat, Search, Trash2, ArrowLeft } from "lucide-react";
 
-const Section = ({ title, open, onToggle, right, children }) => {
+const fieldClass = "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500";
+const helperClass = "mt-1 text-xs leading-5 text-slate-500";
+
+const Section = ({ title, description, open, onToggle, right, children }) => {
+  const contentId = `item-section-${String(title).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
   return (
-    <div className={`shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white ${open ? "overflow-visible" : "overflow-hidden"}`}>
+    <section className="border-b border-slate-200 last:border-b-0">
+      <div className="flex items-start justify-between gap-4 px-4 py-4 sm:px-5">
+        <div className="min-w-0">
+          <h2 id={`${contentId}-heading`} className="text-base font-semibold text-slate-900 sm:text-lg">{title}</h2>
+          {description && <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p>}
+        </div>
+        <div className="flex shrink-0 items-center gap-2 pt-0.5 text-slate-500">
+          {right}
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={open}
+            aria-controls={contentId}
+            aria-labelledby={`${contentId}-heading`}
+            className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
+          >
+            {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+          </button>
+        </div>
+      </div>
+      {open && <div id={contentId} className="page-section-enter px-4 pb-5 sm:px-5">{children}</div>}
+    </section>
+  );
+};
+
+const ToggleRow = ({ label, description, checked, onChange, disabled = false, stateLabel }) => {
+  const active = checked && !disabled;
+  return (
+    <div className={`flex items-start justify-between gap-4 py-1 ${disabled ? "opacity-60" : ""}`}>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-slate-800">{label}</span>
+          <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+            {stateLabel || (active ? "On" : "Off")}
+          </span>
+        </div>
+        <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p>
+      </div>
       <button
         type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between bg-slate-50 px-5 py-4 transition hover:bg-slate-100"
+        role="switch"
+        aria-checked={active}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:cursor-not-allowed ${
+          active ? "bg-accent" : "bg-slate-300"
+        }`}
       >
-        <h3 className="font-semibold text-slate-800">{title}</h3>
-        <div className="flex items-center gap-3">
-          {right}
-          {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-        </div>
+        <span className={`h-5 w-5 rounded-full bg-white transition-transform ${active ? "translate-x-5" : "translate-x-0"}`} />
       </button>
-      {open && <div className="page-section-enter p-5">{children}</div>}
     </div>
   );
 };
@@ -142,7 +183,8 @@ const ItemFormPage = ({ mode }) => {
   const [loadingItem, setLoadingItem] = useState(false);
 
   const [secGeneral, setSecGeneral] = useState(true);
-  const [secProcessing, setSecProcessing] = useState(true);
+  const [secPricing, setSecPricing] = useState(true);
+  const [secProcessing, setSecProcessing] = useState(false);
   const [secRecipe, setSecRecipe] = useState(true);
   const [secLabels, setSecLabels] = useState(false);
 
@@ -645,28 +687,21 @@ const ItemFormPage = ({ mode }) => {
     }));
   };
 
-  const submitItem = async () => {
+  const getItemValidationError = () => {
     if (!formData.name.trim() || !formData.subCategoryId) {
-      toast.error(`Please fill required fields (Name, ${singleCategoryMode ? "Category" : "Sub Category"})`);
-      setSecGeneral(true);
-      return;
+      return { message: `Please fill required fields (Name, ${singleCategoryMode ? "Category" : "Sub Category"})`, section: "general" };
     }
 
     if (formData.itemType === ItemType.SERVICE && formData.branchIds.length === 0) {
-      toast.error("Select at least one branch for the service");
-      setSecGeneral(true);
-      return;
+      return { message: "Select at least one branch for the service", section: "general" };
     }
 
     const recipeIngredientRows = getRecipeIngredientRows(formData.ingredients);
-
     if (
       formData.itemType === ItemType.RECIPE &&
       recipeIngredientRows.some((ingredient) => !ingredient.ingredientItemId || Number(ingredient.quantity || 0) <= 0)
     ) {
-      toast.error("Select each ingredient from search and enter a valid quantity");
-      setSecRecipe(true);
-      return;
+      return { message: "Select each ingredient from search and enter a valid quantity", section: "recipe" };
     }
 
     if (
@@ -674,9 +709,7 @@ const ItemFormPage = ({ mode }) => {
       formData.overheadCostMode !== OVERHEAD_COST_MODES.NONE &&
       Number(formData.overheadCostValue || 0) <= 0
     ) {
-      toast.error("Enter a valid recipe overhead value");
-      setSecGeneral(true);
-      return;
+      return { message: "Enter a valid recipe overhead value", section: "pricing" };
     }
 
     if (
@@ -684,9 +717,7 @@ const ItemFormPage = ({ mode }) => {
       formData.stockProcessingEnabled &&
       formData.processingOutputs.some((output) => !output.outputItemId)
     ) {
-      toast.error("Select each stock processing output from search");
-      setSecProcessing(true);
-      return;
+      return { message: "Select each stock processing output from search", section: "processing" };
     }
 
     if (
@@ -694,11 +725,24 @@ const ItemFormPage = ({ mode }) => {
       formData.stockProcessingEnabled &&
       formData.processingOutputs.some((output) => Number(output.defaultQty || 0) <= 0)
     ) {
-      toast.error("Enter a valid default quantity for each stock processing output");
-      setSecProcessing(true);
+      return { message: "Enter a valid default quantity for each stock processing output", section: "processing" };
+    }
+
+    return null;
+  };
+
+  const submitItem = async () => {
+    const validationError = getItemValidationError();
+    if (validationError) {
+      toast.error(validationError.message);
+      if (validationError.section === "general") setSecGeneral(true);
+      if (validationError.section === "pricing") setSecPricing(true);
+      if (validationError.section === "processing") setSecProcessing(true);
+      if (validationError.section === "recipe") setSecRecipe(true);
       return;
     }
 
+    const recipeIngredientRows = getRecipeIngredientRows(formData.ingredients);
     setSubmitting(true);
     try {
       const payload = {
@@ -773,105 +817,134 @@ const ItemFormPage = ({ mode }) => {
 
   const removeLabel = (value) => setLabels((prev) => prev.filter((label) => label !== value));
 
-  return (
-    <div className="page-enter space-y-6">
-      <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "80ms" }}>
-        <h1 className="text-3xl font-bold text-slate-800">
-          {mode === "edit" ? "Edit Item" : "Add New Item"}
-        </h1>
+return (
+    <div className="page-enter -mx-2 pb-24 sm:mx-0 xl:pb-2">
+      <div className="page-section-enter flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between" style={{ animationDelay: "80ms" }}>
+        <div className="min-w-0">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <button type="button" onClick={() => navigate("/items")} className="inline-flex items-center gap-1 rounded transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent">
+              <ArrowLeft size={14} aria-hidden="true" />
+              Items
+            </button>
+            <span aria-hidden="true">/</span>
+            <span className="text-slate-700">{mode === "edit" ? "Edit Item" : "Add New Item"}</span>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {mode === "edit" ? "Edit Item" : "Add New Item"}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {mode === "edit" ? "Update this item without losing its sales and stock history." : "Create a product, service, or recipe for this shop."}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+            Required fields marked *
+          </span>
+          <Button type="button" variant="secondary" onClick={() => navigate("/items")} disabled={submitting} className="hidden sm:inline-flex">
+            Cancel
+          </Button>
+        </div>
       </div>
 
-      <Card className="sales-panel-enter" style={{ animationDelay: "130ms" }}>
-        {loadingItem ? (
-          <div className="py-12 text-slate-600">Loading item...</div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-1">
-              <div className="shell-panel shell-panel-hover h-full overflow-hidden rounded-xl border border-slate-200 bg-white">
-                <div className="px-5 py-4 bg-slate-50 border-b">
-                  <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-                    <ImageIcon size={18} />
-                    Product Image
-                  </h3>
-                </div>
-                <div className="p-5 space-y-3">
-                  <div>
-                    <label htmlFor="itemformpage-image-url" className="block text-sm font-medium text-slate-700 mb-1">
-                      Image URL
-                    </label>
-                    <input id="itemformpage-image-url"
-                      type="text"
-                      value={formData.imageUrl}
-                      onChange={(e) => {
-                        setFormData({ ...formData, imageUrl: e.target.value });
-                        setImgError(false);
-                      }}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="https://..."
-                    />
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-100 flex items-center justify-center">
-                      {formData.imageUrl && !imgError ? (
-                        <img
-                          src={formData.imageUrl}
-                          alt="preview"
-                          className="w-full h-full object-cover"
-                          onError={() => setImgError(true)}
-                        />
-                      ) : (
-                        <div className="text-center text-slate-500 text-sm px-4">
-                          {imgError ? "Invalid image URL" : "Image preview"}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-2 space-y-6">
+      {loadingItem ? (
+        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-sm text-slate-500">
+          Loading item...
+        </div>
+      ) : (
+        <div className="sales-panel-enter mt-6 grid grid-cols-1 rounded-xl border border-slate-200 bg-white xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start xl:gap-6 xl:rounded-none xl:border-0 xl:bg-transparent" style={{ animationDelay: "130ms" }}>
+          <div className="contents xl:block xl:min-w-0 xl:overflow-hidden xl:rounded-xl xl:border xl:border-slate-200 xl:bg-white">
+            <div className="order-1">
               <Section
                 title="General Information"
+                description="Primary name, identifiers, and catalog classification."
                 open={secGeneral}
                 onToggle={() => setSecGeneral((value) => !value)}
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="md:col-span-2">
-                    <label htmlFor="itemformpage-item-name" className="block text-sm font-medium text-slate-700 mb-1">Item Name *</label>
+                    <label htmlFor="itemformpage-item-name" className="mb-1 block text-[13px] font-semibold text-slate-700">Item Name *</label>
                     <input id="itemformpage-item-name"
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={fieldClass}
+                      placeholder="e.g. Ceylon Black Tea 250g"
                     />
+                    <p className={helperClass}>Shown on POS tiles and customer receipts.</p>
                   </div>
 
                   <div className="md:col-span-2">
-                    <label htmlFor="itemformpage-alt-name-sinhala-used-on-receipts-when-t" className="block text-sm font-medium text-slate-700 mb-1">
-                      Alt Name (Sinhala)
-                      <span className="ml-2 text-xs text-slate-600 font-normal">Used on receipts when the design's name source is set to Alt Name.</span>
+                    <label htmlFor="itemformpage-alt-name-sinhala-used-on-receipts-when-t" className="mb-1 block text-[13px] font-semibold text-slate-700">
+                      Alternate Name (Sinhala)
                     </label>
                     <input id="itemformpage-alt-name-sinhala-used-on-receipts-when-t"
                       type="text"
                       value={formData.altName}
                       onChange={(e) => setFormData({ ...formData, altName: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={fieldClass}
+                      placeholder="Optional Sinhala name"
                     />
+                    <p className={helperClass}>Used on receipts when the receipt name source is set to Alternate Name.</p>
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label htmlFor="itemformpage-barcode" className="block text-sm font-medium text-slate-700 mb-1">Barcode *</label>
+                  <div>
+                    <label htmlFor="itemformpage-barcode" className="mb-1 block text-[13px] font-semibold text-slate-700">Barcode</label>
                     <input id="itemformpage-barcode"
                       type="text"
                       value={formData.barcode}
                       onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={`${fieldClass} font-mono tabular-nums`}
+                      placeholder="Scan or enter barcode"
                     />
+                    <p className={helperClass}>Leave blank to generate automatically.</p>
                   </div>
 
+                  <div>
+                    <label className="mb-1 block text-[13px] font-semibold text-slate-700">Item Type</label>
+                    <CustomSelect
+                      value={formData.itemType}
+                      onChange={(value) => {
+                        setFormData({
+                          ...formData,
+                          itemType: value,
+                          defaultUnit: value === ItemType.WEIGHT ? "KG" : value === ItemType.VOLUME ? "L" : value === ItemType.SERVICE ? "SERVICE" : "PCS",
+                          isKotEnabled: value === ItemType.RECIPE ? formData.isKotEnabled : false,
+                          ingredients: value === ItemType.RECIPE ? formData.ingredients : [],
+                          overheadCostMode: value === ItemType.RECIPE ? formData.overheadCostMode : OVERHEAD_COST_MODES.NONE,
+                          overheadCostValue: value === ItemType.RECIPE ? formData.overheadCostValue : "",
+                          branchIds: value === ItemType.SERVICE ? formData.branchIds : [],
+                          stockProcessingEnabled: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(value)
+                            ? formData.stockProcessingEnabled
+                            : false,
+                          processingOutputs: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(value)
+                            ? formData.processingOutputs
+                            : [],
+                        });
+                      }}
+                      options={allowedItemTypeOptions}
+                      valueKey="value"
+                      labelKey="label"
+                      buttonClassName="h-11 rounded-lg px-3 text-sm"
+                    />
+                    <p className={helperClass}>Controls unit and available item capabilities.</p>
+                  </div>
+
+                  {(formData.itemType === ItemType.WEIGHT || formData.itemType === ItemType.VOLUME) && (
+                    <div>
+                      <label className="mb-1 block text-[13px] font-semibold text-slate-700">Default Unit</label>
+                      <CustomSelect
+                        value={formData.defaultUnit}
+                        onChange={(value) => setFormData({ ...formData, defaultUnit: value })}
+                        options={formData.itemType === ItemType.VOLUME ? volumeUnitOptions : weightUnitOptions}
+                        valueKey="value"
+                        labelKey="label"
+                        buttonClassName="h-11 rounded-lg px-3 text-sm"
+                      />
+                    </div>
+                  )}
+
                   <div className="relative z-20">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
+                    <label className="mb-1 block text-[13px] font-semibold text-slate-700">Category *</label>
                     <div className="flex gap-2">
                       <SearchSelect
                         value={singleCategoryMode ? formData.subCategoryId : formData.categoryId}
@@ -883,8 +956,9 @@ const ItemFormPage = ({ mode }) => {
                         emptyMessage="No categories yet — add one with +"
                         menuMinWidth={260}
                         onOpen={loadCategories}
+                        inputClassName="h-11 text-sm"
                       />
-                      <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="px-3 shrink-0">
+                      <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="h-11 shrink-0 px-3" aria-label="Add category">
                         <Plus size={18} />
                       </Button>
                     </div>
@@ -892,7 +966,7 @@ const ItemFormPage = ({ mode }) => {
 
                   {!singleCategoryMode && (
                     <div className="relative z-10">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Sub Category *</label>
+                      <label className="mb-1 block text-[13px] font-semibold text-slate-700">Sub Category *</label>
                       <div className="flex gap-2">
                         <SearchSelect
                           value={formData.subCategoryId}
@@ -905,13 +979,15 @@ const ItemFormPage = ({ mode }) => {
                           menuMinWidth={260}
                           onOpen={() => loadSubCategories(formData.categoryId)}
                           disabled={!formData.categoryId}
+                          inputClassName="h-11 text-sm"
                         />
                         <Button
                           type="button"
                           variant="secondary"
                           onClick={() => setShowSubCatModal(true)}
-                          className="px-3 shrink-0"
+                          className="h-11 shrink-0 px-3"
                           disabled={!formData.categoryId}
+                          aria-label="Add sub category"
                         >
                           <Plus size={18} />
                         </Button>
@@ -919,139 +995,31 @@ const ItemFormPage = ({ mode }) => {
                     </div>
                   )}
 
-                  <div className="md:col-span-2 flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-slate-700">Item Type:</label>
-                      <CustomSelect
-                        value={formData.itemType}
-                        onChange={(value) => {
-                          setFormData({
-                            ...formData,
-                            itemType: value,
-                            defaultUnit: value === ItemType.WEIGHT ? "KG" : value === ItemType.VOLUME ? "L" : value === ItemType.SERVICE ? "SERVICE" : "PCS",
-                            isKotEnabled: value === ItemType.RECIPE ? formData.isKotEnabled : false,
-                            ingredients: value === ItemType.RECIPE ? formData.ingredients : [],
-                            overheadCostMode: value === ItemType.RECIPE ? formData.overheadCostMode : OVERHEAD_COST_MODES.NONE,
-                            overheadCostValue: value === ItemType.RECIPE ? formData.overheadCostValue : "",
-                            branchIds: value === ItemType.SERVICE ? formData.branchIds : [],
-                            stockProcessingEnabled: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(value)
-                              ? formData.stockProcessingEnabled
-                              : false,
-                            processingOutputs: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(value)
-                              ? formData.processingOutputs
-                              : [],
-                          });
-                        }}
-                        options={allowedItemTypeOptions}
-                        valueKey="value"
-                        labelKey="label"
-                        className="w-[190px]"
-                        buttonClassName="rounded-lg px-3 py-1.5"
-                      />
-                    </div>
-
-                    {(formData.itemType === ItemType.WEIGHT || formData.itemType === ItemType.VOLUME) && (
-                      <div className="flex items-center gap-2 mt-2 md:mt-0 md:ml-4 border-l md:pl-4 border-slate-300">
-                        <label className="text-sm font-medium text-slate-700">Default Unit:</label>
-                        <CustomSelect
-                          value={formData.defaultUnit}
-                          onChange={(value) => setFormData({ ...formData, defaultUnit: value })}
-                          options={formData.itemType === ItemType.VOLUME ? volumeUnitOptions : weightUnitOptions}
-                          valueKey="value"
-                          labelKey="label"
-                          className="w-[96px]"
-                          buttonClassName="rounded-lg px-3 py-1.5"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {formData.itemType === ItemType.RECIPE && (
-                    <div className="md:col-span-2 rounded-xl border border-rose-200 bg-rose-50 p-4">
-                      <label className={`flex items-center justify-between gap-3 ${kotEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}>
-                        <div>
-                          <div className="text-sm font-medium text-slate-700">Send to Kitchen (KOT)</div>
-                          <p className="text-xs text-slate-500">
-                            {kotEnabled
-                              ? 'Enable this when the item should appear on kitchen order tickets.'
-                              : 'KOT is disabled in App Configuration.'}
-                          </p>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={kotEnabled && !!formData.isKotEnabled}
-                          disabled={!kotEnabled}
-                          onChange={(e) => setFormData({ ...formData, isKotEnabled: e.target.checked })}
-                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </label>
-                    </div>
-                  )}
-
-                  <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <label className="flex items-center justify-between gap-3 cursor-pointer">
-                      <div>
-                        <div className="text-sm font-medium text-slate-700">Show in POS</div>
-                        <p className="text-xs text-slate-500">Turn this off for ingredient-only stock items used in recipes.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={!!formData.posVisible}
-                        onChange={(e) => setFormData({ ...formData, posVisible: e.target.checked })}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </label>
-                  </div>
-
-                  <div className={`md:col-span-2 rounded-xl border p-4 ${
-                    formData.active ? "border-slate-200 bg-slate-50" : "border-red-200 bg-red-50"
-                  }`}>
-                    <label className="flex items-center justify-between gap-3 cursor-pointer">
-                      <div>
-                        <div className={`text-sm font-medium ${formData.active ? "text-slate-700" : "text-red-700"}`}>
-                          Item Active
-                        </div>
-                        <p className="text-xs text-slate-500">Turn this off to deactivate the item without deleting its history.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={!!formData.active}
-                        onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </label>
-                    {!formData.active && (
-                      <div className="mt-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600">
-                        This item will be deactivated after saving.
-                      </div>
-                    )}
-                  </div>
-
                   {formData.itemType === ItemType.SERVICE && (
-                    <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="md:col-span-2 border-t border-slate-200 pt-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
                         <div>
-                          <label className="block text-sm font-medium text-slate-700">Available Branches *</label>
-                          <p className="text-xs text-slate-500">This service is visible in POS only for selected branches.</p>
+                          <label className="block text-[13px] font-semibold text-slate-700">Available Branches *</label>
+                          <p className={helperClass}>This service is visible in POS only for selected branches.</p>
                         </div>
-                        <span className="text-xs font-medium text-slate-600">{formData.branchIds.length} selected</span>
+                        <span className="shrink-0 text-xs font-medium text-slate-500">{formData.branchIds.length} selected</span>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                         {branches.map((branch) => {
                           const checked = formData.branchIds.includes(branch.id);
                           return (
                             <label
                               key={branch.id}
-                              className={`flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition ${
-                                checked ? "border-blue-400 bg-blue-50" : "border-slate-200 bg-white"
+                              className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition ${
+                                checked ? "border-accent bg-accent-soft" : "border-slate-200 bg-white hover:bg-slate-50"
                               }`}
                             >
                               <input
                                 type="checkbox"
                                 checked={checked}
                                 onChange={() => toggleBranchId(branch.id)}
-                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                               />
                               <span className="text-sm text-slate-700">{branch.name}</span>
                             </label>
@@ -1060,139 +1028,161 @@ const ItemFormPage = ({ mode }) => {
                       </div>
                     </div>
                   )}
+                </div>
+              </Section>
+            </div>
 
+            <div className="order-3">
+              <Section
+                title="Pricing & Stock"
+                description="Commercial price and the low-stock threshold for this item."
+                open={secPricing}
+                onToggle={() => setSecPricing((value) => !value)}
+              >
+                <div className="grid grid-cols-2 gap-2 min-[370px]:grid-cols-3 sm:gap-4">
                   <div>
-                    <label htmlFor="itemformpage-cost-price" className="block text-sm font-medium text-slate-700 mb-1">
-                      Cost Price {priceUnitLabel(formData.itemType)}
+                    <label htmlFor="itemformpage-cost-price" className="mb-1 flex h-8 items-end text-[12px] font-semibold leading-4 text-slate-700 sm:text-[13px]">
+                      <span>Cost Price {priceUnitLabel(formData.itemType)}</span>
                     </label>
-                    <input id="itemformpage-cost-price"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.costPrice}
-                      onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="itemformpage-selling-price" className="block text-sm font-medium text-slate-700 mb-1">
-                      Selling Price {priceUnitLabel(formData.itemType)}
-                    </label>
-                    <input id="itemformpage-selling-price"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.sellingPrice}
-                      onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {formData.itemType === ItemType.RECIPE && (
-                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Recipe Overhead</label>
-                        <CustomSelect
-                          value={formData.overheadCostMode}
-                          onChange={(value) => setFormData((prev) => ({
-                            ...prev,
-                            overheadCostMode: value,
-                            overheadCostValue: value === OVERHEAD_COST_MODES.NONE ? "" : prev.overheadCostValue,
-                          }))}
-                          options={[
-                            { value: OVERHEAD_COST_MODES.NONE, label: "None" },
-                            { value: OVERHEAD_COST_MODES.FIXED, label: "Fixed Amount" },
-                            { value: OVERHEAD_COST_MODES.PERCENT, label: "Percent" },
-                          ]}
-                          valueKey="value"
-                          labelKey="label"
-                        />
-                        <p className="mt-1 text-xs text-slate-500">Use this for oil, spice, gas, packing or small kitchen overhead that is not tracked as ingredients.</p>
-                      </div>
-
-                      <div>
-                        <label htmlFor="itemformpage-overhead-cost" className="block text-sm font-medium text-slate-700 mb-1">
-                          {formData.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "Overhead Percent" : "Overhead Amount"}
-                        </label>
-                        <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
-                          <input id="itemformpage-overhead-cost"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={formData.overheadCostValue}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, overheadCostValue: e.target.value }))}
-                            disabled={formData.overheadCostMode === OVERHEAD_COST_MODES.NONE}
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-600"
-                          />
-                          <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-600">
-                            {formData.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "%" : "LKR"}
-                          </div>
-                        </div>
-                      </div>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-500 sm:left-3 sm:text-xs">LKR</span>
+                      <input id="itemformpage-cost-price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.costPrice}
+                        onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                        className={`${fieldClass} pl-9 pr-2 text-right tabular-nums sm:pl-12 sm:pr-3`}
+                        placeholder="0.00"
+                      />
                     </div>
-                  )}
+                  </div>
 
                   <div>
-                    <label htmlFor="itemformpage-reorder-level" className="block text-sm font-medium text-slate-700 mb-1">Reorder Level</label>
+                    <label htmlFor="itemformpage-selling-price" className="mb-1 flex h-8 items-end text-[12px] font-semibold leading-4 text-slate-700 sm:text-[13px]">
+                      <span>Selling Price {priceUnitLabel(formData.itemType)}</span>
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-500 sm:left-3 sm:text-xs">LKR</span>
+                      <input id="itemformpage-selling-price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.sellingPrice}
+                        onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
+                        className={`${fieldClass} pl-9 pr-2 text-right font-semibold tabular-nums sm:pl-12 sm:pr-3`}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="itemformpage-reorder-level" className="mb-1 flex h-8 items-end text-[12px] font-semibold leading-4 text-slate-700 sm:text-[13px]">Reorder Level</label>
                     <input id="itemformpage-reorder-level"
                       type="number"
                       min="0"
                       value={formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE ? "0" : formData.reorderLevel}
                       onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
                       disabled={formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE}
-                      className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE
-                          ? "bg-slate-100 text-slate-600 border-slate-200"
-                          : "border-slate-300"
-                      }`}
+                      className={`${fieldClass} px-2 text-right tabular-nums sm:px-3`}
+                      placeholder="0"
                     />
                   </div>
                 </div>
-              </Section>
 
-              {isStockTrackedFormItem && (
+                <p className={`${helperClass} mt-2`}>
+                  {formData.itemType === ItemType.SERVICE || formData.itemType === ItemType.RECIPE
+                    ? "Reorder Level is not used for service or recipe items."
+                    : "Reorder Level warns when available stock reaches that quantity."}
+                </p>
+
+                {formData.itemType === ItemType.RECIPE && (
+                  <div className="mt-4 grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-[13px] font-semibold text-slate-700">Recipe Overhead</label>
+                      <CustomSelect
+                        value={formData.overheadCostMode}
+                        onChange={(value) => setFormData((prev) => ({
+                          ...prev,
+                          overheadCostMode: value,
+                          overheadCostValue: value === OVERHEAD_COST_MODES.NONE ? "" : prev.overheadCostValue,
+                        }))}
+                        options={[
+                          { value: OVERHEAD_COST_MODES.NONE, label: "None" },
+                          { value: OVERHEAD_COST_MODES.FIXED, label: "Fixed Amount" },
+                          { value: OVERHEAD_COST_MODES.PERCENT, label: "Percent" },
+                        ]}
+                        valueKey="value"
+                        labelKey="label"
+                        buttonClassName="h-11 rounded-lg px-3 text-sm"
+                      />
+                      <p className={helperClass}>For oil, spice, gas, packing, or untracked kitchen overhead.</p>
+                    </div>
+
+                    <div>
+                      <label htmlFor="itemformpage-overhead-cost" className="mb-1 block text-[13px] font-semibold text-slate-700">
+                        {formData.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "Overhead Percent" : "Overhead Amount"}
+                        {formData.overheadCostMode !== OVERHEAD_COST_MODES.NONE && <span className="ml-1 text-accent">*</span>}
+                      </label>
+                      <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
+                        <input id="itemformpage-overhead-cost"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.overheadCostValue}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, overheadCostValue: e.target.value }))}
+                          disabled={formData.overheadCostMode === OVERHEAD_COST_MODES.NONE}
+                          className={`${fieldClass} text-right tabular-nums`}
+                        />
+                        <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-600">
+                          {formData.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "%" : "LKR"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Section>
+            </div>
+
+            {isStockTrackedFormItem && (
+              <div className="order-4">
                 <Section
                   title="Stock Processing"
+                  description="Optional. Use this stock item as a source for linked output items."
                   open={secProcessing}
                   onToggle={() => setSecProcessing((value) => !value)}
                 >
                   <div className="space-y-4">
-                    <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 cursor-pointer">
-                      <div>
-                        <div className="text-sm font-medium text-slate-700">Enable as processing source</div>
-                        <p className="text-xs text-slate-500">Use this item as a source that can be cut or converted into linked stock items.</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={!!formData.stockProcessingEnabled}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            stockProcessingEnabled: e.target.checked,
-                            processingOutputs: e.target.checked && prev.processingOutputs.length === 0
-                              ? [buildEmptyProcessingOutput()]
-                              : prev.processingOutputs,
-                          }))
-                        }
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </label>
+                    <ToggleRow
+                      label="Enable as processing source"
+                      description="Cut or convert this item into linked stock items."
+                      checked={!!formData.stockProcessingEnabled}
+                      stateLabel={formData.stockProcessingEnabled ? "On" : "Off"}
+                      onChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          stockProcessingEnabled: checked,
+                          processingOutputs: checked && prev.processingOutputs.length === 0
+                            ? [buildEmptyProcessingOutput()]
+                            : prev.processingOutputs,
+                        }))
+                      }
+                    />
 
                     {formData.stockProcessingEnabled && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm text-slate-500">
+                      <div className="space-y-3 border-t border-slate-200 pt-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-sm leading-6 text-slate-500">
                             Link the items produced from this source. Waste rows are tracked in processing history without adding sellable stock.
                           </p>
-                          <Button type="button" onClick={addProcessingOutputRow}>
+                          <Button type="button" onClick={addProcessingOutputRow} className="shrink-0">
                             <Plus size={16} className="mr-2" />
                             Add Output
                           </Button>
                         </div>
 
                         {formData.processingOutputs.length === 0 ? (
-                          <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                          <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
                             No output items linked yet.
                           </div>
                         ) : (
@@ -1200,14 +1190,14 @@ const ItemFormPage = ({ mode }) => {
                             {formData.processingOutputs.map((output, index) => (
                               <div
                                 key={`${output.outputItemId || "new"}-${index}`}
-                                className={`relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_140px_130px_120px_52px] ${
+                                className={`relative grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_140px_130px_120px_52px] ${
                                   processingOutputSearchResults[index]?.loading || (processingOutputSearchResults[index]?.items || []).length > 0 ? "z-50" : "z-0"
                                 }`}
                               >
                                 <div>
-                                  <label className="mb-1 block text-sm font-medium text-slate-700">Output Item</label>
+                                  <label className="mb-1 block text-[13px] font-semibold text-slate-700">Output Item <span className="text-accent">*</span></label>
                                   <div className="relative">
-                                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+                                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                                     <input aria-label={`Output item ${index + 1}`}
                                       type="text"
                                       value={output.search || ""}
@@ -1215,7 +1205,7 @@ const ItemFormPage = ({ mode }) => {
                                       onKeyDown={(e) => handleProcessingOutputSearchKeyDown(index, e)}
                                       onBlur={() => window.setTimeout(() => clearProcessingOutputSearchResults(index), 150)}
                                       placeholder="Search output item..."
-                                      className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      className={`${fieldClass} pl-10`}
                                     />
                                     {(processingOutputSearchResults[index]?.loading || (processingOutputSearchResults[index]?.items || []).length > 0) && (
                                       <div className="relative z-[80] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
@@ -1228,7 +1218,7 @@ const ItemFormPage = ({ mode }) => {
                                               type="button"
                                               onMouseDown={(e) => e.preventDefault()}
                                               onClick={() => selectProcessingOutputForRow(index, option)}
-                                              className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-blue-50 last:border-b-0"
+                                              className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-accent-soft last:border-b-0"
                                             >
                                               <div className="min-w-0">
                                                 <div className="truncate font-medium text-slate-800">{option.name}</div>
@@ -1252,7 +1242,7 @@ const ItemFormPage = ({ mode }) => {
                                 </div>
 
                                 <div>
-                                  <label className="mb-1 block text-sm font-medium text-slate-700">Default Qty</label>
+                                  <label className="mb-1 block text-[13px] font-semibold text-slate-700">Default Qty <span className="text-accent">*</span></label>
                                   <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
                                     <input aria-label={`Default quantity for output ${index + 1}`}
                                       type="number"
@@ -1260,7 +1250,7 @@ const ItemFormPage = ({ mode }) => {
                                       step="0.001"
                                       value={output.defaultQty}
                                       onChange={(e) => updateProcessingOutput(index, "defaultQty", e.target.value)}
-                                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      className={`${fieldClass} px-3 tabular-nums`}
                                       placeholder="0"
                                     />
                                     <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600">
@@ -1270,25 +1260,25 @@ const ItemFormPage = ({ mode }) => {
                                 </div>
 
                                 <div>
-                                  <label htmlFor="itemformpage-default-sell-price" className="mb-1 block text-sm font-medium text-slate-700">Default Sell Price</label>
-                                  <input id="itemformpage-default-sell-price"
+                                  <label htmlFor={`itemformpage-default-sell-price-${index}`} className="mb-1 block text-[13px] font-semibold text-slate-700">Default Sell Price</label>
+                                  <input id={`itemformpage-default-sell-price-${index}`}
                                     type="number"
                                     min="0"
                                     step="0.01"
                                     value={output.defaultSellingPrice}
                                     onChange={(e) => updateProcessingOutput(index, "defaultSellingPrice", e.target.value)}
                                     disabled={!!output.waste}
-                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    className={`${fieldClass} text-right tabular-nums`}
                                     placeholder="Item price"
                                   />
                                 </div>
 
-                                <label className="flex items-end gap-2 pb-2 text-sm font-medium text-slate-700">
+                                <label className="flex min-h-11 items-end gap-2 pb-2 text-sm font-medium text-slate-700">
                                   <input
                                     type="checkbox"
                                     checked={!!output.waste}
                                     onChange={(e) => updateProcessingOutput(index, "waste", e.target.checked)}
-                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                                   />
                                   Waste
                                 </label>
@@ -1297,7 +1287,7 @@ const ItemFormPage = ({ mode }) => {
                                   <button aria-label="Remove output"
                                     type="button"
                                     onClick={() => removeProcessingOutput(index)}
-                                    className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"
+                                    className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-danger-border hover:text-danger focus:outline-none focus:ring-2 focus:ring-accent"
                                     title="Remove output"
                                   >
                                     <Trash2 size={16} />
@@ -1311,28 +1301,31 @@ const ItemFormPage = ({ mode }) => {
                     )}
                   </div>
                 </Section>
-              )}
+              </div>
+            )}
 
-              {formData.itemType === ItemType.RECIPE && (
+            {formData.itemType === ItemType.RECIPE && (
+              <div className="order-4">
                 <Section
                   title="Recipe Ingredients"
+                  description="Optional. Stock items deducted when this recipe is sold."
                   open={secRecipe}
                   onToggle={() => setSecRecipe((value) => !value)}
-                  right={<ChefHat size={18} className="text-rose-500" />}
+                  right={<ChefHat size={18} className="text-danger" />}
                 >
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm text-slate-500">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm leading-6 text-slate-500">
                         Select the stock items that should be deducted when this food item is sold.
                       </p>
-                      <Button type="button" onClick={addIngredientRow}>
+                      <Button type="button" onClick={addIngredientRow} className="shrink-0">
                         <Plus size={16} className="mr-2" />
                         Add Ingredient
                       </Button>
                     </div>
 
                     {formData.ingredients.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                      <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
                         No ingredients added yet.
                       </div>
                     ) : (
@@ -1340,15 +1333,14 @@ const ItemFormPage = ({ mode }) => {
                         {formData.ingredients.map((ingredient, index) => (
                           <div
                             key={`${ingredient.ingredientItemId || "new"}-${index}`}
-                            style={{ animationDelay: `${140 + index * 40}ms` }}
-                            className={`sales-cart-item relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px] ${
+                            className={`relative grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px] ${
                               ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0 ? "z-50" : "z-0"
                             }`}
                           >
                             <div>
-                              <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
+                              <label className="mb-1 block text-[13px] font-semibold text-slate-700">Ingredient <span className="text-accent">*</span></label>
                               <div className="relative">
-                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                                 <input aria-label={`Ingredient ${index + 1}`}
                                   type="text"
                                   value={ingredient.search || ""}
@@ -1356,7 +1348,7 @@ const ItemFormPage = ({ mode }) => {
                                   onKeyDown={(e) => handleIngredientSearchKeyDown(index, e)}
                                   onBlur={() => window.setTimeout(() => clearIngredientSearchResults(index), 150)}
                                   placeholder="Scan barcode or type ingredient name..."
-                                  className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className={`${fieldClass} pl-10`}
                                 />
                                 {(ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0) && (
                                   <div className="relative z-[80] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
@@ -1369,7 +1361,7 @@ const ItemFormPage = ({ mode }) => {
                                           type="button"
                                           onMouseDown={(e) => e.preventDefault()}
                                           onClick={() => selectIngredientForRow(index, option)}
-                                          className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-blue-50 last:border-b-0"
+                                          className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-accent-soft last:border-b-0"
                                         >
                                           <div className="min-w-0">
                                             <div className="truncate font-medium text-slate-800">{option.name}</div>
@@ -1395,25 +1387,26 @@ const ItemFormPage = ({ mode }) => {
                             </div>
 
                             <div>
-                              <label className="mb-1 block text-sm font-medium text-slate-700">Qty</label>
+                              <label className="mb-1 block text-[13px] font-semibold text-slate-700">Qty <span className="text-accent">*</span></label>
                               <input aria-label={`Quantity for ingredient ${index + 1}`}
                                 type="number"
                                 min="0"
                                 step="0.001"
                                 value={ingredient.quantity}
                                 onChange={(e) => updateIngredient(index, "quantity", e.target.value)}
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className={`${fieldClass} tabular-nums`}
                               />
                             </div>
 
                             <div>
-                              <label className="mb-1 block text-sm font-medium text-slate-700">Unit</label>
+                              <label className="mb-1 block text-[13px] font-semibold text-slate-700">Unit</label>
                               <CustomSelect
                                 value={ingredient.qtyUnit}
                                 onChange={(value) => updateIngredient(index, "qtyUnit", value)}
                                 options={recipeUnitOptions}
                                 valueKey="value"
                                 labelKey="label"
+                                buttonClassName="h-11 rounded-lg px-3 text-sm"
                               />
                             </div>
 
@@ -1421,7 +1414,7 @@ const ItemFormPage = ({ mode }) => {
                               <button aria-label="Remove ingredient"
                                 type="button"
                                 onClick={() => removeIngredient(index)}
-                                className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"
+                                className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-danger-border hover:text-danger focus:outline-none focus:ring-2 focus:ring-accent"
                                 title="Remove ingredient"
                               >
                                 <Trash2 size={16} />
@@ -1433,28 +1426,41 @@ const ItemFormPage = ({ mode }) => {
                     )}
                   </div>
                 </Section>
-              )}
+              </div>
+            )}
 
-              <Section title="Label and Certificate" open={secLabels} onToggle={() => setSecLabels((value) => !value)}>
+            <div className="order-4">
+              <Section
+                title="Labels & Certificates"
+                description="Optional. Add free-text labels used by this shop."
+                open={secLabels}
+                onToggle={() => setSecLabels((value) => !value)}
+              >
                 <div className="space-y-4">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <input aria-label="Add label"
                       type="text"
                       value={labelInput}
                       onChange={(e) => setLabelInput(e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addLabel();
+                        }
+                      }}
+                      className={`${fieldClass} flex-1`}
                       placeholder="Add label"
                     />
-                    <Button type="button" onClick={addLabel}>
+                    <Button type="button" onClick={addLabel} className="shrink-0">
                       <Plus size={18} className="mr-2" /> Add
                     </Button>
                   </div>
                   {labels.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {labels.map((label) => (
-                        <div key={label} className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm">
+                        <div key={label} className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
                           {label}
-                          <button type="button" onClick={() => removeLabel(label)} className="text-slate-500 hover:text-slate-800">
+                          <button type="button" onClick={() => removeLabel(label)} className="text-slate-500 hover:text-slate-900" aria-label={`Remove ${label}`}>
                             <X size={16} />
                           </button>
                         </div>
@@ -1463,20 +1469,133 @@ const ItemFormPage = ({ mode }) => {
                   )}
                 </div>
               </Section>
-
-              <div className="flex justify-end gap-2 border-t pt-4">
-                <Button type="button" variant="secondary" onClick={() => navigate("/items")} disabled={submitting}>
-                  Cancel
-                </Button>
-                <Button type="button" onClick={submitItem} disabled={submitting}>
-                  {submitting ? "Saving..." : "Save"}
-                </Button>
-              </div>
             </div>
           </div>
-        )}
-      </Card>
 
+          <aside className="contents xl:sticky xl:top-0 xl:block xl:self-start xl:space-y-4">
+            <section className="order-2 border-b border-slate-200 px-4 py-5 sm:px-5 xl:rounded-xl xl:border xl:border-slate-200 xl:bg-white" aria-labelledby="item-image-heading">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 id="item-image-heading" className="text-base font-semibold text-slate-900 sm:text-lg">Product Image</h2>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">Paste an image URL and confirm the preview.</p>
+                </div>
+                <ImageIcon size={18} className="shrink-0 text-slate-500" aria-hidden="true" />
+              </div>
+
+              <div className="mt-4 overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50">
+                <div className="flex aspect-[4/3] items-center justify-center">
+                  {formData.imageUrl && !imgError ? (
+                    <img
+                      src={formData.imageUrl}
+                      alt="Product preview"
+                      className="h-full w-full object-cover"
+                      onError={() => setImgError(true)}
+                    />
+                  ) : (
+                    <div className="px-4 text-center text-sm text-slate-500">
+                      <ImageIcon size={24} className="mx-auto mb-2 text-slate-400" aria-hidden="true" />
+                      {imgError ? "Invalid image URL" : "Image preview"}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label htmlFor="itemformpage-image-url" className="mb-1 block text-[13px] font-semibold text-slate-700">Image URL</label>
+                <input id="itemformpage-image-url"
+                  type="text"
+                  value={formData.imageUrl}
+                  onChange={(e) => {
+                    setFormData({ ...formData, imageUrl: e.target.value });
+                    setImgError(false);
+                  }}
+                  className={fieldClass}
+                  placeholder="https://..."
+                />
+                <p className={helperClass}>Preview updates instantly.</p>
+              </div>
+            </section>
+
+            <section className="order-5 border-b border-slate-200 px-4 py-5 sm:px-5 xl:rounded-xl xl:border xl:border-slate-200 xl:bg-white" aria-labelledby="item-status-heading">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 id="item-status-heading" className="text-base font-semibold text-slate-900 sm:text-lg">Visibility & Status</h2>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">Control where this item is available.</p>
+                </div>
+                <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                  {formData.active ? "Active" : "Inactive"}
+                </span>
+              </div>
+
+              <div className="space-y-4 divide-y divide-slate-200">
+                <ToggleRow
+                  label="Show in POS"
+                  description="Turn this off for ingredient-only stock items used in recipes."
+                  checked={!!formData.posVisible}
+                  stateLabel={formData.posVisible ? "Visible" : "Hidden"}
+                  onChange={(checked) => setFormData({ ...formData, posVisible: checked })}
+                />
+                <div className="pt-4">
+                  <ToggleRow
+                    label="Item active"
+                    description="Turn this off to deactivate the item without deleting its history."
+                    checked={!!formData.active}
+                    stateLabel={formData.active ? "Active" : "Inactive"}
+                    onChange={(checked) => setFormData({ ...formData, active: checked })}
+                  />
+                  {!formData.active && (
+                    <div className="mt-3 rounded-lg border border-danger-border bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
+                      This item will be deactivated after saving.
+                    </div>
+                  )}
+                </div>
+                {formData.itemType === ItemType.RECIPE && (
+                  <div className="pt-4">
+                    <ToggleRow
+                      label="Send to Kitchen (KOT)"
+                      description={kotEnabled ? "Print a kitchen ticket when this recipe is sold." : "KOT is disabled in App Configuration."}
+                      checked={kotEnabled && !!formData.isKotEnabled}
+                      disabled={!kotEnabled}
+                      stateLabel={!kotEnabled ? "Unavailable" : (formData.isKotEnabled ? "On" : "Off")}
+                      onChange={(checked) => setFormData({ ...formData, isKotEnabled: checked })}
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <div className="hidden xl:block">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="mb-3 flex items-center justify-between gap-3 text-xs">
+                  <span className="font-medium text-slate-500">
+                    {getItemValidationError() ? "Complete the required fields" : "Ready to save"}
+                  </span>
+                  <span className="text-slate-400">*</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="secondary" onClick={() => navigate("/items")} disabled={submitting} className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={submitItem} disabled={submitting} className="flex-[2]">
+                    {submitting ? "Saving..." : "Save Item"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          </div>
+      )}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur xl:hidden" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+        <div className="mx-auto flex max-w-3xl gap-3">
+          <Button type="button" variant="secondary" onClick={() => navigate("/items")} disabled={submitting} className="flex-1">
+            Cancel
+          </Button>
+          <Button type="button" onClick={submitItem} disabled={submitting} className="flex-[2]">
+            {submitting ? "Saving..." : "Save Item"}
+          </Button>
+        </div>
+      </div>
       <Modal isOpen={showCatModal} onClose={() => !savingCat && setShowCatModal(false)} title="Add New Category">
         <div className="space-y-4">
           <div>
@@ -1485,7 +1604,7 @@ const ItemFormPage = ({ mode }) => {
               type="text"
               value={newCatName}
               onChange={(e) => setNewCatName(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="e.g. Beverages"
               autoFocus
             />
@@ -1509,7 +1628,7 @@ const ItemFormPage = ({ mode }) => {
               type="text"
               value={newSubCatName}
               onChange={(e) => setNewSubCatName(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="e.g. Soft Drinks"
               autoFocus
             />

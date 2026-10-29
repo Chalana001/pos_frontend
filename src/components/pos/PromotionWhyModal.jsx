@@ -41,8 +41,8 @@ const OUTCOMES = {
 };
 
 const TONES = {
-  good: "bg-emerald-50 text-emerald-800",
-  warn: "bg-amber-50 text-amber-900",
+  good: "bg-success-soft text-success",
+  warn: "bg-warning-soft text-warning",
   muted: "bg-slate-50 text-slate-600",
 };
 
@@ -97,7 +97,7 @@ export const WhyButton = ({ onClick, applied, label = "Why?" }) => (
     type="button"
     onClick={onClick}
     className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold ${
-      applied ? "text-emerald-700 hover:bg-emerald-50" : "text-slate-500 hover:bg-slate-100"
+      applied ? "text-success hover:bg-success-soft" : "text-slate-500 hover:bg-slate-100"
     }`}
   >
     {applied ? <CheckCircle2 size={11} /> : <Info size={11} />}

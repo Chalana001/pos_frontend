@@ -82,7 +82,7 @@ const SupplierViewPage = () => {
       <Card className="sales-panel-enter p-6" style={{ animationDelay: "90ms" }}>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="page-section-enter flex gap-4" style={{ animationDelay: "130ms" }}>
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
               <Truck size={28} />
             </div>
             <div>
@@ -105,14 +105,14 @@ const SupplierViewPage = () => {
           <div className="grid min-w-[280px] grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "180ms" }}>
               <div className="text-xs font-semibold uppercase text-slate-600">Payable</div>
-              <div className={`mt-1 text-2xl font-bold ${Number(supplier?.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-800"}`}>
+              <div className={`mt-1 text-2xl font-bold ${Number(supplier?.dueAmount || 0) > 0 ? "text-danger" : "text-slate-800"}`}>
                 {formatCurrency(supplier?.dueAmount || 0)}
               </div>
             </div>
             <div className="profile-stat-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white p-4" style={{ animationDelay: "220ms" }}>
               <div className="text-xs font-semibold uppercase text-slate-600">Status</div>
               <div className="mt-2">
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${supplier?.active ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${supplier?.active ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
                   {supplier?.active ? "Active" : "Inactive"}
                 </span>
               </div>
@@ -201,7 +201,7 @@ const SupplierViewPage = () => {
                   return (
                     <tr
                       key={purchase.purchaseId}
-                      className={`cursor-pointer transition-colors ${isCanceled ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-slate-50"}`}
+                      className={`cursor-pointer transition-colors ${isCanceled ? "bg-danger-soft/30 hover:bg-danger-soft/50" : "hover:bg-slate-50"}`}
                       onClick={() => navigate(`/purchases/${purchase.purchaseId}`)}
                     >
                       <td className="px-6 py-4 text-slate-600">
@@ -209,11 +209,11 @@ const SupplierViewPage = () => {
                           <Calendar size={14} /> {formatDateTime(purchase.createdAt)}
                         </span>
                       </td>
-                      <td className={`px-6 py-4 font-semibold ${isCanceled ? "text-red-400 line-through" : "text-slate-800"}`}>
+                      <td className={`px-6 py-4 font-semibold ${isCanceled ? "text-danger line-through" : "text-slate-800"}`}>
                         {purchase.invoiceNo}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`rounded-full border px-2 py-1 text-xs font-bold uppercase ${isCanceled ? "border-red-200 bg-red-100 text-red-700" : "border-emerald-200 bg-emerald-100 text-emerald-700"}`}>
+                        <span className={`rounded-full border px-2 py-1 text-xs font-bold uppercase ${isCanceled ? "border-danger-border bg-danger-soft text-danger" : "border-success-border bg-success-soft text-success"}`}>
                           {isCanceled ? "Canceled" : "Completed"}
                         </span>
                       </td>
@@ -223,10 +223,10 @@ const SupplierViewPage = () => {
                       <td className={`px-6 py-4 text-right font-bold ${isCanceled ? "text-slate-600 line-through" : "text-slate-800"}`}>
                         {formatCurrency(purchase.grandTotal || 0)}
                       </td>
-                      <td className={`px-6 py-4 text-right font-semibold ${isCanceled ? "text-slate-600 line-through" : "text-emerald-700"}`}>
+                      <td className={`px-6 py-4 text-right font-semibold ${isCanceled ? "text-slate-600 line-through" : "text-success"}`}>
                         {formatCurrency(purchase.paidAmount || 0)}
                       </td>
-                      <td className={`px-6 py-4 text-right font-bold ${isCanceled ? "text-slate-600 line-through" : Number(purchase.dueAmount || 0) > 0 ? "text-red-600" : "text-slate-600"}`}>
+                      <td className={`px-6 py-4 text-right font-bold ${isCanceled ? "text-slate-600 line-through" : Number(purchase.dueAmount || 0) > 0 ? "text-danger" : "text-slate-600"}`}>
                         {formatCurrency(purchase.dueAmount || 0)}
                       </td>
                       <td className="px-6 py-4 text-slate-600">

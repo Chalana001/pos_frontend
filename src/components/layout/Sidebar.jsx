@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Lock, Sparkles } from "lucide-react";
+import { Lock } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useAppConfiguration } from "../../context/AppConfigurationContext";
@@ -13,24 +13,27 @@ import { APP_VERSION } from "../../data/versionHistory";
 import { History } from "lucide-react";
 import { isSidebarInline } from '../../utils/sidebarLayout';
 import {
-  LayoutDashboard,
-  ShoppingCart,
-  Package,
-  Users,
-  Clock,
-  DollarSign,
-  TrendingDown,
-  Warehouse,
-  PieChart,
+  DashboardIcon,
+  PosIcon,
+  SalesIcon,
+  PromotionsIcon,
+  LoyaltyIcon,
+  ItemsIcon,
+  CustomersIcon,
+  WarrantiesIcon,
+  SuppliersIcon,
+  ShiftsIcon,
+  ExpensesIcon,
+  CashDropsIcon,
+  StockIcon,
+  PurchaseIcon,
+  ReportsIcon,
+  ConfigurationIcon,
+} from "./navIcons";
+import {
   ChevronDown,
   ChevronRight,
   X,
-  Truck,
-  ShieldCheck,
-  Settings2,
-  Tag,
-  CreditCard, // 🔴 Sales වලට අලුත් Icon එකක් ගත්තා
-  // Printer,
 } from "lucide-react";
 
 const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed }) => {
@@ -227,110 +230,110 @@ const Sidebar = ({ isOpen, setIsOpen, isDesktopCollapsed, setIsDesktopCollapsed 
   const menuItems = [
     {
       name: "Dashboard",
-      icon: LayoutDashboard,
+      icon: DashboardIcon,
       path: "/dashboard",
       permission: "VIEW_DASHBOARD",
     },
     {
       name: "POS",
-      icon: ShoppingCart,
+      icon: PosIcon,
       path: "/pos",
       permission: "ACCESS_POS",
     },
     // 🟢 අලුතින් එකතු කළ Sales Menu එක (POS එකට යටින්)
     {
       name: "Sales",
-      icon: CreditCard,
+      icon: SalesIcon,
       path: "/sales",
       permission: "VIEW_SALES", // ගැලපෙන permission එකක් දෙන්න
       type: "dropdown-sales",
     },
     {
       name: "Promotions",
-      icon: Tag,
+      icon: PromotionsIcon,
       path: "/promotions",
       permission: "MANAGE_PROMOTIONS",
       type: "dropdown-promotions",
     },
     {
       name: "Loyalty",
-      icon: Sparkles,
+      icon: LoyaltyIcon,
       path: "/loyalty",
       permission: "MANAGE_LOYALTY",
     },
     {
       name: "Items",
-      icon: Package,
+      icon: ItemsIcon,
       path: "/items",
       permission: "VIEW_ITEMS",
       type: "dropdown-items",
     },
     {
       name: "Customers",
-      icon: Users,
+      icon: CustomersIcon,
       path: "/customers",
       permission: "MANAGE_CUSTOMERS",
       type: "dropdown-customers",
     },
     {
       name: "Warranties",
-      icon: ShieldCheck,
+      icon: WarrantiesIcon,
       path: "/warranties",
       permission: "VIEW_SALES",
       type: "dropdown-warranties",
     },
     {
       name: "Suppliers",
-      icon: Truck,
+      icon: SuppliersIcon,
       path: "/suppliers",
       permission: "VIEW_PURCHASES",
       type: "dropdown-suppliers",
     },
-    { 
+    {
       name: "Shifts",
-      icon: Clock, 
-      path: "/shifts", 
-      permission: "MANAGE_SHIFTS", 
-      type: "dropdown-shifts" 
+      icon: ShiftsIcon,
+      path: "/shifts",
+      permission: "MANAGE_SHIFTS",
+      type: "dropdown-shifts"
     },
     {
       name: "Expenses",
-      icon: DollarSign,
+      icon: ExpensesIcon,
       path: "/expenses",
       permission: "RECORD_EXPENSES",
       type: "dropdown-expenses",
     },
     {
       name: "Cash Drops",
-      icon: TrendingDown,
+      icon: CashDropsIcon,
       path: "/cash-drops",
       permission: "RECORD_EXPENSES",
       type: "dropdown-cashdrops",
     },
     {
       name: "Stock",
-      icon: Warehouse,
+      icon: StockIcon,
       path: "/stocks",
       permission: "VIEW_STOCK",
       type: "dropdown-stock",
     },
     {
       name: "Purchase",
-      icon: Package,
+      icon: PurchaseIcon,
       path: "/purchase",
       permission: "VIEW_PURCHASES",
       type: "dropdown-purchase",
     },
     {
       name: "Reports",
-      icon: PieChart,
+      icon: ReportsIcon,
       path: "/reports",
       permission: "VIEW_REPORTS",
       type: "dropdown-reports",
     },
     {
       name: "Configuration",
-      icon: Settings2,
+      icon: ConfigurationIcon,
       path: "/app-configuration",
       permission: "MANAGE_APP_CONFIGURATION",
       type: "dropdown-configuration",
@@ -369,16 +372,18 @@ return (
           <div className="flex items-start justify-between">
             <div className="min-w-0">
               <div className={`flex items-center ${isDesktopCollapsed ? "justify-center" : "gap-3"}`}>
+                {/* The mark's cyan strokes read directly on the near-black sidebar;
+                    no tile, no filter (brightness(0) invert(1) flattened the cyan to white). */}
                 <img
-                src={BRAND_MARK}
-                alt={`${BRAND_NAME} mark`}
-                className="sidebar-logo-spin h-14 w-14 shrink-0 object-contain"
-              />
+                  src={BRAND_MARK}
+                  alt={`${BRAND_NAME} mark`}
+                  className="sidebar-logo-spin h-12 w-12 shrink-0 object-contain"
+                />
               {!isDesktopCollapsed ? (
                 <img
                   src={BRAND_WORDMARK}
                   alt={BRAND_NAME}
-                  className="h-12 w-auto max-w-[150px] object-contain"
+                  className="sidebar-wordmark-invert h-12 w-auto max-w-[150px] object-contain"
                 />
               ) : null}
               </div>
@@ -946,6 +951,20 @@ return (
                         </NavLink>
                       )}
 
+                      {hasPermission(role, "MANAGE_ITEMS") && canOpenPath("/items/categories") && (
+                        <NavLink
+                          to="/items/categories"
+                          className={({ isActive }) =>
+                            `block px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                              ? "bg-slate-800 text-white"
+                              : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                            }`
+                          }
+                        >
+                          {t("Categories")}
+                        </NavLink>
+                      )}
+
                       {hasPermission(role, "MANAGE_ITEMS") && (
                         <NavLink
                           to="/items/new"
@@ -1477,7 +1496,7 @@ return (
                 >
                   <Icon size={20} />
                   <span className="flex-1 text-left font-medium">{t(item.name)}</span>
-                  <Lock size={14} className="text-slate-600 group-hover:text-amber-400" />
+                  <Lock size={14} className="text-slate-600 group-hover:text-warning" />
                 </button>
               );
             }

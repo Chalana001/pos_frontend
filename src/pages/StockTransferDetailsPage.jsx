@@ -8,9 +8,9 @@ import Table from "../components/common/Table";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const statusMeta = {
-  IN_TRANSIT: { label: "In Transit", className: "bg-amber-100 text-amber-700" },
-  COMPLETED: { label: "Completed", className: "bg-emerald-100 text-emerald-700" },
-  CANCELED: { label: "Canceled", className: "bg-red-100 text-red-700" },
+  IN_TRANSIT: { label: "In Transit", className: "bg-warning-soft text-warning" },
+  COMPLETED: { label: "Completed", className: "bg-success-soft text-success" },
+  CANCELED: { label: "Canceled", className: "bg-danger-soft text-danger" },
 };
 
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : "-");
@@ -144,7 +144,7 @@ export default function StockTransferDetailsPage() {
                     <p className="truncate font-black text-slate-900">{item.itemName}</p>
                     <p className="mt-1 text-xs text-slate-500">{item.barcode || "No barcode"}</p>
                   </div>
-                  <p className="font-black text-blue-700">{formatQty(item.qty ?? item.quantity)}</p>
+                  <p className="font-black text-accent">{formatQty(item.qty ?? item.quantity)}</p>
                 </div>
                 <p className="mt-3 text-xs text-slate-500">{item.qtyUnit || item.unit || "Unitless"}</p>
               </div>

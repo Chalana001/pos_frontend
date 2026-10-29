@@ -221,8 +221,8 @@ const Dashboard = () => {
         <Card className="page-section-enter shell-panel-hover" style={{ animationDelay: "120ms" }}>
           {/* Amber is this app's warning colour everywhere else; yellow was a
               one-off here. */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm font-medium text-amber-900">
+          <div className="rounded-lg border border-warning-border bg-warning-soft p-4">
+            <p className="text-sm font-medium text-warning">
               Please select a branch to view dashboard KPIs.
             </p>
           </div>
@@ -310,7 +310,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => selectChartMode("daily")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    chartMode === "daily" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                    chartMode === "daily" ? "bg-white text-accent shadow-sm" : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   Daily
@@ -318,7 +318,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => selectChartMode("monthly")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    chartMode === "monthly" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                    chartMode === "monthly" ? "bg-white text-accent shadow-sm" : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   Monthly
@@ -360,11 +360,11 @@ const Dashboard = () => {
                   <button
                     key={action.label}
                     onClick={() => navigate(action.path)}
-                    className="dashboard-rise-in group rounded-xl bg-slate-50 p-4 text-left transition-all hover:-translate-y-1 hover:bg-blue-50 hover:shadow-lg hover:shadow-slate-100"
+                    className="dashboard-rise-in group rounded-xl bg-slate-50 p-4 text-left transition-all hover:-translate-y-1 hover:bg-accent-soft hover:shadow-lg hover:shadow-slate-100"
                     style={{ animationDelay: `${960 + index * 80}ms` }}
                   >
                     <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-sm transition-transform group-hover:scale-110">
-                      <ActionIcon className="text-blue-600" size={20} />
+                      <ActionIcon className="text-accent" size={20} />
                     </div>
                     <p className="text-sm font-semibold text-slate-800">{action.label}</p>
                   </button>

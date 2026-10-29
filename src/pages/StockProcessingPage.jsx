@@ -317,7 +317,7 @@ const StockProcessingPage = () => {
               <div key={`${row.id}-${output.outputItemId}`} className="text-xs text-slate-600">
                 <span className="font-semibold text-slate-800">{output.outputItemName}</span>{" "}
                 {formatQty(output.displayQty, output.qtyUnit)}
-                {output.waste ? <span className="ml-2 rounded bg-red-50 px-1.5 py-0.5 text-red-600">Waste</span> : null}
+                {output.waste ? <span className="ml-2 rounded bg-danger-soft px-1.5 py-0.5 text-danger">Waste</span> : null}
               </div>
             ))}
             {(row.outputs || []).length > 3 && (
@@ -330,7 +330,7 @@ const StockProcessingPage = () => {
         header: "Status",
         render: (row) => (
           <span className={`rounded px-2 py-1 text-xs font-bold ${
-            row.status === "CANCELED" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"
+            row.status === "CANCELED" ? "bg-danger-soft text-danger" : "bg-success-soft text-success"
           }`}>
             {row.status === "CANCELED" ? "Canceled" : "Completed"}
           </span>
@@ -340,7 +340,7 @@ const StockProcessingPage = () => {
       {
         header: "",
         render: () => (
-          <span className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">
+          <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-2 py-1 text-xs font-semibold text-accent">
             <Eye size={13} /> View
           </span>
         ),
@@ -406,7 +406,7 @@ const StockProcessingPage = () => {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
                 <div className="font-semibold text-slate-800">{selectedSource.name}</div>
                 <div className="mt-1 text-slate-500">{selectedSource.barcode || "No barcode"}</div>
-                <div className="mt-3 rounded-lg bg-white px-3 py-2 font-semibold text-emerald-700">
+                <div className="mt-3 rounded-lg bg-white px-3 py-2 font-semibold text-success">
                   Available: {formatDisplayStockQuantity(selectedSource)}
                 </div>
               </div>
@@ -441,7 +441,7 @@ const StockProcessingPage = () => {
                       outputs: applyOutputTemplate(prev.outputs, nextSourceQty),
                     }));
                   }}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
               <div>
@@ -498,7 +498,7 @@ const StockProcessingPage = () => {
                             step="0.001"
                             value={output.qty}
                             onChange={(e) => updateOutput(index, "qty", e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
                             placeholder="Qty"
                           />
                         </div>
@@ -512,7 +512,7 @@ const StockProcessingPage = () => {
                             value={output.sellingPrice}
                             onChange={(e) => updateOutput(index, "sellingPrice", e.target.value)}
                             disabled={output.waste}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:bg-slate-100"
                             placeholder="Batch sell price"
                           />
                         </div>
@@ -526,7 +526,7 @@ const StockProcessingPage = () => {
 
                         <div>
                           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 md:hidden">Est. Cost</div>
-                          <div className="flex h-[42px] items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-blue-700">
+                          <div className="flex h-[42px] items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-accent">
                             {output.waste
                               ? <span className="text-slate-600">-</span>
                               : costPreview.costs[index] != null
@@ -538,7 +538,7 @@ const StockProcessingPage = () => {
 
                         <div>
                           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 md:hidden">Type</div>
-                          <div className={`flex h-[42px] items-center justify-center rounded-lg px-2 text-xs font-bold ${output.waste ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"}`}>
+                          <div className={`flex h-[42px] items-center justify-center rounded-lg px-2 text-xs font-bold ${output.waste ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}>
                             {output.waste ? "Waste" : "Stock"}
                           </div>
                         </div>
@@ -546,10 +546,10 @@ const StockProcessingPage = () => {
                     ))}
 
                     {costPreview.totalRevenue > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-800">
+                      <div className="mt-1 flex flex-wrap gap-4 rounded-lg border border-slate-200 bg-accent-soft px-4 py-2 text-xs font-semibold text-slate-800">
                         <span>Est. Revenue: {formatCurrency(costPreview.totalRevenue)}</span>
                         {costPreview.margin != null && (
-                          <span className={costPreview.margin >= 0 ? "text-emerald-700" : "text-red-600"}>
+                          <span className={costPreview.margin >= 0 ? "text-success" : "text-danger"}>
                             Margin: {costPreview.margin.toFixed(1)}%
                           </span>
                         )}
@@ -563,7 +563,7 @@ const StockProcessingPage = () => {
                   onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
                   rows={2}
                   placeholder="Note"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
                 />
 
                 <div className="flex justify-end gap-2">
@@ -606,7 +606,7 @@ const StockProcessingPage = () => {
                 <div className="text-xs font-semibold uppercase text-slate-500">Status</div>
                 <div className="mt-1">
                   <span className={`rounded px-2 py-1 text-xs font-bold ${
-                    detailsRecord.status === "CANCELED" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"
+                    detailsRecord.status === "CANCELED" ? "bg-danger-soft text-danger" : "bg-success-soft text-success"
                   }`}>
                     {detailsRecord.status === "CANCELED" ? "Canceled" : "Completed"}
                   </span>
@@ -633,7 +633,7 @@ const StockProcessingPage = () => {
                     <div className="text-sm text-slate-600">{formatCurrency(output.allocatedCost)}</div>
                     <div className="text-sm text-slate-600">{output.waste ? "-" : formatCurrency(output.sellingPrice)}</div>
                     <div>
-                      <span className={`rounded px-2 py-1 text-xs font-bold ${output.waste ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"}`}>
+                      <span className={`rounded px-2 py-1 text-xs font-bold ${output.waste ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}>
                         {output.waste ? "Waste" : `Batch ${output.createdBatchId || "-"}`}
                       </span>
                     </div>
@@ -654,8 +654,8 @@ const StockProcessingPage = () => {
             </div>
 
             {detailsRecord.status === "CANCELED" ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                <div className="text-xs font-semibold uppercase text-red-600">Canceled</div>
+              <div className="rounded-lg border border-danger-border bg-danger-soft p-3">
+                <div className="text-xs font-semibold uppercase text-danger">Canceled</div>
                 <div className="mt-1 text-sm font-medium text-slate-800">{detailsRecord.cancelReason || "-"}</div>
                 <div className="mt-1 text-xs text-slate-500">
                   {detailsRecord.canceledByUsername || "-"} | {detailsRecord.canceledAt ? formatDateTime(detailsRecord.canceledAt) : "-"}
@@ -669,7 +669,7 @@ const StockProcessingPage = () => {
                   onChange={(e) => setCancelReason(e.target.value)}
                   rows={3}
                   placeholder="Reason for cancellation"
-                  className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-danger"
                 />
                 <div className="mt-3 flex justify-end gap-2">
                   <Button type="button" variant="secondary" onClick={closeDetailsModal} disabled={!!cancelingId}>

@@ -294,7 +294,7 @@ const SupplierFormPage = () => {
             <Button type="button" variant="secondary" onClick={() => navigate("/suppliers")} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting} className="bg-blue-600 text-white hover:bg-blue-700">
+            <Button type="submit" disabled={submitting} className="bg-accent text-white hover:bg-accent">
               <Save size={18} className="mr-2" />
               {submitting ? "Saving..." : isEdit ? "Save Changes" : "Save Supplier"}
             </Button>

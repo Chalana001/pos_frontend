@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 
 /**
  * One line-art glyph per mechanic, recognition by shape instead of by reading. Stroke uses
- * currentColor so the tokens ride the same slate/blue ramp as the rest of the picker.
+ * currentColor so the tokens ride the same slate ramp as the rest of the picker.
  */
 const GLYPHS = {
   DISCOUNT: (
@@ -69,6 +69,18 @@ const SENTENCES = {
   PROFIT_SHARE: "Give away a share of the margin, never the cost",
 };
 
+/**
+ * Which mechanic the campaign uses, as a grid of single-line options.
+ *
+ * <p>Each of these was a tall card with a glyph, a bold label and a hint stacked inside it —
+ * seven illustrated tiles wrapping into ragged rows. That grid, sitting under a second grid
+ * of four scope cards, is most of why the screen read as assembled rather than designed.
+ * The glyph and the label fit on one line at a small size; the hint stays, on the line
+ * beneath, at 11px, which is the same information in a third of the height.
+ *
+ * <p>Behaviour is unchanged and load-bearing: this is a real radiogroup with roving
+ * tabindex, so Arrow keys move and select, Home/End jump to the ends.
+ */
 const MechanicPicker = ({ options, value, onChange, disabled }) => {
   const buttonsRef = useRef([]);
 
@@ -98,7 +110,7 @@ const MechanicPicker = ({ options, value, onChange, disabled }) => {
 
   return (
     <div role="radiogroup" aria-label="Offer type">
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
         {options.map((type, index) => {
           const selected = value === type.key;
           return (
@@ -112,33 +124,35 @@ const MechanicPicker = ({ options, value, onChange, disabled }) => {
               disabled={disabled}
               onClick={() => onChange(type.key)}
               onKeyDown={(event) => handleKeyDown(event, index)}
-              className={`flex min-w-32 flex-col items-start gap-2 rounded-xl border p-3 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 disabled:cursor-not-allowed disabled:opacity-50 ${
                 selected
-                  ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20"
-                  : "border-slate-200 bg-white hover:border-slate-300"
+                  ? "border-l-accent border-y-slate-200 border-r-slate-200 border bg-accent-soft shadow-sm"
+                  : "border-y-slate-200 border-r-slate-200 border-l-slate-200 border bg-white hover:bg-slate-50"
               }`}
             >
               <svg
                 viewBox="0 0 26 22"
-                width="30"
-                height="24"
+                width="19"
+                height="16"
                 strokeWidth="1.6"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={selected ? "text-blue-600" : "text-slate-500"}
+                className={selected ? "shrink-0 text-accent" : "shrink-0 text-slate-500"}
                 aria-hidden="true"
               >
                 {GLYPHS[type.key]}
               </svg>
-              <span>
-                <span className={`block text-sm font-bold ${selected ? "text-blue-700" : "text-slate-800"}`}>{type.label}</span>
-                <span className="block text-xs text-slate-500">{type.hint}</span>
+              <span className="min-w-0">
+                <span className={`block truncate text-sm ${selected ? "font-semibold text-accent" : "font-medium text-slate-800"}`}>
+                  {type.label}
+                </span>
+                <span className="block truncate text-[11px] text-slate-500">{type.hint}</span>
               </span>
             </button>
           );
         })}
       </div>
-      <p aria-live="polite" className="mt-2 text-xs font-medium text-slate-500">{SENTENCES[value] || ""}</p>
+      <p aria-live="polite" className="mt-1.5 text-xs font-medium text-slate-500">{SENTENCES[value] || ""}</p>
     </div>
   );
 };

@@ -1,17 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
-import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import Modal from "../components/common/Modal"; 
 import CustomSelect from "../components/common/CustomSelect";
 import SearchSelect from "../components/common/SearchSelect";
-import AccordionSection from "../components/items/BulkItemForm";
 import { itemsAPI } from "../api/items.api";
 import { categoriesAPI } from "../api/categories.api"; 
 import { useBranch } from "../context/BranchContext";
 import { useAuth } from "../context/AuthContext";
 import { useAppConfiguration } from "../context/AppConfigurationContext";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import ResizableSplit from "../components/common/ResizableSplit";
 import DraftRestoreBar from "../components/common/DraftRestoreBar";
 import useUnsavedWork from "../hooks/useUnsavedWork";
@@ -126,6 +125,120 @@ const priceUnitLabel = (itemType) => {
   return "";
 };
 
+const fieldClass = "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500";
+const helperClass = "mt-1 text-xs leading-5 text-slate-500";
+
+const BulkSection = ({ title, description, right, isOpen, onToggle, hideToggle = false, children }) => {
+  const contentId = `bulk-section-${String(title).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+  return (
+    <section className="border-b border-slate-200 last:border-b-0">
+      <div className="flex items-start justify-between gap-4 px-4 py-4 sm:px-5">
+        <div className="min-w-0">
+          <h2 id={`${contentId}-heading`} className="text-base font-semibold text-slate-900">{title}</h2>
+          {description && <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p>}
+        </div>
+        <div className="flex shrink-0 items-center gap-2 pt-0.5 text-slate-500">
+          {right}
+          {!hideToggle && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-expanded={isOpen}
+              aria-controls={contentId}
+              aria-labelledby={`${contentId}-heading`}
+              className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+            </button>
+          )}
+        </div>
+      </div>
+      {isOpen && <div id={contentId} className="page-section-enter px-4 pb-5 sm:px-5">{children}</div>}
+    </section>
+  );
+};
+
+const BulkQueueList = ({ cart, totalLines, onEdit, onRemove, compact = false }) => {
+  if (cart.length === 0) {
+    return (
+      <div className={`${compact ? "px-2 py-10" : "px-6 py-14"} text-center`}>
+        <p className="text-sm font-medium text-slate-700">No items queued</p>
+        <p className="mt-1 text-xs text-slate-500">Use the form to add your first item.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-slate-200">
+      {cart.map((row) => (
+        <div key={row.tempId} className={`${compact ? "px-3 py-3" : "px-4 py-3 sm:px-5"}`}>
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-[10px] text-slate-400">
+              {row.imageUrl ? (
+                <img src={row.imageUrl} alt="" className="h-full w-full object-cover" />
+              ) : "IMG"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-800">{row.name}</p>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">{row.barcode || "Auto-generated barcode"}</p>
+                </div>
+                <span className="shrink-0 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                  {row.itemType}
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span>{row.posVisible ? "Visible in POS" : "Hidden from POS"}</span>
+                <span className="font-semibold tabular-nums text-slate-800">LKR {row.sellingPrice ?? 0}</span>
+              </div>
+              <div className="mt-2 flex justify-end gap-3">
+                <button type="button" className="text-xs font-semibold text-slate-600 hover:text-slate-900" onClick={() => onEdit(row.tempId)}>Edit</button>
+                <button type="button" className="text-xs font-semibold text-danger hover:brightness-90" onClick={() => onRemove(row.tempId)}>Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+      {totalLines > 0 && (
+        <div className="bg-slate-50 px-4 py-3 text-xs text-slate-500">
+          Review the list before saving all items.
+        </div>
+      )}
+    </div>
+  );
+};
+
+const BulkToggleRow = ({ label, description, checked, onChange, disabled = false, stateLabel }) => {
+  const active = checked && !disabled;
+  return (
+    <div className={`flex items-start justify-between gap-4 ${disabled ? "opacity-60" : ""}`}>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-slate-800">{label}</span>
+          <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+            {stateLabel || (active ? "On" : "Off")}
+          </span>
+        </div>
+        <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={active}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:cursor-not-allowed ${
+          active ? "bg-accent" : "bg-slate-300"
+        }`}
+      >
+        <span className={`h-5 w-5 rounded-full bg-white transition-transform ${active ? "translate-x-5" : "translate-x-0"}`} />
+      </button>
+    </div>
+  );
+};
+
 const emptyDraft = () => ({
   imageUrl: "",
   name: "",
@@ -162,11 +275,12 @@ export default function BulkAddItems() {
   const [draft, setDraft] = useState(emptyDraft());
   const [cart, setCart] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [showQueueDialog, setShowQueueDialog] = useState(false);
 
   const [openImage, setOpenImage] = useState(true);
   const [openGeneral, setOpenGeneral] = useState(true);
-  const [openProcessing, setOpenProcessing] = useState(true);
-  const [openRecipe, setOpenRecipe] = useState(true);
+  const [openProcessing, setOpenProcessing] = useState(false);
+  const [openRecipe, setOpenRecipe] = useState(false);
 
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
@@ -642,27 +756,6 @@ export default function BulkAddItems() {
 
   const imageBadge = draft.imageUrl?.trim() ? "1 Image" : "0 Image";
 
-  const generalFilledCount = useMemo(() => {
-    let c = 0;
-    if (draft.name.trim()) c++;
-    if (String(draft.categoryId).trim()) c++;
-    if (!singleCategoryMode && String(draft.subCategoryId).trim()) c++;
-    if (String(draft.costPrice).trim()) c++;
-    if (String(draft.sellingPrice).trim()) c++;
-    if (
-      String(draft.reorderLevel).trim() &&
-      draft.itemType !== ItemType.SERVICE &&
-      draft.itemType !== ItemType.RECIPE
-    ) c++;
-    return c;
-  }, [draft, singleCategoryMode]);
-
-  const generalBadge = `${generalFilledCount}/${
-    draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE
-      ? (singleCategoryMode ? 4 : 5)
-      : (singleCategoryMode ? 5 : 6)
-  }`;
-
   const validateGeneral = () => {
     if (!draft.name.trim()) return "Item name is required";
     if (!String(draft.categoryId).trim()) return "Category is required";
@@ -723,12 +816,16 @@ export default function BulkAddItems() {
 
   const addToList = () => {
     const err = validateGeneral();
-    if (err) return toast.error(err);
+    if (err) {
+      toast.error(err);
+      return false;
+    }
 
     const nextBarcode = draft.barcode.trim();
     const exists = nextBarcode ? cart.find((x) => x.barcode === nextBarcode) : null;
     if (exists) {
-      return toast.error("This barcode is already in the list!");
+      toast.error("This barcode is already in the list!");
+      return false;
     }
 
     // 🟢 weightItem ඉවත් කළා
@@ -795,8 +892,16 @@ export default function BulkAddItems() {
     setDraft(emptyDraft());
     setIngredientSearchResults({});
     setProcessingOutputSearchResults({});
-    setSubCategories([]); 
+    setSubCategories([]);
     toast.success("Added to list");
+    return true;
+  };
+
+  const addToListAndRevealQueue = () => {
+    if (!addToList()) return;
+    if (window.matchMedia("(max-width: 1279px)").matches) {
+      setShowQueueDialog(true);
+    }
   };
 
   const removeRow = (tempId) => setCart((p) => p.filter((x) => x.tempId !== tempId));
@@ -923,8 +1028,31 @@ export default function BulkAddItems() {
 
   const totalLines = cart.length;
 
-  return (
-    <div className="page-enter space-y-5 p-6">
+return (
+    <div className="page-enter -mx-2 pb-6 sm:mx-0 xl:pb-2">
+      <div className="page-section-enter flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between" style={{ animationDelay: "80ms" }}>
+        <div className="min-w-0">
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <button type="button" onClick={() => window.history.back()} className="rounded transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent">Items</button>
+            <span aria-hidden="true">/</span>
+            <span className="text-slate-700">Bulk Add Items</span>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Bulk Add Items</h1>
+          <p className="mt-1 text-sm text-slate-500">Add several items to a list, then save them together.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+            {totalLines} {totalLines === 1 ? "item" : "items"} ready
+          </span>
+          <Button variant="secondary" onClick={() => setCart([])} disabled={saving || cart.length === 0}>
+            Clear list
+          </Button>
+          <Button onClick={saveAll} disabled={saving || cart.length === 0}>
+            {saving ? "Saving..." : `Save all (${totalLines})`}
+          </Button>
+        </div>
+      </div>
+
       <DraftRestoreBar
         draft={pendingDraft}
         label={`Unsaved item list${pendingDraft?.payload?.cart?.length
@@ -933,435 +1061,373 @@ export default function BulkAddItems() {
         onRestore={restoreDraft}
         onDiscard={discardDraft}
       />
-      <div className="page-section-enter flex items-center justify-between" style={{ animationDelay: "80ms" }}>
-        <h1 className="text-2xl font-semibold">Bulk Add Items</h1>
 
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => setCart([])}
-            disabled={saving || cart.length === 0}
+      <ResizableSplit storageKey="pos_split_bulk_add" initialWidth={520} min={420} max={760} className="mt-5">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
+            <h2 className="text-lg font-semibold text-slate-900">Add an item</h2>
+            <p className="mt-0.5 text-xs leading-5 text-slate-500">Complete this item, then add it to the list below.</p>
+          </div>
+
+          <BulkSection
+            title="General Information"
+            description="Primary name, identifiers, and catalog classification."
+            isOpen={openGeneral}
+            onToggle={() => setOpenGeneral((v) => !v)}
           >
-            Clear List
-          </Button>
-          <Button onClick={saveAll} disabled={saving || cart.length === 0}>
-            {saving ? "Saving..." : `Save All (${totalLines})`}
-          </Button>
-        </div>
-      </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label htmlFor="bulkadditems-item-name" className="mb-1 block text-[13px] font-semibold text-slate-700">Item Name *</label>
+                <input id="bulkadditems-item-name"
+                  className={`${fieldClass}`}
+                  value={draft.name}
+                  onChange={(e) => updateDraft("name", e.target.value)}
+                  placeholder="e.g. Ceylon Black Tea 250g"
+                />
+              </div>
 
-      <ResizableSplit storageKey="pos_split_bulk_add" initialWidth={520} min={420} max={760}>
-        <div className="space-y-4">
-          <AccordionSection
+              <div className="md:col-span-2">
+                <label htmlFor="bulkadditems-alt-name-sinhala-optional-used-on-receip" className="mb-1 block text-[13px] font-semibold text-slate-700">Alternate Name (Sinhala)</label>
+                <input id="bulkadditems-alt-name-sinhala-optional-used-on-receip"
+                  className={`${fieldClass}`}
+                  value={draft.altName}
+                  onChange={(e) => updateDraft("altName", e.target.value)}
+                  placeholder="Optional Sinhala name"
+                />
+                <p className={helperClass}>Used on receipts when the receipt name source is Alternate Name.</p>
+              </div>
+
+              <div>
+                <label htmlFor="bulkadditems-barcode" className="mb-1 block text-[13px] font-semibold text-slate-700">Barcode</label>
+                <input id="bulkadditems-barcode"
+                  className={`${fieldClass} font-mono tabular-nums`}
+                  value={draft.barcode}
+                  onChange={(e) => updateDraft("barcode", e.target.value)}
+                  placeholder="Scan or enter barcode"
+                />
+                <p className={helperClass}>Leave blank to generate automatically.</p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[13px] font-semibold text-slate-700">Item Type</label>
+                <CustomSelect
+                  value={draft.itemType}
+                  onChange={(val) => {
+                    setIngredientSearchResults({});
+                    setDraft((prev) => ({
+                      ...prev,
+                      itemType: val,
+                      defaultUnit: val === ItemType.WEIGHT ? "KG" : val === ItemType.VOLUME ? "L" : val === ItemType.SERVICE ? "SERVICE" : "PCS",
+                      isKotEnabled: val === ItemType.RECIPE ? prev.isKotEnabled : false,
+                      overheadCostMode: val === ItemType.RECIPE ? prev.overheadCostMode : OVERHEAD_COST_MODES.NONE,
+                      overheadCostValue: val === ItemType.RECIPE ? prev.overheadCostValue : "",
+                      stockProcessingEnabled: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(val)
+                        ? prev.stockProcessingEnabled
+                        : false,
+                      processingOutputs: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(val)
+                        ? prev.processingOutputs
+                        : [],
+                      ingredients: val === ItemType.RECIPE ? prev.ingredients : [],
+                      branchIds: val === ItemType.SERVICE ? prev.branchIds : [],
+                    }));
+                  }}
+                  options={allowedItemTypeOptions}
+                  valueKey="value"
+                  labelKey="label"
+                  buttonClassName="h-11 rounded-lg px-3 text-sm"
+                />
+                <p className={helperClass}>Controls units and optional capabilities.</p>
+              </div>
+
+              {(draft.itemType === ItemType.WEIGHT || draft.itemType === ItemType.VOLUME) && (
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-slate-700">Default Unit</label>
+                  <CustomSelect
+                    value={draft.defaultUnit}
+                    onChange={(value) => updateDraft("defaultUnit", value)}
+                    options={draft.itemType === ItemType.VOLUME ? volumeUnitOptions : weightUnitOptions}
+                    valueKey="value"
+                    labelKey="label"
+                    buttonClassName="h-11 rounded-lg px-3 text-sm"
+                  />
+                </div>
+              )}
+
+              <div className="relative z-20">
+                <label className="mb-1 block text-[13px] font-semibold text-slate-700">Category *</label>
+                <div className="flex gap-2">
+                  <div className="min-w-0 flex-1">
+                    <SearchSelect
+                      value={singleCategoryMode ? draft.subCategoryId : draft.categoryId}
+                      onChange={handleCategoryChange}
+                      options={categories}
+                      placeholder="Select Category"
+                      searchPlaceholder="Type category name…"
+                      noResultsMessage="No category matches that"
+                      emptyMessage="No categories yet — add one with +"
+                      menuMinWidth={260}
+                      onOpen={loadCategories}
+                      inputClassName="h-11 text-sm"
+                    />
+                  </div>
+                  <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="h-11 shrink-0 px-3" aria-label="Add category">
+                    <Plus size={18} />
+                  </Button>
+                </div>
+              </div>
+
+              {!singleCategoryMode && (
+                <div className="relative z-10">
+                  <label className="mb-1 block text-[13px] font-semibold text-slate-700">Sub Category *</label>
+                  <div className="flex gap-2">
+                    <div className="min-w-0 flex-1">
+                      <SearchSelect
+                        value={draft.subCategoryId}
+                        onChange={(val) => updateDraft("subCategoryId", val)}
+                        options={subCategories}
+                        placeholder="Select Sub Category"
+                        searchPlaceholder="Type sub-category name…"
+                        noResultsMessage="No sub-category matches that"
+                        emptyMessage="No sub-categories for this category"
+                        menuMinWidth={260}
+                        onOpen={() => loadSubCategories(draft.categoryId)}
+                        disabled={!draft.categoryId}
+                        inputClassName="h-11 text-sm"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setShowSubCatModal(true)}
+                      className="h-11 shrink-0 px-3"
+                      disabled={!draft.categoryId}
+                      aria-label="Add sub category"
+                    >
+                      <Plus size={18} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {draft.itemType === ItemType.SERVICE && (
+                <div className="md:col-span-2 border-t border-slate-200 pt-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <label className="block text-[13px] font-semibold text-slate-700">Available Branches *</label>
+                      <p className={helperClass}>This service is visible in POS only for selected branches.</p>
+                    </div>
+                    <span className="shrink-0 text-xs font-medium text-slate-500">{draft.branchIds.length} selected</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    {branches.map((branch) => {
+                      const checked = draft.branchIds.includes(branch.id);
+                      return (
+                        <label
+                          key={branch.id}
+                          className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition ${
+                            checked ? "border-accent bg-accent-soft" : "border-slate-200 bg-white hover:bg-slate-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleDraftBranch(branch.id)}
+                            className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                          />
+                          <span className="text-sm text-slate-700">{branch.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </BulkSection>
+
+          <BulkSection
             title="Product Image"
-            subtitle="Paste image URL to preview"
-            badge={imageBadge}
+            description="Paste an image URL and confirm the preview."
+            right={<span className="text-xs text-slate-500">{imageBadge}</span>}
             isOpen={openImage}
             onToggle={() => setOpenImage((v) => !v)}
           >
-            <div className="space-y-2">
-              <label htmlFor="bulkadditems-image-url" className="text-sm font-medium">Image URL</label>
-              <input id="bulkadditems-image-url"
-                className="w-full border rounded-lg px-3 py-2"
-                value={draft.imageUrl}
-                onChange={(e) => updateDraft("imageUrl", e.target.value)}
-                placeholder="https://..."
-              />
-
-              <div className="border rounded-lg h-64 flex items-center justify-center overflow-hidden bg-gray-50">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
+              <div className="aspect-[4/3] overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50">
                 {draft.imageUrl ? (
                   <img
                     src={draft.imageUrl}
-                    alt="preview"
-                    className="max-h-full max-w-full object-contain"
+                    alt="Product preview"
+                    className="h-full w-full object-cover"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
                   />
                 ) : (
-                  <span className="text-slate-600 text-sm">
-                    Image preview will appear here
-                  </span>
+                  <div className="flex h-full items-center justify-center px-4 text-center text-xs text-slate-500">Image preview</div>
                 )}
               </div>
-
-              <div className="flex gap-2">
+              <div>
+                <label htmlFor="bulkadditems-image-url" className="mb-1 block text-[13px] font-semibold text-slate-700">Image URL</label>
+                <input id="bulkadditems-image-url"
+                  className={fieldClass}
+                  value={draft.imageUrl}
+                  onChange={(e) => updateDraft("imageUrl", e.target.value)}
+                  placeholder="https://..."
+                />
+                <p className={helperClass}>Preview updates instantly.</p>
                 <Button
+                  type="button"
                   variant="secondary"
-                  className="flex-1"
-                  onClick={() => toast("You can replace by pasting a new URL")}
-                >
-                  Replace
-                </Button>
-                <Button
-                  variant="secondary"
+                  className="mt-3"
                   onClick={() => updateDraft("imageUrl", "")}
                   disabled={!draft.imageUrl}
                 >
-                  Remove
+                  Remove image
                 </Button>
               </div>
             </div>
-          </AccordionSection>
+          </BulkSection>
 
-          <AccordionSection
-            title="General Information"
-            badge={generalBadge}
-            isOpen={openGeneral}
-            onToggle={() => setOpenGeneral((v) => !v)}
+          <BulkSection
+            title="Pricing & Stock"
+            description="Commercial price and the low-stock threshold for this item."
+            isOpen
+            onToggle={() => {}}
+            hideToggle
           >
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="bulkadditems-item-name" className="text-sm font-medium">Item Name *</label>
-                <input id="bulkadditems-item-name"
-                  className="w-full border rounded-lg px-3 py-2"
-                  value={draft.name}
-                  onChange={(e) => updateDraft("name", e.target.value)}
-                  placeholder="Ex: Sugar 1Kg"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="bulkadditems-alt-name-sinhala-optional-used-on-receip" className="text-sm font-medium">
-                  Alt Name (Sinhala)
-                  <span className="ml-2 text-xs text-slate-600 font-normal">Optional. Used on receipts when set to Alt Name.</span>
-                </label>
-                <input id="bulkadditems-alt-name-sinhala-optional-used-on-receip"
-                  className="w-full border rounded-lg px-3 py-2"
-                  value={draft.altName}
-                  onChange={(e) => updateDraft("altName", e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                  <label htmlFor="bulkadditems-barcode" className="text-sm font-medium">Barcode</label>
-                  <input id="bulkadditems-barcode"
-                    className="w-full border rounded-lg px-3 py-2"
-                    value={draft.barcode}
-                    onChange={(e) => updateDraft("barcode", e.target.value)}
-                    placeholder="Leave blank for auto-generate"
-                  />
-                  <p className="text-xs text-slate-500">Optional. Backend will generate a barcode if this is empty.</p>
-                </div>
-
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                  <label htmlFor="bulkadditems-reorder-level" className="text-sm font-medium">Reorder Level</label>
-                  <input id="bulkadditems-reorder-level"
-                    type="number"
-                    min="0"
-                    className={`w-full border rounded-lg px-3 py-2 ${
-                      draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE ? "bg-gray-100 text-gray-400" : ""
-                    }`}
-                    value={draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE ? "0" : draft.reorderLevel}
-                    onChange={(e) => updateDraft("reorderLevel", e.target.value)}
-                    disabled={draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE}
-                    placeholder="0"
-                  />
-                </div>
-
-                <div className="space-y-2 col-span-2 relative z-20">
-                  <label className="text-sm font-medium">Category *</label>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <SearchSelect
-                        value={singleCategoryMode ? draft.subCategoryId : draft.categoryId}
-                        onChange={handleCategoryChange}
-                        options={categories}
-                        placeholder="Select Category"
-                        searchPlaceholder="Type category name…"
-                        noResultsMessage="No category matches that"
-                        emptyMessage="No categories yet — add one with +"
-                        menuMinWidth={260}
-                        onOpen={loadCategories}
-                      />
-                    </div>
-                    <Button type="button" variant="secondary" onClick={() => setShowCatModal(true)} className="px-3 shrink-0">
-                      <Plus size={18} />
-                    </Button>
-                  </div>
-                </div>
-
-                {!singleCategoryMode && (
-                  <div className="space-y-2 col-span-2 relative z-10">
-                    <label className="text-sm font-medium">Sub Category *</label>
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <SearchSelect
-                          value={draft.subCategoryId}
-                          onChange={(val) => updateDraft("subCategoryId", val)}
-                          options={subCategories}
-                          placeholder="Select Sub Category"
-                          searchPlaceholder="Type sub-category name…"
-                          noResultsMessage="No sub-category matches that"
-                          emptyMessage="No sub-categories for this category"
-                          menuMinWidth={260}
-                          onOpen={() => loadSubCategories(draft.categoryId)}
-                          disabled={!draft.categoryId}
-                        />
-                      </div>
-                      <Button 
-                        type="button" 
-                        variant="secondary" 
-                        onClick={() => setShowSubCatModal(true)} 
-                        className="px-3 shrink-0"
-                        disabled={!draft.categoryId}
-                      >
-                        <Plus size={18} />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 🟢 Enum Option එක භාවිතා කිරීම */}
-                <div className="space-y-2 col-span-2 p-3 bg-slate-50 border rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-slate-700">Type:</label>
-                    <CustomSelect
-                      value={draft.itemType}
-                      onChange={(val) => {
-                        setIngredientSearchResults({});
-                        setDraft({
-                           ...draft, 
-                           itemType: val,
-                          defaultUnit: val === ItemType.WEIGHT ? "KG" : val === ItemType.VOLUME ? "L" : val === ItemType.SERVICE ? "SERVICE" : "PCS",
-                           isKotEnabled: val === ItemType.RECIPE ? draft.isKotEnabled : false,
-                           overheadCostMode: val === ItemType.RECIPE ? draft.overheadCostMode : OVERHEAD_COST_MODES.NONE,
-                           overheadCostValue: val === ItemType.RECIPE ? draft.overheadCostValue : "",
-                           stockProcessingEnabled: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(val)
-                             ? draft.stockProcessingEnabled
-                             : false,
-                           processingOutputs: [ItemType.NORMAL, ItemType.WEIGHT, ItemType.VOLUME].includes(val)
-                             ? draft.processingOutputs
-                             : [],
-                           ingredients: val === ItemType.RECIPE ? draft.ingredients : [],
-                           branchIds: val === ItemType.SERVICE ? draft.branchIds : [],
-                           posVisible: draft.posVisible,
-                        });
-                      }}
-                      options={allowedItemTypeOptions}
-                      valueKey="value"
-                      labelKey="label"
-                      className="w-[190px]"
-                      buttonClassName="rounded-lg px-3 py-1.5 text-sm"
-                    />
-
-                    {(draft.itemType === ItemType.WEIGHT || draft.itemType === ItemType.VOLUME) && (
-                      <div className="flex items-center gap-2 ml-4 border-l pl-4 border-slate-300">
-                        <label className="text-sm font-medium text-slate-700">Unit:</label>
-                        <CustomSelect
-                          value={draft.defaultUnit}
-                          onChange={(value) => updateDraft("defaultUnit", value)}
-                          options={draft.itemType === ItemType.VOLUME ? volumeUnitOptions : weightUnitOptions}
-                          valueKey="value"
-                          labelKey="label"
-                          className="w-[96px]"
-                          buttonClassName="rounded-lg px-2 py-1.5 text-sm"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2 col-span-1">
-                  <label htmlFor="bulkadditems-cost" className="text-sm font-medium">Cost {priceUnitLabel(draft.itemType)}</label>
+            <div className="grid grid-cols-2 gap-2 min-[370px]:grid-cols-3 sm:gap-4">
+              <div>
+                <label htmlFor="bulkadditems-cost" className="mb-1 flex h-8 items-end text-[12px] font-semibold leading-4 text-slate-700 sm:text-[13px]">Cost {priceUnitLabel(draft.itemType)}</label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-500 sm:left-3 sm:text-xs">LKR</span>
                   <input id="bulkadditems-cost"
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full border rounded-lg px-3 py-2"
+                    className={`${fieldClass} pl-9 pr-2 text-right tabular-nums sm:pl-12 sm:pr-3`}
                     value={draft.costPrice}
                     onChange={(e) => updateDraft("costPrice", e.target.value)}
                     placeholder="0.00"
                   />
                 </div>
+              </div>
 
-                <div className="space-y-2 col-span-1">
-                  <label htmlFor="bulkadditems-sell" className="text-sm font-medium">Sell {priceUnitLabel(draft.itemType)}</label>
+              <div>
+                <label htmlFor="bulkadditems-sell" className="mb-1 flex h-8 items-end text-[12px] font-semibold leading-4 text-slate-700 sm:text-[13px]">Sell {priceUnitLabel(draft.itemType)}</label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-500 sm:left-3 sm:text-xs">LKR</span>
                   <input id="bulkadditems-sell"
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full border rounded-lg px-3 py-2"
+                    className={`${fieldClass} pl-9 pr-2 text-right font-semibold tabular-nums sm:pl-12 sm:pr-3`}
                     value={draft.sellingPrice}
                     onChange={(e) => updateDraft("sellingPrice", e.target.value)}
                     placeholder="0.00"
                   />
                 </div>
-
-                {draft.itemType === ItemType.SERVICE && (
-                  <div className="space-y-3 col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <label className="text-sm font-medium text-slate-700">Available Branches *</label>
-                        <p className="text-xs text-slate-500">This service will be available only in selected branches.</p>
-                      </div>
-                      <span className="text-xs font-medium text-slate-600">{draft.branchIds.length} selected</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {branches.map((branch) => {
-                        const checked = draft.branchIds.includes(branch.id);
-                        return (
-                          <label
-                            key={branch.id}
-                            className={`flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition ${
-                              checked ? "border-blue-400 bg-blue-50" : "border-slate-200 bg-white"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleDraftBranch(branch.id)}
-                              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-slate-700">{branch.name}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {draft.itemType === ItemType.RECIPE && (
-                  <div className="col-span-2 space-y-4 rounded-lg border border-rose-200 bg-rose-50 p-4">
-                    <label className={`flex items-center justify-between gap-3 ${kotEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}>
-                      <div>
-                        <div className="text-sm font-medium text-slate-700">Send to Kitchen (KOT)</div>
-                        <p className="text-xs text-slate-500">
-                          {kotEnabled
-                            ? 'Enable this when the item should appear on kitchen order tickets.'
-                            : 'KOT is disabled in App Configuration.'}
-                        </p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={kotEnabled && !!draft.isKotEnabled}
-                        disabled={!kotEnabled}
-                        onChange={(e) => updateDraft("isKotEnabled", e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </label>
-
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Recipe Overhead</label>
-                        <CustomSelect
-                          value={draft.overheadCostMode}
-                          onChange={(value) => {
-                            updateDraft("overheadCostMode", value);
-                            if (value === OVERHEAD_COST_MODES.NONE) updateDraft("overheadCostValue", "");
-                          }}
-                          options={overheadCostOptions}
-                          valueKey="value"
-                          labelKey="label"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">
-                          {draft.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "Overhead Percent" : "Overhead Amount"}
-                        </label>
-                        <div className="flex rounded-lg border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-blue-500">
-                          <input aria-label="Overhead cost"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={draft.overheadCostValue}
-                            onChange={(e) => updateDraft("overheadCostValue", e.target.value)}
-                            disabled={draft.overheadCostMode === OVERHEAD_COST_MODES.NONE}
-                            className="w-full rounded-l-lg px-3 py-2 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600"
-                            placeholder="0"
-                          />
-                          <span className="flex items-center rounded-r-lg border-l border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500">
-                            {draft.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "%" : "LKR"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <label className="flex items-center justify-between gap-3 cursor-pointer">
-                    <div>
-                      <div className="text-sm font-medium text-slate-700">Show in POS</div>
-                      <p className="text-xs text-slate-500">Turn this off for ingredient-only stock items used in recipes.</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={!!draft.posVisible}
-                      onChange={(e) => updateDraft("posVisible", e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </label>
-                </div>
-
-                <div className={`col-span-2 rounded-lg border p-4 ${draft.active ? "border-slate-200 bg-slate-50" : "border-red-200 bg-red-50"}`}>
-                  <label className="flex items-center justify-between gap-3 cursor-pointer">
-                    <div>
-                      <div className={`text-sm font-medium ${draft.active ? "text-slate-700" : "text-red-700"}`}>
-                        Active Item
-                      </div>
-                      <p className="text-xs text-slate-500">Inactive items stay saved but are hidden from sale and stock selection.</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={!!draft.active}
-                      onChange={(e) => updateDraft("active", e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </label>
-                </div>
               </div>
 
+              <div>
+                <label htmlFor="bulkadditems-reorder-level" className="mb-1 flex h-8 items-end text-[12px] font-semibold leading-4 text-slate-700 sm:text-[13px]">Reorder Level</label>
+                <input id="bulkadditems-reorder-level"
+                  type="number"
+                  min="0"
+                  className={`${fieldClass} px-2 text-right tabular-nums sm:px-3`}
+                  value={draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE ? "0" : draft.reorderLevel}
+                  onChange={(e) => updateDraft("reorderLevel", e.target.value)}
+                  disabled={draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE}
+                  placeholder="0"
+                />
+              </div>
             </div>
-          </AccordionSection>
+            <p className={`${helperClass} mt-2`}>
+              {draft.itemType === ItemType.SERVICE || draft.itemType === ItemType.RECIPE
+                ? "Reorder Level is not used for service or recipe items."
+                : "Reorder Level warns when available stock reaches that quantity."}
+            </p>
+
+            {draft.itemType === ItemType.RECIPE && (
+              <div className="mt-4 grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-slate-700">Recipe Overhead</label>
+                  <CustomSelect
+                    value={draft.overheadCostMode}
+                    onChange={(value) => {
+                      setDraft((prev) => ({
+                        ...prev,
+                        overheadCostMode: value,
+                        overheadCostValue: value === OVERHEAD_COST_MODES.NONE ? "" : prev.overheadCostValue,
+                      }));
+                    }}
+                    options={overheadCostOptions}
+                    valueKey="value"
+                    labelKey="label"
+                    buttonClassName="h-11 rounded-lg px-3 text-sm"
+                  />
+                  <p className={helperClass}>For oil, spice, gas, packing, or untracked kitchen overhead.</p>
+                </div>
+                <div>
+                  <label htmlFor="bulkadditems-overhead" className="mb-1 block text-[13px] font-semibold text-slate-700">
+                    {draft.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "Overhead Percent" : "Overhead Amount"}
+                  </label>
+                  <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
+                    <input id="bulkadditems-overhead"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.overheadCostValue}
+                      onChange={(e) => updateDraft("overheadCostValue", e.target.value)}
+                      disabled={draft.overheadCostMode === OVERHEAD_COST_MODES.NONE}
+                      className={`${fieldClass} text-right tabular-nums`}
+                      placeholder="0"
+                    />
+                    <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-600">
+                      {draft.overheadCostMode === OVERHEAD_COST_MODES.PERCENT ? "%" : "LKR"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </BulkSection>
 
           {isStockTrackedDraft && (
-            <AccordionSection
+            <BulkSection
               title="Stock Processing"
-              subtitle="Link output items produced from this stock item"
-              badge={draft.stockProcessingEnabled ? `${draft.processingOutputs.length} Outputs` : "Off"}
+              description="Optional. Link output items produced from this stock item."
+              right={<span className="text-xs text-slate-500">{draft.stockProcessingEnabled ? `${draft.processingOutputs.length} outputs` : "Optional"}</span>}
               isOpen={openProcessing}
               onToggle={() => setOpenProcessing((v) => !v)}
             >
               <div className="space-y-4">
-                <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 cursor-pointer">
-                  <div>
-                    <div className="text-sm font-medium text-slate-700">Enable Stock Processing</div>
-                    <p className="text-xs text-slate-500">Use this item as a source that can be processed into linked outputs.</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={!!draft.stockProcessingEnabled}
-                    onChange={(e) => {
-                      setDraft((prev) => ({
-                        ...prev,
-                        stockProcessingEnabled: e.target.checked,
-                        processingOutputs: e.target.checked && prev.processingOutputs.length === 0
-                          ? [buildEmptyProcessingOutput()]
-                          : prev.processingOutputs,
-                      }));
-                    }}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </label>
+                <BulkToggleRow
+                  label="Enable as processing source"
+                  description="Use this item as a source that can be processed into linked outputs."
+                  checked={!!draft.stockProcessingEnabled}
+                  stateLabel={draft.stockProcessingEnabled ? "On" : "Off"}
+                  onChange={(checked) => {
+                    setDraft((prev) => ({
+                      ...prev,
+                      stockProcessingEnabled: checked,
+                      processingOutputs: checked && prev.processingOutputs.length === 0
+                        ? [buildEmptyProcessingOutput()]
+                        : prev.processingOutputs,
+                    }));
+                  }}
+                />
 
                 {draft.stockProcessingEnabled && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm text-slate-500">
-                        Select output stock items and default quantities produced from this source.
-                      </p>
-                      <Button type="button" onClick={addProcessingOutputRow}>
+                  <div className="space-y-3 border-t border-slate-200 pt-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm leading-6 text-slate-500">Select output stock items and default quantities produced from this source.</p>
+                      <Button type="button" onClick={addProcessingOutputRow} className="shrink-0">
                         <Plus size={16} className="mr-2" />
-                        Add Output
+                        Add output
                       </Button>
                     </div>
 
                     {draft.processingOutputs.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                      <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
                         No output items linked yet.
                       </div>
                     ) : (
@@ -1369,14 +1435,14 @@ export default function BulkAddItems() {
                         {draft.processingOutputs.map((output, index) => (
                           <div
                             key={`${output.outputItemId || "new"}-${index}`}
-                            className={`relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_140px_120px_52px] ${
+                            className={`relative grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_140px_52px] ${
                               processingOutputSearchResults[index]?.loading || (processingOutputSearchResults[index]?.items || []).length > 0 ? "z-50" : "z-0"
                             }`}
                           >
                             <div>
-                              <label className="mb-1 block text-sm font-medium text-slate-700">Output Item</label>
+                              <label className="mb-1 block text-[13px] font-semibold text-slate-700">Output Item <span className="text-accent">*</span></label>
                               <div className="relative">
-                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+                                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                                 <input aria-label="Output item"
                                   type="text"
                                   value={output.search || ""}
@@ -1384,7 +1450,7 @@ export default function BulkAddItems() {
                                   onKeyDown={(e) => handleProcessingOutputSearchKeyDown(index, e)}
                                   onBlur={() => window.setTimeout(() => clearProcessingOutputSearchResults(index), 150)}
                                   placeholder="Search output item..."
-                                  className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className={`${fieldClass} pl-10`}
                                 />
                                 {(processingOutputSearchResults[index]?.loading || (processingOutputSearchResults[index]?.items || []).length > 0) && (
                                   <div className="relative z-[80] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
@@ -1397,7 +1463,7 @@ export default function BulkAddItems() {
                                           type="button"
                                           onMouseDown={(e) => e.preventDefault()}
                                           onClick={() => selectProcessingOutputForRow(index, option)}
-                                          className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-blue-50 last:border-b-0"
+                                          className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-accent-soft last:border-b-0"
                                         >
                                           <div className="min-w-0">
                                             <div className="truncate font-medium text-slate-800">{option.name}</div>
@@ -1421,7 +1487,7 @@ export default function BulkAddItems() {
                             </div>
 
                             <div>
-                              <label className="mb-1 block text-sm font-medium text-slate-700">Default Qty</label>
+                              <label className="mb-1 block text-[13px] font-semibold text-slate-700">Default Qty <span className="text-accent">*</span></label>
                               <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2">
                                 <input aria-label="Default quantity"
                                   type="number"
@@ -1429,7 +1495,7 @@ export default function BulkAddItems() {
                                   step="0.001"
                                   value={output.defaultQty}
                                   onChange={(e) => updateProcessingOutput(index, "defaultQty", e.target.value)}
-                                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className={`${fieldClass} px-3 tabular-nums`}
                                   placeholder="0"
                                 />
                                 <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600">
@@ -1438,21 +1504,20 @@ export default function BulkAddItems() {
                               </div>
                             </div>
 
-                            <label className="flex items-end gap-2 pb-2 text-sm font-medium text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={!!output.waste}
-                                onChange={(e) => updateProcessingOutput(index, "waste", e.target.checked)}
-                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              Waste
-                            </label>
-
-                            <div className="flex items-end">
+                            <div className="flex flex-wrap items-end gap-3">
+                              <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-slate-700">
+                                <input
+                                  type="checkbox"
+                                  checked={!!output.waste}
+                                  onChange={(e) => updateProcessingOutput(index, "waste", e.target.checked)}
+                                  className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                                />
+                                Waste
+                              </label>
                               <button aria-label="Remove output"
                                 type="button"
                                 onClick={() => removeProcessingOutput(index)}
-                                className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"
+                                className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-danger-border hover:text-danger focus:outline-none focus:ring-2 focus:ring-accent"
                                 title="Remove output"
                               >
                                 <Trash2 size={16} />
@@ -1465,30 +1530,28 @@ export default function BulkAddItems() {
                   </div>
                 )}
               </div>
-            </AccordionSection>
+            </BulkSection>
           )}
 
           {draft.itemType === ItemType.RECIPE && (
-            <AccordionSection
+            <BulkSection
               title="Recipe Ingredients"
-              subtitle="Search and add stock items used by this recipe"
-              badge={`${draft.ingredients.length} Items`}
+              description="Optional. Search and add stock items used by this recipe."
+              right={<span className="text-xs text-slate-500">{draft.ingredients.length} items</span>}
               isOpen={openRecipe}
               onToggle={() => setOpenRecipe((v) => !v)}
             >
               <div className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-slate-500">
-                    Search ingredients by name or barcode. Stock quantity is not shown here.
-                  </p>
-                  <Button type="button" onClick={addIngredientRow}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm leading-6 text-slate-500">Search ingredients by name or barcode.</p>
+                  <Button type="button" onClick={addIngredientRow} className="shrink-0">
                     <Plus size={16} className="mr-2" />
-                    Add Ingredient
+                    Add ingredient
                   </Button>
                 </div>
 
                 {draft.ingredients.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                  <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
                     No ingredients added yet.
                   </div>
                 ) : (
@@ -1496,14 +1559,14 @@ export default function BulkAddItems() {
                     {draft.ingredients.map((ingredient, index) => (
                       <div
                         key={`${ingredient.ingredientItemId || "new"}-${index}`}
-                        className={`relative grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px] ${
+                        className={`relative grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_120px_120px_52px] ${
                           ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0 ? "z-50" : "z-0"
                         }`}
                       >
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Ingredient</label>
+                          <label className="mb-1 block text-[13px] font-semibold text-slate-700">Ingredient <span className="text-accent">*</span></label>
                           <div className="relative">
-                            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+                            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                             <input aria-label="Ingredient"
                               type="text"
                               value={ingredient.search || ""}
@@ -1511,7 +1574,7 @@ export default function BulkAddItems() {
                               onKeyDown={(e) => handleIngredientSearchKeyDown(index, e)}
                               onBlur={() => window.setTimeout(() => clearIngredientSearchResults(index), 150)}
                               placeholder="Scan barcode or type ingredient name..."
-                              className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className={`${fieldClass} pl-10`}
                             />
                             {(ingredientSearchResults[index]?.loading || (ingredientSearchResults[index]?.items || []).length > 0) && (
                               <div className="relative z-[80] mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
@@ -1524,7 +1587,7 @@ export default function BulkAddItems() {
                                       type="button"
                                       onMouseDown={(e) => e.preventDefault()}
                                       onClick={() => selectIngredientForRow(index, option)}
-                                      className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-blue-50 last:border-b-0"
+                                      className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-left transition hover:bg-accent-soft last:border-b-0"
                                     >
                                       <div className="min-w-0">
                                         <div className="truncate font-medium text-slate-800">{option.name}</div>
@@ -1550,25 +1613,26 @@ export default function BulkAddItems() {
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Qty</label>
+                          <label className="mb-1 block text-[13px] font-semibold text-slate-700">Qty <span className="text-accent">*</span></label>
                           <input aria-label="Ingredient quantity"
                             type="number"
                             min="0"
                             step="0.001"
                             value={ingredient.quantity}
                             onChange={(e) => updateIngredient(index, "quantity", e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={`${fieldClass} tabular-nums`}
                           />
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Unit</label>
+                          <label className="mb-1 block text-[13px] font-semibold text-slate-700">Unit</label>
                           <CustomSelect
                             value={ingredient.qtyUnit}
                             onChange={(value) => updateIngredient(index, "qtyUnit", value)}
                             options={recipeUnitOptions}
                             valueKey="value"
                             labelKey="label"
+                            buttonClassName="h-11 rounded-lg px-3 text-sm"
                           />
                         </div>
 
@@ -1576,7 +1640,7 @@ export default function BulkAddItems() {
                           <button aria-label="Remove ingredient"
                             type="button"
                             onClick={() => removeIngredient(index)}
-                            className="flex h-[42px] w-[42px] items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-red-600"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-danger-border hover:text-danger focus:outline-none focus:ring-2 focus:ring-accent"
                             title="Remove ingredient"
                           >
                             <Trash2 size={16} />
@@ -1587,88 +1651,147 @@ export default function BulkAddItems() {
                   </div>
                 )}
               </div>
-            </AccordionSection>
+            </BulkSection>
           )}
 
-          <Card className="sales-panel-enter sales-panel-hover p-4" style={{ animationDelay: "180ms" }}>
-            <Button onClick={addToList} className="w-full">
-              + Add to List
-            </Button>
-          </Card>
+          <BulkSection
+            title="Visibility & Status"
+            description="Control where this queued item will be available."
+            isOpen
+            onToggle={() => {}}
+            hideToggle
+          >
+            <div className="space-y-4 divide-y divide-slate-200">
+              <BulkToggleRow
+                label="Show in POS"
+                description="Turn this off for ingredient-only stock items used in recipes."
+                checked={!!draft.posVisible}
+                stateLabel={draft.posVisible ? "Visible" : "Hidden"}
+                onChange={(checked) => updateDraft("posVisible", checked)}
+              />
+              <div className="pt-4">
+                <BulkToggleRow
+                  label="Item active"
+                  description="Inactive items stay saved but are hidden from sale and stock selection."
+                  checked={!!draft.active}
+                  stateLabel={draft.active ? "Active" : "Inactive"}
+                  onChange={(checked) => updateDraft("active", checked)}
+                />
+              </div>
+              {draft.itemType === ItemType.RECIPE && (
+                <div className="pt-4">
+                  <BulkToggleRow
+                    label="Send to Kitchen (KOT)"
+                    description={kotEnabled ? "Print a kitchen ticket when this recipe is sold." : "KOT is disabled in App Configuration."}
+                    checked={kotEnabled && !!draft.isKotEnabled}
+                    disabled={!kotEnabled}
+                    stateLabel={!kotEnabled ? "Unavailable" : (draft.isKotEnabled ? "On" : "Off")}
+                    onChange={(checked) => updateDraft("isKotEnabled", checked)}
+                  />
+                </div>
+              )}
+            </div>
+          </BulkSection>
+
+          <div className="sticky bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" onClick={() => setDraft(emptyDraft())} className="flex-1">
+                Clear form
+              </Button>
+              <Button type="button" onClick={addToListAndRevealQueue} className="flex-[2]">
+                Add to list
+              </Button>
+            </div>
+          </div>
         </div>
 
-        <div>
-          <Card className="sales-panel-enter p-4 space-y-4" style={{ animationDelay: "130ms" }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Items List</h2>
-                <p className="text-sm text-gray-500">
-                  Items to save: {totalLines}
-                </p>
-              </div>
+        <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white xl:block">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Items to add</h2>
+              <p className="mt-0.5 text-xs text-slate-500">{totalLines} {totalLines === 1 ? "item" : "items"} queued</p>
             </div>
+            <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+              {totalLines} ready
+            </span>
+          </div>
 
-            {cart.length === 0 ? (
-              <div className="rounded-lg border p-8 text-center text-gray-500">
-                No items added yet. Add items from the form.
-              </div>
-            ) : (
-              <div className="app-table-wrap rounded-lg border">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr className="text-left">
-                      <th className="px-3 py-2">Item</th>
-                      <th className="px-3 py-2">Barcode</th>
-                      <th className="px-3 py-2">Type</th>
-                      <th className="px-3 py-2">POS</th>
-                      <th className="px-3 py-2 text-right">Cost</th>
-                      <th className="px-3 py-2 text-right">Sell</th>
-                      <th className="px-3 py-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
+          <BulkQueueList
+            cart={cart}
+            totalLines={totalLines}
+            onEdit={editRow}
+            onRemove={removeRow}
+          />
 
-                  <tbody>
-                    {cart.map((row) => (
-                      <tr key={row.tempId} className="border-t">
-                        <td className="px-3 py-2 whitespace-nowrap">{row.name}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{row.barcode || "Auto"}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                            <span className="text-xs bg-slate-100 px-1.5 py-0.5 rounded border">{row.itemType}</span>
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          <span className={`text-xs px-1.5 py-0.5 rounded border ${
-                            row.posVisible ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600 border-slate-200"
-                          }`}>
-                            {row.posVisible ? "Visible" : "Hidden"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-right">{row.costPrice}</td>
-                        <td className="px-3 py-2 text-right">{row.sellingPrice}</td>
-                        <td className="px-3 py-2">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              className="min-h-11 px-3 py-1 rounded border hover:bg-gray-50"
-                              onClick={() => editRow(row.tempId)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="min-h-11 px-3 py-1 rounded border hover:bg-red-50 text-red-600"
-                              onClick={() => removeRow(row.tempId)}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
+          {cart.length === 0 && (
+            <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 sm:px-5">
+              Items are saved only when you choose Save all.
+            </div>
+          )}
         </div>
       </ResizableSplit>
+
+      {createPortal(
+        <button
+          type="button"
+          onClick={() => setShowQueueDialog(true)}
+          className="fixed bottom-4 right-4 z-[70] flex h-14 min-w-14 items-center justify-center gap-2 rounded-full bg-accent px-4 text-accent-fg shadow-lg transition hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 xl:hidden"
+          aria-label={`Open queued items, ${totalLines} ${totalLines === 1 ? "item" : "items"}`}
+        >
+          <span className="relative">
+            <ShoppingCart size={22} aria-hidden="true" />
+            {totalLines > 0 && (
+              <span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-accent bg-white px-1 text-[10px] font-bold leading-none text-slate-900 tabular-nums">
+                {totalLines}
+              </span>
+            )}
+          </span>
+          <span className="text-sm font-semibold">List</span>
+        </button>,
+        document.body
+      )}
+
+      <Modal
+        isOpen={showQueueDialog}
+        onClose={() => setShowQueueDialog(false)}
+        title={`Items to add${totalLines ? ` (${totalLines})` : ""}`}
+      >
+        <div className="-mx-2 overflow-hidden rounded-xl border border-slate-200">
+          <BulkQueueList
+            cart={cart}
+            totalLines={totalLines}
+            compact
+            onEdit={(tempId) => {
+              editRow(tempId);
+              setShowQueueDialog(false);
+            }}
+            onRemove={removeRow}
+          />
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setCart([]);
+              setShowQueueDialog(false);
+            }}
+            disabled={saving || cart.length === 0}
+          >
+            Clear list
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              setShowQueueDialog(false);
+              saveAll();
+            }}
+            disabled={saving || cart.length === 0}
+          >
+            {saving ? "Saving..." : `Save all (${totalLines})`}
+          </Button>
+        </div>
+      </Modal>
 
       <Modal isOpen={showCatModal} onClose={() => !savingCat && setShowCatModal(false)} title="Add New Category">
         <div className="space-y-4">
@@ -1678,7 +1801,7 @@ export default function BulkAddItems() {
               type="text"
               value={newCatName}
               onChange={(e) => setNewCatName(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
               placeholder="e.g. Beverages"
               autoFocus
             />
@@ -1702,7 +1825,7 @@ export default function BulkAddItems() {
               type="text"
               value={newSubCatName}
               onChange={(e) => setNewSubCatName(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
               placeholder="e.g. Soft Drinks"
               autoFocus
             />

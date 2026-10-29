@@ -82,12 +82,12 @@ const CustomerLoyaltyPanel = ({ customerId }) => {
   return (
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
-          <p className="flex items-center gap-1 text-xs font-bold uppercase text-violet-700">
+        <div className="rounded-xl border border-info-border bg-info-soft p-4">
+          <p className="flex items-center gap-1 text-xs font-bold uppercase text-info">
             <Sparkles size={12} /> Points
           </p>
-          <p className="mt-2 text-2xl font-black text-violet-900">{account.pointsBalance}</p>
-          <p className="text-xs text-violet-700">worth {formatCurrency(account.pointsValue)}</p>
+          <p className="mt-2 text-2xl font-black text-info">{account.pointsBalance}</p>
+          <p className="text-xs text-info">worth {formatCurrency(account.pointsValue)}</p>
         </div>
         <div className="rounded-xl border border-slate-200 p-4">
           <p className="text-xs font-bold uppercase text-slate-500">Tier</p>
@@ -133,7 +133,7 @@ const CustomerLoyaltyPanel = ({ customerId }) => {
                     {TYPE_LABELS[row.type] || row.type}
                     {row.reversed && <span className="ml-1 text-xs text-slate-500">(reversed)</span>}
                   </td>
-                  <td className={`app-table-cell text-right font-bold ${row.points < 0 ? "text-red-700" : "text-emerald-700"}`}>
+                  <td className={`app-table-cell text-right font-bold ${row.points < 0 ? "text-danger" : "text-success"}`}>
                     {row.points > 0 ? `+${row.points}` : row.points}
                   </td>
                   <td className="app-table-cell text-right text-slate-600">{row.balanceAfter}</td>

@@ -95,7 +95,7 @@ export default function BasicOverviewView({
         <Card className="admin-panel-card dashboard-premium-card surface-inverted overflow-hidden p-5 text-white shadow-[0_20px_60px_rgb(15_23_42/0.18)]">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">Owner Command Center</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-300">Owner Command Center</p>
               <h2 className="mt-1 text-xl font-black">Current period versus previous period</h2>
             </div>
             <p className="text-xs font-semibold text-slate-600">
@@ -122,7 +122,7 @@ export default function BasicOverviewView({
         <Card className="admin-panel-card border-slate-200/80 p-5 shadow-[0_12px_36px_rgb(15_23_42/0.06)]">
           <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Action Center</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-warning">Action Center</p>
               <h2 className="mt-1 text-lg font-black text-slate-900">What needs attention now</h2>
             </div>
             <p className="text-xs font-semibold text-slate-500">
@@ -132,19 +132,19 @@ export default function BasicOverviewView({
           {/* These four surfaces DO change with state. That is the point of an
               action centre, so the conditional red/amber stays. */}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className={`rounded-xl border p-4 ${risks.outOfStockItems > 0 ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`}>
+            <div className={`rounded-xl border p-4 ${risks.outOfStockItems > 0 ? "border-danger-border bg-danger-soft" : "border-success-border bg-success-soft"}`}>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-black text-slate-900">Stock attention</p>
-                <Package className={risks.outOfStockItems > 0 ? "text-red-700" : "text-emerald-700"} size={20} />
+                <Package className={risks.outOfStockItems > 0 ? "text-danger" : "text-success"} size={20} />
               </div>
               <p className="mt-3 text-2xl font-black tabular-nums text-slate-900">{risks.lowStockItems}</p>
               <p className="mt-1 text-xs font-semibold text-slate-600">{risks.outOfStockItems} out of stock</p>
             </div>
 
-            <div className={`rounded-xl border p-4 ${risks.overdue91Plus > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-slate-50"}`}>
+            <div className={`rounded-xl border p-4 ${risks.overdue91Plus > 0 ? "border-warning-border bg-warning-soft" : "border-slate-200 bg-slate-50"}`}>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-black text-slate-900">Overdue 90+ days</p>
-                <Users className="text-amber-700" size={20} />
+                <Users className="text-warning" size={20} />
               </div>
               <p className="mt-3 text-2xl font-black tabular-nums text-slate-900">{formatCurrency(risks.overdue91Plus)}</p>
               <p className="mt-1 text-xs font-semibold text-slate-600">{risks.overdueCustomerCount} customers require collection</p>
@@ -159,10 +159,10 @@ export default function BasicOverviewView({
               <p className="mt-1 text-xs font-semibold text-slate-600">Outstanding across selected branch scope</p>
             </div>
 
-            <div className={`rounded-xl border p-4 ${risks.saleReturnRatePercent > 3 ? "border-red-200 bg-red-50" : "border-slate-200 bg-slate-50"}`}>
+            <div className={`rounded-xl border p-4 ${risks.saleReturnRatePercent > 3 ? "border-danger-border bg-danger-soft" : "border-slate-200 bg-slate-50"}`}>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-black text-slate-900">Sales returns</p>
-                <RotateCcw className={risks.saleReturnRatePercent > 3 ? "text-red-700" : "text-slate-600"} size={20} />
+                <RotateCcw className={risks.saleReturnRatePercent > 3 ? "text-danger" : "text-slate-600"} size={20} />
               </div>
               <p className="mt-3 text-2xl font-black tabular-nums text-slate-900">{formatCurrency(risks.saleReturnAmount)}</p>
               <p className="mt-1 text-xs font-semibold text-slate-600">
@@ -176,7 +176,7 @@ export default function BasicOverviewView({
       <Card className="admin-panel-card dashboard-premium-card overflow-hidden border-slate-200/80 bg-white p-5 shadow-[0_18px_50px_rgb(15_23_42/0.07)]">
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Executive Summary</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Executive Summary</p>
             <h2 className="mt-1 text-xl font-black text-slate-900">Sales, profit and alerts in one view</h2>
           </div>
           <p className="text-sm font-medium text-slate-500">

@@ -144,7 +144,7 @@ const PromotionCodesPanel = ({ promotionId, onCountChange }) => {
       </div>
 
       {showForm && (
-        <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/40 p-4">
+        <div className="mb-4 rounded-lg border border-slate-200 bg-accent-soft/40 p-4">
           <div className="mb-3 flex gap-1 rounded-lg border border-slate-200 bg-white p-1 w-fit">
             {[{ key: "NAMED", label: "One named code" }, { key: "BATCH", label: "A batch of random codes" }].map((option) => (
               <button
@@ -152,7 +152,7 @@ const PromotionCodesPanel = ({ promotionId, onCountChange }) => {
                 type="button"
                 onClick={() => update("mode", option.key)}
                 className={`rounded-md px-3 py-1.5 text-xs font-bold ${
-                  form.mode === option.key ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                  form.mode === option.key ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 {option.label}
@@ -286,8 +286,8 @@ const PromotionCodesPanel = ({ promotionId, onCountChange }) => {
                         onClick={() => toggle(row)}
                         className={`rounded-full px-2.5 py-1 text-xs font-bold ${
                           !row.active ? "bg-slate-200 text-slate-600"
-                            : exhausted ? "bg-orange-100 text-orange-700"
-                            : "bg-emerald-100 text-emerald-700"
+                            : exhausted ? "bg-warning-soft text-warning"
+                            : "bg-success-soft text-success"
                         }`}
                       >
                         {!row.active ? "Off" : exhausted ? "Used up" : "Active"}

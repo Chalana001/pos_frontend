@@ -23,13 +23,13 @@ const statusOptions = [
 const getStatusClassName = (status) => {
   switch (status) {
     case "OPEN":
-      return "border-blue-200 bg-blue-100 text-blue-700";
+      return "border-slate-200 bg-slate-100 text-accent";
     case "IN_PROGRESS":
-      return "border-violet-200 bg-violet-100 text-violet-700";
+      return "border-info-border bg-info-soft text-info";
     case "COMPLETED":
-      return "border-emerald-200 bg-emerald-100 text-emerald-700";
+      return "border-success-border bg-success-soft text-success";
     case "REJECTED":
-      return "border-red-200 bg-red-100 text-red-700";
+      return "border-danger-border bg-danger-soft text-danger";
     case "CANCELED":
       return "border-slate-200 bg-slate-100 text-slate-600";
     default:
@@ -116,7 +116,7 @@ const WarrantyClaimsPage = () => {
                   setSearch(event.target.value);
                   setPage(0);
                 }}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 placeholder="Search claim, warranty, barcode, invoice, customer, or item..."
                 ref={searchRef}
               />
@@ -176,7 +176,7 @@ const WarrantyClaimsPage = () => {
                       <td className="app-table-cell">{row.customerName}</td>
                       <td className="app-table-cell">
                         <div className="flex items-center gap-2">
-                          <Wrench size={16} className="text-blue-600" />
+                          <Wrench size={16} className="text-accent" />
                           <div className="flex flex-col"><span>{row.itemName}</span>{row.altName && <span className="text-xs text-slate-600">{row.altName}</span>}</div>
                         </div>
                       </td>

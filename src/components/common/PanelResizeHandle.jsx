@@ -21,12 +21,12 @@ const PanelResizeHandle = ({
       >
         <span
           className={`absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full transition ${
-            isResizing ? "bg-blue-500" : "bg-slate-200 group-hover:bg-slate-300"
+            isResizing ? "bg-accent" : "bg-slate-200 group-hover:bg-slate-300"
           }`}
         />
         <span
           className={`relative flex h-14 w-5 items-center justify-center rounded-full border bg-white shadow-sm transition ${
-            isResizing ? "border-blue-300" : "border-slate-200 group-hover:border-slate-300"
+            isResizing ? "border-slate-300" : "border-slate-200 group-hover:border-slate-300"
           }`}
         >
           <span className="h-8 w-[3px] rounded-full bg-slate-300" />

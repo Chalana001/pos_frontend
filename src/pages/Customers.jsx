@@ -105,7 +105,7 @@ const CustomersListPage = () => {
     {
       header: "Due Amount",
       render: (c) => (
-        <span className={(c.dueAmount || 0) > 0 ? "dark-hl text-red-600 font-semibold" : ""}>
+        <span className={(c.dueAmount || 0) > 0 ? "dark-hl text-danger font-semibold" : ""}>
           {formatCurrency(c.dueAmount || 0)}
         </span>
       ),
@@ -119,7 +119,7 @@ const CustomersListPage = () => {
       render: (c) => (
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
-            c.active ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+            c.active ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
           }`}
         >
           {c.active ? "Active" : "Inactive"}
@@ -153,7 +153,7 @@ const CustomersListPage = () => {
                 }}
                 placeholder="Search customer, phone, or address..."
                 ref={searchRef}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
 

@@ -31,6 +31,7 @@ export const DEFAULT_APP_CONFIGURATION = {
   managerWarrantyAllowed: true,
   quickSaleHeldBillsEnabled: true,
   quickSaleHeldBillsMax: 2,
+  expiryAlertMonths: 2,
   cashierWarrantyAllowed: false,
 };
 
@@ -59,6 +60,9 @@ const normalizeConfiguration = (value = {}) => ({
   quickSaleHeldBillsEnabled: value.quickSaleHeldBillsEnabled !== false,
   quickSaleHeldBillsMax: Object.hasOwn(value, 'quickSaleHeldBillsMax')
     ? normalizeQuickSaleHeldBillsMax(value.quickSaleHeldBillsMax)
+    : 2,
+  expiryAlertMonths: [1, 2, 3, 6, 12].includes(Number(value.expiryAlertMonths))
+    ? Number(value.expiryAlertMonths)
     : 2,
   cashierWarrantyAllowed: value.cashierWarrantyAllowed === true,
 });

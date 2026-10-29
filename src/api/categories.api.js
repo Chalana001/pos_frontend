@@ -16,4 +16,15 @@ export const categoriesAPI = {
 
   createSubCategory: (data) => api.post("/categories/sub-categories", data),
 
+  // Category management screen: the tree with per-row item counts, then rename and delete.
+  usage: () => api.get("/categories/usage"),
+
+  update: (categoryId, data) => api.put(`/categories/${categoryId}`, data),
+
+  remove: (categoryId) => api.delete(`/categories/${categoryId}`),
+
+  updateSubCategory: (subCategoryId, data) => api.put(`/categories/sub-categories/${subCategoryId}`, data),
+
+  removeSubCategory: (subCategoryId) => api.delete(`/categories/sub-categories/${subCategoryId}`),
+
 };

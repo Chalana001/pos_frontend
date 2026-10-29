@@ -149,7 +149,7 @@ const StockAdjustments = () => {
           const positiveTypes = ["FOUND", "NEW_STOCK", "MANUAL"];
           const positive = positiveTypes.includes(adj.type);
           return (
-            <span className={`rounded-full px-2 py-1 text-xs font-medium ${positive ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+            <span className={`rounded-full px-2 py-1 text-xs font-medium ${positive ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
               {adj.type?.replace("_", " ")}
             </span>
           );
@@ -162,7 +162,7 @@ const StockAdjustments = () => {
           const isPositive = qtyValue > 0;
           const unit = adj.qtyUnit ? ` ${adj.qtyUnit}` : "";
           return (
-            <span className={`font-semibold ${isPositive ? "text-emerald-600" : "text-red-600"}`}>
+            <span className={`font-semibold ${isPositive ? "text-success" : "text-danger"}`}>
               {isPositive ? "+" : ""}
               {formatStockQuantity(qtyValue)}
               {unit}
@@ -209,7 +209,7 @@ const StockAdjustments = () => {
                 }}
                 placeholder="Search item, barcode, or reason..."
                 ref={searchRef}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
 

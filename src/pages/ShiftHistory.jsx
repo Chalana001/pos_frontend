@@ -214,7 +214,7 @@ const ShiftHistory = () => {
                 {shifts.map((s) => (
                   <tr
                     key={s.id}
-                    className="hover:bg-blue-50/70 transition-colors cursor-pointer"
+                    className="hover:bg-accent-soft/70 transition-colors cursor-pointer"
                     onClick={() => navigate(`/shifts/history/${s.id}`)}
                   >
                     <td className="p-4">
@@ -231,7 +231,7 @@ const ShiftHistory = () => {
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
-                        s.status === 'OPEN' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                        s.status === 'OPEN' ? 'bg-success-soft text-success' : 'bg-slate-100 text-slate-600'
                       }`}>
                         {s.status}
                       </span>
@@ -241,7 +241,7 @@ const ShiftHistory = () => {
                       <p className="text-xs text-slate-600">Sales: {formatCurrency(s.cashSales)}</p>
                     </td>
                     <td className={`p-4 text-right font-bold text-sm ${
-                      (s.cashDifference || 0) < 0 ? 'text-red-600' : (s.cashDifference > 0 ? 'text-blue-600' : 'text-slate-600')
+                      (s.cashDifference || 0) < 0 ? 'text-danger' : (s.cashDifference > 0 ? 'text-accent' : 'text-slate-600')
                     }`}>
                       {s.status === 'CLOSED' ? formatCurrency(s.cashDifference) : '--'}
                     </td>

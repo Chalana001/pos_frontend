@@ -94,7 +94,7 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
           </div>
           <div className="flex gap-3 pt-2">
              <Button variant="secondary" type="button" onClick={() => setShowAddForm(false)} className="flex-1">Cancel</Button>
-             <Button type="submit" className="flex-1 bg-blue-600">Save Customer</Button>
+             <Button type="submit" className="flex-1 bg-accent">Save Customer</Button>
           </div>
         </form>
       </Modal>
@@ -112,11 +112,11 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search customers..."
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent focus:outline-none"
               autoFocus
             />
           </div>
-          <Button onClick={() => setShowAddForm(true)} className="px-4 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200">
+          <Button onClick={() => setShowAddForm(true)} className="px-4 rounded-xl bg-accent-soft text-accent hover:bg-slate-100 border border-slate-200">
             <UserPlus size={20} />
           </Button>
         </div>
@@ -126,9 +126,9 @@ const CustomerSelect = ({ isOpen, onClose, onSelectCustomer }) => {
             <button
               key={customer.id}
               onClick={() => { onSelectCustomer(customer); onClose(); }}
-              className="w-full p-4 flex items-center gap-4 bg-white border border-slate-100 hover:border-blue-400 hover:bg-blue-50 rounded-xl transition-all text-left group"
+              className="w-full p-4 flex items-center gap-4 bg-white border border-slate-100 hover:border-border-strong hover:bg-surface-2 rounded-xl transition-all text-left group"
             >
-              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-blue-200 group-hover:text-blue-600 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-slate-200 group-hover:text-accent transition-colors">
                  <User size={20} />
               </div>
               <div>

@@ -38,7 +38,7 @@ const NumberField = ({ label, value, onCommit, min, max }) => {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={commit}
-        className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none"
+        className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-accent focus:outline-none"
       />
     </div>
   );
@@ -137,11 +137,11 @@ const ScaleBarcodeConfigCard = ({
             type="checkbox"
             checked={!!form.scaleBarcodeEnabled}
             onChange={(event) => updateField('scaleBarcodeEnabled', event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
           />
         </label>
 
-        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+        <div className="flex items-start gap-2 rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-xs text-warning">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           <span>
             The templates below are starting points, not verified vendor specs. Every scale brand differs.
@@ -178,9 +178,9 @@ const ScaleBarcodeConfigCard = ({
               value={form.scaleBarcodePrefix || ''}
               onChange={(e) => updateField('scaleBarcodePrefix', normalizeScalePrefixText(e.target.value))}
               placeholder="e.g. 20 or 20,21,22 or NS"
-              className={`mt-1 h-9 w-full rounded-lg border bg-white px-3 text-sm font-mono focus:border-blue-500 focus:outline-none ${prefixError ? 'border-red-400' : 'border-slate-300'}`}
+              className={`mt-1 h-9 w-full rounded-lg border bg-white px-3 text-sm font-mono focus:border-accent focus:outline-none ${prefixError ? 'border-danger-border' : 'border-slate-300'}`}
             />
-            <p className={`mt-1 text-[11px] ${prefixError ? 'text-red-600' : 'text-slate-500'}`}>
+            <p className={`mt-1 text-[11px] ${prefixError ? 'text-danger' : 'text-slate-500'}`}>
               {prefixError || 'Letters allowed. Separate several prefixes with commas. Leave empty to accept any.'}
             </p>
           </div>
@@ -242,7 +242,7 @@ const ScaleBarcodeConfigCard = ({
               type="checkbox"
               checked={!!form.scaleBarcodeStripLeadingZeros}
               onChange={(e) => updateField('scaleBarcodeStripLeadingZeros', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
             />
           </label>
           <label className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -251,7 +251,7 @@ const ScaleBarcodeConfigCard = ({
               type="checkbox"
               checked={!!form.scaleBarcodeHasCheckDigit}
               onChange={(e) => updateField('scaleBarcodeHasCheckDigit', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
             />
           </label>
         </div>
@@ -275,24 +275,24 @@ const ScaleBarcodeConfigCard = ({
             value={testInput}
             onChange={(e) => setTestInput(e.target.value)}
             placeholder="Scan a label from your scale here, or type what it prints"
-            className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-mono focus:border-blue-500 focus:outline-none"
+            className="mt-1 h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-mono focus:border-accent focus:outline-none"
           />
           {testResult ? (
             <div className="mt-2 space-y-2 text-xs">
               {testResult.prefix !== undefined ? (
                 <div className="flex flex-wrap gap-1 font-mono">
                   {testResult.prefix ? (
-                    <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-800" title="Prefix">{testResult.prefix}</span>
+                    <span className="rounded bg-accent-soft px-2 py-0.5 text-slate-800" title="Prefix">{testResult.prefix}</span>
                   ) : null}
-                  <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-800" title="Item code">{testResult.itemCode}</span>
-                  <span className="rounded bg-amber-50 px-2 py-0.5 text-amber-800" title="Value">{testResult.valueDigits}</span>
+                  <span className="rounded bg-success-soft px-2 py-0.5 text-success" title="Item code">{testResult.itemCode}</span>
+                  <span className="rounded bg-warning-soft px-2 py-0.5 text-warning" title="Value">{testResult.valueDigits}</span>
                   {testResult.checkDigit ? (
                     <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-700" title="Check digit">{testResult.checkDigit}</span>
                   ) : null}
                 </div>
               ) : null}
               {testResult.ok ? (
-                <p className="text-emerald-700">
+                <p className="text-success">
                   Decodes as <span className="font-medium">{testResult.display}</span>. The POS will look for a weight
                   item whose barcode is <span className="font-mono">{testResult.itemCode}</span>.
                   {form.scaleBarcodeHasCheckDigit && !testResult.checkDigitVerified ? (
@@ -300,7 +300,7 @@ const ScaleBarcodeConfigCard = ({
                   ) : null}
                 </p>
               ) : (
-                <p className="text-red-600">Not a scale barcode with these settings: {testResult.reason}</p>
+                <p className="text-danger">Not a scale barcode with these settings: {testResult.reason}</p>
               )}
             </div>
           ) : null}

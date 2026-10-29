@@ -77,6 +77,14 @@ const stockStatusOptions = [
   { value: "IN_STOCK", label: "In Stock" },
 ];
 
+const expiryStatusOptions = [
+  { value: "ALL", label: "All Expiry" },
+  { value: "EXPIRED", label: "Expired" },
+  { value: "EXPIRING_SOON", label: "Expiring Soon" },
+  { value: "NOT_EXPIRED", label: "Not Expired" },
+  { value: "MISSING_EXPIRY", label: "Missing Expiry" },
+];
+
 const Stock = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -97,6 +105,7 @@ const Stock = () => {
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [stockStatus, setStockStatus] = useState("ALL");
+  const [expiryStatus, setExpiryStatus] = useState("ALL");
   const [categoryId, setCategoryId] = useState("");
   const [subCategoryId, setSubCategoryId] = useState("");
 
@@ -113,8 +122,11 @@ const Stock = () => {
     const params = new URLSearchParams(location.search);
     const requestedStatus = params.get("status");
     const requestedSearch = params.get("search");
+    const requestedExpiry = params.get("expiry");
     const validStatus = stockStatusOptions.some((option) => option.value === requestedStatus);
+    const validExpiry = expiryStatusOptions.some((option) => option.value === requestedExpiry);
     setStockStatus(validStatus ? requestedStatus : "ALL");
+    setExpiryStatus(validExpiry ? requestedExpiry : "ALL");
     setSearchQuery(requestedSearch || "");
     setPage(0);
   }, [location.search]);
@@ -195,6 +207,7 @@ const Stock = () => {
       const response = await stockAPI.getByBranch(currentBranchId, {
         search: searchQuery,
         stockStatus,
+        expiryStatus,
         categoryId: singleCategoryMode ? undefined : categoryId || undefined,
         subCategoryId: singleCategoryMode ? categoryId || undefined : subCategoryId || undefined,
         page: page,
@@ -208,6 +221,7 @@ const Stock = () => {
       const valueResponse = await stockAPI.getValue(currentBranchId, {
         search: searchQuery,
         stockStatus,
+        expiryStatus,
         categoryId: singleCategoryMode ? undefined : categoryId || undefined,
         subCategoryId: singleCategoryMode ? categoryId || undefined : subCategoryId || undefined,
       });
@@ -255,7 +269,7 @@ const Stock = () => {
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranchId, searchQuery, stockStatus, categoryId, subCategoryId, page, singleCategoryMode]);
+  }, [selectedBranchId, searchQuery, stockStatus, expiryStatus, categoryId, subCategoryId, page, singleCategoryMode]);
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
@@ -264,6 +278,11 @@ const Stock = () => {
 
   const handleStockStatusChange = (value) => {
     setStockStatus(value);
+    setPage(0);
+  };
+
+  const handleExpiryStatusChange = (value) => {
+    setExpiryStatus(value);
     setPage(0);
   };
 
@@ -281,6 +300,7 @@ const Stock = () => {
   const clearFilters = () => {
     setSearchQuery("");
     setStockStatus("ALL");
+    setExpiryStatus("ALL");
     setCategoryId("");
     setSubCategoryId("");
     setPage(0);
@@ -433,9 +453,9 @@ const Stock = () => {
           const displayUnit = getDisplayUnit(item, item.defaultUnit);
           const isLow = displayQty <= 0;
           return (
-            <span className={"font-semibold " + (isLow ? "text-red-600" : "text-slate-800")}>
+            <span className={"font-semibold " + (isLow ? "text-danger" : "text-slate-800")}>
               {formatQtyWithUnit(displayQty, displayUnit)}
-              {isLow && <AlertTriangle size={14} className="inline ml-1 text-red-500" />}
+              {isLow && <AlertTriangle size={14} className="inline ml-1 text-danger" />}
             </span>
           );
         },
@@ -447,7 +467,7 @@ const Stock = () => {
           const reorderLevel = getDisplayStockBaseQuantity(item.reorderLevel ?? 0, item);
           const isReorder = qty <= reorderLevel;
           return (
-            <span className={"px-2 py-1 rounded-full text-xs font-medium " + (qty <= 0 ? "bg-red-100 text-red-800" : isReorder ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800")}>
+            <span className={"px-2 py-1 rounded-full text-xs font-medium " + (qty <= 0 ? "bg-danger-soft text-danger" : isReorder ? "bg-warning-soft text-warning" : "bg-success-soft text-success")}>
               {qty <= 0 ? "Out of Stock" : isReorder ? "Reorder" : "In Stock"}
             </span>
           );
@@ -464,7 +484,7 @@ const Stock = () => {
                 e.stopPropagation();
                 handleOpenAdjust(item);
               }}
-              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border-none"
+              className="flex items-center gap-1 text-accent hover:text-accent bg-accent-soft hover:bg-slate-100 border-none"
             >
               <Settings2 size={16} /> Adjust
             </Button>
@@ -475,7 +495,7 @@ const Stock = () => {
                 e.stopPropagation();
                 handleOpenTransfer(item);
               }}
-              className="flex items-center gap-1 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 border-none"
+              className="flex items-center gap-1 text-info hover:text-info bg-info-soft hover:bg-info-soft border-none"
               disabled={getDisplayQty(item) <= 0}
             >
               <ArrowRightLeft size={16} /> Transfer
@@ -528,8 +548,8 @@ const Stock = () => {
               <h3 className="text-sm font-medium text-slate-600 mb-2">Total Items</h3>
               <p className="text-2xl font-bold text-slate-800">{totalItems}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Package className="text-blue-600" size={24} />
+            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+              <Package className="text-accent" size={24} />
             </div>
           </div>
         </Card>
@@ -548,16 +568,16 @@ const Stock = () => {
             <div>
               <h3 className="text-sm font-medium text-slate-600 mb-2">Reorder Alerts</h3>
               <div className="flex items-end gap-3">
-                <p className="dark-hl text-2xl font-bold text-amber-600">
+                <p className="dark-hl text-2xl font-bold text-warning">
                   {loadingCounts ? "..." : reorderAlertCount}
                 </p>
                 {outOfStockCount > 0 && (
-                  <span className="dark-hl mb-1 text-xs font-semibold text-red-600">{outOfStockCount} out</span>
+                  <span className="dark-hl mb-1 text-xs font-semibold text-danger">{outOfStockCount} out</span>
                 )}
               </div>
             </div>
-            <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="text-amber-600" size={24} />
+            <div className="w-12 h-12 bg-warning-soft rounded-lg flex items-center justify-center">
+              <AlertTriangle className="text-warning" size={24} />
             </div>
           </div>
           </button>
@@ -565,7 +585,7 @@ const Stock = () => {
 
         <Card className="inventory-kpi-card shell-panel shell-panel-hover" style={{ animationDelay: "170ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Stock Value</h3>
-          <p className="text-2xl font-bold text-emerald-600">LKR {Number(stockValue).toFixed(2)}</p>
+          <p className="text-2xl font-bold text-success">LKR {Number(stockValue).toFixed(2)}</p>
         </Card>
       </div>
 
@@ -580,7 +600,7 @@ const Stock = () => {
                 onChange={handleSearch}
                 placeholder="Search name, barcode, or category..."
                 ref={searchRef}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
             <div className="col-span-1">
@@ -591,6 +611,17 @@ const Stock = () => {
                 valueKey="value"
                 labelKey="label"
                 placeholder="Stock Status"
+                buttonClassName="h-[42px]"
+              />
+            </div>
+            <div className="col-span-1">
+              <CustomSelect
+                value={expiryStatus}
+                onChange={handleExpiryStatusChange}
+                options={expiryStatusOptions}
+                valueKey="value"
+                labelKey="label"
+                placeholder="Expiry Status"
                 buttonClassName="h-[42px]"
               />
             </div>
@@ -665,9 +696,9 @@ const Stock = () => {
               <div className="page-section-enter" style={{ animationDelay: "70ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Batch *</label>
                 {itemBatches.length === 1 ? (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-                    <span className="text-sm text-blue-800 font-semibold">Batch #{itemBatches[0].batchId} Auto-selected</span>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">In Stock: {formatDisplayStockQuantity(itemBatches[0], 0, selectedItem)}</span>
+                  <div className="p-3 bg-accent-soft border border-slate-200 rounded-lg flex items-center justify-between">
+                    <span className="text-sm text-slate-800 font-semibold">Batch #{itemBatches[0].batchId} Auto-selected</span>
+                    <span className="text-xs bg-slate-100 text-accent px-2 py-1 rounded">In Stock: {formatDisplayStockQuantity(itemBatches[0], 0, selectedItem)}</span>
                   </div>
                 ) : itemBatches.length > 1 ? (
                   <CustomSelect
@@ -679,7 +710,7 @@ const Stock = () => {
                     placeholder="-- Choose a Batch --"
                   />
                 ) : (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">No available batches.</div>
+                  <div className="p-3 bg-danger-soft border border-danger-border rounded-lg text-sm text-danger">No available batches.</div>
                 )}
               </div>
 
@@ -716,7 +747,7 @@ const Stock = () => {
                     step={isMeasuredItem(selectedItem) ? getMeasuredStep(adjustFormData.qtyUnit) : "1"}
                     value={adjustFormData.qty}
                     onChange={(e) => setAdjustFormData({ ...adjustFormData, qty: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                     placeholder="Quantity"
                     required
                   />
@@ -770,9 +801,9 @@ const Stock = () => {
               <div className="page-section-enter" style={{ animationDelay: "70ms" }}>
                 <label className="block text-sm font-medium text-slate-700 mb-1">From Batch *</label>
                 {itemBatches.length === 1 ? (
-                  <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between">
-                    <span className="text-sm text-purple-800 font-semibold">Batch #{itemBatches[0].batchId} Auto-selected</span>
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">In Stock: {formatDisplayStockQuantity(itemBatches[0], 0, selectedItem)}</span>
+                  <div className="p-3 bg-info-soft border border-info-border rounded-lg flex items-center justify-between">
+                    <span className="text-sm text-info font-semibold">Batch #{itemBatches[0].batchId} Auto-selected</span>
+                    <span className="text-xs bg-info-soft text-info px-2 py-1 rounded">In Stock: {formatDisplayStockQuantity(itemBatches[0], 0, selectedItem)}</span>
                   </div>
                 ) : itemBatches.length > 1 ? (
                   <CustomSelect
@@ -784,7 +815,7 @@ const Stock = () => {
                     placeholder="-- Choose a Batch --"
                   />
                 ) : (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">No stock available to transfer.</div>
+                  <div className="p-3 bg-danger-soft border border-danger-border rounded-lg text-sm text-danger">No stock available to transfer.</div>
                 )}
               </div>
 
@@ -840,7 +871,7 @@ const Stock = () => {
               <div className="page-section-enter flex gap-2 pt-2" style={{ animationDelay: "230ms" }}>
                 <Button
                   type="submit"
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                  className="flex-1 bg-accent hover:bg-accent-hover text-white"
                   disabled={isSubmitting || itemBatches.length === 0}
                 >
                   {isSubmitting ? "Processing..." : "Transfer Stock"}

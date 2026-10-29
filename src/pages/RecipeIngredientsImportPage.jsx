@@ -16,9 +16,9 @@ import { itemsAPI } from "../api/items.api";
 const ROW_PAGE_SIZE = 100;
 
 const rowStatusClasses = {
-  READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  IMPORTED: "border-blue-200 bg-blue-50 text-blue-700",
-  ERROR: "border-red-200 bg-red-50 text-red-700",
+  READY: "border-success-border bg-success-soft text-success",
+  IMPORTED: "border-slate-200 bg-accent-soft text-accent",
+  ERROR: "border-danger-border bg-danger-soft text-danger",
   SKIPPED: "border-slate-200 bg-slate-100 text-slate-600",
 };
 
@@ -203,9 +203,9 @@ export default function RecipeIngredientsImportPage({ embedded = false }) {
             {fileName ? <span className="font-medium text-slate-800">{fileName}</span> : null}
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 font-medium text-emerald-700">Ready: {summary.ready}</span>
-            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 font-medium text-red-700">Errors: {summary.error}</span>
-            <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 font-medium text-blue-700">Imported: {summary.imported}</span>
+            <span className="rounded-full border border-success-border bg-success-soft px-2 py-1 font-medium text-success">Ready: {summary.ready}</span>
+            <span className="rounded-full border border-danger-border bg-danger-soft px-2 py-1 font-medium text-danger">Errors: {summary.error}</span>
+            <span className="rounded-full border border-slate-200 bg-accent-soft px-2 py-1 font-medium text-accent">Imported: {summary.imported}</span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 font-medium text-slate-700">Selected: {summary.selected}</span>
           </div>
         </div>
@@ -239,7 +239,7 @@ export default function RecipeIngredientsImportPage({ embedded = false }) {
                           type="checkbox"
                           checked={row.selected ?? true}
                           onChange={() => toggleSelected(row.rowNumber)}
-                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                         />
                       </td>
                       <td className="px-3 py-3">

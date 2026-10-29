@@ -81,7 +81,7 @@ const ItemSearchPicker = ({ branchId, excludedIds = [], onSelect, onSelectAll, p
         onFocus={() => results.length && setOpen(true)}
         placeholder={placeholder}
         aria-label="Search items to add"
-        className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-9 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+        className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-9 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
       />
       {loading && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />}
 
@@ -101,7 +101,7 @@ const ItemSearchPicker = ({ branchId, excludedIds = [], onSelect, onSelectAll, p
               <button
                 type="button"
                 onClick={() => { onSelectAll(visible); setOpen(false); setQuery(""); }}
-                className="sticky top-0 z-10 flex w-full items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-bold text-blue-700 hover:bg-blue-50"
+                className="sticky top-0 z-10 flex w-full items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm font-bold text-accent hover:bg-accent-soft"
               >
                 <span>Add all {visible.length} results</span>
                 <span className="text-xs font-semibold text-slate-500">or pick one below</span>
@@ -112,7 +112,7 @@ const ItemSearchPicker = ({ branchId, excludedIds = [], onSelect, onSelectAll, p
                 key={item.id}
                 type="button"
                 onClick={() => choose(item)}
-                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-blue-50"
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-accent-soft"
               >
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-slate-800">{item.name}</span>
@@ -122,7 +122,7 @@ const ItemSearchPicker = ({ branchId, excludedIds = [], onSelect, onSelectAll, p
                   <span className="text-xs font-semibold text-slate-600">
                     {formatCurrency(item.sellingPrice ?? item.unitPrice ?? 0)}
                   </span>
-                  <Plus size={14} className="text-blue-600" />
+                  <Plus size={14} className="text-accent" />
                 </span>
               </button>
             ))}

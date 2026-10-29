@@ -43,7 +43,7 @@ const PeriodPicker = ({ from, to, onChange }) => {
             onClick={() => choose(preset.key)}
             aria-pressed={activePreset === preset.key}
             className={`rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
-              activePreset === preset.key ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+              activePreset === preset.key ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"
             }`}
           >
             {preset.label}

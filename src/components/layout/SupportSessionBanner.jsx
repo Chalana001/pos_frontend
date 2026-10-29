@@ -51,7 +51,7 @@ const SupportSessionBanner = () => {
     <div
       role="status"
       className={`sticky top-0 z-[60] flex flex-wrap items-center gap-2 px-3 py-2 text-sm text-white ${
-        readOnly ? "bg-blue-700" : "bg-red-700"
+        readOnly ? "bg-accent" : "bg-danger"
       }`}
     >
       <ShieldAlert size={16} className="shrink-0" />

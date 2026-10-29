@@ -324,7 +324,7 @@ const SaleReturnPage = () => {
   }
   if (!sale) {
     return (
-      <div className="p-10 text-center text-red-500">Sale not found.</div>
+      <div className="p-10 text-center text-danger">Sale not found.</div>
     );
   }
 
@@ -350,9 +350,9 @@ const SaleReturnPage = () => {
         </div>
 
         {/* Success card */}
-        <Card className="p-8 border-t-4 border-t-emerald-500 shadow-md text-center">
+        <Card className="p-8 border-t-4 border-t-success-border shadow-md text-center">
           <div className="flex justify-center mb-4">
-            <CheckCircle size={56} className="text-emerald-500" />
+            <CheckCircle size={56} className="text-success" />
           </div>
           <h2 className="text-2xl font-bold text-slate-800 mb-1">Return Processed!</h2>
           <p className="text-slate-500 mb-6">
@@ -393,7 +393,7 @@ const SaleReturnPage = () => {
                     </td>
                     <td className="px-4 py-2 text-center">
                       {ri.stockReversed ? (
-                        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">
+                        <span className="text-xs bg-success-soft text-success px-2 py-0.5 rounded-full font-semibold">
                           Reversed
                         </span>
                       ) : (
@@ -431,13 +431,13 @@ const SaleReturnPage = () => {
                       {row("Goods returned", `${fmt(goods)} LKR`)}
                       {pointsValue > 0 && row(
                         `Paid with points, ${successReturn.loyaltyPointsGivenBack || 0} points returned`,
-                        `-${fmt(pointsValue)} LKR`, "text-violet-800")}
+                        `-${fmt(pointsValue)} LKR`, "text-info")}
                       {discount > 0 && row("Bill discount share", `-${fmt(discount)} LKR`)}
                       <tr className="border-t border-slate-200 bg-slate-50">
                         <td colSpan={2} className="px-4 py-3 font-bold text-slate-700 text-sm">
                           Cash Refund
                         </td>
-                        <td className="px-4 py-3 text-right font-bold text-emerald-700 text-base">
+                        <td className="px-4 py-3 text-right font-bold text-success text-base">
                           {fmt(cash)} LKR
                         </td>
                         <td />
@@ -481,7 +481,7 @@ const SaleReturnPage = () => {
             <RotateCcw size={16} className="mr-2" /> Process Another Return
           </Button>
           <Button
-            className="bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+            className="bg-accent text-white hover:bg-accent shadow-sm"
             onClick={() => navigate(`/sales/${invoiceNo}`)}
           >
             Back to Sale Details
@@ -504,21 +504,21 @@ const SaleReturnPage = () => {
           <ArrowLeft size={18} className="mr-2" /> Back to Sale
         </Button>
         <div className="flex items-center gap-2">
-          <RotateCcw size={20} className="text-orange-500" />
+          <RotateCcw size={20} className="text-warning" />
           <h1 className="text-lg font-bold text-slate-800">Process Return</h1>
         </div>
       </div>
 
       {/* ── Canceled warning ── */}
       {isCanceled && (
-        <div className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+        <div className="flex items-center gap-3 rounded-xl bg-danger-soft border border-danger-border p-4 text-sm text-danger">
           <AlertTriangle size={20} className="shrink-0" />
           This order has been canceled. Returns cannot be processed for canceled orders.
         </div>
       )}
 
       {/* ── Invoice summary ── */}
-      <Card className="page-section-enter p-5 border-t-4 border-t-orange-400 shadow-sm">
+      <Card className="page-section-enter p-5 border-t-4 border-t-warning-border shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <div className="text-xs text-slate-600 uppercase font-semibold mb-1">Invoice</div>
@@ -537,7 +537,7 @@ const SaleReturnPage = () => {
             <div className="text-xs text-slate-600 uppercase font-semibold mb-1">Grand Total</div>
             <div className="text-2xl font-bold text-slate-800">{fmt(sale.grandTotal)} LKR</div>
             {existingReturns.length > 0 && (
-              <div className="mt-1 text-xs text-orange-600 font-semibold">
+              <div className="mt-1 text-xs text-warning font-semibold">
                 {existingReturns.length} existing return{existingReturns.length > 1 ? "s" : ""} on
                 this invoice
               </div>
@@ -549,9 +549,9 @@ const SaleReturnPage = () => {
       {/* ── Existing returns history ── */}
       {existingReturns.length > 0 && (
         <Card className="page-section-enter p-0 overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
-          <div className="px-4 py-3 bg-orange-50 border-b border-orange-100 flex items-center gap-2">
-            <RotateCcw size={15} className="text-orange-500" />
-            <span className="text-sm font-semibold text-orange-700">Previous Returns</span>
+          <div className="px-4 py-3 bg-warning-soft border-b border-warning-border flex items-center gap-2">
+            <RotateCcw size={15} className="text-warning" />
+            <span className="text-sm font-semibold text-warning">Previous Returns</span>
           </div>
           <div className="divide-y divide-slate-100">
             {existingReturns.map((ret) => (
@@ -566,11 +566,11 @@ const SaleReturnPage = () => {
                   <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
                     {ret.refundMethod}
                   </span>
-                  <span className="font-bold text-red-600">
+                  <span className="font-bold text-danger">
                     - {fmt(ret.totalRefundAmount)} LKR
                   </span>
                   <button
-                    className="text-xs text-blue-600 hover:underline"
+                    className="text-xs text-accent hover:underline"
                     onClick={() => handlePrintReturn(ret)}
                     aria-label="Print return receipt"
                   >
@@ -592,7 +592,7 @@ const SaleReturnPage = () => {
           </div>
           {anyItemsReturnable && !isCanceled && (
             <button
-              className="text-xs text-blue-600 hover:underline font-medium"
+              className="text-xs text-accent hover:underline font-medium"
               onClick={toggleSelectAll}
             >
               {sale.items.every(isFullySelected)
@@ -648,7 +648,7 @@ const SaleReturnPage = () => {
                     </td>
                     <td className="p-4 text-center">
                       {already > 0 ? (
-                        <span className="text-orange-600 font-semibold">{formatQuantityWithUnit(already, item.qtyUnit)}</span>
+                        <span className="text-warning font-semibold">{formatQuantityWithUnit(already, item.qtyUnit)}</span>
                       ) : (
                         <span className="text-slate-600">-</span>
                       )}
@@ -670,9 +670,9 @@ const SaleReturnPage = () => {
                             onChange={(e) => setQtyForItem(item, e.target.value)}
                             placeholder="0"
                             step="0.001"
-                            className={`w-20 text-center border rounded-lg px-2 py-1.5 text-sm outline-none transition focus:ring-2 focus:ring-orange-400 ${
+                            className={`w-20 text-center border rounded-lg px-2 py-1.5 text-sm outline-none transition focus:ring-2 focus:ring-warning ${
                               currentQty > 0
-                                ? "border-orange-400 bg-orange-50 font-bold"
+                                ? "border-warning-border bg-warning-soft font-bold"
                                 : "border-slate-300 bg-white"
                             }`}
                           />
@@ -692,7 +692,7 @@ const SaleReturnPage = () => {
                     </td>
                     <td className="p-4 text-right pr-6">
                       {currentQty > 0 ? (
-                        <span className="font-bold text-red-600">
+                        <span className="font-bold text-danger">
                           -{fmt(refundLine)}
                         </span>
                       ) : (
@@ -720,7 +720,7 @@ const SaleReturnPage = () => {
             {/* Refund method */}
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Refund Method <span className="text-red-500">*</span>
+                Refund Method <span className="text-danger">*</span>
               </label>
               <CustomSelect
                 value={refundMethod}
@@ -729,13 +729,13 @@ const SaleReturnPage = () => {
                 buttonClassName="py-2"
               />
               {storeCreditBlocked && (
-                <p className="text-xs font-semibold text-red-600 mt-1">
+                <p className="text-xs font-semibold text-danger mt-1">
                   Store credit can only be refunded on a credit sale. Use cash, bank or
                   card for this sale.
                 </p>
               )}
               {refundMethod === "STORE_CREDIT" && !storeCreditBlocked && (
-                <p className="text-xs text-emerald-600 mt-1">
+                <p className="text-xs text-success mt-1">
                   Customer due amount will be reduced by the refund amount.
                 </p>
               )}
@@ -744,14 +744,14 @@ const SaleReturnPage = () => {
             {/* Reason */}
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                Return Reason <span className="text-red-500">*</span>
+                Return Reason <span className="text-danger">*</span>
               </label>
               <textarea
                 rows={3}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g. Customer received wrong item, duplicate purchase, damaged product…"
-                className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-orange-400 focus:border-orange-400 placeholder:text-slate-600"
+                className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-warning focus:border-warning-border placeholder:text-slate-600"
               />
             </div>
 
@@ -766,7 +766,7 @@ const SaleReturnPage = () => {
                 value={cashierNote}
                 onChange={(e) => setCashierNote(e.target.value)}
                 placeholder="Internal note for manager reference…"
-                className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-orange-400 placeholder:text-slate-600"
+                className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-warning placeholder:text-slate-600"
               />
             </div>
           </Card>
@@ -794,7 +794,7 @@ const SaleReturnPage = () => {
                         {item.itemName}{" "}
                         <span className="text-slate-600 font-mono">×{returnQty} {unit}</span>
                       </div>
-                      <div className="font-semibold text-red-600">
+                      <div className="font-semibold text-danger">
                         -{fmt(refundLine)} LKR
                       </div>
                     </div>
@@ -807,7 +807,7 @@ const SaleReturnPage = () => {
                     <span className="font-semibold text-slate-700">{fmt(goodsValue)} LKR</span>
                   </div>
                   {pointsValueBack > 0 && (
-                    <div className="flex items-center justify-between text-sm text-violet-800">
+                    <div className="flex items-center justify-between text-sm text-info">
                       <span>Paid with points. Returned as points</span>
                       <span className="font-semibold">-{fmt(pointsValueBack)} LKR</span>
                     </div>
@@ -820,7 +820,7 @@ const SaleReturnPage = () => {
                   )}
                   <div className="flex items-center justify-between pt-1">
                     <span className="text-sm font-bold text-slate-700">Cash Refund</span>
-                    <span className="text-2xl font-bold text-red-600">
+                    <span className="text-2xl font-bold text-danger">
                       {fmt(totalRefund)} LKR
                     </span>
                   </div>
@@ -838,7 +838,7 @@ const SaleReturnPage = () => {
               <Button
                 className={`w-full py-3 text-base font-bold shadow-md transition-all ${
                   selectedLines.length > 0 && reason.trim() && !storeCreditBlocked
-                    ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-200"
+                    ? "bg-accent hover:bg-accent-hover text-white shadow-orange-200"
                     : "bg-slate-200 text-slate-600 cursor-not-allowed"
                 }`}
                 onClick={handleSubmit}

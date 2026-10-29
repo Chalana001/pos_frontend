@@ -28,7 +28,7 @@ export const PremiumChartCard = ({ title, subtitle, children }) => (
         <h2 className="text-base font-bold text-slate-900">{title}</h2>
         {subtitle && <p className="mt-1 text-xs font-medium text-slate-500">{subtitle}</p>}
       </div>
-      <div className="h-2 w-16 rounded-full bg-blue-600" />
+      <div className="h-2 w-16 rounded-full bg-accent" />
     </div>
     {children}
   </Card>
@@ -67,7 +67,7 @@ export const ComparisonMetric = ({ title, current, previous, icon: Icon, accent 
           <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{title}</p>
           <p className="mt-2 truncate text-xl font-black tabular-nums text-slate-900">{format(current)}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <span className={change === null ? "text-slate-500" : improved ? "text-emerald-700" : "text-red-700"}>
+            <span className={change === null ? "text-slate-500" : improved ? "text-success" : "text-danger"}>
               {change === null ? "New activity" : `${improved ? "+" : ""}${change.toFixed(1)}%`}
             </span>
             <span className="text-slate-500">vs {format(previous)}</span>
@@ -82,10 +82,10 @@ export const ComparisonMetric = ({ title, current, previous, icon: Icon, accent 
 };
 
 const VALUATION_STATUS_STYLES = {
-  SELLABLE: ["Retail", "bg-emerald-50 text-emerald-700"],
-  PRICED_INTERNAL_USE: ["Internal + Priced", "bg-blue-50 text-blue-700"],
+  SELLABLE: ["Retail", "bg-success-soft text-success"],
+  PRICED_INTERNAL_USE: ["Internal + Priced", "bg-accent-soft text-accent"],
   INTERNAL_USE: ["Internal Use", "bg-slate-100 text-slate-600"],
-  MISSING_PRICE: ["Missing Price", "bg-amber-50 text-amber-700"],
+  MISSING_PRICE: ["Missing Price", "bg-warning-soft text-warning"],
 };
 
 export const ValuationStatusBadge = ({ status }) => {

@@ -52,9 +52,9 @@ const cashSourceOptions = [
 const ROW_PAGE_SIZE = 100;
 
 const statusBadgeClass = {
-  READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  NOT_FOUND: "border-red-200 bg-red-50 text-red-700",
-  AMBIGUOUS: "border-amber-200 bg-amber-50 text-amber-700",
+  READY: "border-success-border bg-success-soft text-success",
+  NOT_FOUND: "border-danger-border bg-danger-soft text-danger",
+  AMBIGUOUS: "border-warning-border bg-warning-soft text-warning",
   INVALID: "border-slate-300 bg-slate-100 text-slate-700",
 };
 
@@ -520,11 +520,11 @@ const PurchaseExcelImportPage = () => {
           <div
             className={`flex min-w-[200px] items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
               row.status === "READY"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                ? "border-success-border bg-success-soft text-success"
                 : row.status === "NOT_FOUND"
-                  ? "border-red-200 bg-red-50 text-red-700"
+                  ? "border-danger-border bg-danger-soft text-danger"
                   : row.status === "AMBIGUOUS"
-                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                    ? "border-warning-border bg-warning-soft text-warning"
                     : "border-slate-200 bg-slate-50 text-slate-600"
             }`}
           >
@@ -553,7 +553,7 @@ const PurchaseExcelImportPage = () => {
             <button
               type="button"
               onClick={() => removeRow(row.rowNumber)}
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-2 text-xs text-slate-500 hover:bg-red-50 hover:text-red-600"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-2 text-xs text-slate-500 hover:bg-danger-soft hover:text-danger"
             >
               <Trash2 size={12} className="mr-1" />
               Remove
@@ -575,13 +575,13 @@ const PurchaseExcelImportPage = () => {
         </div>
         <div className="purchase-summary-card shell-panel shell-panel-hover rounded-xl border border-slate-200 bg-white px-5 py-3 text-right shadow-sm">
           <p className="text-sm font-medium text-slate-500">Grand Total</p>
-          <p className="text-2xl font-bold text-emerald-600">{formatCurrency(grandTotal)}</p>
+          <p className="text-2xl font-bold text-success">{formatCurrency(grandTotal)}</p>
           {normalizedDiscount > 0 ? (
             <p className="mt-1 text-xs font-semibold text-slate-500">
               Subtotal {formatCurrency(subtotal)} - Discount {formatCurrency(normalizedDiscount)}
             </p>
           ) : null}
-          <p className={`mt-1 text-sm font-semibold ${dueAmount > 0 ? "text-red-600" : "text-emerald-600"}`}>
+          <p className={`mt-1 text-sm font-semibold ${dueAmount > 0 ? "text-danger" : "text-success"}`}>
             Supplier Due: {formatCurrency(dueAmount)}
           </p>
         </div>
@@ -764,13 +764,13 @@ const PurchaseExcelImportPage = () => {
               )}
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 font-medium text-emerald-700">
+              <span className="rounded-full border border-success-border bg-success-soft px-2 py-1 font-medium text-success">
                 Ready: {summary.ready}
               </span>
-              <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 font-medium text-red-700">
+              <span className="rounded-full border border-danger-border bg-danger-soft px-2 py-1 font-medium text-danger">
                 Not Found: {summary.notFound}
               </span>
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 font-medium text-amber-700">
+              <span className="rounded-full border border-warning-border bg-warning-soft px-2 py-1 font-medium text-warning">
                 Ambiguous: {summary.ambiguous}
               </span>
               <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-1 font-medium text-slate-700">
@@ -829,7 +829,7 @@ const PurchaseExcelImportPage = () => {
         <Button
           onClick={handleFinalize}
           size="lg"
-          className="bg-emerald-600 hover:bg-emerald-700 shadow-lg px-8"
+          className="bg-success hover:bg-success shadow-lg px-8"
           disabled={readyRows.length === 0 || submitting}
         >
           <Save size={18} className="mr-2" />
@@ -857,7 +857,7 @@ const PurchaseExcelImportPage = () => {
             <span className="font-semibold text-slate-800">{summary.notFound + summary.ambiguous + summary.invalid}</span>{" "}
             row(s) will be skipped (status NOT_FOUND / AMBIGUOUS / INVALID).
           </p>
-          <p>Only <span className="font-semibold text-emerald-700">{summary.ready}</span> READY row(s) will be saved as a purchase.</p>
+          <p>Only <span className="font-semibold text-success">{summary.ready}</span> READY row(s) will be saved as a purchase.</p>
           <p className="text-xs text-slate-500">You can cancel and fix those rows, or proceed.</p>
         </div>
       </ConfirmDialog>

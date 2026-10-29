@@ -205,12 +205,16 @@ export default {
 
         success: token("success"),
         "success-soft": token("success-soft"),
+        "success-border": token("success-border"),
         warning: token("warning"),
         "warning-soft": token("warning-soft"),
+        "warning-border": token("warning-border"),
         danger: token("danger"),
         "danger-soft": token("danger-soft"),
+        "danger-border": token("danger-border"),
         info: token("info"),
         "info-soft": token("info-soft"),
+        "info-border": token("info-border"),
 
         "series-1": token("series-1"),
         "series-2": token("series-2"),

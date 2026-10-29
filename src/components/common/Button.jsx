@@ -17,8 +17,8 @@ const Button = ({
     primary: 'btn-primary',
     secondary: 'btn-secondary',
     danger: 'btn-danger',
-    success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500',
-    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500',
+    success: 'bg-success text-white hover:bg-success focus:ring-success',
+    outline: 'border-2 border-accent text-accent hover:bg-accent-soft focus:ring-accent',
   };
 
   const sizes = {

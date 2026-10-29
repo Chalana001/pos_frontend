@@ -40,11 +40,11 @@ const formatQty = (value, unit) => {
   return unit ? `${formatted} ${unit}` : formatted;
 };
 
-const qtyTone = (qty) => (Number(qty || 0) <= 0 ? "text-red-700" : "text-slate-900");
+const qtyTone = (qty) => (Number(qty || 0) <= 0 ? "text-danger" : "text-slate-900");
 
 const profitTone = (value) => {
   if (value == null) return "text-slate-500";
-  return Number(value) < 0 ? "text-red-700" : "text-slate-900";
+  return Number(value) < 0 ? "text-danger" : "text-slate-900";
 };
 
 export default function InventoryValuationReportView({ inventorySummary, singleCategoryMode }) {
@@ -101,7 +101,7 @@ export default function InventoryValuationReportView({ inventorySummary, singleC
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className="h-full rounded-full bg-blue-600"
+                      className="h-full rounded-full bg-accent"
                       style={{
                         width: `${Math.max((Number(category.value || 0) / maxCategoryValue) * 100, Number(category.value || 0) > 0 ? 2 : 0)}%`,
                       }}
@@ -133,22 +133,22 @@ export default function InventoryValuationReportView({ inventorySummary, singleC
         </PremiumChartCard>
 
         <Card className="admin-panel-card border-slate-200/80 p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Stock Health</p>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-warning">Stock Health</p>
           <h2 className="mt-1 text-lg font-black text-slate-900">Immediate valuation risks</h2>
           <div className="mt-5 space-y-3">
             {/* These four are ordered by severity, and the surfaces carry that
                 order. This is one of the places colour genuinely means something. */}
-            <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4">
+            <div className="flex items-center justify-between rounded-xl border border-danger-border bg-danger-soft p-4">
               <span className="font-bold text-slate-800">Zero-stock items</span>
-              <span className="text-xl font-black text-red-700">{zeroStockItems}</span>
+              <span className="text-xl font-black text-danger">{zeroStockItems}</span>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-red-300 bg-red-100 p-4">
+            <div className="flex items-center justify-between rounded-xl border border-danger-border bg-danger-soft p-4">
               <span className="font-bold text-slate-800">Negative-stock items</span>
-              <span className="text-xl font-black text-red-800">{negativeStockItems}</span>
+              <span className="text-xl font-black text-danger">{negativeStockItems}</span>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-center justify-between rounded-xl border border-warning-border bg-warning-soft p-4">
               <span className="font-bold text-slate-800">Items without cost</span>
-              <span className="text-xl font-black text-amber-700">{itemsWithoutCost}</span>
+              <span className="text-xl font-black text-warning">{itemsWithoutCost}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
               <span className="font-bold text-slate-800">Sellable items missing price</span>

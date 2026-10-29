@@ -1,7 +1,8 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronLeft, ChevronRight, Printer, WifiOff } from "lucide-react";
+import { Search, ChefHat, Lock, ShoppingBag, UtensilsCrossed, Save, RefreshCw, AlertTriangle, ChevronLeft, ChevronRight, Printer, WifiOff, ArrowLeft } from "lucide-react";
 import { forgetServerReachable, isServerReachable, markServerReachable } from "../utils/serverReachability";
 import { useKeyboard } from "../hooks/useKeyboard";
 import { useSearchOnType } from "../hooks/useSearchOnType";
@@ -16,6 +17,7 @@ import { warrantyTemplatesAPI } from "../api/warrantyTemplates.api";
 import Cart from "../components/pos/Cart";
 import CustomerSelect from "../components/pos/CustomerSelect";
 import CheckoutOverlay, { salePaymentMethods, saleDocumentTypes } from "../components/pos/CheckoutOverlay";
+import MobileCartBar from "../components/pos/MobileCartBar";
 import usePaymentMethods from "../hooks/usePaymentMethods";
 import BatchSelectModal from "../components/pos/BatchSelectModal";
 import { formatCurrency, localDateTimeStamp } from "../utils/formatters";
@@ -308,6 +310,7 @@ const POS = () => {
   const [categoryScroll, setCategoryScroll] = useState({ canLeft: false, canRight: false });
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [selectedBatchItem, setSelectedBatchItem] = useState(null);
+  const [showMobileCart, setShowMobileCart] = useState(false);
 
   const [showCustomerSelect, setShowCustomerSelect] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -1561,6 +1564,17 @@ const POS = () => {
     // reason the value was read off it: two labels scanned back to back would otherwise
     // have the second one's characters land on top of the first one's uncommitted text.
     e.target.value = "";
+    await submitSearchQuery(query);
+  };
+
+  /**
+   * Resolve one query the same way Enter in the search box does.
+   *
+   * <p>Split out of the keydown handler so a label caught coming out of the quantity box
+   * takes the identical path: exact barcode, then scale decode, then server lookup. Keeping
+   * one entry point means a redirected scan cannot drift from a normally scanned one.
+   */
+  const submitSearchQuery = async (query) => {
     setSearchQuery("");
 
     if (!query) {
@@ -1692,6 +1706,21 @@ const POS = () => {
       return;
     }
     addToCart(itemToAdd);
+  };
+
+  /**
+   * Add a label that was typed into a cart quantity box by mistake.
+   *
+   * <p>Quantity boxes now take focus automatically, so a scan made without pressing Enter
+   * first lands there. Cart rolls the field back and hands the characters here; from this
+   * point it is an ordinary scan, so it goes through the same resolution and the search box
+   * ends up with focus for the next one.
+   */
+  const addScannedCode = (code) => {
+    const query = String(code ?? "").trim();
+    focusSearch();
+    if (!query) return;
+    submitSearchQuery(query);
   };
 
   const updateQuantity = (index, newQty) => {
@@ -2784,6 +2813,9 @@ const POS = () => {
       ? `${selectedTable.tableName} • ${pendingOrdersByTable[Number(selectedTable.id)]?.customerName || "Walk-in Customer"}`
       : "Dine-In • Select a table"
     : "Takeaway / Quick Sale";
+  const checkoutLabel = !shouldUseServerForCheckout
+    ? (isFreeLocalSalesPlan ? "Save Sale (F9)" : "Save to Queue (F9)")
+    : (saleMode === SALE_MODES.DINE_IN ? "Checkout Table (F9)" : "Checkout (F9)");
 
   const branchLabel = myShift?.branchName || effectiveBranch?.name || effectiveBranchId;
   const checkoutTotal = calculateTotal();
@@ -2802,7 +2834,7 @@ const POS = () => {
           sm:block`, the header pill inside `hidden md:inline-flex`, so a tablet-width
           terminal showed nothing at all while queueing sales. This banner is always on. */}
       {!shouldUseServerForCheckout ? (
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 lg:rounded-2xl lg:px-4">
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-warning lg:rounded-2xl lg:px-4">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
             <WifiOff size={14} />
             {isFreeLocalSalesPlan ? "Local mode" : "Offline. Queue mode"}
@@ -2815,7 +2847,7 @@ const POS = () => {
           {!isFreeLocalSalesPlan && queuePressure.count > 0 ? (
             <Link
               to="/offline-sales"
-              className="ml-auto rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-900 transition hover:bg-amber-300"
+              className="ml-auto rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-bold text-warning transition hover:bg-warning-soft"
             >
               {queuePressure.count} waiting to sync
             </Link>
@@ -2827,7 +2859,7 @@ const POS = () => {
           on one terminal, in one browser profile that nothing backs up. Past these
           numbers the honest thing is to say so rather than let it keep looking fine. */}
       {!isFreeLocalSalesPlan && (queuePressure.count >= 50 || queuePressure.ageHours >= 6) ? (
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-rose-900 lg:rounded-2xl lg:px-4">
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-danger-border bg-danger-soft px-3 py-2 text-danger lg:rounded-2xl lg:px-4">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
             <AlertTriangle size={14} />
             Sync overdue
@@ -2842,15 +2874,18 @@ const POS = () => {
           </span>
           <Link
             to="/offline-sales"
-            className="ml-auto rounded-full bg-rose-200 px-2.5 py-0.5 text-xs font-bold text-rose-900 transition hover:bg-rose-300"
+            className="ml-auto rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-bold text-danger transition hover:bg-danger-soft"
           >
             Open queue
           </Link>
         </div>
       ) : null}
 
-      <div className="flex flex-1 flex-col gap-1 lg:h-full lg:flex-row lg:gap-2 lg:overflow-hidden">
-        <div className="sales-surface sales-panel-enter flex h-[58vh] min-w-0 flex-shrink-0 flex-col overflow-hidden rounded-xl lg:h-full lg:flex-1 lg:rounded-2xl relative" style={{ animationDelay: "90ms" }}>
+      {/* min-h-0: without it the row's automatic minimum size is its content's, so
+          the panel below sized to every tile and the page scrolled instead of the
+          grid. With it the row is exactly the free height and the grid scrolls. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-1 lg:h-full lg:flex-row lg:gap-2 lg:overflow-hidden">
+        <div className="sales-surface sales-panel-enter flex flex-1 min-w-0 flex-shrink-0 flex-col overflow-hidden rounded-xl lg:h-full lg:flex-1 lg:rounded-2xl relative" style={{ animationDelay: "90ms" }}>
 
           <header className="page-section-enter flex flex-shrink-0 flex-col gap-2 border-b border-slate-100 bg-white px-2 py-2 lg:px-4 lg:py-3" style={{ animationDelay: "140ms" }}>
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -2870,7 +2905,7 @@ const POS = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
                     disabled={!canSell}
-                    className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs lg:text-sm disabled:opacity-50"
+                    className="w-full pl-8 lg:pl-10 pr-3 lg:pr-4 py-1.5 lg:py-2.5 rounded-lg lg:rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent transition-all text-xs lg:text-sm disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -2915,7 +2950,7 @@ const POS = () => {
                     } catch { /* storage unavailable or malformed draft */ }
                     return (
                       <button key={slot} type="button" onClick={() => switchQuickSaleSlot(slot)} aria-label={`Quick Sale slot ${slot}`} aria-pressed={isActive}
-                        className={`relative inline-flex h-9 min-w-9 flex-shrink-0 items-center justify-center rounded-lg px-2 text-sm font-semibold transition ${isActive ? "bg-white shadow-sm" : "hover:bg-white/70"} ${hasDraft ? "text-blue-500" : isActive ? "text-slate-900" : "text-slate-500"}`}>
+                        className={`relative inline-flex h-9 min-w-9 flex-shrink-0 items-center justify-center rounded-lg px-2 text-sm font-semibold transition ${isActive ? "bg-white shadow-sm" : "hover:bg-white/70"} ${hasDraft ? "text-accent" : isActive ? "text-slate-900" : "text-slate-500"}`}>
                         {slot}
                       </button>
                     );
@@ -2929,7 +2964,9 @@ const POS = () => {
                   </div>
                 ) : null}
                 {categories.length > 4 ? (
-                  <div className="flex items-center gap-1.5 lg:gap-2">
+                  /* Below lg the strip is swiped, and two round buttons eating its
+                     width were the only thing between the chips and full bleed. */
+                  <div className="hidden items-center gap-1.5 lg:flex lg:gap-2">
                     <button
                       type="button"
                       onClick={() => scrollCategories("left")}
@@ -2994,15 +3031,15 @@ const POS = () => {
                         type="button"
                         onClick={() => handleSelectTable(table)}
                         className={`sales-panel-hover rounded-xl border px-3 py-3 text-left transition ${isSelected
-                          ? "border-blue-500 bg-blue-50 shadow-sm"
+                          ? "border-accent bg-accent-soft shadow-sm"
                           : "border-slate-200 bg-slate-50 hover:border-slate-300"
                           }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="text-sm font-semibold text-slate-900">{table.tableName}</div>
                           <span className={`rounded-full px-2 py-0.5 text-xs font-bold uppercase ${table.status === "OCCUPIED"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-emerald-100 text-emerald-700"
+                            ? "bg-warning-soft text-warning"
+                            : "bg-success-soft text-success"
                             }`}>
                             {table.status}
                           </span>
@@ -3031,7 +3068,7 @@ const POS = () => {
                   onClick={() => setActiveCategory(cat)}
                   disabled={!canSell}
                   className={`px-3 lg:px-5 py-1 lg:py-2 rounded-md lg:rounded-lg whitespace-nowrap text-xs lg:text-sm font-semibold transition-all ${activeCategory === cat
-                    ? "bg-blue-600 text-white shadow-sm lg:shadow-md shadow-blue-200"
+                    ? "bg-accent text-white shadow-sm lg:shadow-md shadow-slate-200"
                     : "bg-slate-50 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
                     }`}
                 >
@@ -3055,7 +3092,7 @@ const POS = () => {
                 <p className="text-sm lg:text-lg font-medium text-center">No items found</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 lg:gap-3 xl:grid-cols-4 2xl:grid-cols-5">
+              <div className="grid grid-cols-3 gap-2 lg:grid-cols-4 lg:gap-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {visibleItems.map((item, index) => {
                   const unlimitedStockItem = isUnlimitedStockItem(item);
                   const stockQty = getSellableStockBaseQty(item);
@@ -3080,20 +3117,20 @@ const POS = () => {
                     >
                       <div className="absolute top-1 right-1 lg:top-2 lg:right-2 flex max-w-[calc(100%-0.75rem)] flex-col items-end gap-1">
                         {item.itemType === ItemType.SERVICE ? (
-                          <span className="tile-badge px-1 py-[1px] bg-purple-50 text-purple-600 text-[10px] font-bold rounded border border-purple-100 uppercase leading-4">Service</span>
+                          <span className="tile-badge px-1 py-[1px] bg-info-soft text-info text-[10px] font-bold rounded border border-info-border uppercase leading-4">Service</span>
                         ) : item.itemType === ItemType.RECIPE && !isOutOfStock ? (
-                          <span className="tile-badge px-1 py-[1px] bg-rose-50 text-rose-600 text-[10px] font-semibold rounded border border-rose-100 uppercase leading-4">
+                          <span className="tile-badge px-1 py-[1px] bg-danger-soft text-danger text-[10px] font-semibold rounded border border-danger-border uppercase leading-4">
                             {item.isKotEnabled ? "Recipe • KOT" : "Recipe"}
                           </span>
                         ) : isOutOfStock ? (
                           <span className={`tile-badge px-1 py-[1px] text-[10px] font-bold rounded border uppercase leading-4 ${canSelectOutOfStock
-                            ? "border-amber-200 bg-amber-50 text-amber-600"
-                            : "border-red-100 bg-red-50 text-red-500"
+                            ? "border-warning-border bg-warning-soft text-warning"
+                            : "border-danger-border bg-danger-soft text-danger"
                             }`}>
                             {canSelectOutOfStock ? "Override" : "Out"}
                           </span>
                         ) : (
-                          <span className="tile-badge px-1 lg:px-1.5 py-[1px] bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded border border-emerald-100 leading-4">{stockLabel}</span>
+                          <span className="tile-badge px-1 lg:px-1.5 py-[1px] bg-success-soft text-success text-[10px] font-bold rounded border border-success-border leading-4">{stockLabel}</span>
                         )}
                       </div>
 
@@ -3105,7 +3142,7 @@ const POS = () => {
                           {item.name}
                         </h3>
                         {item.altName && <p className="text-xs leading-tight text-slate-600 line-clamp-1 lg:text-xs">{item.altName}</p>}
-                        <p className="text-xs font-bold text-blue-600 lg:text-[14px]">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
+                        <p className="text-xs font-bold text-accent lg:text-[14px]">{item.itemType === ItemType.SERVICE && item.sellingPrice === 0 ? "Open Price" : formatCurrency(item.sellingPrice)}</p>
                       </div>
                     </div>
                   );
@@ -3141,7 +3178,7 @@ const POS = () => {
             where the resize handle it comes from actually exists (hidden below that). */}
         <div
           ref={cartPanelRef}
-          className={`sales-surface sales-panel-enter w-full min-w-0 flex-shrink-0 flex-col h-max rounded-xl transition-opacity duration-300 lg:h-full lg:w-[var(--cart-w)] lg:overflow-hidden lg:rounded-2xl ${!canSell ? "pointer-events-none opacity-50 grayscale" : ""}`}
+          className={`sales-surface sales-panel-enter hidden w-full min-w-0 flex-shrink-0 flex-col h-max rounded-xl transition-opacity duration-300 lg:flex lg:h-full lg:w-[var(--cart-w)] lg:overflow-hidden lg:rounded-2xl ${!canSell ? "pointer-events-none opacity-50 grayscale" : ""}`}
           style={{ "--cart-w": `min(100%, ${cartPanelWidth}px)`, animationDelay: "130ms" }}
         >
           <Cart
@@ -3175,12 +3212,9 @@ const POS = () => {
             onAddCustomer={() => setShowCustomerSelect(true)}
             onClearCart={clearCurrentCart}
             focusSearch={focusSearch}
+            onScanToSearch={addScannedCode}
             cartSummary={cartSummary}
-            checkoutLabel={
-              !shouldUseServerForCheckout
-                ? (isFreeLocalSalesPlan ? "Save Sale (F9)" : "Save to Queue (F9)")
-                : (saleMode === SALE_MODES.DINE_IN ? "Checkout Table (F9)" : "Checkout (F9)")
-            }
+            checkoutLabel={checkoutLabel}
             queueMode={!shouldUseServerForCheckout}
             sideAction={(
               <>
@@ -3240,6 +3274,130 @@ const POS = () => {
         </ErrorBoundary>
       </div>
 
+      {/* Below lg the cart lives on the selling screen itself: the item grid fills
+          everything above this bar and the bar shows the current order over the
+          total and checkout. The floating round button it replaces only said how
+          many items were waiting; this says what they are. */}
+      {canSell && (
+        <MobileCartBar
+          lines={cartItems.map((item) => ({
+            qtyLabel: item.weightItem
+              ? `${item.qty} ${item.qtyUnit || item.defaultUnit} ×`
+              : `${item.qty}×`,
+            name: item.name,
+            amount: calculateCartItemTotal(item),
+          }))}
+          itemCount={cartItems.length}
+          total={checkoutTotal}
+          checkoutLabel={checkoutLabel}
+          queueMode={!shouldUseServerForCheckout}
+          loading={loading}
+          onCheckout={handleCheckout}
+          onOpenCart={() => setShowMobileCart(true)}
+        />
+      )}
+
+      {showMobileCart && createPortal(
+        <div className="fixed inset-0 z-[100] flex h-[100dvh] flex-col bg-slate-100 lg:hidden" role="dialog" aria-modal="true" aria-label="Current order">
+          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
+            <button
+              type="button"
+              onClick={() => setShowMobileCart(false)}
+              className="inline-flex h-11 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              <ArrowLeft size={20} aria-hidden="true" />
+              Back to items
+            </button>
+            <div className="min-w-0 text-right">
+              <p className="truncate text-xs font-medium text-slate-500">{cartSummary}</p>
+              <p className="text-sm font-semibold tabular-nums text-slate-900">{cartItems.length} {cartItems.length === 1 ? "item" : "items"}</p>
+            </div>
+          </header>
+          <div className="min-h-0 flex-1 overflow-hidden bg-white">
+          <Cart
+            items={cartItems}
+            customer={customer}
+            setCustomer={setCustomer}
+            onUpdateQty={updateQuantity}
+            onUpdatePrice={updateUnitPrice}
+            onRemoveItem={removeItem}
+            onInlineDiscount={handleInlineDiscount}
+            onRemovePromotion={removePromotion}
+            onRestorePromotion={restorePromotion}
+            onUpdateQtyUnit={updateQtyUnit}
+            onUpdateWarranty={updateWarranty}
+            warrantyOptions={warrantyOptions}
+            warrantyEnabled={canAddWarranty}
+            billDiscount={billDiscount}
+            setBillDiscount={setBillDiscount}
+            promotionCode={promotionCode}
+            setPromotionCode={setPromotionCode}
+            codeStatus={billPromotionPreview?.codeStatus || null}
+            loyaltyPoints={loyaltyPoints}
+            setLoyaltyPoints={setLoyaltyPoints}
+            loyaltyRefreshKey={loyaltyRefreshKey}
+            loyaltyCustomerId={canUseServer && customer ? customer.id : null}
+            loyaltyDiscount={canUseServer ? loyaltyDiscount : 0}
+            onLoyaltyValueChange={setLoyaltyDiscount}
+            billPromotion={billPromotionPreview}
+            onCheckout={() => {
+              setShowMobileCart(false);
+              handleCheckout();
+            }}
+            loading={loading}
+            onAddCustomer={() => {
+              setShowMobileCart(false);
+              setShowCustomerSelect(true);
+            }}
+            onClearCart={clearCurrentCart}
+            focusSearch={focusSearch}
+            onScanToSearch={addScannedCode}
+            cartSummary={cartSummary}
+            checkoutLabel={checkoutLabel}
+            queueMode={!shouldUseServerForCheckout}
+            sideAction={(
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrintBill}
+                  disabled={cartItems.length === 0}
+                  className="inline-flex h-[50px] shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Printer size={16} />
+                  Bill
+                </button>
+                {kotEnabled ? (
+                  <button
+                    type="button"
+                    onClick={handlePrintKot}
+                    disabled={!canUseServer || queueCartActive || printingKot || !hasKotItems || !canPrintKot}
+                    className="inline-flex h-[50px] shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <ChefHat size={16} />
+                    KOT
+                  </button>
+                ) : null}
+              </>
+            )}
+            footerActions={
+              saleMode === SALE_MODES.DINE_IN ? (
+                <button
+                  type="button"
+                  onClick={() => savePendingDraft()}
+                  disabled={savingDraft || !selectedTableId || cartItems.length === 0}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Save size={16} />
+                  {savingDraft ? "Saving..." : "Save Draft"}
+                </button>
+              ) : null
+            }
+          />
+          </div>
+        </div>,
+        document.body
+      )}
+
       <CustomerSelect isOpen={showCustomerSelect} onClose={() => { setShowCustomerSelect(false); }} onSelectCustomer={setCustomer} />
       <CheckoutOverlay
         isOpen={showPayment}
@@ -3272,24 +3430,24 @@ const POS = () => {
         confirmLabel="Allow Override"
       >
         {stockOverrideDialog?.shortages?.length ? (
-            <div className="overflow-hidden rounded-xl border border-amber-100 bg-amber-50/50">
-              <div className="border-b border-amber-100 px-4 py-2 text-xs font-bold uppercase text-amber-700">
+            <div className="overflow-hidden rounded-xl border border-warning-border bg-warning-soft/50">
+              <div className="border-b border-warning-border px-4 py-2 text-xs font-bold uppercase text-warning">
                 Shortage Items
               </div>
-              <div className="divide-y divide-amber-100 bg-white">
+              <div className="divide-y divide-warning-border bg-white">
                 {stockOverrideDialog.shortages.map((shortage, index) => (
                   <div key={`${shortage.itemLabel}-${index}`} className="px-4 py-3">
                     <div className="text-sm font-semibold text-slate-800">{shortage.itemLabel}</div>
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                       <span>Need: <span className="font-semibold text-slate-700">{formatStockQuantity(shortage.requiredQuantity)} {shortage.unit}</span></span>
-                      <span>Available: <span className="font-semibold text-red-600">{formatStockQuantity(shortage.availableQuantity)} {shortage.unit}</span></span>
+                      <span>Available: <span className="font-semibold text-danger">{formatStockQuantity(shortage.availableQuantity)} {shortage.unit}</span></span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-warning">
               {stockOverrideDialog?.message}
             </div>
           )}

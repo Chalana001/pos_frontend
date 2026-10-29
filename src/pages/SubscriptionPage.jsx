@@ -79,7 +79,7 @@ const SubscriptionPage = () => {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-blue-600" />
+        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-accent" />
       </div>
     );
   }
@@ -112,11 +112,11 @@ const SubscriptionPage = () => {
               <div
                 key={plan.id}
                 className={`relative flex flex-col rounded-2xl border bg-white p-5 ${
-                  isCurrent ? 'border-blue-500 shadow-md ring-1 ring-blue-500' : 'border-slate-200 shadow-sm'
+                  isCurrent ? 'border-accent shadow-md ring-1 ring-accent' : 'border-slate-200 shadow-sm'
                 }`}
               >
                 {isCurrent ? (
-                  <span className="absolute -top-2.5 left-5 rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+                  <span className="absolute -top-2.5 left-5 rounded-full bg-accent px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
                     Your package
                   </span>
                 ) : null}
@@ -138,7 +138,7 @@ const SubscriptionPage = () => {
 
                 <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
                   <li className="flex items-center gap-2">
-                    <Sparkles size={14} className="shrink-0 text-blue-500" />
+                    <Sparkles size={14} className="shrink-0 text-accent" />
                     {plan.enabledModuleCount} of {plan.totalModuleCount} features
                   </li>
                   <li className="flex items-center gap-2">
@@ -163,7 +163,7 @@ const SubscriptionPage = () => {
                       href={contactHref}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block rounded-lg bg-blue-600 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                      className="block rounded-lg bg-accent py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-accent"
                     >
                       Ask about {plan.label}
                     </a>
@@ -208,7 +208,7 @@ const SubscriptionPage = () => {
                       <th
                         key={plan.id}
                         className={`px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide ${
-                          plan.name === currentPlanName ? 'bg-blue-50 text-blue-700' : 'text-slate-500'
+                          plan.name === currentPlanName ? 'bg-accent-soft text-accent' : 'text-slate-500'
                         }`}
                       >
                         {plan.label}
@@ -229,11 +229,11 @@ const SubscriptionPage = () => {
                         <td
                           key={plans[index].id}
                           className={`px-3 py-2.5 text-center ${
-                            plans[index].name === currentPlanName ? 'bg-blue-50/60' : ''
+                            plans[index].name === currentPlanName ? 'bg-accent-soft/60' : ''
                           }`}
                         >
                           {included ? (
-                            <Check size={16} className="mx-auto text-emerald-600" />
+                            <Check size={16} className="mx-auto text-success" />
                           ) : (
                             <Minus size={16} className="mx-auto text-slate-600" />
                           )}
@@ -260,7 +260,7 @@ const SubscriptionPage = () => {
                   href={contactHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+                  className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-success"
                 >
                   <MessageCircle size={15} />
                   WhatsApp {support.supportPhone}
