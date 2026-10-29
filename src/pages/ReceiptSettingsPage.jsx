@@ -826,7 +826,7 @@ const ReceiptSettingsPage = () => {
                     <label
                       key={field.key}
                       className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
-                        field.locked ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'
+                        field.locked ? 'border-slate-200 bg-accent-soft' : 'border-slate-200 bg-white'
                       }`}
                     >
                       <div>
@@ -839,7 +839,7 @@ const ReceiptSettingsPage = () => {
                         checked={!!form[field.key]}
                         disabled={isDisabled}
                         onChange={(event) => updateField(field.key, event.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                       />
                     </label>
                       );
@@ -944,7 +944,7 @@ const ReceiptSettingsPage = () => {
                                     title="Bold"
                                     className={`flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-bold transition ${
                                       line.bold
-                                        ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                        ? 'border-accent bg-accent-soft text-accent'
                                         : 'border-slate-300 bg-white text-slate-500 hover:border-slate-400'
                                     }`}
                                   >
@@ -956,7 +956,7 @@ const ReceiptSettingsPage = () => {
                                     title="Italic"
                                     className={`flex h-9 w-9 items-center justify-center rounded-lg border text-sm transition ${
                                       line.italic
-                                        ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                        ? 'border-accent bg-accent-soft text-accent'
                                         : 'border-slate-300 bg-white text-slate-500 hover:border-slate-400'
                                     }`}
                                   >
@@ -968,7 +968,7 @@ const ReceiptSettingsPage = () => {
                                     title="Underline"
                                     className={`flex h-9 w-9 items-center justify-center rounded-lg border text-sm transition ${
                                       line.underline
-                                        ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                        ? 'border-accent bg-accent-soft text-accent'
                                         : 'border-slate-300 bg-white text-slate-500 hover:border-slate-400'
                                     }`}
                                   >
@@ -1002,7 +1002,7 @@ const ReceiptSettingsPage = () => {
                                 type="button"
                                 onClick={() => removeTemplateLine(index)}
                                 title="Remove line"
-                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-500 transition hover:border-red-400 hover:bg-red-100"
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-danger-border bg-danger-soft text-danger transition hover:border-danger-border hover:bg-danger-soft"
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -1023,7 +1023,7 @@ const ReceiptSettingsPage = () => {
                                         ? 'e.g. Thank You, Come Again!'
                                         : 'Custom label (leave empty for default)'
                                   }
-                                  className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm placeholder-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400/30"
+                                  className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm placeholder-slate-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
                                 />
                               </div>
                             ) : null}
@@ -1042,7 +1042,7 @@ const ReceiptSettingsPage = () => {
                                     max="200"
                                     value={form.logoWidthPercent}
                                     onChange={(e) => updateField('logoWidthPercent', Number(e.target.value))}
-                                    className="mt-1.5 w-full accent-blue-600"
+                                    className="mt-1.5 w-full accent-accent"
                                   />
                                 </div>
                                 <div>
@@ -1056,7 +1056,7 @@ const ReceiptSettingsPage = () => {
                                     max="20"
                                     value={form.logoTopSpacing}
                                     onChange={(e) => updateField('logoTopSpacing', Number(e.target.value))}
-                                    className="mt-1.5 w-full accent-blue-600"
+                                    className="mt-1.5 w-full accent-accent"
                                   />
                                 </div>
                               </div>
@@ -1072,7 +1072,7 @@ const ReceiptSettingsPage = () => {
                                     onClick={() => updateTemplateLine(index, 'customText', '')}
                                     className={`h-7 px-3 rounded text-xs font-medium border transition ${
                                       line.customText?.trim() !== 'solid'
-                                        ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                        ? 'border-accent bg-accent-soft text-accent'
                                         : 'border-slate-300 bg-white text-slate-500 hover:border-slate-400'
                                     }`}
                                   >
@@ -1083,7 +1083,7 @@ const ReceiptSettingsPage = () => {
                                     onClick={() => updateTemplateLine(index, 'customText', 'solid')}
                                     className={`h-7 px-3 rounded text-xs font-medium border transition ${
                                       line.customText?.trim() === 'solid'
-                                        ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                        ? 'border-accent bg-accent-soft text-accent'
                                         : 'border-slate-300 bg-white text-slate-500 hover:border-slate-400'
                                     }`}
                                   >
@@ -1113,7 +1113,7 @@ const ReceiptSettingsPage = () => {
                                       type="checkbox"
                                       checked={itemTableCfg[toggle.key]}
                                       onChange={(e) => updateItemTableCfg(toggle.key, e.target.checked)}
-                                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                      className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                                     />
                                   </label>
                                 ))}
@@ -1129,7 +1129,7 @@ const ReceiptSettingsPage = () => {
                                           maxLength={30}
                                           value={itemTableCfg[field.key]}
                                           onChange={(e) => updateItemTableCfg(field.key, e.target.value)}
-                                          className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                                          className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
                                         />
                                       </label>
                                     ))}
@@ -1148,7 +1148,7 @@ const ReceiptSettingsPage = () => {
                                           placeholder="(none)"
                                           value={itemTableCfg[field.key]}
                                           onChange={(e) => updateItemTableCfg(field.key, e.target.value)}
-                                          className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                                          className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
                                         />
                                       </label>
                                     ))}
@@ -1163,7 +1163,7 @@ const ReceiptSettingsPage = () => {
                                       maxLength={30}
                                       value={itemTableCfg.labelDiscount}
                                       onChange={(e) => updateItemTableCfg('labelDiscount', e.target.value)}
-                                      className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                                      className="h-8 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
                                     />
                                   </label>
                                 ) : null}
@@ -1186,7 +1186,7 @@ const ReceiptSettingsPage = () => {
                       <button
                         type="button"
                         onClick={() => addTemplateLine(addLineType)}
-                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-4 text-sm font-semibold text-blue-600 transition hover:bg-blue-100"
+                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-accent bg-accent-soft px-4 text-sm font-semibold text-accent transition hover:bg-slate-100"
                       >
                         <Plus size={14} />
                         Add Line
@@ -1233,7 +1233,7 @@ const ReceiptSettingsPage = () => {
                           max="200"
                           value={form.invoiceLogoWidthPercent}
                           onChange={(event) => updateField('invoiceLogoWidthPercent', Number(event.target.value))}
-                          className="mt-3 w-full accent-blue-600"
+                          className="mt-3 w-full accent-accent"
                         />
                         <p className="mt-2 text-xs text-slate-500">
                           Full invoice logo size is controlled separately from the thermal receipt.
@@ -1283,7 +1283,7 @@ const ReceiptSettingsPage = () => {
                               onClick={() => updateField('currencySymbol', sym)}
                               className={`h-9 min-w-[44px] rounded-lg border px-2 text-sm font-medium transition ${
                                 form.currencySymbol === sym
-                                  ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                  ? 'border-accent bg-accent-soft text-accent'
                                   : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
                               }`}
                             >
@@ -1297,7 +1297,7 @@ const ReceiptSettingsPage = () => {
                             value={form.currencySymbol || ''}
                             onChange={(e) => updateField('currencySymbol', e.target.value.slice(0, 6))}
                             placeholder="Custom"
-                            className="h-9 w-20 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
+                            className="h-9 w-20 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
                           />
                         </div>
                         <p className="mt-1.5 text-xs text-slate-500">Shown before prices on the receipt (max 6 chars).</p>
@@ -1320,7 +1320,7 @@ const ReceiptSettingsPage = () => {
                           type="checkbox"
                           checked={!!form.directPrintEnabled}
                           onChange={(event) => updateField('directPrintEnabled', event.target.checked)}
-                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                         />
                       </label>
 
@@ -1353,7 +1353,7 @@ const ReceiptSettingsPage = () => {
                           max="10"
                           value={form.printerCopies}
                           onChange={(event) => updateField('printerCopies', Number(event.target.value))}
-                          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                         />
                       </div>
 

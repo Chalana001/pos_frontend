@@ -39,7 +39,7 @@ const TablePagination = ({
                 onGoToPage();
               }
             }}
-            className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           />
           <Button
             type="button"

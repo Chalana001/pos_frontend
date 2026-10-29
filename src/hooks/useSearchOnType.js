@@ -24,6 +24,10 @@ export function useSearchOnType(setter, existingRef) {
         (tag === "input" || tag === "textarea" || tag === "select" || active?.isContentEditable) &&
         active !== ref.current;
 
+      // Number fields are the one exception, and their guard lives on the input itself
+      // (see Cart's QuantityField): it is the only place that knows which cart line the
+      // digits belong to, so it can put the quantity back before the scan is replayed
+      // into the search box. Anything else keeps the keyboard while it is being typed in.
       if (isInOtherField) return;
 
       if (e.key === "Escape") {

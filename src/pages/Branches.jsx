@@ -226,7 +226,7 @@ const Branches = () => {
       render: (b) => (
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
-            b.active ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+            b.active ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
           }`}
         >
           {b.active ? "Active" : "Inactive"}
@@ -286,8 +286,8 @@ const Branches = () => {
               <h3 className="text-sm font-medium text-slate-600 mb-2">Total Branches</h3>
               <p className="text-2xl font-bold text-slate-800">{branches.length}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Building2 className="text-blue-600" size={24} />
+            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+              <Building2 className="text-accent" size={24} />
             </div>
           </div>
         </Card>
@@ -309,7 +309,7 @@ const Branches = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
             <input aria-label="Search branches..."
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="Search branches..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -507,7 +507,7 @@ const Branches = () => {
       <SharedModal isOpen={!!deactivateTarget} onClose={() => setDeactivateTarget(null)} title="Deactivate Branch" size="sm">
         <div className="space-y-5">
           <div className="flex gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger">
               <Trash2 size={20} />
             </div>
             <div>

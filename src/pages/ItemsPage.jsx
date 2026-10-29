@@ -306,11 +306,11 @@ const ItemsPage = () => {
         <div className="flex flex-col">
           <span className="font-medium text-slate-800">{i.name}</span>
           {i.altName && <span className="text-xs text-slate-600">{i.altName}</span>}
-          {i.itemType === ItemType.SERVICE && <span className="text-xs uppercase font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded w-fit mt-1">Service</span>}
-          {i.itemType === ItemType.WEIGHT && <span className="text-xs uppercase font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded w-fit mt-1">Weight Item</span>}
-          {i.itemType === ItemType.VOLUME && <span className="text-xs uppercase font-bold text-cyan-600 bg-cyan-100 px-1.5 py-0.5 rounded w-fit mt-1">Volume Item</span>}
-          {i.itemType === ItemType.RECIPE && <span className="text-xs uppercase font-bold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded w-fit mt-1">Recipe</span>}
-          {kotEnabled && i.isKotEnabled && <span className="text-xs uppercase font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded w-fit mt-1">KOT</span>}
+          {i.itemType === ItemType.SERVICE && <span className="text-xs uppercase font-bold text-info bg-info-soft px-1.5 py-0.5 rounded w-fit mt-1">Service</span>}
+          {i.itemType === ItemType.WEIGHT && <span className="text-xs uppercase font-bold text-warning bg-warning-soft px-1.5 py-0.5 rounded w-fit mt-1">Weight Item</span>}
+          {i.itemType === ItemType.VOLUME && <span className="text-xs uppercase font-bold text-info bg-info-soft px-1.5 py-0.5 rounded w-fit mt-1">Volume Item</span>}
+          {i.itemType === ItemType.RECIPE && <span className="text-xs uppercase font-bold text-danger bg-danger-soft px-1.5 py-0.5 rounded w-fit mt-1">Recipe</span>}
+          {kotEnabled && i.isKotEnabled && <span className="text-xs uppercase font-bold text-accent bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">KOT</span>}
           {i.posVisible === false && <span className="text-xs uppercase font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded w-fit mt-1">Hidden in POS</span>}
         </div>
       )
@@ -320,7 +320,7 @@ const ItemsPage = () => {
       render: (item) => (
         <div className="flex flex-col">
            <div className="flex items-center gap-1">
-              <Tag size={14} className="text-blue-500" />
+              <Tag size={14} className="text-accent" />
               <span className="font-medium text-slate-700 text-sm">
                   {(singleCategoryMode ? item.subCategoryName || item.categoryName : item.categoryName) || "Uncategorized"}
               </span>
@@ -354,7 +354,7 @@ const ItemsPage = () => {
       render: (i) => (
         <span
           className={`px-2 py-1 rounded-full text-xs font-bold ${
-            i.active ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"
+            i.active ? "bg-success-soft text-success border border-success-border" : "bg-danger-soft text-danger border border-danger-border"
           }`}
         >
           {i.active ? "Active" : "Inactive"}
@@ -368,14 +368,14 @@ const ItemsPage = () => {
           <div className="flex items-center gap-1">
             <button aria-label="Edit"
               onClick={() => navigate(`/items/${i.id}/edit`)}
-              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              className="p-1.5 text-accent hover:bg-accent-soft rounded transition-colors"
               title="Edit"
             >
               <Edit size={18} />
             </button>
             <button aria-label="Delete"
               onClick={() => openDeleteModal(i)}
-              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+              className="p-1.5 text-danger hover:bg-danger-soft rounded transition-colors"
               title="Delete"
             >
               <Trash2 size={18} />
@@ -428,7 +428,7 @@ const ItemsPage = () => {
                 onChange={handleSearch}
                 placeholder="Search name, barcode, or category..."
                 ref={searchRef}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
 
@@ -545,7 +545,7 @@ const ItemsPage = () => {
                 }}
                 placeholder="Price"
                 disabled={priceOperator === "ALL"}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-600"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:bg-slate-100 disabled:text-slate-600"
               />
             </div>
 
@@ -589,8 +589,8 @@ const ItemsPage = () => {
             : (deleteLoading ? "Deactivating..." : "Deactivate Instead")
         }
       >
-          <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={20} />
+          <div className="flex gap-3 rounded-lg border border-warning-border bg-warning-soft p-4">
+            <AlertTriangle className="mt-0.5 shrink-0 text-warning" size={20} />
             <div>
               <div className="font-semibold text-slate-900">{deleteCheck?.itemName || "Item"}</div>
               <p className="mt-1 text-sm leading-6 text-slate-600">
@@ -602,7 +602,7 @@ const ItemsPage = () => {
           {deleteLoading && !deleteCheck?.reasons?.length ? (
             <LoadingSpinner size="md" text="Checking item references..." />
           ) : deleteCheck?.canDelete ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            <div className="rounded-lg border border-success-border bg-success-soft p-4 text-sm text-success">
               This item has no history or active references. You can delete it permanently.
             </div>
           ) : (

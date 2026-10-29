@@ -1,6 +1,8 @@
 import api from "./axios";
 
 export const shiftsAPI = {
+  getCashCountSettings: () => api.get("/shifts/cash-count-settings"),
+  updateCashCountSettings: (payload) => api.put("/shifts/cash-count-settings", payload),
   openMine: (data) => api.post("/shifts/open", data),
   getMine: () => api.get("/shifts/me"),
   closeMine: (data) => api.post("/shifts/close", data),
@@ -22,6 +24,10 @@ export const shiftsAPI = {
     api.post(`/shifts/${shiftId}/cashdrop`, data),
 
   getById: (shiftId) => api.get(`/shifts/${shiftId}`),
+
+  // Per-payment-method sales for one shift (Close Shift dialog): the backend
+  // groups the order_payments ledger over the shift window in one query.
+  getPaymentSummary: (shiftId) => api.get(`/shifts/${shiftId}/payment-summary`),
 
   getOrders: (shiftId, params = {}) => api.get(`/shifts/${shiftId}/orders`, { params }),
 

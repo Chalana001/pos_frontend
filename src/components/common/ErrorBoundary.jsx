@@ -59,11 +59,11 @@ class ErrorBoundary extends React.Component {
         role="alert"
         className={
           isSection
-            ? 'flex flex-col items-center justify-center gap-3 rounded-xl border border-red-200 bg-red-50 p-6 text-center'
+            ? 'flex flex-col items-center justify-center gap-3 rounded-xl border border-danger-border bg-danger-soft p-6 text-center'
             : 'flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center'
         }
       >
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
           <AlertTriangle size={24} aria-hidden="true" />
         </span>
 
@@ -78,7 +78,7 @@ class ErrorBoundary extends React.Component {
           <button
             type="button"
             onClick={this.handleRetry}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-accent"
           >
             <RotateCcw size={16} aria-hidden="true" />
             Try again
@@ -88,7 +88,7 @@ class ErrorBoundary extends React.Component {
             <button
               type="button"
               onClick={this.handleReload}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
             >
               <RefreshCw size={16} aria-hidden="true" />
               Reload screen

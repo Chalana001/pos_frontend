@@ -3,6 +3,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { customersAPI } from "../api/customers.api";
+import usePaymentMethods from "../hooks/usePaymentMethods";
 import Button from "../components/common/Button";
 import Card from "../components/common/Card";
 import CustomSelect from "../components/common/CustomSelect";
@@ -12,7 +13,7 @@ import CustomerLoyaltyPanel from "../components/customers/CustomerLoyaltyPanel";
 import CustomerOrdersTab from "../components/customers/CustomerOrdersTab";
 import { formatCurrency, formatDate } from "../utils/formatters";
 
-const paymentMethodOptions = [
+const FALLBACK_PAYMENT_OPTIONS = [
   { value: "CASH", label: "Cash" },
   { value: "CARD", label: "Card" },
   { value: "BANK", label: "Bank" },
@@ -22,6 +23,13 @@ const paymentMethodOptions = [
 const CustomerViewPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+
+  // Customer due payments settle a balance, so deferred (credit) methods are
+  // excluded here, mirroring the backend's settlement rule.
+  const { methods: configuredMethods } = usePaymentMethods();
+  const paymentMethodOptions = configuredMethods.length
+    ? configuredMethods.filter((m) => !m.allowsCredit).map((m) => ({ value: m.code, label: m.displayName }))
+    : FALLBACK_PAYMENT_OPTIONS;
 
   const [tab, setTab] = useState("orders");
   const [loading, setLoading] = useState(false);
@@ -140,7 +148,7 @@ const CustomerViewPage = () => {
                   <div>
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        customer?.active ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                        customer?.active ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
                       }`}
                     >
                       {customer?.active ? "Active" : "Inactive"}
@@ -174,7 +182,7 @@ const CustomerViewPage = () => {
                     <div className="mt-1 flex items-center justify-between">
                       <div
                         className={`text-xl font-bold ${
-                          (customer?.dueAmount || 0) > 0 ? "dark-hl text-red-600" : "text-slate-800"
+                          (customer?.dueAmount || 0) > 0 ? "dark-hl text-danger" : "text-slate-800"
                         }`}
                       >
                         {formatCurrency(customer?.dueAmount || 0)}
@@ -184,7 +192,7 @@ const CustomerViewPage = () => {
                         <Button
                           size="sm"
                           onClick={() => setShowPaymentModal(true)}
-                          className="border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
+                          className="border-success-border bg-success text-white hover:bg-success"
                         >
                           Pay Now
                         </Button>
@@ -209,7 +217,7 @@ const CustomerViewPage = () => {
               <button
                 onClick={() => onTabChange("orders")}
                 className={`profile-tab-chip rounded-lg px-4 py-2 text-sm font-medium ${
-                  tab === "orders" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                  tab === "orders" ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"
                 }`}
                 style={{ animationDelay: "120ms" }}
               >
@@ -219,7 +227,7 @@ const CustomerViewPage = () => {
               <button
                 onClick={() => onTabChange("notes")}
                 className={`profile-tab-chip rounded-lg px-4 py-2 text-sm font-medium ${
-                  tab === "notes" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                  tab === "notes" ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"
                 }`}
                 style={{ animationDelay: "160ms" }}
               >
@@ -229,7 +237,7 @@ const CustomerViewPage = () => {
               <button
                 onClick={() => onTabChange("loyalty")}
                 className={`profile-tab-chip rounded-lg px-4 py-2 text-sm font-medium ${
-                  tab === "loyalty" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                  tab === "loyalty" ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"
                 }`}
                 style={{ animationDelay: "200ms" }}
               >
@@ -262,7 +270,7 @@ const CustomerViewPage = () => {
         <form onSubmit={handlePaymentSubmit} className="space-y-4 p-6">
           <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
             <span className="text-sm font-medium text-slate-600">Total Due Amount</span>
-            <span className="dark-hl text-lg font-bold text-red-600">{formatCurrency(customer?.dueAmount || 0)}</span>
+            <span className="dark-hl text-lg font-bold text-danger">{formatCurrency(customer?.dueAmount || 0)}</span>
           </div>
 
           <div>
@@ -276,7 +284,7 @@ const CustomerViewPage = () => {
                 max={customer?.dueAmount}
                 value={paymentAmount}
                 onChange={(event) => setPaymentAmount(event.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 font-semibold outline-none transition-all focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 font-semibold outline-none transition-all focus:ring-2 focus:ring-accent"
                 placeholder="0.00"
                 required
               />
@@ -289,7 +297,7 @@ const CustomerViewPage = () => {
               value={paymentMethod}
               onChange={setPaymentMethod}
               options={paymentMethodOptions}
-              buttonClassName="px-4 py-3 font-semibold focus:ring-blue-100"
+              buttonClassName="px-4 py-3 font-semibold focus:ring-accent"
             />
           </div>
 
@@ -304,7 +312,7 @@ const CustomerViewPage = () => {
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+              className="flex-1 bg-success text-white hover:bg-success"
               disabled={paymentLoading}
             >
               {paymentLoading ? "Processing..." : "Confirm Payment"}

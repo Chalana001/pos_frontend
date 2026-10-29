@@ -111,8 +111,8 @@ const CustomerOrdersTab = ({ customerId }) => {
                       <span
                         className={`rounded-full px-2 py-1 text-xs font-medium ${
                           order.orderType === "CREDIT"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-emerald-100 text-emerald-800"
+                            ? "bg-danger-soft text-danger"
+                            : "bg-success-soft text-success"
                         }`}
                       >
                         {order.orderType || "-"}
@@ -127,7 +127,7 @@ const CustomerOrdersTab = ({ customerId }) => {
                       <span
                         className={`rounded-full px-2 py-1 text-xs font-medium ${
                           order.status === "CANCELED"
-                            ? "bg-red-100 text-red-800"
+                            ? "bg-danger-soft text-danger"
                             : "bg-slate-100 text-slate-700"
                         }`}
                       >

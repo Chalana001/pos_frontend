@@ -4,10 +4,10 @@ import { formatCurrency } from "../../../utils/formatters";
 import { promotionStatus } from "./promotionStatus";
 
 const TONES = {
-  blue: "bg-blue-50 text-blue-700",
-  emerald: "bg-emerald-50 text-emerald-700",
-  amber: "bg-amber-50 text-amber-700",
-  violet: "bg-violet-50 text-violet-700",
+  blue: "bg-accent-soft text-accent",
+  emerald: "bg-success-soft text-success",
+  amber: "bg-warning-soft text-warning",
+  violet: "bg-info-soft text-info",
 };
 
 const KpiCard = ({ icon: Icon, label, value, sub, tone = "blue", progress, delay = 0 }) => (
@@ -28,7 +28,7 @@ const KpiCard = ({ icon: Icon, label, value, sub, tone = "blue", progress, delay
     {progress != null && (
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100" aria-label="Budget used">
         <div
-          className={`budget-bar h-full rounded-full ${progress >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
+          className={`budget-bar h-full rounded-full ${progress >= 80 ? "bg-warning" : "bg-success"}`}
           style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
         />
       </div>

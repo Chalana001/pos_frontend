@@ -12,11 +12,11 @@ import { formatDate } from "../utils/formatters";
 const getStatusClassName = (status) => {
   switch (status) {
     case "ACTIVE":
-      return "border-emerald-200 bg-emerald-100 text-emerald-700";
+      return "border-success-border bg-success-soft text-success";
     case "EXPIRED":
-      return "border-amber-200 bg-amber-100 text-amber-700";
+      return "border-warning-border bg-warning-soft text-warning";
     case "CLAIMED":
-      return "border-blue-200 bg-blue-100 text-blue-700";
+      return "border-slate-200 bg-slate-100 text-accent";
     case "VOID":
       return "border-slate-200 bg-slate-100 text-slate-600";
     default:
@@ -99,7 +99,7 @@ const WarrantiesPage = () => {
                 setSearch(event.target.value);
                 setPage(0);
               }}
-              className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="Search warranty no, barcode, invoice, customer, or item..."
             />
           </div>
@@ -143,7 +143,7 @@ const WarrantiesPage = () => {
                       <td className="app-table-cell">{row.customerName}</td>
                       <td className="app-table-cell">
                         <div className="flex items-center gap-2">
-                          <ShieldCheck size={16} className="text-blue-600" />
+                          <ShieldCheck size={16} className="text-accent" />
                           <div className="flex flex-col"><span>{row.itemName}</span>{row.altName && <span className="text-xs text-slate-600">{row.altName}</span>}</div>
                         </div>
                       </td>

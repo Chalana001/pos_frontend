@@ -48,11 +48,11 @@ const Register = () => {
     <div className="auth-screen flex min-h-screen items-center justify-center p-4">
       <div className="auth-panel-enter w-full max-w-md" style={{ animationDelay: '90ms' }}>
         <div className="always-dark page-section-enter mb-8 text-center" style={{ animationDelay: '180ms' }}>
-          <div className="shell-chip mx-auto mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-blue-900">
+          <div className="shell-chip mx-auto mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-slate-900">
             Admin Setup
           </div>
           <h1 className="mb-2 text-4xl font-bold text-white">{BRAND_NAME}</h1>
-          <p className="text-blue-100">Create your admin account</p>
+          <p className="text-slate-300">Create your admin account</p>
         </div>
 
         <div className="auth-card rounded-2xl p-8">
@@ -65,7 +65,7 @@ const Register = () => {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="Choose a username"
                   autoFocus
                 />
@@ -80,7 +80,7 @@ const Register = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="Enter password"
                 />
               </div>
@@ -94,7 +94,7 @@ const Register = () => {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="auth-input w-full rounded-lg border border-slate-300 py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="Confirm your password"
                 />
               </div>
@@ -102,7 +102,7 @@ const Register = () => {
 
             <Button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 py-3 text-lg shadow-lg shadow-blue-600/20 hover:-translate-y-0.5"
+              className="flex w-full items-center justify-center gap-2 py-3 text-lg shadow-lg shadow-slate-200/20 hover:-translate-y-0.5"
               disabled={loading}
             >
               {loading ? 'Registering...' : (
@@ -117,7 +117,7 @@ const Register = () => {
           <div className="always-dark page-section-enter mt-6 text-center" style={{ animationDelay: '340ms' }}>
             <p className="text-sm text-slate-600">
               Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 font-semibold hover:underline">
+              <Link to="/login" className="text-accent font-semibold hover:underline">
                 Sign In
               </Link>
             </p>

@@ -118,7 +118,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
   }
 
   if (error) {
-    return <p className="text-sm text-red-600 py-2">Could not load this shift's activity. Cash totals above are still accurate.</p>;
+    return <p className="text-sm text-danger py-2">Could not load this shift's activity. Cash totals above are still accurate.</p>;
   }
 
   const activeSales = sales.items.filter((s) => s.status !== "CANCELED");
@@ -136,7 +136,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
         totalCount={sales.total}
         emptyText="No sales in this shift"
         sumValue={salesSum}
-        sumTone="text-emerald-700"
+        sumTone="text-success"
         defaultOpen={sales.items.length > 0 && sales.items.length <= 5}
         renderRow={(sale) => (
           <div key={sale.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
@@ -146,10 +146,10 @@ const ShiftCloseSummary = ({ shiftId }) => {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {sale.status === "CANCELED" && (
-                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">CANCELED</span>
+                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-danger-soft text-danger">CANCELED</span>
               )}
               {sale.paymentMethod && sale.paymentMethod !== "CASH" && (
-                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-700">{sale.paymentMethod}</span>
+                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-accent-soft text-accent">{sale.paymentMethod}</span>
               )}
               <span className={`font-bold ${sale.status === "CANCELED" ? "text-slate-600 line-through" : "text-slate-800"}`}>
                 {formatCurrency(sale.grandTotal || 0)}
@@ -170,7 +170,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
         totalCount={expenses.total}
         emptyText="No expenses in this shift"
         sumValue={expensesSum}
-        sumTone="text-red-700"
+        sumTone="text-danger"
         defaultOpen={expenses.items.length > 0 && expenses.items.length <= 5}
         renderRow={(expense) => (
           <div key={expense.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
@@ -189,7 +189,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
         totalCount={cashDrops.total}
         emptyText="No cash drops in this shift"
         sumValue={cashDropsSum}
-        sumTone="text-red-700"
+        sumTone="text-danger"
         defaultOpen={cashDrops.items.length > 0 && cashDrops.items.length <= 5}
         renderRow={(drop) => (
           <div key={drop.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
@@ -208,7 +208,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
         totalCount={purchases.total}
         emptyText="No purchases paid from this shift's cash"
         sumValue={purchasesSum}
-        sumTone="text-red-700"
+        sumTone="text-danger"
         defaultOpen={purchases.items.length > 0}
         renderRow={(purchase) => (
           <div key={purchase.purchaseId} className="flex items-center justify-between gap-2 py-1.5 text-sm">
@@ -218,7 +218,7 @@ const ShiftCloseSummary = ({ shiftId }) => {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {purchase.status === "CANCELED" && (
-                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">CANCELED</span>
+                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-danger-soft text-danger">CANCELED</span>
               )}
               <span className={`font-bold ${purchase.status === "CANCELED" ? "text-slate-600 line-through" : "text-slate-800"}`}>
                 {formatCurrency(purchase.cashSourceAmount || 0)}

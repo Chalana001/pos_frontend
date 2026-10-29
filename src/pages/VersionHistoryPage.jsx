@@ -3,10 +3,10 @@ import { CalendarDays, CheckCircle2, History, Tag } from "lucide-react";
 import { APP_VERSION, VERSION_HISTORY } from "../data/versionHistory";
 
 const sectionTone = {
-  Added: "border-blue-200 bg-blue-50 text-blue-700",
-  Improved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Changed: "border-violet-200 bg-violet-50 text-violet-700",
-  Fixed: "border-amber-200 bg-amber-50 text-amber-700",
+  Added: "border-slate-200 bg-accent-soft text-accent",
+  Improved: "border-success-border bg-success-soft text-success",
+  Changed: "border-info-border bg-info-soft text-info",
+  Fixed: "border-warning-border bg-warning-soft text-warning",
 };
 
 const VersionHistoryPage = () => {
@@ -39,12 +39,12 @@ const VersionHistoryPage = () => {
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-bold text-white">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-bold text-white">
                     <Tag size={15} />
                     v{release.version}
                   </span>
                   {index === 0 && (
-                    <span className="rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-700">
+                    <span className="rounded-lg bg-success-soft px-3 py-1.5 text-sm font-bold text-success">
                       Latest
                     </span>
                   )}

@@ -43,7 +43,7 @@ const PurchasesPage = () => {
       render: (r) => (
         <button
           onClick={() => navigate(`/purchases/${r.id}`)}
-          className="text-blue-600"
+          className="text-accent"
         >
           View
         </button>

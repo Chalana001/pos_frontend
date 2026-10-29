@@ -220,7 +220,7 @@ const DiningTablesPage = () => {
                   value={tableForm.tableName}
                   onChange={(event) => setTableForm((prev) => ({ ...prev, tableName: event.target.value }))}
                   placeholder="Table 01"
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
 
@@ -262,8 +262,8 @@ const DiningTablesPage = () => {
                           <div className="text-base font-semibold text-slate-900">{table.tableName}</div>
                           <div className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
                             table.status === 'OCCUPIED'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-emerald-100 text-emerald-700'
+                              ? 'bg-warning-soft text-warning'
+                              : 'bg-success-soft text-success'
                           }`}>
                             {table.status}
                           </div>
@@ -273,7 +273,7 @@ const DiningTablesPage = () => {
                           <button aria-label="Edit table"
                             type="button"
                             onClick={() => handleEdit(table)}
-                            className="rounded-lg bg-white p-2 text-slate-500 transition hover:text-blue-600"
+                            className="rounded-lg bg-white p-2 text-slate-500 transition hover:text-accent"
                             title="Edit table"
                           >
                             <Pencil size={15} />
@@ -282,7 +282,7 @@ const DiningTablesPage = () => {
                             type="button"
                             onClick={() => handleDelete(table.id)}
                             disabled={deletingId === table.id}
-                            className="rounded-lg bg-white p-2 text-slate-500 transition hover:text-red-600 disabled:opacity-50"
+                            className="rounded-lg bg-white p-2 text-slate-500 transition hover:text-danger disabled:opacity-50"
                             title="Delete table"
                           >
                             <Trash2 size={15} />

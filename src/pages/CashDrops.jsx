@@ -358,7 +358,7 @@ const CashDrops = () => {
     {
       header: "Amount",
       render: (drop) => (
-        <span className="font-semibold text-blue-600">
+        <span className="font-semibold text-accent">
           {formatCurrency(drop.amount)}
         </span>
       ),
@@ -374,7 +374,7 @@ const CashDrops = () => {
       header: "Shift",
       render: (drop) =>
         drop.outsideShift || !drop.shiftId ? (
-          <span className="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-700">
+          <span className="px-2 py-1 rounded text-xs font-semibold bg-info-soft text-info">
             Outside Shift
           </span>
         ) : (
@@ -411,8 +411,8 @@ const CashDrops = () => {
 
       {!hasOpenShift && (
         <Card className="ops-alert-card" style={{ animationDelay: "90ms" }}>
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm font-medium text-amber-800">
+          <div className="p-4 bg-warning-soft border border-warning-border rounded-lg">
+            <p className="text-sm font-medium text-warning">
               No active shift. History is available, but recording a new cash drop requires an open shift.
             </p>
           </div>
@@ -429,19 +429,19 @@ const CashDrops = () => {
                   <span className="ml-1 font-normal text-slate-600">(filtered)</span>
                 )}
               </h3>
-              <p className="text-2xl font-bold text-blue-600">
+              <p className="text-2xl font-bold text-accent">
                 {summaryLoading ? formatCurrency(0) : formatCurrency(summary.totalAmount)}
               </p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <TrendingDown className="text-blue-600" size={24} />
+            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+              <TrendingDown className="text-accent" size={24} />
             </div>
           </div>
         </Card>
 
         <Card className="ops-summary-card shell-panel shell-panel-hover" style={{ animationDelay: "150ms" }}>
           <h3 className="text-sm font-medium text-slate-600 mb-2">Today's Drop</h3>
-          <p className="text-2xl font-bold text-emerald-600">
+          <p className="text-2xl font-bold text-success">
             {todayTotalLoading ? formatCurrency(0) : formatCurrency(todayTotal)}
           </p>
         </Card>
@@ -475,7 +475,7 @@ const CashDrops = () => {
                 }}
                 placeholder="Search reason..."
                 ref={searchRef}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
 
@@ -617,8 +617,8 @@ const CashDrops = () => {
         title="Record Bank Deposit (Outside Shift)"
       >
         <form onSubmit={handleOutsideSubmit} className="space-y-4">
-          <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
-            <p className="text-xs text-blue-800">
+          <div className="rounded-lg bg-accent-soft border border-slate-200 p-3">
+            <p className="text-xs text-slate-800">
               For cash that's already out of a till. E.g. banking the day's collected cash after every
               shift is closed. This is just a record; it does not change any shift's expected cash.
             </p>

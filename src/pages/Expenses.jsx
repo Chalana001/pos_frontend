@@ -254,7 +254,7 @@ const Expenses = () => {
     {
       header: "Category",
       render: (expense) => (
-        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+        <span className="px-2 py-1 bg-slate-100 text-slate-800 rounded-full text-xs font-medium">
           {formatCategoryLabel(expense.category || "")}
         </span>
       ),
@@ -263,7 +263,7 @@ const Expenses = () => {
     {
       header: "Amount",
       render: (expense) => (
-        <span className="font-semibold text-red-600">{formatCurrency(expense.amount)}</span>
+        <span className="font-semibold text-danger">{formatCurrency(expense.amount)}</span>
       ),
     },
     { header: "Recorded By", accessor: "cashierName" },
@@ -298,8 +298,8 @@ const Expenses = () => {
 
       {isCashier && !hasActiveShift && (
         <Card className="ops-alert-card" style={{ animationDelay: "90ms" }}>
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm font-medium text-amber-800">
+          <div className="p-4 bg-warning-soft border border-warning-border rounded-lg">
+            <p className="text-sm font-medium text-warning">
               No active shift. Please open a shift to view and record expenses.
             </p>
           </div>
@@ -308,8 +308,8 @@ const Expenses = () => {
 
       {activeExpenseTypes.length === 0 && (
         <Card className="ops-alert-card" style={{ animationDelay: "95ms" }}>
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm font-medium text-amber-800">
+          <div className="p-4 bg-warning-soft border border-warning-border rounded-lg">
+            <p className="text-sm font-medium text-warning">
               No active expense types found. Add one from Expense Settings before recording expenses.
             </p>
           </div>
@@ -331,7 +331,7 @@ const Expenses = () => {
                   }}
                   placeholder="Search description..."
                   ref={searchRef}
-                  className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
 
@@ -421,15 +421,15 @@ const Expenses = () => {
       <Modal isOpen={showModal} onClose={handleCloseModal} title="Record Expense">
         <form onSubmit={handleSubmit} className="space-y-4">
           {isAdminOrManager && hasActiveShift && (
-            <div className="page-section-enter flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 p-3" style={{ animationDelay: "60ms" }}>
+            <div className="page-section-enter flex items-center gap-2 rounded-lg border border-slate-200 bg-accent-soft p-3" style={{ animationDelay: "60ms" }}>
               <input
                 type="checkbox"
                 id="isFromDrawer"
                 checked={formData.isFromDrawer}
                 onChange={(e) => setFormData({ ...formData, isFromDrawer: e.target.checked })}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-accent rounded focus:ring-accent"
               />
-              <label htmlFor="isFromDrawer" className="text-sm font-medium text-blue-900 cursor-pointer">
+              <label htmlFor="isFromDrawer" className="text-sm font-medium text-slate-900 cursor-pointer">
                 Take money from the Cash Drawer (Shift)
               </label>
             </div>
@@ -452,7 +452,7 @@ const Expenses = () => {
             <input id="expenses-amount"
               type="text"
               inputMode="decimal"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="0.00"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
@@ -463,7 +463,7 @@ const Expenses = () => {
           <div className="page-section-enter" style={{ animationDelay: "180ms" }}>
             <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
             <textarea
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="Enter expense details..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}

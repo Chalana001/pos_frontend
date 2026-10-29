@@ -15,12 +15,12 @@ const StatusFilterGroup = ({ options, value, onChange }) => (
           onClick={() => onChange(option.key)}
           aria-pressed={active}
           className={`rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
-            active ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+            active ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"
           }`}
         >
           {option.label}
           {option.count != null && (
-            <span className={`ml-1.5 tabular-nums ${active ? "text-blue-100" : "text-slate-400"}`}>
+            <span className={`ml-1.5 tabular-nums ${active ? "text-slate-300" : "text-slate-400"}`}>
               {option.count}
             </span>
           )}

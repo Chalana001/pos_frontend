@@ -151,7 +151,7 @@ const CustomerSegmentsPage = () => {
           </Button>
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-800">
-              <Users size={22} className="text-blue-600" /> Customer Segments
+              <Users size={22} className="text-accent" /> Customer Segments
             </h1>
             <p className="text-sm text-slate-500">
               Rules a promotion can target, instead of picking customers one by one.
@@ -272,7 +272,7 @@ const CustomerSegmentsPage = () => {
               <span className="text-sm font-bold text-slate-800">Rules</span>
               {/* The rule in the operator's own words, live while it is being typed: what the
                   table will say is decided here, so it should be visible here too. */}
-              <p className="mb-3 rounded-lg bg-blue-50/60 px-3 py-2 text-xs font-semibold text-blue-800">
+              <p className="mb-3 rounded-lg bg-accent-soft/60 px-3 py-2 text-xs font-semibold text-slate-800">
                 {ruleTexts(editing).join(", ") || "No rules yet, every customer matches"}
               </p>
               <p className="mb-3 text-xs text-slate-500">
@@ -318,7 +318,7 @@ const CustomerSegmentsPage = () => {
                   <span className="text-sm font-medium text-slate-700">Active</span>
                   <input type="checkbox" checked={editing.active !== false}
                     onChange={(event) => update("active", event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                    className="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent" />
                 </label>
               </div>
               <p className="mt-3 text-xs text-slate-500">

@@ -122,7 +122,7 @@ const SuppliersPage = () => {
             <input aria-label="Search supplier, phone, email, or address..."
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="Search supplier, phone, email, or address..."
               ref={searchRef}
             />
@@ -162,7 +162,7 @@ const SuppliersPage = () => {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent">
                             <Truck size={18} />
                           </div>
                           <div>
@@ -173,11 +173,11 @@ const SuppliersPage = () => {
                       </td>
                       <td className="px-6 py-4 text-slate-600">{supplier.phone || "-"}</td>
                       <td className="px-6 py-4 text-slate-600">{supplier.email || "-"}</td>
-                      <td className={`px-6 py-4 text-right font-bold ${Number(supplier.dueAmount || 0) > 0 ? "dark-hl text-red-600" : "text-slate-500"}`}>
+                      <td className={`px-6 py-4 text-right font-bold ${Number(supplier.dueAmount || 0) > 0 ? "dark-hl text-danger" : "text-slate-500"}`}>
                         {formatCurrency(supplier.dueAmount || 0)}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${supplier.active ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${supplier.active ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
                           {supplier.active ? "Active" : "Inactive"}
                         </span>
                       </td>
@@ -203,7 +203,7 @@ const SuppliersPage = () => {
                                   event.stopPropagation();
                                   navigate(`/suppliers/${supplier.id}/edit`);
                                 }}
-                                className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                                className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-accent-soft hover:text-accent"
                               >
                                 <Pencil size={18} />
                               </button>
@@ -214,7 +214,7 @@ const SuppliersPage = () => {
                                   event.stopPropagation();
                                   setDeleteTarget(supplier);
                                 }}
-                                className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                                className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-danger-soft hover:text-danger"
                               >
                                 <Trash2 size={18} />
                               </button>

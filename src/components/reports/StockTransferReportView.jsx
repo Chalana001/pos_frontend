@@ -8,9 +8,9 @@ import { tileTone } from "../../utils/chartTheme";
 
 const statusMeta = {
   ALL: { label: "All transfers", className: "bg-slate-100 text-slate-700" },
-  IN_TRANSIT: { label: "In Transit", className: "bg-amber-100 text-amber-700" },
-  COMPLETED: { label: "Completed", className: "bg-emerald-100 text-emerald-700" },
-  CANCELED: { label: "Canceled", className: "bg-red-100 text-red-700" },
+  IN_TRANSIT: { label: "In Transit", className: "bg-warning-soft text-warning" },
+  COMPLETED: { label: "Completed", className: "bg-success-soft text-success" },
+  CANCELED: { label: "Canceled", className: "bg-danger-soft text-danger" },
 };
 
 const filterOptions = [
@@ -157,7 +157,7 @@ export default function StockTransferReportView({ data, pageData }) {
                   type="button"
                   onClick={() => setStatusFilter(option.value)}
                   className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold transition-colors ${
-                    active ? "border-blue-200 bg-blue-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    active ? "border-slate-200 bg-accent text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   <span>{option.label}</span>

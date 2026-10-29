@@ -10,6 +10,7 @@ export const reportsAPI = {
   supplierPayablesAging: (params) => api.get('/reports/v2/supplier-payables-aging', { params }),
   stockMovement: (params) => api.get('/reports/v2/stock-movement', { params }),
   stockHealth: (params) => api.get('/reports/v2/stock-health', { params }),
+  expiredStock: (params) => api.get('/reports/v2/expired-stock', { params }),
   demandForecast: (params) => api.get('/reports/v2/demand-forecast', { params }),
   forecastAccuracy: () => api.get('/reports/v2/forecast-accuracy'),
   stockTransferReport: (params) => api.get('/reports/v2/stock-transfers', { params }),

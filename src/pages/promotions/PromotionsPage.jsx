@@ -92,7 +92,7 @@ const CampaignRow = ({ promotion, ctx }) => {
 
   return (
     <tr
-      className={`${isDraft ? "opacity-70" : ""} cursor-pointer transition-colors hover:bg-blue-50/40`}
+      className={`${isDraft ? "opacity-70" : ""} cursor-pointer transition-colors hover:bg-accent-soft/40`}
       onClick={() => ctx.onEdit(promotion.id)}
       title="Open this campaign"
     >
@@ -133,10 +133,10 @@ const CampaignRow = ({ promotion, ctx }) => {
           </span>
         </div>
         {isLive && left != null && left <= 7 && (
-          <div className="mt-1 font-bold text-amber-600">{timeUntilText(left)}</div>
+          <div className="mt-1 font-bold text-warning">{timeUntilText(left)}</div>
         )}
         {stateKey === "SCHEDULED" && until != null && (
-          <div className="mt-1 font-semibold text-blue-600">{startsText(until)}</div>
+          <div className="mt-1 font-semibold text-accent">{startsText(until)}</div>
         )}
       </td>
       <td className="app-table-cell align-top">
@@ -154,7 +154,7 @@ const CampaignRow = ({ promotion, ctx }) => {
                   </span>
                   <span className="h-1 overflow-hidden rounded-full bg-slate-100" aria-label="Budget used">
                     <span
-                      className={`budget-bar block h-full rounded-full ${budget.percent >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
+                      className={`budget-bar block h-full rounded-full ${budget.percent >= 80 ? "bg-warning" : "bg-success"}`}
                       style={{ width: `${budget.percent}%` }}
                     />
                   </span>
@@ -481,7 +481,7 @@ const PromotionsPage = () => {
             <input aria-label="Search campaigns or items"
               type="text"
               placeholder="Search campaigns or items..."
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);

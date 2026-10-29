@@ -129,7 +129,9 @@ const Dashboard = () => {
         ]);
         if (!active) return;
         setKpis(kpiRes.data);
-        setChartData(chartRes.data);
+        // An error payload (object) must never reach the chart: recharts
+        // calls .map on it and the error boundary takes the whole page down.
+        setChartData(Array.isArray(chartRes.data) ? chartRes.data : []);
       } catch (error) {
         if (!active) return;
         console.error("Failed to fetch dashboard data:", error);
@@ -165,10 +167,12 @@ const Dashboard = () => {
         ? await dashboardAPI.getDailyChart(params)
         : await dashboardAPI.getMonthlyChart(params);
       // The monthly endpoint keys buckets as { month: "2026-09" }, but the
-      // chart reads { date } - remap or the plot stays empty.
+      // chart reads { date } - remap or the plot stays empty. Same array
+      // guard: a failed request resolving as an object must not reach state.
+      const rows = Array.isArray(response.data) ? response.data : [];
       setChartData(mode === "daily"
-        ? response.data
-        : response.data.map(({ month, sales }) => ({ date: `${month}-01`, sales })));
+        ? rows
+        : rows.map(({ month, sales }) => ({ date: `${month}-01`, sales })));
     } catch (error) {
       console.error(`Failed to fetch ${mode} chart data:`, error);
       setChartData([]);
@@ -217,8 +221,8 @@ const Dashboard = () => {
         <Card className="page-section-enter shell-panel-hover" style={{ animationDelay: "120ms" }}>
           {/* Amber is this app's warning colour everywhere else; yellow was a
               one-off here. */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm font-medium text-amber-900">
+          <div className="rounded-lg border border-warning-border bg-warning-soft p-4">
+            <p className="text-sm font-medium text-warning">
               Please select a branch to view dashboard KPIs.
             </p>
           </div>
@@ -306,7 +310,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => selectChartMode("daily")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    chartMode === "daily" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                    chartMode === "daily" ? "bg-white text-accent shadow-sm" : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   Daily
@@ -314,7 +318,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => selectChartMode("monthly")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                    chartMode === "monthly" ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                    chartMode === "monthly" ? "bg-white text-accent shadow-sm" : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   Monthly
@@ -356,11 +360,11 @@ const Dashboard = () => {
                   <button
                     key={action.label}
                     onClick={() => navigate(action.path)}
-                    className="dashboard-rise-in group rounded-xl bg-slate-50 p-4 text-left transition-all hover:-translate-y-1 hover:bg-blue-50 hover:shadow-lg hover:shadow-slate-100"
+                    className="dashboard-rise-in group rounded-xl bg-slate-50 p-4 text-left transition-all hover:-translate-y-1 hover:bg-accent-soft hover:shadow-lg hover:shadow-slate-100"
                     style={{ animationDelay: `${960 + index * 80}ms` }}
                   >
                     <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-sm transition-transform group-hover:scale-110">
-                      <ActionIcon className="text-blue-600" size={20} />
+                      <ActionIcon className="text-accent" size={20} />
                     </div>
                     <p className="text-sm font-semibold text-slate-800">{action.label}</p>
                   </button>

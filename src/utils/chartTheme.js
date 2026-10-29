@@ -16,6 +16,19 @@
 // The contrast WARN is discharged by the "relief rule": every chart in this app is
 // accompanied by a data table, so no value is reachable by colour alone. Keep it
 // that way, if you add a chart with no table twin, use only slots 1, 2, 6 or 8.
+//
+// The palette reads CSS variables (--series-*) rather than fixed hex, so the whole
+// chart layer follows the theme token. The hex fallbacks are the validated values
+// from before the token move; they only fire if a chart renders before the CSS
+// variables resolve (never in practice, but the function contract needs a value).
+
+const readVar = (name, fallback) => {
+  if (typeof window === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value ? `rgb(${value.split(/\s+/).join(' ')})` : fallback;
+};
+
+const seriesVar = (n, fallback) => () => readVar(`--series-${n}`, fallback);
 
 // ---------------------------------------------------------------------------
 // Categorical, series identity
@@ -24,27 +37,33 @@
 // Fixed order. This ordering IS the colourblind-safety mechanism, not a style
 // choice, adjacent slots are the pairs that touch in a stack, bar group or line
 // chart. Do not reorder, do not append a 9th colour.
-export const SERIES = [
-  '#00b4c8', // 1 cyan - sampled from the ZenSys mark's glow, so the lead series wears the brand
-  '#eb6834', // 2 orange
-  '#1baf7a', // 3 aqua
-  '#eda100', // 4 yellow
-  '#e87ba4', // 5 magenta
-  '#008300', // 6 green
-  '#4a3aa7', // 7 violet
-  '#e34948', // 8 red
+//
+// Each entry is a thunk so the CSS variable is read at paint time, not module
+// load — the theme may still be flipping when this module is imported.
+const SERIES_READERS = [
+  seriesVar(1, '#00b4c8'), // 1 cyan - sampled from the ZenSys mark's glow, so the lead series wears the brand
+  seriesVar(2, '#eb6834'), // 2 orange
+  seriesVar(3, '#1baf7a'), // 3 aqua
+  seriesVar(4, '#eda100'), // 4 yellow
+  seriesVar(5, '#e87ba4'), // 5 magenta
+  seriesVar(6, '#008300'), // 6 green
+  seriesVar(7, '#4a3aa7'), // 7 violet
+  seriesVar(8, '#e34948'), // 8 red
 ];
+
+export const SERIES = SERIES_READERS.map((read) => read());
+export const getSeries = () => SERIES_READERS.map((read) => read());
 
 export const MAX_SERIES = SERIES.length;
 
 // Assign by position, never by rank, a filter that removes a series must not
 // repaint the survivors. Past slot 8 we clamp rather than cycle; use foldSeries()
 // to collapse the tail instead of relying on this.
-export const seriesColor = (index) => SERIES[index] ?? SERIES[MAX_SERIES - 1];
+export const seriesColor = (index) => getSeries()[index] ?? getSeries()[MAX_SERIES - 1];
 
 // Scatter / bubble / small-multiple charts compare every pair, not just
 // neighbours. Only the first three slots clear the floors under that harder test.
-export const SCATTER_SAFE_SERIES = SERIES.slice(0, 3);
+export const SCATTER_SAFE_SERIES = getSeries().slice(0, 3);
 
 const OTHER_COLOR = '#94a3b8'; // slate-400. Deliberately outside the series set
 
@@ -141,12 +160,12 @@ export const MONEY = {
 
 export const TILE = {
   neutral: { value: 'text-slate-900', chip: 'bg-slate-100 text-slate-600' },
-  accent: { value: 'text-slate-900', chip: 'bg-blue-50 text-blue-700' },
-  good: { value: 'text-emerald-700', chip: 'bg-emerald-50 text-emerald-700' },
+  accent: { value: 'text-slate-900', chip: 'bg-accent-soft text-accent' },
+  good: { value: 'text-success', chip: 'bg-success-soft text-success' },
   // dark-hl: in dark these values wear the one cyan accent - they are the
   // money-at-risk / stock-at-risk numbers; light keeps amber and red.
-  warning: { value: 'dark-hl text-amber-700', chip: 'bg-amber-50 text-amber-700' },
-  critical: { value: 'dark-hl text-red-700', chip: 'bg-red-50 text-red-700' },
+  warning: { value: 'dark-hl text-warning', chip: 'bg-warning-soft text-warning' },
+  critical: { value: 'dark-hl text-danger', chip: 'bg-danger-soft text-danger' },
 };
 
 // Older code passed a raw hue name ("indigo", "violet", "cyan"…). Map those onto

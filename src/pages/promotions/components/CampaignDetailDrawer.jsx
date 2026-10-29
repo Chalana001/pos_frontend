@@ -132,7 +132,7 @@ const CampaignDetailDrawer = ({ campaign, branchName, onClose, onDuplicate, onEd
                       <div className="truncate font-semibold text-slate-800">{row.invoiceNo || `Order ${row.orderId}`}</div>
                       <div className="text-slate-500">{row.soldAt ? new Date(row.soldAt).toLocaleDateString() : "-"} · {row.level === "BILL" ? "Whole bill" : row.itemName || "Line"}</div>
                     </div>
-                    <span className="shrink-0 font-bold text-emerald-700">-{formatCurrency(row.discountAmount)}</span>
+                    <span className="shrink-0 font-bold text-success">-{formatCurrency(row.discountAmount)}</span>
                   </div>
                 ))}
               </div>

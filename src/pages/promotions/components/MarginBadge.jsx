@@ -5,10 +5,10 @@ import React from "react";
  * recomputed here, so the badge cannot disagree with the rule the save path enforces.
  */
 const STYLES = {
-  OK: { label: "OK", className: "bg-emerald-100 text-emerald-700" },
-  LOW_MARGIN: { label: "Low", className: "bg-amber-100 text-amber-700" },
-  BELOW_COST: { label: "Below cost", className: "bg-red-100 text-red-700" },
-  ABOVE_NORMAL_PRICE: { label: "Above normal", className: "bg-red-100 text-red-700" },
+  OK: { label: "OK", className: "bg-success-soft text-success" },
+  LOW_MARGIN: { label: "Low", className: "bg-warning-soft text-warning" },
+  BELOW_COST: { label: "Below cost", className: "bg-danger-soft text-danger" },
+  ABOVE_NORMAL_PRICE: { label: "Above normal", className: "bg-danger-soft text-danger" },
 };
 
 const MarginBadge = ({ status, marginPercent, message }) => {

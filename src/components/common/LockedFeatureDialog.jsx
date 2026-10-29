@@ -86,7 +86,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
       <div className="space-y-6">
         {/* ---------------------------------------------------------- hero */}
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-3 py-1 text-xs font-bold uppercase tracking-wide text-warning">
             <Lock size={12} />
             Not in your package
           </span>
@@ -114,8 +114,8 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
             <ul className="grid gap-3 sm:grid-cols-2">
               {outcomes.map((outcome) => (
                 <li key={outcome} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                    <Check size={12} className="text-emerald-700" strokeWidth={3} />
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-soft">
+                    <Check size={12} className="text-success" strokeWidth={3} />
                   </span>
                   <span className="text-sm leading-6 text-slate-700">{outcome}</span>
                 </li>
@@ -137,7 +137,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
                   className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5"
                 >
                   <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-                    <Sparkles size={13} className="shrink-0 text-blue-500" />
+                    <Sparkles size={13} className="shrink-0 text-accent" />
                     {entry.name}
                   </span>
                   <span className="mt-0.5 block text-xs leading-5 text-slate-500">
@@ -161,7 +161,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
                   key={entry.key}
                   className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs ${
                     entry.key === moduleKey
-                      ? "border-amber-300 bg-amber-50 font-bold text-amber-800"
+                      ? "border-warning-border bg-warning-soft font-bold text-warning"
                       : entry.enabled
                         ? "border-slate-200 bg-white text-slate-700"
                         : "border-dashed border-slate-300 bg-white text-slate-600"
@@ -170,7 +170,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
                   {entry.key === moduleKey ? (
                     <Lock size={11} />
                   ) : entry.enabled ? (
-                    <Check size={11} className="text-emerald-600" />
+                    <Check size={11} className="text-success" />
                   ) : (
                     <Lock size={11} className="text-slate-600" />
                   )}
@@ -183,21 +183,21 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
 
         {/* --------------------------------------------------------- the ask */}
         {isOwner ? (
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+          <div className="rounded-2xl border border-slate-200 bg-accent-soft p-5">
             {unlockingPlan ? (
               <div className="mb-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className="text-sm text-blue-900">
+                <span className="text-sm text-slate-900">
                   Included in <strong className="font-bold">{unlockingPlan.label}</strong>
                 </span>
-                <span className="text-2xl font-bold tracking-tight text-blue-900">
+                <span className="text-2xl font-bold tracking-tight text-slate-900">
                   {currency} {unlockingPlan.renewalPrice.toLocaleString()}
                 </span>
-                <span className="text-sm text-blue-700">
+                <span className="text-sm text-accent">
                   /{unlockingPlan.billingCycle === "YEARLY" ? "year" : "month"}
                 </span>
               </div>
             ) : (
-              <p className="mb-4 text-sm text-blue-900">
+              <p className="mb-4 text-sm text-slate-900">
                 Talk to us and we&apos;ll switch {featureName} on for your shop.
               </p>
             )}
@@ -208,7 +208,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
                   href={whatsAppHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-700"
+                  className="inline-flex items-center gap-2 rounded-lg bg-success px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-success"
                 >
                   <MessageCircle size={16} />
                   Add {featureName}
@@ -228,7 +228,7 @@ const LockedFeatureDialog = ({ moduleKey, open, onClose }) => {
               <button
                 type="button"
                 onClick={() => { onClose(); navigate("/pricing"); }}
-                className="inline-flex items-center gap-1 px-2 py-3 text-sm font-medium text-blue-700 transition-colors hover:text-blue-900"
+                className="inline-flex items-center gap-1 px-2 py-3 text-sm font-medium text-accent transition-colors hover:text-slate-900"
               >
                 Compare packages
                 <ArrowRight size={14} />

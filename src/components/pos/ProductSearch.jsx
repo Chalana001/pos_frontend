@@ -57,7 +57,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by product name..."
-            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg"
+            className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent focus:outline-none text-lg"
             autoFocus
           />
         </div>
@@ -80,10 +80,10 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
                 <button
                   key={item.id}
                   onClick={() => { onSelectItem(item); onClose(); }}
-                  className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-blue-400 hover:bg-blue-50/30 transition-colors text-left group"
+                  className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-border-strong hover:bg-accent-soft/30 transition-colors text-left group"
                 >
                   <div>
-                    <h3 className="font-bold text-slate-800 group-hover:text-blue-700">{item.name}</h3>
+                    <h3 className="font-bold text-slate-800 group-hover:text-accent">{item.name}</h3>
                     {item.altName && <p className="text-xs text-slate-600">{item.altName}</p>}
                     <div className="flex gap-3 text-sm text-slate-500 mt-1">
                       <span className="flex items-center gap-1"><Barcode size={14} /> {item.barcode}</span>
@@ -92,7 +92,7 @@ const ProductSearch = ({ isOpen, onClose, onSelectItem, branchId }) => {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-bold text-slate-900 font-mono">{formatCurrency(item.sellingPrice)}</div>
-                    <div className={`text-xs font-medium mt-1 ${isService ? "text-purple-600" : (stockQty > 0 ? "text-emerald-600" : "text-red-500")}`}>
+                    <div className={`text-xs font-medium mt-1 ${isService ? "text-info" : (stockQty > 0 ? "text-success" : "text-danger")}`}>
                       {isService ? "Service Item" : `${qtyLabel} in stock`}
                     </div>
                   </div>

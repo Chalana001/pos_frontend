@@ -27,19 +27,19 @@ import Input from './Input';
  */
 const TONES = {
   danger: {
-    chip: 'bg-red-100 text-red-600',
+    chip: 'bg-danger-soft text-danger',
     confirmVariant: 'danger',
     confirmClassName: '',
   },
   warning: {
-    chip: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',
+    chip: 'bg-warning-soft text-warning ring-1 ring-warning',
     confirmVariant: 'primary',
     // The proven combo from the old POS override button: the raw amber pair
     // rides on top of btn-primary.
-    confirmClassName: 'bg-amber-600 text-white shadow-md shadow-amber-200 hover:bg-amber-700',
+    confirmClassName: 'bg-warning text-white shadow-md shadow-amber-200 hover:bg-warning',
   },
   primary: {
-    chip: 'bg-blue-50 text-blue-600',
+    chip: 'bg-accent-soft text-accent',
     confirmVariant: 'primary',
     confirmClassName: '',
   },
@@ -99,7 +99,7 @@ const ConfirmDialog = ({
         {input && (
           input.multiline ? (
             <textarea
-              className="w-full resize-none rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+              className="w-full resize-none rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-600 focus:border-accent focus:ring-2 focus:ring-accent"
               rows={input.rows ?? 3}
               placeholder={input.placeholder}
               aria-label={input.label ?? input.placeholder}

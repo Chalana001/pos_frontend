@@ -187,7 +187,7 @@ const PurchaseReturnPage = () => {
   // RENDER
   // ────────────────────────────────────────────────────────────────────────────
   if (loading) return <div className="p-10 text-center text-slate-500">Loading purchase details…</div>;
-  if (!purchase) return <div className="p-10 text-center text-red-500">Purchase not found.</div>;
+  if (!purchase) return <div className="p-10 text-center text-danger">Purchase not found.</div>;
 
   const isCanceled = purchase.status === "CANCELED";
   const grnOptions = (purchase.grnList || []).map((g) => ({
@@ -213,9 +213,9 @@ const PurchaseReturnPage = () => {
           </Button>
         </div>
 
-        <Card className="p-8 border-t-4 border-t-blue-600 shadow-md text-center">
+        <Card className="p-8 border-t-4 border-t-accent shadow-md text-center">
           <div className="flex justify-center mb-4">
-            <CheckCircle size={56} className="text-blue-600" />
+            <CheckCircle size={56} className="text-accent" />
           </div>
           <h2 className="text-2xl font-bold text-slate-800 mb-1">Purchase Return Processed!</h2>
           <p className="text-slate-500 mb-6">
@@ -246,7 +246,7 @@ const PurchaseReturnPage = () => {
                     <td className="px-4 py-2 text-right text-slate-700">{fmt(ri.returnLineAmount)} LKR</td>
                     <td className="px-4 py-2 text-center">
                       {ri.stockDeducted ? (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">Deducted</span>
+                        <span className="text-xs bg-slate-100 text-accent px-2 py-0.5 rounded-full font-semibold">Deducted</span>
                       ) : (
                         <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">Skipped</span>
                       )}
@@ -257,7 +257,7 @@ const PurchaseReturnPage = () => {
               <tfoot>
                 <tr className="border-t border-slate-200 bg-slate-50">
                   <td colSpan={2} className="px-4 py-3 font-bold text-slate-700">Total Returned</td>
-                  <td className="px-4 py-3 text-right font-bold text-blue-700 text-base">
+                  <td className="px-4 py-3 text-right font-bold text-accent text-base">
                     {fmt(successReturn.totalReturnAmount)} LKR
                   </td>
                   <td />
@@ -293,7 +293,7 @@ const PurchaseReturnPage = () => {
             <RotateCcw size={16} className="mr-2" /> Process Another Return
           </Button>
           <Button
-            className="bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+            className="bg-accent text-white hover:bg-accent shadow-sm"
             onClick={() => navigate(`/purchases/${purchaseId}`)}
           >
             Back to Purchase
@@ -314,20 +314,20 @@ const PurchaseReturnPage = () => {
           <ArrowLeft size={18} className="mr-2" /> Back to Purchase
         </Button>
         <div className="flex items-center gap-2">
-          <RotateCcw size={20} className="text-blue-600" />
+          <RotateCcw size={20} className="text-accent" />
           <h1 className="text-lg font-bold text-slate-800">Process Purchase Return</h1>
         </div>
       </div>
 
       {isCanceled && (
-        <div className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+        <div className="flex items-center gap-3 rounded-xl bg-danger-soft border border-danger-border p-4 text-sm text-danger">
           <AlertTriangle size={20} className="shrink-0" />
           This purchase has been canceled. Returns cannot be processed.
         </div>
       )}
 
       {/* Purchase summary */}
-      <Card className="page-section-enter p-5 border-t-4 border-t-blue-600 shadow-sm">
+      <Card className="page-section-enter p-5 border-t-4 border-t-accent shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <div className="text-xs text-slate-600 uppercase font-semibold mb-1">Purchase Invoice</div>
@@ -344,7 +344,7 @@ const PurchaseReturnPage = () => {
               {fmt(purchase.grandTotal)} LKR
             </div>
             {existingReturns.length > 0 && (
-              <div className="mt-1 text-xs text-blue-600 font-semibold">
+              <div className="mt-1 text-xs text-accent font-semibold">
                 {existingReturns.length} existing return{existingReturns.length > 1 ? "s" : ""} on this purchase
               </div>
             )}
@@ -355,9 +355,9 @@ const PurchaseReturnPage = () => {
       {/* Existing returns */}
       {existingReturns.length > 0 && (
         <Card className="page-section-enter p-0 overflow-hidden shadow-sm" style={{ animationDelay: "120ms" }}>
-          <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
-            <RotateCcw size={15} className="text-blue-500" />
-            <span className="text-sm font-semibold text-blue-700">Previous Debit Notes</span>
+          <div className="px-4 py-3 bg-accent-soft border-b border-slate-200 flex items-center gap-2">
+            <RotateCcw size={15} className="text-accent" />
+            <span className="text-sm font-semibold text-accent">Previous Debit Notes</span>
           </div>
           <div className="divide-y divide-slate-100">
             {existingReturns.map((ret) => (
@@ -368,8 +368,8 @@ const PurchaseReturnPage = () => {
                   <span className="ml-2 text-xs text-slate-600">GRN: {ret.grnNo}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-red-600">-{fmt(ret.totalReturnAmount)} LKR</span>
-                  <button className="text-blue-600 hover:text-blue-800" onClick={() => handlePrint(ret)}>
+                  <span className="font-bold text-danger">-{fmt(ret.totalReturnAmount)} LKR</span>
+                  <button className="text-accent hover:text-slate-800" onClick={() => handlePrint(ret)}>
                     <Printer size={14} />
                   </button>
                 </div>
@@ -385,7 +385,7 @@ const PurchaseReturnPage = () => {
           {grnOptions.length > 1 && (
             <Card className="p-5 shadow-sm">
               <label className="block text-xs font-semibold uppercase text-slate-600 mb-2">
-                Select GRN (Branch) <span className="text-red-500">*</span>
+                Select GRN (Branch) <span className="text-danger">*</span>
               </label>
               <CustomSelect
                 value={selectedGrnId}
@@ -409,7 +409,7 @@ const PurchaseReturnPage = () => {
                     Select Items to Return, {selectedGrn.grnNo} ({selectedGrn.branchName})
                   </span>
                 </div>
-                <button className="text-xs text-blue-600 hover:underline font-medium" onClick={toggleSelectAll}>
+                <button className="text-xs text-accent hover:underline font-medium" onClick={toggleSelectAll}>
                   {selectedGrn.items.every((item) =>
                     (returnQtys[item.id] || 0) === maxReturnableQty(item.id, receivedQty(item))
                   ) ? "Deselect All" : "Select All"}
@@ -452,12 +452,12 @@ const PurchaseReturnPage = () => {
                           <td className="p-4 text-center text-slate-600">
                             {item.qty}
                             {Number(item.freeQty) > 0 && (
-                              <span className="ml-1 text-xs font-semibold text-cyan-600">+{item.freeQty} free</span>
+                              <span className="ml-1 text-xs font-semibold text-info">+{item.freeQty} free</span>
                             )}
                           </td>
                           <td className="p-4 text-center">
                             {already > 0
-                              ? <span className="text-blue-600 font-semibold">{already}</span>
+                              ? <span className="text-accent font-semibold">{already}</span>
                               : <span className="text-slate-600">-</span>}
                           </td>
                           <td className="p-4 text-center font-semibold text-slate-700">{maxRet}</td>
@@ -473,9 +473,9 @@ const PurchaseReturnPage = () => {
                                 value={currentQty || ""}
                                 onChange={(e) => setQtyForItem(item.id, e.target.value)}
                                 placeholder="0"
-                                className={`w-20 text-center border rounded-lg px-2 py-1.5 text-sm outline-none transition focus:ring-2 focus:ring-blue-400 ${
+                                className={`w-20 text-center border rounded-lg px-2 py-1.5 text-sm outline-none transition focus:ring-2 focus:ring-accent ${
                                   currentQty > 0
-                                    ? "border-blue-400 bg-blue-50 font-bold"
+                                    ? "border-accent bg-accent-soft font-bold"
                                     : "border-slate-300 bg-white"
                                 }`}
                               />
@@ -483,7 +483,7 @@ const PurchaseReturnPage = () => {
                           </td>
                           <td className="p-4 text-right pr-6">
                             {currentQty > 0
-                              ? <span className="font-bold text-red-600">-{fmt(returnLine)}</span>
+                              ? <span className="font-bold text-danger">-{fmt(returnLine)}</span>
                               : <span className="text-slate-600">-</span>}
                           </td>
                         </tr>
@@ -504,14 +504,14 @@ const PurchaseReturnPage = () => {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
-                    Return Reason <span className="text-red-500">*</span>
+                    Return Reason <span className="text-danger">*</span>
                   </label>
                   <textarea
                     rows={3}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="e.g. Damaged goods, wrong items received, excess quantity…"
-                    className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-400 focus:border-blue-400 placeholder:text-slate-600"
+                    className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-accent focus:border-accent placeholder:text-slate-600"
                   />
                 </div>
 
@@ -524,7 +524,7 @@ const PurchaseReturnPage = () => {
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="Internal reference note…"
-                    className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-400 placeholder:text-slate-600"
+                    className="w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-accent placeholder:text-slate-600"
                   />
                 </div>
               </Card>
@@ -546,14 +546,14 @@ const PurchaseReturnPage = () => {
                           <div className="text-slate-700 truncate max-w-[60%]">
                             {item.itemName} <span className="text-slate-600 font-mono">×{returnQty}</span>
                           </div>
-                          <div className="font-semibold text-red-600">-{fmt(returnLine)} LKR</div>
+                          <div className="font-semibold text-danger">-{fmt(returnLine)} LKR</div>
                         </div>
                       ))}
                     </div>
                     <div className="border-t border-slate-200 pt-4">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-bold text-slate-700">Total Return</span>
-                        <span className="text-2xl font-bold text-red-600">{fmt(totalReturn)} LKR</span>
+                        <span className="text-2xl font-bold text-danger">{fmt(totalReturn)} LKR</span>
                       </div>
                       <div className="mt-1 text-xs text-slate-600">
                         Debit note will be issued to {purchase.supplierName}
@@ -566,7 +566,7 @@ const PurchaseReturnPage = () => {
                   <Button
                     className={`w-full py-3 text-base font-bold shadow-md transition-all ${
                       selectedLines.length > 0 && reason.trim()
-                        ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200"
+                        ? "bg-accent hover:bg-accent text-white shadow-slate-200"
                         : "bg-slate-200 text-slate-600 cursor-not-allowed"
                     }`}
                     onClick={handleSubmit}

@@ -38,6 +38,7 @@ import { useAuth } from "../context/AuthContext";
 import AgingReportView from "../components/reports/AgingReportView";
 import StockMovementReportView from "../components/reports/StockMovementReportView";
 import StockHealthReportView from "../components/reports/StockHealthReportView";
+import ExpiredStockReportView from "../components/reports/ExpiredStockReportView";
 import DemandForecastReportView from "../components/reports/DemandForecastReportView";
 import GrnPurchaseReportView from "../components/reports/GrnPurchaseReportView";
 import StockTransferReportView from "../components/reports/StockTransferReportView";
@@ -139,6 +140,7 @@ const allTabs = [
   { id: "supplierPerformance", label: "Supplier Performance", icon: Truck },
   { id: "returnsReports", label: "Returns", icon: RotateCcw },
   { id: "stockHealth", label: "Stock Health", icon: Package },
+  { id: "expiredStock", label: "Expiry Management", icon: Package },
   { id: "demandForecast", label: "Forecast & Reorder", icon: TrendingUp },
   { id: "inventoryValuation", label: "Inventory Valuation", icon: Package },
   { id: "shiftSummary", label: "Shift / Z Report", icon: Calendar },
@@ -164,6 +166,7 @@ const tabsByMode = {
   returns: ["returnsReports"],
   inventory: ["inventoryValuation"],
   stockHealth: ["stockHealth"],
+  expiredStock: ["expiredStock"],
   forecast: ["demandForecast"],
   shifts: ["shiftSummary"],
   cashFlow: ["cashFlow"],
@@ -188,6 +191,7 @@ const pageTitleByMode = {
   returns: "Returns Reports",
   inventory: "Inventory Valuation",
   stockHealth: "Stock Health / Reorder",
+  expiredStock: "Stock Expiry Management",
   forecast: "Demand Forecast & Reorder Planning",
   shifts: "Shift / Z Reports",
   cashFlow: "Cash Flow",
@@ -256,6 +260,7 @@ const Reports = ({ mode = "basic" }) => {
   const [ownerSummary, setOwnerSummary] = useState(null);
   const [inventorySummary, setInventorySummary] = useState(null);
   const [stockHealthSummary, setStockHealthSummary] = useState(null);
+  const [expiredStockOptions, setExpiredStockOptions] = useState({ expiryStatus: "ALL", includeZeroQuantity: false, page: 0, search: "" });
   const [forecastSummary, setForecastSummary] = useState(null);
   const [forecastAccuracy, setForecastAccuracy] = useState(null);
   const [forecastOptions, setForecastOptions] = useState({ forecastDays: 30, targetCoverDays: 30, categoryId: "", supplierId: "", confidence: "", actionableOnly: false });
@@ -356,6 +361,7 @@ const Reports = ({ mode = "basic" }) => {
     setPageData(emptyPage);
     setStockHealthSummary(null);
     setForecastSummary(null);
+    setExpiredStockOptions((current) => ({ ...current, page: 0 }));
     resetPage();
   }, [defaultTab]);
 
@@ -521,6 +527,7 @@ const Reports = ({ mode = "basic" }) => {
       setInventorySummary(null);
       setStockHealthSummary(null);
       setForecastSummary(null);
+      setExpiredStockOptions((current) => ({ ...current, page: 0 }));
       setSalesSummary(null);
       setSalesTrend({ data: [], type: "DAILY" });
       setReturnsData({ summary: null, topSaleItems: [], topPurchaseItems: [], reasons: [], trend: [] });
@@ -579,6 +586,16 @@ const Reports = ({ mode = "basic" }) => {
         setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
       } else if (type === "stockHealth") {
         response = await reportsAPI.stockHealth(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {});
+        setStockHealthSummary(response.data);
+        setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
+      } else if (type === "expiredStock") {
+        response = await reportsAPI.expiredStock({
+          ...(selectedBranchId && selectedBranchId !== 0 ? { branchId: selectedBranchId } : {}),
+          expiryStatus: expiredStockOptions.expiryStatus,
+          includeZeroQuantity: expiredStockOptions.includeZeroQuantity,
+          page: expiredStockOptions.page,
+          size: PAGE_SIZE,
+        });
         setStockHealthSummary(response.data);
         setReportData(Array.isArray(response.data?.items) ? response.data.items : []);
       } else if (type === "demandForecast") {
@@ -690,7 +707,7 @@ const Reports = ({ mode = "basic" }) => {
     }, 250);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, dateRange.from, dateRange.to, filterVersion, selectedBranchId, page]);
+  }, [activeTab, dateRange.from, dateRange.to, filterVersion, selectedBranchId, page, expiredStockOptions]);
 
   useEffect(() => {
     setPageInput(String(page + 1));
@@ -760,6 +777,7 @@ const Reports = ({ mode = "basic" }) => {
     productPerformance: "PRODUCT",
     customerPerformance: "CUSTOMER",
     supplierPerformance: "SUPPLIER",
+    expiredStock: "EXPIRED_STOCK",
   };
 
   const loadExportJobs = async () => {
@@ -794,6 +812,11 @@ const Reports = ({ mode = "basic" }) => {
     if (activeTab === "productPerformance") { params.sortBy = filters.productSortBy; if (filters.itemType !== "ALL") params.itemType = filters.itemType; }
     if (activeTab === "customerPerformance") params.sortBy = filters.customerSortBy;
     if (activeTab === "supplierPerformance") params.sortBy = filters.supplierSortBy;
+    if (activeTab === "expiredStock") {
+      params.sortBy = "expiryDate";
+      if (expiredStockOptions.expiryStatus && expiredStockOptions.expiryStatus !== "ALL") params.expiryStatus = expiredStockOptions.expiryStatus;
+      if (expiredStockOptions.includeZeroQuantity) params.includeZeroQuantity = true;
+    }
     return params;
   };
 
@@ -876,11 +899,11 @@ const Reports = ({ mode = "basic" }) => {
               <button key={shift.shiftId} type="button" onClick={() => window.location.assign(`/shifts/history/${shift.shiftId}`)} className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div><p className="font-black text-slate-900">Shift #{shift.shiftId}</p><p className="mt-1 text-xs text-slate-500">{shift.cashierUsername}, {formatDateTime(shift.openedAt)}</p></div>
-                  <span className={`rounded-full px-2 py-1 text-xs font-bold ${shift.shiftStatus === "CLOSED" ? "bg-slate-100 text-slate-700" : "bg-emerald-100 text-emerald-700"}`}>{shift.shiftStatus}</span>
+                  <span className={`rounded-full px-2 py-1 text-xs font-bold ${shift.shiftStatus === "CLOSED" ? "bg-slate-100 text-slate-700" : "bg-success-soft text-success"}`}>{shift.shiftStatus}</span>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-xs font-semibold text-slate-500">Cash sales</p><p className="mt-1 font-bold">{formatCurrency(shift.cashSales)}</p></div>
-                  <div><p className="text-xs font-semibold text-slate-500">Variance</p><p className={`mt-1 font-black ${Number(shift.cashDifference || 0) < 0 ? "text-red-600" : Number(shift.cashDifference || 0) > 0 ? "text-blue-600" : "text-emerald-700"}`}>{formatCurrency(shift.cashDifference)}</p></div>
+                  <div><p className="text-xs font-semibold text-slate-500">Variance</p><p className={`mt-1 font-black ${Number(shift.cashDifference || 0) < 0 ? "text-danger" : Number(shift.cashDifference || 0) > 0 ? "text-accent" : "text-success"}`}>{formatCurrency(shift.cashDifference)}</p></div>
                 </div>
               </button>
             ))}
@@ -898,7 +921,7 @@ const Reports = ({ mode = "basic" }) => {
                 { header: "Cash Drops", render: (shift) => formatCurrency(shift.totalCashDrops) },
                 { header: "Expected", render: (shift) => formatCurrency(shift.expectedClosingCash) },
                 { header: "Counted", render: (shift) => formatCurrency(shift.countedCash) },
-                { header: "Variance", render: (shift) => <span className={`font-black ${Number(shift.cashDifference || 0) < 0 ? "text-red-600" : Number(shift.cashDifference || 0) > 0 ? "text-blue-600" : "text-emerald-700"}`}>{formatCurrency(shift.cashDifference)}</span> },
+                { header: "Variance", render: (shift) => <span className={`font-black ${Number(shift.cashDifference || 0) < 0 ? "text-danger" : Number(shift.cashDifference || 0) > 0 ? "text-accent" : "text-success"}`}>{formatCurrency(shift.cashDifference)}</span> },
               ]}
               data={reportData}
               onRowClick={(shift) => window.location.assign(`/shifts/history/${shift.shiftId}`)}
@@ -921,7 +944,7 @@ const Reports = ({ mode = "basic" }) => {
               { header: "Type", accessor: "orderType" },
               { header: "Total", render: (i) => <span className="font-bold">{formatCurrency(i.grandTotal)}</span> },
               { header: "Paid", render: (i) => formatCurrency(i.paidAmount) },
-              { header: "Due", render: (i) => <span className={(i.dueAmount || 0) > 0 ? "font-bold text-red-600" : ""}>{formatCurrency(i.dueAmount)}</span> },
+              { header: "Due", render: (i) => <span className={(i.dueAmount || 0) > 0 ? "font-bold text-danger" : ""}>{formatCurrency(i.dueAmount)}</span> },
             ]}
             data={reportData}
           />
@@ -939,9 +962,9 @@ const Reports = ({ mode = "basic" }) => {
               { header: "#", render: (_, i) => pageData.page * pageData.size + i + 1 },
               { header: "Customer", render: (i) => <div><p className="font-semibold">{i.customerName}</p><p className="text-xs text-slate-500">{i.phone}</p></div> },
               { header: "Orders", accessor: "orderCount" },
-              { header: "Spent", render: (i) => <span className="font-bold text-blue-600">{formatCurrency(i.totalSpent)}</span> },
+              { header: "Spent", render: (i) => <span className="font-bold text-accent">{formatCurrency(i.totalSpent)}</span> },
               { header: "Paid", render: (i) => formatCurrency(i.totalPaid) },
-              { header: "Due", render: (i) => <span className={(i.totalDue || 0) > 0 ? "font-bold text-red-600" : ""}>{formatCurrency(i.totalDue)}</span> },
+              { header: "Due", render: (i) => <span className={(i.totalDue || 0) > 0 ? "font-bold text-danger" : ""}>{formatCurrency(i.totalDue)}</span> },
               { header: "Avg Order", render: (i) => formatCurrency(i.averageOrderValue) },
               { header: "Last Order", render: (i) => formatDateTime(i.lastOrderAt) },
             ]}
@@ -959,9 +982,9 @@ const Reports = ({ mode = "basic" }) => {
               { header: "#", render: (_, i) => pageData.page * pageData.size + i + 1 },
               { header: "Supplier", render: (i) => <div><p className="font-semibold">{i.supplierName}</p><p className="text-xs text-slate-500">{i.contactNo}</p></div> },
               { header: "Purchases", accessor: "purchaseCount" },
-              { header: "Purchased", render: (i) => <span className="font-bold text-blue-600">{formatCurrency(i.totalPurchased)}</span> },
+              { header: "Purchased", render: (i) => <span className="font-bold text-accent">{formatCurrency(i.totalPurchased)}</span> },
               { header: "Paid", render: (i) => formatCurrency(i.totalPaid) },
-              { header: "Due", render: (i) => <span className={(i.totalDue || 0) > 0 ? "font-bold text-red-600" : ""}>{formatCurrency(i.totalDue)}</span> },
+              { header: "Due", render: (i) => <span className={(i.totalDue || 0) > 0 ? "font-bold text-danger" : ""}>{formatCurrency(i.totalDue)}</span> },
               { header: "Avg Purchase", render: (i) => formatCurrency(i.averagePurchaseValue) },
               { header: "Last Purchase", render: (i) => formatDateTime(i.lastPurchaseAt) },
             ]}
@@ -1002,6 +1025,22 @@ const Reports = ({ mode = "basic" }) => {
     if (activeTab === "commercialIntelligence") return <CommercialIntelligenceView promotions={commercialData.promotions} warranty={commercialData.warranty} returnsData={returnsData} />;
     if (activeTab === "exceptions") return <ExceptionCenterView data={reportData} />;
     if (activeTab === "stockHealth") return <StockHealthReportView summary={stockHealthSummary} data={reportData} />;
+    if (activeTab === "expiredStock") return (
+      <ExpiredStockReportView
+        summary={stockHealthSummary}
+        data={reportData}
+        options={{
+          expiryStatus: expiredStockOptions.expiryStatus,
+          includeZeroQuantity: expiredStockOptions.includeZeroQuantity,
+          search: expiredStockOptions.search,
+          onExpiryStatusChange: (value) => setExpiredStockOptions((current) => ({ ...current, expiryStatus: value, page: 0 })),
+          onIncludeZeroChange: (value) => setExpiredStockOptions((current) => ({ ...current, includeZeroQuantity: value, page: 0 })),
+          onPageChange: (value) => setExpiredStockOptions((current) => ({ ...current, page: value })),
+        }}
+        onRefresh={() => generateReport("expiredStock")}
+        onExport={handleExcelExport}
+      />
+    );
     if (activeTab === "demandForecast") return <DemandForecastReportView summary={forecastSummary} accuracy={forecastAccuracy} data={reportData} options={forecastOptions} lookups={forecastLookups} onOptionsChange={(next) => { setForecastOptions(next); setLoadedTab(null); }} onRefresh={() => generateReport("demandForecast")} onExport={async () => { const categoryParams = getCategoryFilterParams(forecastOptions.categoryId, singleCategoryMode); await reportsAPI.createExportJob({ reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, ...categoryParams, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }); await loadExportJobs(); toast.success("Forecast export queued"); }} onSchedule={async (schedule) => { const categoryParams = getCategoryFilterParams(forecastOptions.categoryId, singleCategoryMode); await reportsAPI.createReportSchedule({ report: { reportType: "DEMAND_FORECAST", branchId: selectedBranchId || null, ...forecastOptions, ...categoryParams, supplierId: forecastOptions.supplierId || null, confidence: forecastOptions.confidence || null }, ...schedule }); await loadReportSchedules(); toast.success("Recurring forecast scheduled"); }} />;
     return null;
   };
@@ -1025,10 +1064,10 @@ const Reports = ({ mode = "basic" }) => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-800">{pageTitleByMode[mode] || "Reports"}</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {mode === "basic" ? "Quick chart overview for business direction." : mode === "cashFlow" ? "Cash-only business inflows, outflows, and daily movement." : mode === "profitLoss" ? "Canonical revenue, cost, margin, and operating profit statement." : mode === "creditAging" ? "Current outstanding customer credit grouped by invoice age and collection priority." : mode === "supplierPayables" ? "Current supplier obligations grouped by purchase age and payment priority." : mode === "stockMovement" ? "Opening, inflow, outflow, processing, and closing stock reconciliation." : mode === "stockTransfers" ? "Branch transfer counts, movement quantities, and transfer drill-downs." : mode === "stockHealth" ? "Current stock coverage, reorder suggestions, and expiry risk." : mode === "forecast" ? "Confidence-labelled demand projections and practical reorder planning." : mode === "grnPurchases" ? "Received goods value, supplier returns, and linked purchase payment status." : mode === "customerBehavior" ? "New, returning, repeat, value, and inactivity behavior for registered customers." : mode === "performanceComparison" ? "Sales, orders, discounts, returns, refunds, and expenses by cashier and branch." : mode === "commercialIntelligence" ? "Bill-promotion usage, return impact, and warranty status intelligence." : mode === "exceptions" ? "Current and period-based business risks requiring owner or manager attention." : "Detailed paginated report data with Excel export."}
+            {mode === "basic" ? "Quick chart overview for business direction." : mode === "cashFlow" ? "Cash-only business inflows, outflows, and daily movement." : mode === "profitLoss" ? "Canonical revenue, cost, margin, and operating profit statement." : mode === "creditAging" ? "Current outstanding customer credit grouped by invoice age and collection priority." : mode === "supplierPayables" ? "Current supplier obligations grouped by purchase age and payment priority." : mode === "stockMovement" ? "Opening, inflow, outflow, processing, and closing stock reconciliation." : mode === "stockTransfers" ? "Branch transfer counts, movement quantities, and transfer drill-downs." : mode === "stockHealth" ? "Current stock coverage, reorder suggestions, and expiry risk." : mode === "expiredStock" ? "Batch-level expired and expiring stock with cost exposure and supplier references." : mode === "forecast" ? "Confidence-labelled demand projections and practical reorder planning." : mode === "grnPurchases" ? "Received goods value, supplier returns, and linked purchase payment status." : mode === "customerBehavior" ? "New, returning, repeat, value, and inactivity behavior for registered customers." : mode === "performanceComparison" ? "Sales, orders, discounts, returns, refunds, and expenses by cashier and branch." : mode === "commercialIntelligence" ? "Bill-promotion usage, return impact, and warranty status intelligence." : mode === "exceptions" ? "Current and period-based business risks requiring owner or manager attention." : "Detailed paginated report data with Excel export."}
           </p>
         </div>
-        {!(["creditAging", "supplierPayables", "stockHealth"].includes(mode)) && <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+        {!(["creditAging", "supplierPayables", "stockHealth", "expiredStock"].includes(mode)) && <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
           <Calendar size={16} className="text-slate-500" />
           {activeDateLabel}
           <span className="text-slate-600">|</span>
@@ -1052,7 +1091,7 @@ const Reports = ({ mode = "basic" }) => {
         </div>
       </Card>
 
-      {!(["creditAging", "supplierPayables", "stockHealth"].includes(mode)) && <Card className="admin-panel-card overflow-visible p-0">
+      {!(["creditAging", "supplierPayables", "stockHealth", "expiredStock"].includes(mode)) && <Card className="admin-panel-card overflow-visible p-0">
         <div className="inventory-filter-bar border-b border-slate-100 bg-slate-50/50 p-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="flex flex-wrap gap-2">
@@ -1063,7 +1102,7 @@ const Reports = ({ mode = "basic" }) => {
                   onClick={() => setQuickDate(option.id)}
                   className={`h-[38px] rounded-xl border px-3 text-sm font-semibold transition-colors ${
                     datePreset === option.id
-                      ? "border-blue-200 bg-blue-600 text-white shadow-sm"
+                      ? "border-slate-200 bg-accent text-white shadow-sm"
                       : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
@@ -1093,20 +1132,20 @@ const Reports = ({ mode = "basic" }) => {
                 value={filters[activeSortKey]}
                 onChange={(value) => handleFilterChange(activeSortKey, value)}
                 options={sortOptionsByTab[activeTab]}
-                buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-blue-100"
+                buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-accent"
               />
               <CustomSelect
                 value={filters.sortDirection}
                 onChange={(value) => handleFilterChange("sortDirection", value)}
                 options={sortDirectionOptions}
-                buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-blue-100"
+                buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-accent"
               />
               {activeTab === "productPerformance" && (
                 <CustomSelect
                   value={filters.itemType}
                   onChange={(value) => handleFilterChange("itemType", value)}
                   options={productTypeOptions}
-                  buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-blue-100"
+                  buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-accent"
                 />
               )}
               {activeTab === "salesReport" && (
@@ -1114,7 +1153,7 @@ const Reports = ({ mode = "basic" }) => {
                   value={filters.orderType}
                   onChange={(value) => handleFilterChange("orderType", value)}
                   options={orderTypeOptions}
-                  buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-blue-100"
+                  buttonClassName="h-[38px] py-0 font-semibold shadow-sm focus:ring-accent"
                 />
               )}
             </div>
@@ -1129,7 +1168,7 @@ const Reports = ({ mode = "basic" }) => {
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
               className={`report-tab-chip flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-                activeTab === tab.id ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-100"
+                activeTab === tab.id ? "bg-accent text-white shadow-md" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
               <tab.icon size={16} /> {tab.label}
@@ -1163,7 +1202,7 @@ const Reports = ({ mode = "basic" }) => {
                   and it sits in an existing row so nothing shifts when it appears. */}
               {loading && (
                 <span className="mr-auto flex items-center gap-2 text-xs font-semibold text-slate-500">
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-accent" />
                   Updating…
                 </span>
               )}
@@ -1222,7 +1261,7 @@ const Reports = ({ mode = "basic" }) => {
                       <div>
                         <p className="text-sm font-bold text-slate-800">{job.reportType} report</p>
                         <p className="text-xs text-slate-500">{new Date(job.createdAt).toLocaleString()}, {job.status}</p>
-                        {job.errorMessage && <p className="mt-1 text-xs font-semibold text-red-600">{job.errorMessage}</p>}
+                        {job.errorMessage && <p className="mt-1 text-xs font-semibold text-danger">{job.errorMessage}</p>}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {job.downloadable && <Button variant="outline" size="sm" onClick={() => downloadExportJob(job)}><Download size={14} className="mr-2" />Download</Button>}
@@ -1242,7 +1281,7 @@ const Reports = ({ mode = "basic" }) => {
                   <h2 className="text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
                     {allTabs.find((tab) => tab.id === activeTab)?.label || "Report"}
                   </h2>
-                  <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">{["creditAging", "supplierPayables", "stockHealth"].includes(mode) ? "Current position as of generation time" : `Period: ${datePreset === "allTime" ? "All Time" : `${dateRange.from} to ${dateRange.to}`}`}</p>
+                  <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">{["creditAging", "supplierPayables", "stockHealth", "expiredStock"].includes(mode) ? "Current position as of generation time" : `Period: ${datePreset === "allTime" ? "All Time" : `${dateRange.from} to ${dateRange.to}`}`}</p>
                 </div>
                 <p className="text-xs font-medium text-slate-500 sm:text-right">Generated: {new Date().toLocaleString()}</p>
               </div>

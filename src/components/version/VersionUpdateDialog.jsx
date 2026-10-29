@@ -82,7 +82,7 @@ const VersionUpdateDialog = () => {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-blue-700">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent">
                   <Sparkles size={12} />
                   What's new
                 </span>
@@ -99,7 +99,7 @@ const VersionUpdateDialog = () => {
           <ul className="space-y-2">
             {LATEST_VERSION.highlights.slice(0, 6).map((item) => (
               <li key={item} className="flex gap-3">
-                <CheckCircle2 className="mt-0.5 shrink-0 text-emerald-600" size={18} />
+                <CheckCircle2 className="mt-0.5 shrink-0 text-success" size={18} />
                 <p className="text-sm leading-6 text-slate-700">{item}</p>
               </li>
             ))}
@@ -110,7 +110,7 @@ const VersionUpdateDialog = () => {
           <Link
             to="/version-history"
             onClick={closeDialog}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-800"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-accent hover:text-slate-800"
           >
             <History size={16} />
             Full version history

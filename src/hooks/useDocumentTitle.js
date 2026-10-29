@@ -82,6 +82,7 @@ const ROUTE_TITLES = [
   ['/users', 'Users'],
   ['/receipt-settings', 'Receipt settings'],
   ['/app-configuration', 'App configuration'],
+  ['/settings/cash-denominations', 'Cash Denominations'],
   ['/version-history', 'Version history'],
 ];
 

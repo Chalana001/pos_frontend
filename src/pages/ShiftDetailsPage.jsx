@@ -1,18 +1,54 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Clock, Printer, User } from "lucide-react";
+import {
+  ArrowLeft,
+  Banknote,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  FileText,
+  Landmark,
+  MapPin,
+  Printer,
+  Receipt,
+  Search,
+  ShoppingCart,
+  TrendingDown,
+  TrendingUp,
+  User,
+  Wallet,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 import { shiftsAPI } from "../api/shifts.api";
+import { cashDropsAPI } from "../api/cashDrops.api";
 import Card from "../components/common/Card";
+import Table from "../components/common/Table";
 import Button from "../components/common/Button";
-import Modal from "../components/common/Modal";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import ShiftCloseSummary from "../components/shifts/ShiftCloseSummary";
+import ShiftCloseDialog from "../components/shifts/ShiftCloseDialog";
 import TablePagination from "../components/common/TablePagination";
-import { formatCurrency, formatDateTime } from "../utils/formatters";
-import { calculateExpectedCash, nonCashTotals } from "../utils/shiftCash";
+import CustomSelect from "../components/common/CustomSelect";
+import { resolvePaymentIcon } from "../utils/paymentMethodIcons";
+import { formatCurrency, formatDateTime, formatTime } from "../utils/formatters";
 
 const formatCategoryLabel = (value) => value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+
+const fetchAllPages = async (fetchPage) => {
+  const firstResponse = await fetchPage(0);
+  const firstData = firstResponse?.data || {};
+  const firstContent = Array.isArray(firstData.content) ? firstData.content : [];
+  const totalPages = Number(firstData.totalPages || 1);
+  if (totalPages <= 1) return firstContent;
+
+  const otherPages = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => fetchPage(index + 1))
+  );
+  return [
+    ...firstContent,
+    ...otherPages.flatMap((response) => Array.isArray(response?.data?.content) ? response.data.content : []),
+  ];
+};
 
 const getPaymentLabel = (sale) => {
   const paidAmount = Number(sale?.paidAmount || 0);
@@ -24,6 +60,26 @@ const getPaymentLabel = (sale) => {
   return sale?.orderType === "CREDIT" ? "Credit" : method;
 };
 
+// Pagination only earns its screen space when there is more than one page.
+// A 2-record table with the footer hidden reads cleaner than one with a
+// disabled Prev/Next and a "Page 1 of 1" summary.
+const PaginationWhenNeeded = (props) => {
+  const { totalElements, pageSize, ...rest } = props;
+  if (Number(totalElements || 0) <= Number(pageSize || 0)) return null;
+  return <TablePagination {...rest} />;
+};
+
+const shiftDuration = (openedAt, closedAt) => {
+  if (!openedAt) return "—";
+  const start = new Date(openedAt).getTime();
+  const end = closedAt ? new Date(closedAt).getTime() : Date.now();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return "—";
+  const minutes = Math.round((end - start) / 60000);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+};
+
 const ShiftDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -31,6 +87,21 @@ const ShiftDetailsPage = () => {
   const [shift, setShift] = useState(null);
   const [sales, setSales] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [expensesAmount, setExpensesAmount] = useState(0);
+  const [cashDrops, setCashDrops] = useState([]);
+  const [purchases, setPurchases] = useState([]);
+  const [purchasesAmount, setPurchasesAmount] = useState(0);
+  const [cashDropsTotal, setCashDropsTotal] = useState(0);
+  const [cashDropsTotalPages, setCashDropsTotalPages] = useState(0);
+  const [cashDropsLoading, setCashDropsLoading] = useState(true);
+  const [cashDropsPage, setCashDropsPage] = useState(0);
+  const [cashDropsPageInput, setCashDropsPageInput] = useState("1");
+  const [purchasesTotal, setPurchasesTotal] = useState(0);
+  const [purchasesTotalPages, setPurchasesTotalPages] = useState(0);
+  const [purchasesLoading, setPurchasesLoading] = useState(true);
+  const [purchasesPage, setPurchasesPage] = useState(0);
+  const [purchasesPageInput, setPurchasesPageInput] = useState("1");
+  const [paymentSummary, setPaymentSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [salesLoading, setSalesLoading] = useState(false);
   const [expensesLoading, setExpensesLoading] = useState(false);
@@ -44,25 +115,123 @@ const ShiftDetailsPage = () => {
   const [expensesTotalPages, setExpensesTotalPages] = useState(0);
   const [expensesTotalElements, setExpensesTotalElements] = useState(0);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [countedCash, setCountedCash] = useState("");
-  const [closing, setClosing] = useState(false);
+
+  // Sales table controls: invoice search and payment-method filter are
+  // client-side over the fetched page — the API has no server-side filter for
+  // these yet, and the shift's own sales list is small enough that this stays
+  // honest: filtered rows are the page's real rows.
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("ALL");
+
+  // Derived values live above the loading early-return so hook order stays
+  // stable across renders.
+  const paymentRows = useMemo(() => paymentSummary?.methods || [], [paymentSummary]);
+  const paymentFilterOptions = useMemo(() => [
+    { value: "ALL", label: "All methods" },
+    ...paymentRows.map((m) => ({ value: m.code, label: m.displayName })),
+  ], [paymentRows]);
+  const filteredSales = useMemo(() => sales.filter((sale) => {
+    const matchesInvoice = !invoiceSearch.trim()
+      || (sale.invoiceNo || "").toLowerCase().includes(invoiceSearch.trim().toLowerCase());
+    const matchesPayment = paymentFilter === "ALL" || sale.paymentMethod === paymentFilter;
+    return matchesInvoice && matchesPayment;
+  }), [sales, invoiceSearch, paymentFilter]);
+
+  const loadShift = async () => {
+    setLoading(true);
+    try {
+      const response = await shiftsAPI.getById(id);
+      setShift(response.data);
+    } catch (error) {
+      console.error("Failed to load shift", error);
+      setShift(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadShift = async () => {
-      setLoading(true);
-      try {
-        const response = await shiftsAPI.getById(id);
-        setShift(response.data);
-      } catch (error) {
-        console.error("Failed to load shift", error);
-        setShift(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadShift();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    shiftsAPI.getPaymentSummary(id)
+      .then((response) => { if (!cancelled) setPaymentSummary(response.data); })
+      .catch((error) => {
+        console.error("Failed to load shift payment summary", error);
+        if (!cancelled) setPaymentSummary(null);
+      });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetchAllPages((page) => shiftsAPI.getExpenses(id, { page, size: 100 })),
+      fetchAllPages((page) => shiftsAPI.getPurchases(id, { page, size: 100 })),
+    ])
+      .then(([allExpenses, allPurchases]) => {
+        if (cancelled) return;
+        setExpensesAmount(allExpenses.reduce((total, expense) => total + Number(expense.amount || 0), 0));
+        setPurchasesAmount(allPurchases
+          .filter((purchase) => purchase.status !== "CANCELED")
+          .reduce((total, purchase) => total + Number(purchase.cashSourceAmount || 0), 0));
+      })
+      .catch((error) => {
+        console.error("Failed to calculate shift expense and purchase totals", error);
+        if (!cancelled) {
+          setExpensesAmount(0);
+          setPurchasesAmount(0);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCashDropsLoading(true);
+    cashDropsAPI.getAll({ shiftId: id, page: cashDropsPage, size: 5 })
+      .then((response) => {
+        if (cancelled) return;
+        setCashDrops(response.data?.content || []);
+        setCashDropsTotal(response.data?.totalElements || 0);
+        setCashDropsTotalPages(response.data?.totalPages || 0);
+      })
+      .catch((error) => {
+        console.error("Failed to load shift cash drops", error);
+        if (!cancelled) {
+          setCashDrops([]);
+          setCashDropsTotal(0);
+          setCashDropsTotalPages(0);
+        }
+      })
+      .finally(() => { if (!cancelled) setCashDropsLoading(false); });
+    return () => { cancelled = true; };
+  }, [id, cashDropsPage]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPurchasesLoading(true);
+    shiftsAPI.getPurchases(id, { page: purchasesPage, size: 5 })
+      .then((response) => {
+        if (cancelled) return;
+        setPurchases(response.data?.content || []);
+        setPurchasesTotal(response.data?.totalElements || 0);
+        setPurchasesTotalPages(response.data?.totalPages || 0);
+      })
+      .catch((error) => {
+        console.error("Failed to load shift drawer purchases", error);
+        if (!cancelled) {
+          setPurchases([]);
+          setPurchasesTotal(0);
+          setPurchasesTotalPages(0);
+        }
+      })
+      .finally(() => { if (!cancelled) setPurchasesLoading(false); });
+    return () => { cancelled = true; };
+  }, [id, purchasesPage]);
 
   useEffect(() => {
     const loadSales = async () => {
@@ -116,6 +285,14 @@ const ShiftDetailsPage = () => {
     setExpensesPageInput(String(expensesPage + 1));
   }, [expensesPage]);
 
+  useEffect(() => {
+    setCashDropsPageInput(String(cashDropsPage + 1));
+  }, [cashDropsPage]);
+
+  useEffect(() => {
+    setPurchasesPageInput(String(purchasesPage + 1));
+  }, [purchasesPage]);
+
   const goToPage = () => {
     const requestedPage = Number(pageInput);
     if (!Number.isInteger(requestedPage)) {
@@ -138,23 +315,41 @@ const ShiftDetailsPage = () => {
     setExpensesPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
   };
 
-  const handleCloseShift = async (e) => {
-    e.preventDefault();
-    setClosing(true);
+  const goToCashDropsPage = () => {
+    const requestedPage = Number(cashDropsPageInput);
+    if (!Number.isInteger(requestedPage)) {
+      setCashDropsPageInput(String(cashDropsPage + 1));
+      return;
+    }
+
+    const maxPage = cashDropsTotalPages > 0 ? cashDropsTotalPages : 1;
+    setCashDropsPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
+  };
+
+  const goToPurchasesPage = () => {
+    const requestedPage = Number(purchasesPageInput);
+    if (!Number.isInteger(requestedPage)) {
+      setPurchasesPageInput(String(purchasesPage + 1));
+      return;
+    }
+
+    const maxPage = purchasesTotalPages > 0 ? purchasesTotalPages : 1;
+    setPurchasesPage(Math.min(Math.max(requestedPage, 1), maxPage) - 1);
+  };
+
+  const handleCloseShift = async (shiftId, payload) => {
+    // Shift details is the admin/manager surface; closeById has always been
+    // its path and stays that way. Errors propagate to the dialog so the
+    // modal stays open on a failed close.
     try {
-      const response = await shiftsAPI.closeById(shift.id, {
-        countedCash: parseFloat(countedCash),
-        note: "",
-      });
+      const response = await shiftsAPI.closeById(shiftId, payload);
       setShift(response.data);
       toast.success("Shift closed successfully");
       setShowCloseModal(false);
-      setCountedCash("");
     } catch (error) {
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to close shift";
       toast.error(errorMessage);
-    } finally {
-      setClosing(false);
+      throw error;
     }
   };
 
@@ -163,156 +358,276 @@ const ShiftDetailsPage = () => {
   }
 
   if (!shift) {
-    return <div className="p-10 text-center text-red-500">Shift not found.</div>;
+    return <div className="p-10 text-center text-danger">Shift not found.</div>;
   }
 
+  const totalSalesAmount = paymentSummary?.totalSales
+    ?? (Number(shift.cashSales || 0) + Number(shift.cardSales || 0) + Number(shift.bankSales || 0));
+  const expectedCash = Number(shift.expectedCash ?? 0);
+  const countedCash = Number(shift.countedCash ?? 0);
+  const shiftVariance = Number(shift.cashDifference || 0);
+  const denominationRows = shift.denominationCounts || [];
+
+  const salesColumns = [
+    { key: "invoice", header: "Invoice", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap font-bold text-accent", render: (sale) => sale.invoiceNo },
+    { key: "time", header: "Time", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap text-xs text-slate-600", render: (sale) => formatTime(sale.createdAt) },
+    { key: "payment", header: "Payment", headerClassName: "text-center", className: "whitespace-nowrap text-center", render: (sale) => <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-700">{getPaymentLabel(sale)}</span> },
+    { key: "status", header: "Status", headerClassName: "text-center", className: "whitespace-nowrap text-center", render: (sale) => <span className={`rounded px-2 py-1 text-[10px] font-bold ${sale.status === "CANCELED" ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}>{sale.status || "COMPLETED"}</span> },
+    { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right font-bold text-slate-900", render: (sale) => formatCurrency(sale.grandTotal || 0) },
+  ];
+  const expenseColumns = [
+    { key: "time", header: "Time", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap text-xs text-slate-600", render: (expense) => formatTime(expense.createdAt) },
+    { key: "category", header: "Category", className: "whitespace-nowrap text-xs", render: (expense) => formatCategoryLabel(expense.category || "") },
+    { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right text-xs font-bold text-danger", render: (expense) => formatCurrency(expense.amount || 0) },
+  ];
+  const cashDropColumns = [
+    { key: "time", header: "Time", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap text-xs text-slate-600", render: (drop) => formatTime(drop.createdAt) },
+    { key: "reason", header: "Reason", className: "max-w-[160px] truncate text-xs", render: (drop) => drop.reason || "Cash drop" },
+    { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right text-xs font-bold text-slate-800", render: (drop) => formatCurrency(drop.amount || 0) },
+  ];
+  const purchaseColumns = [
+    { key: "invoice", header: "Purchase", headerClassName: "whitespace-nowrap", className: "whitespace-nowrap text-xs font-semibold text-accent", render: (purchase) => purchase.invoiceNo || `Purchase #${purchase.purchaseId}` },
+    { key: "supplier", header: "Supplier", className: "max-w-[130px] truncate text-xs", render: (purchase) => purchase.supplierName || "—" },
+    { key: "amount", header: "Amount", headerClassName: "whitespace-nowrap text-right", className: "whitespace-nowrap text-right text-xs font-bold text-slate-800", render: (purchase) => formatCurrency(purchase.cashSourceAmount || 0) },
+  ];
+  const summaryCards = [
+    { label: "Total Sales", value: totalSalesAmount, tone: "text-slate-900", sub: `${paymentSummary?.totalTransactions ?? totalElements} transactions` },
+    { label: "Expected Drawer Cash", value: expectedCash, tone: "text-accent", sub: "Only drawer tenders counted" },
+    { label: "Closing Counted Cash", value: countedCash, tone: "text-slate-900", sub: shift.countedCash != null ? "Physical count at close" : "Not closed yet" },
+    {
+      label: "Cash Variance",
+      value: shiftVariance,
+      tone: shiftVariance === 0 ? "text-success" : shiftVariance < 0 ? "text-danger" : "text-warning",
+      sub: shiftVariance === 0 ? "Reconciled" : shiftVariance < 0 ? "Shortage" : "Overage",
+      cardTone: shiftVariance === 0 ? "bg-success-soft/60 border-success-border" : shiftVariance < 0 ? "bg-danger-soft/60 border-danger-border" : "bg-warning-soft/60 border-warning-border",
+      icon: shiftVariance === 0 ? <CheckCircle2 size={18} /> : shiftVariance < 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />,
+    },
+  ];
+
   return (
-    <div className="page-enter space-y-6 p-4">
-      <div className="page-section-enter flex flex-col justify-between gap-4 md:flex-row md:items-center" style={{ animationDelay: "40ms" }}>
+    <div className="page-enter space-y-4 p-4">
+      {/* A. Shift header */}
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center print:hidden">
         <div>
-          <Button variant="secondary" onClick={() => navigate("/shifts/history")} className="mb-4">
-            <ArrowLeft size={18} className="mr-2" /> Back to Shift History
-          </Button>
-          <h1 className="text-3xl font-bold text-slate-800">Shift #{shift.id}</h1>
-          <p className="text-sm text-slate-500 mt-1">{shift.branchName || `Branch #${shift.branchId}`}</p>
+          <Button variant="secondary" onClick={() => navigate("/shifts/history")} className="mb-3"><ArrowLeft size={17} className="mr-2" /> Back to Shift History</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-3xl font-black text-slate-900">Shift #{shift.id}</h1>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${shift.status === "OPEN" ? "bg-success-soft text-success" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+            <span className="inline-flex items-center gap-1.5"><MapPin size={15} />{shift.branchName || `Branch #${shift.branchId}`}</span>
+            <span className="hidden text-slate-300 sm:inline">|</span>
+            <span className="inline-flex items-center gap-1.5"><CalendarDays size={15} />{formatDateTime(shift.openedAt)}{shift.closedAt ? ` to ${formatDateTime(shift.closedAt)}` : ""}</span>
+            <span className="hidden text-slate-300 sm:inline">|</span>
+            <span className="inline-flex items-center gap-1.5"><Clock size={15} />{shiftDuration(shift.openedAt, shift.closedAt)}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 print:hidden">
-          {shift.status === "CLOSED" && <Button variant="secondary" onClick={() => window.print()}><Printer size={17} className="mr-2" /> Print Z Report</Button>}
-          {shift.status === "OPEN" && <Button variant="danger" onClick={() => setShowCloseModal(true)}>Close Shift</Button>}
-          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase w-fit ${shift.status === "OPEN" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{shift.status}</span>
+        <div className="flex items-center gap-2">
+          {shift.status === "CLOSED" && <Button variant="secondary" onClick={() => window.print()}><Printer size={16} className="mr-2" /> Print Z Report</Button>}
+          {shift.status === "OPEN" && <Button variant="danger" onClick={() => setShowCloseModal(true)}>Cash Reconciliation</Button>}
         </div>
       </div>
 
-      <Card className="border border-slate-200 p-5 print:border-0 print:shadow-none">
-        <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
-          <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">Z Report</p><h2 className="mt-1 text-xl font-black text-slate-900">Cash Reconciliation</h2></div>
-          <p className="text-xs font-semibold text-slate-500">{formatDateTime(shift.openedAt)} to {formatDateTime(shift.closedAt)}</p>
-        </div>
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ["Opening cash", shift.openingCash],
-            ["Cash sales", shift.cashSales],
-            ["Expenses", -Number(shift.totalExpenses || 0)],
-            ["Cash drops", -Number(shift.totalCashDrops || 0)],
-            ["Expected cash", shift.expectedCash],
-            ["Counted cash", shift.countedCash],
-          ].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-2 text-lg font-black text-slate-900">{formatCurrency(value || 0)}</p></div>)}
-          <div className={`rounded-xl p-4 sm:col-span-2 ${Number(shift.cashDifference || 0) < 0 ? "bg-red-50" : Number(shift.cashDifference || 0) > 0 ? "bg-blue-50" : "bg-emerald-50"}`}>
-            <p className="text-xs font-bold uppercase text-slate-500">Closing variance</p>
-            <p className={`mt-2 text-2xl font-black ${Number(shift.cashDifference || 0) < 0 ? "text-red-700" : Number(shift.cashDifference || 0) > 0 ? "text-blue-700" : "text-emerald-700"}`}>{formatCurrency(shift.cashDifference || 0)}</p>
-            <p className="mt-1 text-xs font-semibold text-slate-600">{Number(shift.cashDifference || 0) < 0 ? "Cash shortage" : Number(shift.cashDifference || 0) > 0 ? "Cash excess" : "Cash reconciled"}</p>
+      {/* B. Summary cards */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 print:hidden">
+        {summaryCards.map((card) => (
+          <div key={card.label} className={`rounded-xl border p-4 ${card.cardTone || "border-slate-200 bg-white"}`}>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{card.label}</p>
+              {card.icon && <span className={card.tone}>{card.icon}</span>}
+            </div>
+            <p className={`mt-2 text-xl font-black ${card.tone}`}>{formatCurrency(card.value || 0)}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{card.sub}</p>
           </div>
-        </div>
-        {(shift.openNote || shift.closeNote) && <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">{shift.openNote && <div><p className="text-xs font-bold uppercase text-slate-500">Opening note</p><p className="mt-1 text-sm text-slate-700">{shift.openNote}</p></div>}{shift.closeNote && <div><p className="text-xs font-bold uppercase text-slate-500">Closing note</p><p className="mt-1 text-sm text-slate-700">{shift.closeNote}</p></div>}</div>}
-        {(() => {
-          const { cardSales, bankSales, cashCollections } = nonCashTotals(shift);
-          if (!cardSales && !bankSales && !cashCollections) return null;
-          return (
-            <div className="mt-5 rounded-xl bg-slate-50 p-4">
-              <p className="text-xs font-bold uppercase text-slate-500">Other tender this shift</p>
-              <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-slate-700 sm:grid-cols-3">
-                <span>Card: {formatCurrency(cardSales)} (not in drawer)</span>
-                <span>Bank: {formatCurrency(bankSales)} (not in drawer)</span>
-                <span>Cash collected on credit dues: {formatCurrency(cashCollections)}</span>
+        ))}
+      </div>
+
+      {/* C. Upper information grid: reconciliation | payment methods | denominations.
+          items-start keeps each card at its own content height — the grid's
+          default stretch is what ballooned the two left cards to match the
+          denomination table's tall list. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start print:hidden">
+        <Card className="overflow-hidden border border-slate-200 p-0">
+          <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+            <span className="rounded-xl bg-accent-soft p-2.5 text-accent"><Receipt size={19} /></span>
+            <div>
+              <h2 className="font-bold text-slate-900">Cash Reconciliation</h2>
+              <p className="text-xs text-slate-500">Drawer movements and validation</p>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {[["Opening cash", shift.openingCash, ""], ["Cash sales", shift.cashSales, "text-accent"], ["Expenses", -Number(shift.totalExpenses || 0), "text-danger"], ["Cash drops", -Number(shift.totalCashDrops || 0), "text-danger"], ["Expected cash", shift.expectedCash, "text-accent font-bold"], ["Counted cash", shift.countedCash, ""], ["Variance", shiftVariance, shiftVariance === 0 ? "text-success font-bold" : "text-danger font-bold"]].map(([label, amount, tone]) => (
+              <div key={label} className="flex items-center justify-between px-4 py-2 text-sm">
+                <span className="text-slate-600">{label}</span>
+                <span className={`font-semibold ${tone}`}>{formatCurrency(amount || 0)}</span>
+              </div>
+            ))}
+          </div>
+          {(shift.openNote || shift.closeNote) && (
+            <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-3 text-xs space-y-1">
+              {shift.openNote && <p><span className="font-semibold text-slate-500">Opening note: </span>{shift.openNote}</p>}
+              {shift.closeNote && <p><span className="font-semibold text-slate-500">Closing note: </span>{shift.closeNote}</p>}
+            </div>
+          )}
+        </Card>
+
+        <Card className="overflow-hidden border border-slate-200 p-0">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="rounded-xl bg-success-soft p-2.5 text-success"><Wallet size={19} /></span>
+              <div>
+                <h2 className="font-bold text-slate-900">Sales by Payment Method</h2>
+                <p className="text-xs text-slate-500">{paymentSummary?.totalTransactions ?? 0} transactions</p>
               </div>
             </div>
-          );
-        })()}
-      </Card>
+            <span className="text-sm font-black text-success">{formatCurrency(totalSalesAmount)}</span>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {paymentRows.length > 0 ? paymentRows.map((method) => {
+              const Icon = resolvePaymentIcon(method);
+              return (
+                <div key={method.code} className="flex items-center justify-between gap-2 px-4 py-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Icon size={16} className="shrink-0 text-accent" />
+                    <p className="truncate text-sm font-semibold text-slate-700">{method.displayName}</p>
+                    <span className="shrink-0 text-xs text-slate-400">{method.transactionCount} txn</span>
+                  </div>
+                  <span className="shrink-0 text-sm font-bold text-slate-900">{formatCurrency(method.amount || 0)}</span>
+                </div>
+              );
+            }) : (
+              <div className="px-4 py-8 text-center">
+                <Wallet size={20} className="mx-auto text-slate-300 mb-1" />
+                <p className="text-sm text-slate-500">No sales in this shift</p>
+              </div>
+            )}
+            {paymentSummary?.cashCollections > 0 && (
+              <div className="flex items-center justify-between px-4 py-2 text-sm">
+                <span className="text-slate-600">Credit collections (cash)</span>
+                <span className="font-bold text-success">{formatCurrency(paymentSummary.cashCollections)}</span>
+              </div>
+            )}
+          </div>
+        </Card>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "90ms" }}>
-          <div className="text-xs text-slate-500 flex items-center gap-2 uppercase font-bold">
-            <User size={14} /> Cashier
+        {/* Content-driven height; mobile order puts the physical count first
+            per the approved mobile reference. Denominations render as a
+            two-column chip grid instead of a table: a table's minimum column
+            widths forced horizontal scrolling inside this panel, which read
+            badly; chips never scroll either way. */}
+        <Card className="order-first overflow-hidden border border-slate-200 p-0 lg:order-none print:hidden">
+          <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+            <span className="rounded-xl bg-success-soft p-2.5 text-success"><Banknote size={19} /></span>
+            <div>
+              <h2 className="font-bold text-slate-900">Cash Count by Denomination</h2>
+              <p className="text-xs text-slate-500">Physical count at shift close</p>
+            </div>
           </div>
-          <div className="mt-2 text-lg font-bold text-slate-800">{shift.cashierName || `User ${shift.cashierUserId}`}</div>
-        </Card>
-        <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "130ms" }}>
-          <div className="text-xs text-slate-500 flex items-center gap-2 uppercase font-bold">
-            <Clock size={14} /> Opened
+          {denominationRows.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-slate-500">No denomination count recorded.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 p-3">
+              {denominationRows.map((row) => {
+                const amount = Number(row.denomination) * Number(row.quantity);
+                return (
+                  <div key={row.denomination} className={`flex items-center justify-between rounded-lg border px-3 py-2 ${amount > 0 ? "border-slate-200 bg-white" : "border-slate-100 bg-slate-50/60"}`}>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <Banknote size={13} className={amount > 0 ? "text-success" : "text-slate-300"} />
+                      <span className="text-xs font-bold text-slate-700">Rs {Number(row.denomination).toLocaleString("en-LK")}</span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="text-xs font-semibold text-slate-600">×{Number(row.quantity)}</span>
+                      <span className={`ml-1.5 text-xs font-bold ${amount > 0 ? "text-slate-900" : "text-slate-400"}`}>{formatCurrency(amount)}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="mx-3 mb-3 flex items-center justify-between rounded-lg bg-accent-soft px-3 py-2.5">
+            <span className="text-sm font-bold text-slate-900">Counted Cash Total</span>
+            <span className="text-base font-black text-slate-900">{formatCurrency(shift.countedCash || 0)}</span>
           </div>
-          <div className="mt-2 text-sm font-bold text-slate-800">{formatDateTime(shift.openedAt)}</div>
         </Card>
-        <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "170ms" }}>
-          <div className="text-xs text-slate-500 uppercase font-bold">Cash Sales</div>
-          <div className="mt-2 text-lg font-bold text-emerald-600">{formatCurrency(shift.cashSales || 0)}</div>
-        </Card>
-        <Card className="ops-summary-card shell-panel shell-panel-hover p-4" style={{ animationDelay: "210ms" }}>
-          <div className="text-xs text-slate-500 uppercase font-bold">Difference</div>
-          <div className={`mt-2 text-lg font-bold ${
-            (shift.cashDifference || 0) < 0 ? "text-red-600" : (shift.cashDifference || 0) > 0 ? "text-blue-600" : "text-slate-700"
-          }`}>
-            {shift.status === "CLOSED" ? formatCurrency(shift.cashDifference || 0) : "--"}
+
+        {/* Compact Cashier & Shift Timeline: one cohesive full-width row
+            beneath the upper grid, not three oversized cards. */}
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 lg:col-span-3 print:hidden">
+          <div className="grid grid-cols-1 gap-3 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
+            <div className="flex items-center gap-2.5 sm:pr-4">
+              <User size={15} className="shrink-0 text-slate-500" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Cashier</p>
+                <p className="truncate text-sm font-semibold text-slate-800">{shift.cashierName || `User ${shift.cashierUserId}`}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 sm:px-4">
+              <Clock size={15} className="shrink-0 text-success" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Opened</p>
+                <p className="text-sm font-semibold text-slate-800">{formatDateTime(shift.openedAt)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 sm:pl-4">
+              <Clock size={15} className="shrink-0 text-slate-400" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Closed</p>
+                <p className="text-sm font-semibold text-slate-800">{shift.closedAt ? formatDateTime(shift.closedAt) : "—"}</p>
+              </div>
+            </div>
           </div>
-        </Card>
+        </div>
       </div>
 
-      <Card className="sales-panel-enter overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "130ms" }}>
-        <div className="flex items-center justify-between p-4 border-b bg-slate-50">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800">Sales in This Shift</h2>
-            <p className="text-sm text-slate-500">Showing {sales.length} of {totalElements} sales</p>
+      {/* D. Main transaction area — Row 1: Sales in This Shift, full width */}
+      <Card className="sales-panel-enter overflow-hidden border border-slate-200 p-0 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
+          <div className="flex items-center gap-3">
+            <span className="rounded-xl bg-accent-soft p-2.5 text-accent"><ShoppingCart size={19} /></span>
+            <div>
+              <h2 className="font-bold text-slate-900">Sales in This Shift</h2>
+              <p className="text-xs text-slate-500">Showing {filteredSales.length} of {totalElements} sales</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                aria-label="Search invoice"
+                type="text"
+                value={invoiceSearch}
+                onChange={(e) => setInvoiceSearch(e.target.value)}
+                placeholder="Search invoice…"
+                className="h-9 w-44 rounded-lg border border-slate-300 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
+            <div className="w-40">
+              <CustomSelect
+                value={paymentFilter}
+                onChange={setPaymentFilter}
+                options={paymentFilterOptions}
+                buttonClassName="h-9"
+                menuClassName="min-w-[160px]"
+              />
+            </div>
+            <div className="rounded-lg bg-accent-soft px-3 py-2">
+              <p className="text-[10px] font-medium text-accent">Total Sales</p>
+              <p className="text-base font-black text-accent">{formatCurrency(totalSalesAmount)}</p>
+            </div>
           </div>
         </div>
-
-        <div className="app-table-wrap">
-          <table className="app-table whitespace-nowrap">
-            <thead className="app-table-head">
-              <tr>
-                <th className="p-4">Date</th>
-                <th className="p-4">Invoice No</th>
-                <th className="p-4">Customer</th>
-                <th className="p-4 text-center">Payment</th>
-                <th className="p-4 text-center">Status</th>
-                <th className="p-4 text-right">Grand Total</th>
-                <th className="p-4 w-10"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {salesLoading ? (
-                <tr><td colSpan="7" className="p-6 text-center text-slate-500">Loading...</td></tr>
-              ) : sales.length === 0 ? (
-                <tr><td colSpan="7" className="p-6 text-center text-slate-500">No sales found for this shift.</td></tr>
-              ) : (
-                sales.map((sale) => (
-                  <tr
-                    key={sale.id}
-                    className="hover:bg-blue-50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/sales/${sale.invoiceNo}`)}
-                  >
-                    <td className="p-4 text-slate-600">{formatDateTime(sale.createdAt)}</td>
-                    <td className="p-4 font-bold text-blue-600">{sale.invoiceNo}</td>
-                    <td className="p-4 font-medium text-slate-700">{sale.customerName || "Walk-in Customer"}</td>
-                    <td className="p-4 text-center">
-                      <span className="px-2 py-1 rounded text-xs font-semibold bg-slate-100 text-slate-700">
-                        {getPaymentLabel(sale)}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className={`px-2 py-1 rounded text-xs font-bold border ${
-                        sale.status === "CANCELED"
-                          ? "bg-red-100 text-red-700 border-red-200"
-                          : "bg-emerald-100 text-emerald-700 border-emerald-200"
-                      }`}>
-                        {sale.status || "COMPLETED"}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right font-bold text-slate-800">{formatCurrency(sale.grandTotal || 0)}</td>
-                    <td className="p-4 text-right text-slate-600">
-                      <ChevronRight size={18} className="inline-block" />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        {/* Bounded scroll: the page keeps its own height; long sales lists
+            scroll under the sticky header inside this card only. */}
+        <div className="app-table-wrap-fixed max-h-[420px] rounded-none">
+          <Table columns={salesColumns} data={filteredSales} loading={salesLoading} skeletonRows={4} compact emptyMessage="No sales match the current filters." onRowClick={(sale) => navigate(`/sales/${sale.invoiceNo}`)} />
         </div>
-
-        <TablePagination
-          summary={`Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages}`}
+        <PaginationWhenNeeded
+          summary={`Page ${page + 1} of ${totalPages === 0 ? 1 : totalPages} · ${totalElements} sales`}
           page={page}
           pageInput={pageInput}
           totalPages={totalPages}
+          totalElements={totalElements}
+          pageSize={pageSize}
           loading={salesLoading}
           onPageChange={setPage}
           onPageInputChange={setPageInput}
@@ -320,113 +635,100 @@ const ShiftDetailsPage = () => {
         />
       </Card>
 
-      <Card className="sales-panel-enter overflow-hidden border border-slate-200 p-0" style={{ animationDelay: "170ms" }}>
-        <div className="flex items-center justify-between p-4 border-b bg-slate-50">
-          <div>
-            <h2 className="text-lg font-bold text-slate-800">Expenses in This Shift</h2>
-            <p className="text-sm text-slate-500">Showing {expenses.length} of {expensesTotalElements} expenses</p>
+      {/* D. Row 2: Purchases → Expenses → Cash Drops, three independent panels */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 print:hidden">
+        <Card className="overflow-hidden border border-slate-200 p-0">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 p-3">
+            <div className="flex items-center gap-2.5">
+              <span className="rounded-lg bg-warning-soft p-2 text-warning"><Banknote size={17} /></span>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Purchases Paid from This Drawer</h2>
+                <p className="text-[11px] text-slate-500">{purchasesTotal} purchases</p>
+              </div>
+            </div>
+            <span className="rounded-lg bg-warning-soft px-2 py-1 text-xs font-bold text-warning">{formatCurrency(purchasesAmount)}</span>
           </div>
-        </div>
+          <div className="max-h-64 overflow-y-auto custom-scrollbar">
+            <Table columns={purchaseColumns} data={purchases} loading={purchasesLoading} skeletonRows={3} compact emptyMessage="No drawer-paid purchases for this shift." />
+          </div>
+          <PaginationWhenNeeded
+            summary={`Page ${purchasesPage + 1} of ${purchasesTotalPages === 0 ? 1 : purchasesTotalPages}`}
+            page={purchasesPage}
+            pageInput={purchasesPageInput}
+            totalPages={purchasesTotalPages}
+            totalElements={purchasesTotal}
+            pageSize={5}
+            loading={purchasesLoading}
+            onPageChange={setPurchasesPage}
+            onPageInputChange={setPurchasesPageInput}
+            onGoToPage={goToPurchasesPage}
+          />
+        </Card>
 
-        <div className="app-table-wrap">
-          <table className="app-table whitespace-nowrap">
-            <thead className="app-table-head">
-              <tr>
-                <th className="p-4">Date</th>
-                <th className="p-4">Category</th>
-                <th className="p-4">Description</th>
-                <th className="p-4">Recorded By</th>
-                <th className="p-4 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {expensesLoading ? (
-                <tr><td colSpan="5" className="p-6 text-center text-slate-500">Loading...</td></tr>
-              ) : expenses.length === 0 ? (
-                <tr><td colSpan="5" className="p-6 text-center text-slate-500">No expenses found for this shift.</td></tr>
-              ) : (
-                expenses.map((expense) => (
-                  <tr key={expense.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4 text-slate-600">{formatDateTime(expense.createdAt)}</td>
-                    <td className="p-4">
-                      <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700">
-                        {formatCategoryLabel(expense.category || "")}
-                      </span>
-                    </td>
-                    <td className="p-4 font-medium text-slate-700 max-w-[360px] truncate" title={expense.description}>
-                      {expense.description || "-"}
-                    </td>
-                    <td className="p-4 text-slate-600">{expense.cashierName || `User ${expense.cashierId}`}</td>
-                    <td className="p-4 text-right font-bold text-red-600">{formatCurrency(expense.amount || 0)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Card className="overflow-hidden border border-slate-200 p-0">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 p-3">
+            <div className="flex items-center gap-2.5">
+              <span className="rounded-lg bg-danger-soft p-2 text-danger"><FileText size={17} /></span>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Expenses</h2>
+                <p className="text-[11px] text-slate-500">{expensesTotalElements} records</p>
+              </div>
+            </div>
+            <span className="rounded-lg bg-danger-soft px-2 py-1 text-xs font-bold text-danger">{formatCurrency(expensesAmount)}</span>
+          </div>
+          <div className="max-h-64 overflow-y-auto custom-scrollbar">
+            <Table columns={expenseColumns} data={expenses} loading={expensesLoading} skeletonRows={3} compact emptyMessage="No expenses for this shift." />
+          </div>
+          <PaginationWhenNeeded
+            summary={`Page ${expensesPage + 1} of ${expensesTotalPages === 0 ? 1 : expensesTotalPages}`}
+            page={expensesPage}
+            pageInput={expensesPageInput}
+            totalPages={expensesTotalPages}
+            totalElements={expensesTotalElements}
+            pageSize={pageSize}
+            loading={expensesLoading}
+            onPageChange={setExpensesPage}
+            onPageInputChange={setExpensesPageInput}
+            onGoToPage={goToExpensesPage}
+          />
+        </Card>
 
-        <TablePagination
-          summary={`Page ${expensesPage + 1} of ${expensesTotalPages === 0 ? 1 : expensesTotalPages}`}
-          page={expensesPage}
-          pageInput={expensesPageInput}
-          totalPages={expensesTotalPages}
-          loading={expensesLoading}
-          onPageChange={setExpensesPage}
-          onPageInputChange={setExpensesPageInput}
-          onGoToPage={goToExpensesPage}
-        />
-      </Card>
+        <Card className="overflow-hidden border border-slate-200 p-0">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 p-3">
+            <div className="flex items-center gap-2.5">
+              <span className="rounded-lg bg-accent-soft p-2 text-accent"><TrendingDown size={17} /></span>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Cash Drops</h2>
+                <p className="text-[11px] text-slate-500">{cashDropsTotal} drops</p>
+              </div>
+            </div>
+            <span className="rounded-lg bg-accent-soft px-2 py-1 text-xs font-bold text-accent">{formatCurrency(shift.totalCashDrops || 0)}</span>
+          </div>
+          <div className="max-h-64 overflow-y-auto custom-scrollbar">
+            <Table columns={cashDropColumns} data={cashDrops} loading={cashDropsLoading} skeletonRows={3} compact emptyMessage="No cash drops for this shift." />
+          </div>
+          <PaginationWhenNeeded
+            summary={`Page ${cashDropsPage + 1} of ${cashDropsTotalPages === 0 ? 1 : cashDropsTotalPages}`}
+            page={cashDropsPage}
+            pageInput={cashDropsPageInput}
+            totalPages={cashDropsTotalPages}
+            totalElements={cashDropsTotal}
+            pageSize={5}
+            loading={cashDropsLoading}
+            onPageChange={setCashDropsPage}
+            onPageInputChange={setCashDropsPageInput}
+            onGoToPage={goToCashDropsPage}
+          />
+        </Card>
+      </div>
 
-      <Modal
+      <ShiftCloseDialog
         isOpen={showCloseModal}
-        onClose={() => {
-          setShowCloseModal(false);
-          setCountedCash("");
-        }}
-        title={`Close Shift #${shift.id} (Cashier: ${shift.cashierName || shift.cashierUserId})`}
-      >
-        <form onSubmit={handleCloseShift} className="space-y-4">
-          <div className="space-y-2 rounded-lg bg-slate-50 p-4">
-            <div className="flex justify-between text-sm">
-              <span>Expected Cash:</span>
-              <span className="font-bold text-blue-600">{formatCurrency(calculateExpectedCash(shift))}</span>
-            </div>
-          </div>
-
-          {showCloseModal && <ShiftCloseSummary shiftId={shift.id} />}
-
-          <div>
-            <label htmlFor="shiftdetailspage-counted-cash-amount" className="block text-sm font-medium text-slate-700 mb-1">Counted Cash Amount *</label>
-            <input id="shiftdetailspage-counted-cash-amount"
-              type="number"
-              step="0.01"
-              value={countedCash}
-              onChange={(e) => setCountedCash(e.target.value)}
-              className="input"
-              placeholder="0.00"
-              required
-              autoFocus
-            />
-          </div>
-
-          {countedCash && (
-            <div className={`rounded-lg p-4 ${parseFloat(countedCash) === calculateExpectedCash(shift) ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
-              <p className="text-sm font-medium">
-                Difference: {formatCurrency(Math.abs(parseFloat(countedCash) - calculateExpectedCash(shift)))}
-              </p>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button type="submit" variant="danger" className="flex-1" disabled={closing}>
-              {closing ? "Closing..." : "Confirm Close"}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => { setShowCloseModal(false); setCountedCash(""); }}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onClose={() => setShowCloseModal(false)}
+        shift={shift}
+        closeShift={handleCloseShift}
+        onClosed={() => loadShift()}
+      />
     </div>
   );
 };

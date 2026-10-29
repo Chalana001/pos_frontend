@@ -113,7 +113,7 @@ const CustomerNotesTab = ({ customerId }) => {
           onChange={(e) => setNewNote(e.target.value)}
           rows={4}
           placeholder="Type customer note here..."
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
         />
 
         <div className="flex justify-end mt-3">
@@ -147,7 +147,7 @@ const CustomerNotesTab = ({ customerId }) => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       {n.pinned && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-warning-soft text-warning font-semibold">
                           <Pin size={14} />
                           Pinned
                         </span>
@@ -163,7 +163,7 @@ const CustomerNotesTab = ({ customerId }) => {
                           rows={3}
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
                         />
                         <div className="flex gap-2">
                           <Button type="button" onClick={saveEdit}>Save</Button>
@@ -193,7 +193,7 @@ const CustomerNotesTab = ({ customerId }) => {
                       <button aria-label="Edit"
                         type="button"
                         onClick={() => startEdit(n)}
-                        className="p-2 rounded-lg border border-slate-200 hover:bg-white text-blue-700"
+                        className="p-2 rounded-lg border border-slate-200 hover:bg-white text-accent"
                         title="Edit"
                       >
                         <Edit3 size={18} />
@@ -202,7 +202,7 @@ const CustomerNotesTab = ({ customerId }) => {
                       <button aria-label="Delete"
                         type="button"
                         onClick={() => deleteNote(n.id)}
-                        className="p-2 rounded-lg border border-slate-200 hover:bg-white text-red-700"
+                        className="p-2 rounded-lg border border-slate-200 hover:bg-white text-danger"
                         title="Delete"
                       >
                         <Trash2 size={18} />

@@ -19,22 +19,26 @@
   of colour, 73-96% saturation across the families. Instead the low steps are
   the page ground nudged toward the hue (8/14/22/34%), and the high steps are
   the light scale's bright end. Quiet surfaces, bright solids, which is how
-  Radix and Supabase build their dark scales too. Slate is hand-authored,
-  biased toward the navy in the ZenSys mark.
+  Radix and Supabase build their dark scales too.
+
+  Light slate is Tailwind's neutral ramp, not its slate. The blue-tinted slate
+  read as SaaS-template chrome next to the pure-grey dark mode; with the tint
+  gone the two themes are one family, and the only hue left in the shell is
+  the ZenSys navy of the action color and the cyan of the mark.
 
   The logo is a PNG and carries no colour class, so none of this reaches it.
 */
 :root {
-  --c-slate-50: 248 250 252;
-  --c-slate-100: 241 245 249;
-  --c-slate-200: 226 232 240;
-  --c-slate-300: 203 213 225;
-  --c-slate-400: 148 163 184;
-  --c-slate-500: 100 116 139;
-  --c-slate-600: 71 85 105;
-  --c-slate-700: 51 65 85;
-  --c-slate-800: 30 41 59;
-  --c-slate-900: 15 23 42;
+  --c-slate-50: 250 250 250;
+  --c-slate-100: 245 245 245;
+  --c-slate-200: 229 229 229;
+  --c-slate-300: 212 212 212;
+  --c-slate-400: 163 163 163;
+  --c-slate-500: 115 115 115;
+  --c-slate-600: 82 82 82;
+  --c-slate-700: 64 64 64;
+  --c-slate-800: 38 38 38;
+  --c-slate-900: 23 23 23;
 
   --c-gray-50: 249 250 251;
   --c-gray-100: 243 244 246;
@@ -180,7 +184,9 @@
   --c-rose-900: 136 19 55;
 
   --c-surface: 255 255 255;
-  --c-sidebar: 15 23 42;
+  /* The sidebar reads the same near-black in both themes — it is the app's one
+     permanent dark surface, so it does not invert with the ramp. */
+  --c-sidebar: 5 5 5;
 }
 
 :root[data-theme="dark"] {
@@ -507,8 +513,9 @@
 
 /*
   Semantic tokens point at the ramp rather than restating it, so they follow the
-  theme with no second definition. --accent is blue-600, which the mirror turns
-  into blue-400 on a dark ground, lifted exactly as it should be.
+  theme with no second definition. The accent is the same ink the dark mode
+  already uses — near-black on light, white on dark — so both modes carry one
+  monochrome action color. No hue enters the shell.
 */
 :root {
   --bg:            var(--c-slate-50);
@@ -522,30 +529,46 @@
   --text-muted:    var(--c-slate-600);
   --text-subtle:   var(--c-slate-400);
 
-  --accent:        var(--c-blue-600);
-  --accent-hover:  var(--c-blue-700);
-  --accent-soft:   var(--c-blue-50);
+  --accent:        var(--c-slate-900);
+  --accent-hover:  var(--c-slate-700);
+  --accent-soft:   var(--c-slate-100);
   --accent-fg:     255 255 255;
 
-  --success:       var(--c-emerald-600);
-  --success-soft:  var(--c-emerald-50);
+  /* Light mode keeps only the money-critical states in colour: danger (due /
+     credit / unpaid) stays red, warning (partial) stays amber. Success — paid,
+     completed, cash, in stock — is the quiet default, so it reads as neutral
+     gray rather than a green badge on every row, matching how dark mode already
+     down-plays it. */
+  --success:       var(--c-slate-600);
+  --success-soft:  var(--c-slate-100);
+  --success-border: var(--c-slate-300);
   --warning:       var(--c-amber-500);
   --warning-soft:  var(--c-amber-50);
+  --warning-border: var(--c-amber-200);
   --danger:        var(--c-red-600);
   --danger-soft:   var(--c-red-50);
-  --info:          var(--c-indigo-600);
-  --info-soft:     var(--c-indigo-50);
+  --danger-border: var(--c-red-200);
+  --info:          var(--c-slate-600);
+  --info-soft:     var(--c-slate-100);
+  --info-border:   var(--c-slate-300);
 
-  --series-1: var(--c-blue-600);
-  --series-2: var(--c-orange-600);
-  --series-3: var(--c-emerald-600);
-  --series-4: var(--c-amber-500);
+  /* Chart series: the validated colorblind-safe palette, as RGB triplets so
+     chartTheme.js can read them at paint time and the whole chart layer follows
+     the token. Order is load-bearing — adjacent slots must stay separable. */
+  --series-1: 0 180 200;    /* cyan — ZenSys mark */
+  --series-2: 235 104 52;   /* orange */
+  --series-3: 27 175 122;   /* aqua */
+  --series-4: 237 161 0;    /* yellow */
+  --series-5: 232 123 164;  /* magenta */
+  --series-6: 0 131 0;      /* green */
+  --series-7: 74 58 167;    /* violet */
+  --series-8: 227 73 72;    /* red */
 
   --grid: var(--c-slate-200);
 
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05);
-  --shadow-md: 0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.04);
-  --shadow-lg: 0 16px 40px -12px rgb(15 23 42 / 0.18);
+  --shadow-sm: 0 1px 2px rgb(23 23 23 / 0.05);
+  --shadow-md: 0 4px 12px -2px rgb(23 23 23 / 0.08), 0 2px 4px -2px rgb(23 23 23 / 0.04);
+  --shadow-lg: 0 16px 40px -12px rgb(23 23 23 / 0.18);
 }
 
 /* Shadows are the one thing the ramp cannot express: on a dark ground a soft
@@ -559,6 +582,19 @@
   --accent-hover: var(--c-slate-800);
   --accent-fg:    5 5 5;
 
+  --success:       var(--c-emerald-500);
+  --success-soft:  var(--c-emerald-100);
+  --success-border: var(--c-emerald-300);
+  --warning:       var(--c-amber-500);
+  --warning-soft:  var(--c-amber-100);
+  --warning-border: var(--c-amber-300);
+  --danger:        var(--c-red-500);
+  --danger-soft:   var(--c-red-100);
+  --danger-border: var(--c-red-300);
+  --info:          var(--c-slate-400);
+  --info-soft:     var(--c-slate-200);
+  --info-border:   var(--c-slate-300);
+
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45);
   --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.55), 0 2px 4px -2px rgb(0 0 0 / 0.4);
   --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.65);
@@ -569,18 +605,11 @@
     @apply antialiased;
     background-color: rgb(var(--bg));
     color: rgb(var(--text));
-    background-image:
-      radial-gradient(circle at top left, rgb(219 234 254 / 0.9), transparent 28%),
-      radial-gradient(circle at top right, rgb(224 231 255 / 0.75), transparent 24%),
-      linear-gradient(180deg, #f8fbff 0%, #f8fafc 44%, #f1f5f9 100%);
   }
 
-  /* The tinted wash is a light-mode flourish. On a dark ground it reads as two
-     bright smears, so the token carries the surface on its own instead. */
-  :root[data-theme="dark"] body {
-    background-image: none;
-  }
-
+  /* The tinted wash that sat here is gone with the slate ramp: on a pure-grey
+     ground the blue radials read as smears, so the token carries the page on
+     its own, the same way dark already does. */
 }
 
 @layer components {
@@ -610,7 +639,7 @@
 
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: #d4d4d4 transparent;
   }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -623,21 +652,21 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #d4d4d4;
     border: 3px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: #a3a3a3;
     border: 3px solid transparent;
     background-clip: padding-box;
   }
 
   .custom-scrollbar-dark {
     scrollbar-width: thin;
-    scrollbar-color: #64748b transparent;
+    scrollbar-color: #525252 transparent;
   }
 
 .custom-scrollbar-dark::-webkit-scrollbar {
@@ -658,14 +687,14 @@
   }
 
   .custom-scrollbar-dark::-webkit-scrollbar-thumb {
-    background: #64748b;
+    background: #525252;
     border: 3px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
   }
 
   .custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: #a3a3a3;
     border: 3px solid transparent;
     background-clip: padding-box;
   }
@@ -912,10 +941,10 @@ html[data-animation-level="balanced"] .custom-select-option {
 
 @keyframes shell-soft-pulse {
   0%, 100% {
-    box-shadow: 0 8px 24px rgb(37 99 235 / 0.08);
+    box-shadow: 0 8px 24px rgb(15 23 42 / 0.08);
   }
   50% {
-    box-shadow: 0 16px 38px rgb(37 99 235 / 0.16);
+    box-shadow: 0 16px 38px rgb(15 23 42 / 0.16);
   }
 }
 
@@ -952,10 +981,10 @@ html[data-animation-level="balanced"] .custom-select-option {
 
 @keyframes dashboard-soft-glow {
   0%, 100% {
-    box-shadow: 0 1px 2px rgb(15 23 42 / 0.05);
+    box-shadow: 0 1px 2px rgb(23 23 23 / 0.05);
   }
   50% {
-    box-shadow: 0 18px 42px rgb(37 99 235 / 0.16);
+    box-shadow: 0 18px 42px rgb(15 23 42 / 0.16);
   }
 }
 
@@ -1040,8 +1069,8 @@ html[data-animation-level="balanced"] .custom-select-option {
 
 .dashboard-premium-card:hover {
   transform: translateY(-3px);
-  border-color: rgb(191 219 254);
-  box-shadow: 0 18px 38px rgb(15 23 42 / 0.10);
+  border-color: rgb(212 212 212);
+  box-shadow: 0 18px 38px rgb(23 23 23 / 0.10);
 }
 
 .dashboard-premium-card:hover::before {
@@ -1158,19 +1187,23 @@ html[data-animation-level="balanced"] .custom-select-option {
 
 .shell-panel-hover:hover {
   transform: translateY(-2px);
-  border-color: rgb(191 219 254);
-  box-shadow: 0 20px 44px rgb(15 23 42 / 0.12);
+  border-color: rgb(212 212 212);
+  box-shadow: 0 20px 44px rgb(23 23 23 / 0.12);
 }
 
+/* The login screen's brand chip: neutral plate, navy text. The blue wash it
+   used to carry was the last place a hue sat on a shell chrome element. */
 .shell-chip {
-  border: 1px solid rgb(191 219 254 / 0.9);
-  background: linear-gradient(180deg, rgb(239 246 255 / 0.95), rgb(219 234 254 / 0.78));
-  box-shadow: 0 10px 24px rgb(37 99 235 / 0.10);
+  border: 1px solid rgb(229 229 229 / 0.9);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.95), rgb(245 245 245 / 0.78));
+  box-shadow: 0 10px 24px rgb(23 23 23 / 0.10);
+  color: #0f172a;
 }
 
-/* The sign-in splash keeps the brand hues in both themes, navy into blue into
-   teal, but at dark-mode luminance. Left bright, it framed a near-black card
-   with a glaring blue field and the two fought each other. */
+/* The sign-in splash keeps the brand's dark ground in both themes, navy into
+   near-black with a whisper of the mark's cyan, at dark-mode luminance. The
+   old version ran blue into teal at full brightness and fought the card it
+   framed; the brand here lives in the ground and the grid, not a colour field. */
 :root[data-theme="dark"] .auth-screen {
   /* True black-and-white, the same budget as the rest of dark. The two
      radials that were blue and teal become faint white light so the field
@@ -1204,10 +1237,9 @@ html[data-animation-level="balanced"] .custom-select-option {
   min-height: 100vh;
   overflow: hidden;
   background:
-    linear-gradient(135deg, rgb(15 23 42 / 0.18), transparent 36%),
-    radial-gradient(circle at 16% 18%, rgb(191 219 254 / 0.58), transparent 24%),
-    radial-gradient(circle at 86% 12%, rgb(186 230 253 / 0.42), transparent 22%),
-    linear-gradient(145deg, #0f172a 0%, #1d4ed8 46%, #0f766e 100%);
+    linear-gradient(135deg, rgb(255 255 255 / 0.06), transparent 36%),
+    radial-gradient(circle at 16% 18%, rgb(34 211 238 / 0.10), transparent 24%),
+    linear-gradient(145deg, #050505 0%, #0f172a 46%, #171717 100%);
 }
 
 .auth-screen::before {
@@ -1267,6 +1299,22 @@ html[data-animation-level="balanced"] .custom-select-option {
   animation: sidebar-logo-orbit 18s linear infinite;
 }
 
+/* The wordmark PNG is dark ink; the sidebar is near-black in both themes, so it
+   needs to be inverted to read. Brightness(0) collapses the mark to black first,
+   invert() then takes it to white, a clean single-color knock-out of the logo. */
+.sidebar-wordmark-invert {
+  filter: brightness(0) invert(1);
+}
+
+/* Stitch split-login left brand panel: the faint technical grid behind the navy.
+   White lines at low opacity, 32px cells, matches the approved mock. */
+.login-grid-pattern {
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -1323,8 +1371,8 @@ html[data-animation-level="balanced"] .custom-select-option {
 
 .sales-panel-hover:hover {
   transform: translateY(-2px);
-  border-color: rgb(191 219 254);
-  box-shadow: 0 22px 46px rgb(15 23 42 / 0.12);
+  border-color: rgb(212 212 212);
+  box-shadow: 0 22px 46px rgb(23 23 23 / 0.12);
 }
 
 .sales-product-tile,
@@ -1346,7 +1394,7 @@ html[data-animation-level="balanced"] .custom-select-option {
 }
 
 .sales-highlight-ring {
-  box-shadow: 0 0 0 1px rgb(191 219 254 / 0.85), 0 22px 50px rgb(37 99 235 / 0.10);
+  box-shadow: 0 0 0 1px rgb(212 212 212 / 0.85), 0 22px 50px rgb(23 23 23 / 0.10);
 }
 
 @keyframes profile-chip-in {
@@ -1659,16 +1707,16 @@ html[data-animation-level="balanced"] #root table tbody tr {
 @media print {
   :root {
 
-  --c-slate-50: 248 250 252;
-  --c-slate-100: 241 245 249;
-  --c-slate-200: 226 232 240;
-  --c-slate-300: 203 213 225;
-  --c-slate-400: 148 163 184;
-  --c-slate-500: 100 116 139;
-  --c-slate-600: 71 85 105;
-  --c-slate-700: 51 65 85;
-  --c-slate-800: 30 41 59;
-  --c-slate-900: 15 23 42;
+  --c-slate-50: 250 250 250;
+  --c-slate-100: 245 245 245;
+  --c-slate-200: 229 229 229;
+  --c-slate-300: 212 212 212;
+  --c-slate-400: 163 163 163;
+  --c-slate-500: 115 115 115;
+  --c-slate-600: 82 82 82;
+  --c-slate-700: 64 64 64;
+  --c-slate-800: 38 38 38;
+  --c-slate-900: 23 23 23;
 
   --c-gray-50: 249 250 251;
   --c-gray-100: 243 244 246;
@@ -1825,16 +1873,16 @@ html[data-animation-level="balanced"] #root table tbody tr {
    doing outside. */
 :root[data-theme="dark"] .always-dark {
 
-  --c-slate-50: 248 250 252;
-  --c-slate-100: 241 245 249;
-  --c-slate-200: 226 232 240;
-  --c-slate-300: 203 213 225;
-  --c-slate-400: 148 163 184;
-  --c-slate-500: 100 116 139;
-  --c-slate-600: 71 85 105;
-  --c-slate-700: 51 65 85;
-  --c-slate-800: 30 41 59;
-  --c-slate-900: 15 23 42;
+  --c-slate-50: 250 250 250;
+  --c-slate-100: 245 245 245;
+  --c-slate-200: 229 229 229;
+  --c-slate-300: 212 212 212;
+  --c-slate-400: 163 163 163;
+  --c-slate-500: 115 115 115;
+  --c-slate-600: 82 82 82;
+  --c-slate-700: 64 64 64;
+  --c-slate-800: 38 38 38;
+  --c-slate-900: 23 23 23;
 
   --c-gray-50: 249 250 251;
   --c-gray-100: 243 244 246;
@@ -1995,19 +2043,12 @@ html[data-animation-level="balanced"] #root table tbody tr {
 
 
 /* The open nav group.
-   Light keeps the blue it always had. Dark drops the hue entirely: a bright
-   blue slab was the one loud thing left in an otherwise restrained shell, so
-   the marker becomes plain contrast instead of colour. The sidebar pins the
-   light ramp (.always-dark), so slate-50 here is the pale end and slate-900
-   the dark one, a white pill with navy text. */
+   The sidebar is the one surface that does not invert with the theme — it is
+   near-black in both modes — so the active marker is the same in both too: a
+   white pill with dark text, plain contrast instead of colour. */
 .sidebar-group-active {
-  background-color: rgb(var(--c-blue-600));
-  color: #ffffff;
-}
-
-:root[data-theme="dark"] .sidebar-group-active {
-  background-color: rgb(var(--c-slate-50));
-  color: rgb(var(--c-slate-900));
+  background-color: #ffffff;
+  color: rgb(5 5 5);
 }
 
 
@@ -2450,4 +2491,51 @@ html[data-animation-level="balanced"] #root table tbody tr {
 .recharts-default-tooltip .recharts-tooltip-item-name,
 .recharts-default-tooltip .recharts-tooltip-item-value {
   color: rgb(var(--c-slate-900)) !important;
+}
+
+/* Select Item row. Branch sits on its own line above the fields, so Free always
+   lands directly under Cost instead of sometimes being pushed under the branch
+   when that column was part of the same grid pack.
+
+   The field count follows the panel, not the window: the purchase divider can
+   be dragged, so a narrow pane keeps two clean rows of three and a widened pane
+   puts all six on one line. Thresholds are content-box widths measured on this
+   row: the default 1280 split leaves ~350px, and ~540px is where six fields fit
+   at full size. */
+.purchase-branch-row {
+  container-type: inline-size;
+}
+
+.purchase-branch-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem 0.5rem;
+  align-items: end;
+}
+
+@container (min-width: 540px) {
+  .purchase-branch-fields {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/* Campaign builder: phone touch targets.
+   DESIGN.md asks 44px controls on phones and 40px on desktop. The builder's fields are
+   32-38px, which is right for a dense desktop table and wrong under a thumb, and the page
+   is full of them spread across six components. One scoped rule beats editing every input's
+   className and keeps desktop density unchanged. */
+@media (max-width: 639px) {
+  .campaign-builder input,
+  .campaign-builder select,
+  .campaign-builder textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .campaign-builder .btn {
+    min-height: 44px;
+  }
+  .campaign-builder .app-table-cell input {
+    min-height: 40px;
+    font-size: 16px;
+  }
 }

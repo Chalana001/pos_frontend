@@ -21,14 +21,14 @@ const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : "-
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : "-");
 
 const statusMeta = {
-  HEALTHY: { label: "Healthy", className: "bg-emerald-100 text-emerald-700" },
-  LOW_STOCK: { label: "Low stock", className: "bg-amber-100 text-amber-700" },
-  OUT_OF_STOCK: { label: "Out of stock", className: "bg-red-100 text-red-700" },
-  NEGATIVE: { label: "Negative", className: "bg-red-100 text-red-700" },
-  EXPIRING_SOON: { label: "Expiring soon", className: "bg-amber-100 text-amber-700" },
-  EXPIRED: { label: "Expired", className: "bg-red-100 text-red-700" },
+  HEALTHY: { label: "Healthy", className: "bg-success-soft text-success" },
+  LOW_STOCK: { label: "Low stock", className: "bg-warning-soft text-warning" },
+  OUT_OF_STOCK: { label: "Out of stock", className: "bg-danger-soft text-danger" },
+  NEGATIVE: { label: "Negative", className: "bg-danger-soft text-danger" },
+  EXPIRING_SOON: { label: "Expiring soon", className: "bg-warning-soft text-warning" },
+  EXPIRED: { label: "Expired", className: "bg-danger-soft text-danger" },
   DEAD_STOCK: { label: "Dead stock", className: "bg-slate-100 text-slate-700" },
-  BELOW_COST: { label: "Below cost", className: "bg-amber-100 text-amber-700" },
+  BELOW_COST: { label: "Below cost", className: "bg-warning-soft text-warning" },
   MISSING_COST: { label: "Missing cost", className: "bg-slate-100 text-slate-700" },
 };
 
@@ -149,7 +149,7 @@ export default function StockHealthReportView({ summary, data }) {
                   type="button"
                   onClick={() => setStatus(option.value)}
                   className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold transition-colors ${
-                    active ? "border-blue-200 bg-blue-600 text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    active ? "border-slate-200 bg-accent text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   <span>{option.label}</span>
@@ -182,7 +182,7 @@ export default function StockHealthReportView({ summary, data }) {
                   <div><p className="text-xs font-semibold text-slate-500">Sold 90 days</p><p className="mt-1 font-bold text-slate-900">{formatQtyWithUnit(row.soldLast90Days, row.unit)}</p></div>
                   <div><p className="text-xs font-semibold text-slate-500">Avg daily</p><p className="mt-1 font-bold text-slate-900">{formatQtyWithUnit(row.averageDailySales, row.unit)}</p></div>
                   <div><p className="text-xs font-semibold text-slate-500">Days of stock</p><p className="mt-1 font-bold text-slate-900">{row.estimatedDaysOfStock == null ? "-" : Number(row.estimatedDaysOfStock).toFixed(1)}</p></div>
-                  <div><p className="text-xs font-semibold text-slate-500">Suggested reorder</p><p className="mt-1 font-bold text-emerald-700">{formatQtyWithUnit(row.suggestedReorderQty, row.unit)}</p></div>
+                  <div><p className="text-xs font-semibold text-slate-500">Suggested reorder</p><p className="mt-1 font-bold text-success">{formatQtyWithUnit(row.suggestedReorderQty, row.unit)}</p></div>
                   <div><p className="text-xs font-semibold text-slate-500">Reorder cost</p><p className="mt-1 font-bold text-slate-900">{formatCurrency(row.estimatedReorderCost)}</p></div>
                   <div><p className="text-xs font-semibold text-slate-500">Last sold</p><p className="mt-1 font-bold text-slate-900">{formatDateTime(row.lastSoldAt)}</p></div>
                 </div>
@@ -204,7 +204,7 @@ export default function StockHealthReportView({ summary, data }) {
               { header: "Stock Position", render: (row) => <div><p className="font-bold text-slate-900">{formatQtyWithUnit(row.qtyOnHand, row.unit)}</p><p className="text-xs text-slate-500">Reorder {formatQtyWithUnit(row.reorderLevel, row.unit)}</p></div> },
               { header: "Demand", render: (row) => <div><p className="font-bold text-slate-900">{formatQtyWithUnit(row.soldLast90Days, row.unit)}</p><p className="text-xs text-slate-500">Avg {formatQtyWithUnit(row.averageDailySales, row.unit)} / day</p></div> },
               { header: "Coverage", render: (row) => (row.estimatedDaysOfStock == null ? "-" : Number(row.estimatedDaysOfStock).toFixed(1)) },
-              { header: "Suggested Reorder", render: (row) => <span className="font-bold text-emerald-700">{formatQtyWithUnit(row.suggestedReorderQty, row.unit)}</span> },
+              { header: "Suggested Reorder", render: (row) => <span className="font-bold text-success">{formatQtyWithUnit(row.suggestedReorderQty, row.unit)}</span> },
               { header: "Reorder Cost", render: (row) => <span className="font-bold text-slate-900">{formatCurrency(row.estimatedReorderCost)}</span> },
               { header: "Supplier / Expiry", render: (row) => <div><p className="font-semibold text-slate-900">{row.preferredSupplier || "-"}</p><p className="text-xs text-slate-500">{formatDate(row.nearestExpiryDate)}</p></div> },
               { header: "Last Sold", render: (row) => <span className="text-slate-700">{formatDateTime(row.lastSoldAt)}</span> },

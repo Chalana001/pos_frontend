@@ -55,9 +55,9 @@ const getPaymentBadgeClass = (sale) => {
   const paidAmount = Number(sale?.paidAmount || 0);
   const dueAmount = Number(sale?.dueAmount || 0);
 
-  if (paidAmount > 0 && dueAmount > 0) return "bg-amber-100 text-amber-700";
-  if (dueAmount > 0) return "bg-red-100 text-red-700";
-  return "bg-emerald-100 text-emerald-700";
+  if (paidAmount > 0 && dueAmount > 0) return "bg-warning-soft text-warning";
+  if (dueAmount > 0) return "bg-danger-soft text-danger";
+  return "bg-success-soft text-success";
 };
 
 const formatInputDate = (date) =>
@@ -244,7 +244,7 @@ const SalesListPage = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Sales History</h1>
           <p className="text-slate-500 text-sm">Manage Customer Invoices & Transactions</p>
         </div>
-        <Button onClick={() => navigate("/pos")} className="bg-blue-600 w-full sm:w-auto flex justify-center">
+        <Button onClick={() => navigate("/pos")} className="bg-accent w-full sm:w-auto flex justify-center">
           <ShoppingCart size={18} className="mr-2" /> Open POS
         </Button>
       </div>
@@ -257,7 +257,7 @@ const SalesListPage = () => {
               type="text"
               placeholder="Search invoice, customer, or phone..."
               ref={searchRef}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               value={search}
               onChange={handleSearch}
             />
@@ -355,7 +355,7 @@ const SalesListPage = () => {
               }}
               placeholder="Total amount"
               disabled={totalOperator === "ALL"}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-600"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:bg-slate-100 disabled:text-slate-600"
             />
           </div>
         </div>
@@ -393,7 +393,7 @@ const SalesListPage = () => {
                 data.map((sale) => (
                   <tr
                     key={sale.id}
-                    className={`hover:bg-blue-50 cursor-pointer transition-colors ${sale.status === "CANCELED" ? "opacity-60 bg-red-50/20" : ""}`}
+                    className={`hover:bg-accent-soft cursor-pointer transition-colors ${sale.status === "CANCELED" ? "opacity-60 bg-danger-soft/20" : ""}`}
                     onClick={() => navigate(`/sales/${sale.invoiceNo}`)}
                   >
                     <td className="p-4 text-slate-600">
@@ -402,7 +402,7 @@ const SalesListPage = () => {
                         <div className="mt-1 text-xs text-slate-600">{formatTime(sale.createdAt)}</div>
                       </div>
                     </td>
-                    <td className={`p-4 font-bold ${sale.status === "CANCELED" ? "text-red-500 line-through" : "text-blue-600"}`}>
+                    <td className={`p-4 font-bold ${sale.status === "CANCELED" ? "text-danger line-through" : "text-accent"}`}>
                       {sale.invoiceNo}
                     </td>
                     <td className="p-4 font-medium text-slate-700">
@@ -414,10 +414,10 @@ const SalesListPage = () => {
                     <td className="p-4 text-center">
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${
                         sale.status === "CANCELED"
-                          ? "bg-red-100 text-red-700 border-red-200"
+                          ? "bg-danger-soft text-danger border-danger-border"
                           : sale.hasReturns
-                            ? "bg-amber-100 text-amber-700 border-amber-200"
-                            : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                            ? "bg-warning-soft text-warning border-warning-border"
+                            : "bg-success-soft text-success border-success-border"
                       }`}>
                         {sale.status === "CANCELED"
                           ? "CANCELED"
@@ -436,16 +436,16 @@ const SalesListPage = () => {
                     <td className="p-4 text-right font-bold text-slate-800 text-base sm:text-lg">
                       {formatCurrency(sale.grandTotal)}
                       {sale.hasReturns && (
-                        <div className="text-xs font-semibold text-amber-600">
+                        <div className="text-xs font-semibold text-warning">
                           -{formatCurrency(sale.totalReturnedAmount || 0)} returned
                           {(sale.returnCount || 0) > 1 ? ` (${sale.returnCount})` : ""}
                         </div>
                       )}
                     </td>
-                    <td className="p-4 text-right font-semibold text-emerald-700">
+                    <td className="p-4 text-right font-semibold text-success">
                       {formatCurrency(sale.paidAmount || 0)}
                     </td>
-                    <td className={`p-4 text-right font-semibold ${(sale.dueAmount || 0) > 0 ? "dark-hl text-red-600" : "text-slate-600"}`}>
+                    <td className={`p-4 text-right font-semibold ${(sale.dueAmount || 0) > 0 ? "dark-hl text-danger" : "text-slate-600"}`}>
                       {formatCurrency(sale.dueAmount || 0)}
                     </td>
                     <td className="p-4 text-slate-600 text-right">

@@ -201,7 +201,7 @@ const StockItemDetailsPage = () => {
               value: itemDetails.subCategoryName || "-",
               helper: "Item sub category",
               icon: Workflow,
-              tone: "bg-violet-50 text-violet-700",
+              tone: "bg-info-soft text-info",
             },
           ];
 
@@ -212,7 +212,7 @@ const StockItemDetailsPage = () => {
           value: formatDisplayStockQuantity(itemDetails),
           helper: "Total available quantity",
           icon: Package,
-          tone: "bg-blue-50 text-blue-700",
+          tone: "bg-accent-soft text-accent",
         },
         {
           key: "batches",
@@ -220,7 +220,7 @@ const StockItemDetailsPage = () => {
           value: String(itemDetails.activeBatches?.length || 0),
           helper: "Batches currently active",
           icon: Boxes,
-          tone: "bg-emerald-50 text-emerald-700",
+          tone: "bg-success-soft text-success",
         },
         ...categoryCards,
       ];
@@ -280,7 +280,7 @@ const StockItemDetailsPage = () => {
   }
 
   if (!itemDetails) {
-    return <div className="p-10 text-center text-red-500">Stock item not found.</div>;
+    return <div className="p-10 text-center text-danger">Stock item not found.</div>;
   }
 
   return (
@@ -363,7 +363,7 @@ const StockItemDetailsPage = () => {
                     <td className="p-4 font-semibold text-slate-800">{batch.batchCode || `Batch #${batch.batchId}`}</td>
                     <td className="p-4 text-slate-600">{batch.branchName || `Branch #${batch.branchId}`}</td>
                     <td className="p-4">
-                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      <span className="rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success">
                         {formatDisplayStockQuantity(batch, 0, itemDetails)}
                       </span>
                     </td>
@@ -412,7 +412,7 @@ const StockItemDetailsPage = () => {
                   resetPage();
                 }}
                 placeholder="Search invoice or GRN..."
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
 
@@ -429,7 +429,7 @@ const StockItemDetailsPage = () => {
                   }
                 }}
                 placeholder="Search supplier..."
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 pr-10 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 pr-10 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
               {(selectedSupplierId || supplierQuery) && (
                 <button
@@ -532,11 +532,11 @@ const StockItemDetailsPage = () => {
                 purchaseHistory.map((entry) => (
                   <tr
                     key={`${entry.purchaseId}-${entry.grnNo}-${entry.receivedAt}`}
-                    className="cursor-pointer transition-colors hover:bg-blue-50"
+                    className="cursor-pointer transition-colors hover:bg-accent-soft"
                     onClick={() => navigate(`/purchases/${entry.purchaseId}`)}
                   >
                     <td className="p-4 text-slate-600">{formatDateTime(entry.receivedAt)}</td>
-                    <td className="p-4 font-bold text-blue-600">{entry.invoiceNo}</td>
+                    <td className="p-4 font-bold text-accent">{entry.invoiceNo}</td>
                     <td className="p-4 text-slate-700">{entry.grnNo}</td>
                     <td className="p-4 text-slate-700">{entry.supplierName}</td>
                     <td className="p-4 text-slate-700">{formatQtyWithUnit(entry.qty, entry.qtyUnit)}</td>
@@ -546,8 +546,8 @@ const StockItemDetailsPage = () => {
                       <span
                         className={`rounded border px-2 py-1 text-xs font-bold ${
                           entry.status === "CANCELED"
-                            ? "border-red-200 bg-red-100 text-red-700"
-                            : "border-emerald-200 bg-emerald-100 text-emerald-700"
+                            ? "border-danger-border bg-danger-soft text-danger"
+                            : "border-success-border bg-success-soft text-success"
                         }`}
                       >
                         {entry.status || "COMPLETED"}

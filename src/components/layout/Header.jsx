@@ -320,10 +320,10 @@ const Header = ({ onOpenSidebar }) => {
   };
 
   const getNotificationToneClass = (tone) => {
-    if (tone === 'red') return 'bg-red-50 text-red-700';
-    if (tone === 'amber') return 'bg-amber-50 text-amber-700';
-    if (tone === 'emerald') return 'bg-emerald-50 text-emerald-700';
-    return 'bg-blue-50 text-blue-700';
+    if (tone === 'red') return 'bg-danger-soft text-danger';
+    if (tone === 'amber') return 'bg-warning-soft text-warning';
+    if (tone === 'emerald') return 'bg-success-soft text-success';
+    return 'bg-accent-soft text-accent';
   };
 
   return (
@@ -353,8 +353,8 @@ const Header = ({ onOpenSidebar }) => {
             aria-label={`Offline Queue: ${offlineQueueCount}`}
             title="Offline Queue"
           >
-            <UploadCloud size={18} className="text-blue-700" />
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-50 px-1.5 text-xs font-bold text-blue-700">
+            <UploadCloud size={18} className="text-accent" />
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-soft px-1.5 text-xs font-bold text-accent">
               {offlineQueueCount}
             </span>
           </Link>
@@ -366,7 +366,7 @@ const Header = ({ onOpenSidebar }) => {
               default and stays hidden on narrow screens. The plan and its
               expiry live in the account menu, not out here. */}
           <div
-            className={`shell-panel-hover h-11 w-11 items-center justify-center rounded-xl border shadow-sm ${isOnline ? 'hidden border-blue-200 bg-blue-50 text-blue-700 md:inline-flex' : 'inline-flex border-blue-600 bg-blue-600 text-white'}`}
+            className={`shell-panel-hover h-11 w-11 items-center justify-center rounded-xl border shadow-sm ${isOnline ? 'hidden border-slate-200 bg-accent-soft text-accent md:inline-flex' : 'inline-flex border-accent bg-accent text-white'}`}
             role="status"
             aria-label={isOnline ? 'Online' : 'Offline'}
             title={isOnline ? 'Online' : 'Offline'}
@@ -394,7 +394,7 @@ const Header = ({ onOpenSidebar }) => {
             >
               <Bell size={19} />
               {notificationCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
+                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-xs font-bold text-white">
                   {notificationCount}
                 </span>
               ) : null}
@@ -422,7 +422,7 @@ const Header = ({ onOpenSidebar }) => {
 
                 {notifications.length === 0 ? (
                   <div className="px-4 py-8 text-center">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-success-soft text-success">
                       <CheckCircle2 size={18} />
                     </div>
                     <div className="mt-3 text-sm font-semibold text-slate-800">No active notifications</div>
@@ -464,8 +464,8 @@ const Header = ({ onOpenSidebar }) => {
               onClick={() => setShowUserMenu(!showUserMenu)}
             className="shell-panel-hover flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 shadow-sm transition hover:bg-slate-50"
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600">
-                <User size={18} className="text-white" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent">
+                <User size={18} className="text-accent-fg" />
               </div>
 
               <div className="hidden min-w-0 max-w-[120px] text-left lg:block">
@@ -501,7 +501,7 @@ const Header = ({ onOpenSidebar }) => {
                           onClick={() => setLanguage(option.value)}
                           className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${
                             language === option.value
-                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              ? 'border-slate-200 bg-accent-soft text-accent'
                               : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                           }`}
                         >
@@ -528,7 +528,7 @@ const Header = ({ onOpenSidebar }) => {
                           onClick={() => setTheme(option.value)}
                           className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${
                             theme === option.value
-                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              ? 'border-slate-200 bg-accent-soft text-accent'
                               : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                           }`}
                         >
@@ -549,7 +549,7 @@ const Header = ({ onOpenSidebar }) => {
                       <UploadCloud size={16} />
                       Offline Queue
                     </span>
-                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">{offlineQueueCount}</span>
+                    <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent">{offlineQueueCount}</span>
                   </button>
 
                   <button

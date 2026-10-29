@@ -196,7 +196,7 @@ const PurchaseDetailsPage = () => {
   };
 
   if (loading) return <div className="p-10 text-center text-slate-500">Loading details...</div>;
-  if (!purchase) return <div className="p-10 text-center text-red-500">Purchase record not found!</div>;
+  if (!purchase) return <div className="p-10 text-center text-danger">Purchase record not found!</div>;
 
   const isCanceled = purchase.status === 'CANCELED';
   const canCancel = user?.role !== 'CASHIER' && !isCanceled;
@@ -271,13 +271,13 @@ const PurchaseDetailsPage = () => {
           </Button>
           {canProcessReturn && (
             <Button
-              className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 shadow-sm"
+              className="bg-accent-soft text-accent hover:bg-slate-100 border border-slate-200 shadow-sm"
               onClick={() => navigate(`/purchases/${id}/return`)}
             >
-              <RotateCcw size={18} className="mr-2 text-blue-500" />
+              <RotateCcw size={18} className="mr-2 text-accent" />
               Process Return
               {existingReturns.length > 0 && (
-                <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold">
+                <span className="ml-2 bg-accent text-white text-xs rounded-full px-1.5 py-0.5 font-bold">
                   {existingReturns.length}
                 </span>
               )}
@@ -285,7 +285,7 @@ const PurchaseDetailsPage = () => {
           )}
           {canPaySupplier && (
             <Button
-              className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
+              className="bg-success text-white hover:bg-success shadow-sm"
               onClick={handleOpenPayment}
             >
               <Wallet size={18} className="mr-2" />
@@ -321,7 +321,7 @@ const PurchaseDetailsPage = () => {
         </div>
       </div>
 
-      <Card className={`sales-panel-enter p-6 border-t-4 shadow-md transition-all ${isCanceled ? 'border-t-slate-400 bg-slate-50' : 'border-t-blue-600'}`} style={{ animationDelay: "90ms" }}>
+      <Card className={`sales-panel-enter p-6 border-t-4 shadow-md transition-all ${isCanceled ? 'border-t-slate-400 bg-slate-50' : 'border-t-accent'}`} style={{ animationDelay: "90ms" }}>
         <div className="flex flex-col md:flex-row justify-between gap-6">
           
           <div>
@@ -335,7 +335,7 @@ const PurchaseDetailsPage = () => {
                     CANCELED
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-success-soft text-success border border-success-border">
                     COMPLETED
                   </span>
                 )}
@@ -414,7 +414,7 @@ const PurchaseDetailsPage = () => {
                 <div className={`font-bold text-lg ${isCanceled ? 'text-slate-500' : 'text-slate-700'}`}>
                   {purchase.supplierName}
                 </div>
-                <Truck size={20} className={isCanceled ? "text-slate-600" : "text-blue-600"} />
+                <Truck size={20} className={isCanceled ? "text-slate-600" : "text-accent"} />
             </div>
             
             <div className={`p-3 rounded-lg inline-block min-w-[200px] ${isCanceled ? 'bg-slate-100 opacity-80' : 'bg-slate-100'}`}>
@@ -429,11 +429,11 @@ const PurchaseDetailsPage = () => {
                   </div>
                   <div>
                     <div className="text-xs font-bold uppercase text-slate-600">Paid</div>
-                    <div className="font-bold text-emerald-700">{formatCurrency(purchase.paidAmount || 0)}</div>
+                    <div className="font-bold text-success">{formatCurrency(purchase.paidAmount || 0)}</div>
                   </div>
                   <div>
                     <div className="text-xs font-bold uppercase text-slate-600">Due</div>
-                    <div className={`font-bold ${purchaseDue > 0 ? "text-red-600" : "text-slate-500"}`}>
+                    <div className={`font-bold ${purchaseDue > 0 ? "text-danger" : "text-slate-500"}`}>
                       {formatCurrency(purchase.dueAmount || 0)}
                     </div>
                   </div>
@@ -483,7 +483,7 @@ const PurchaseDetailsPage = () => {
                         onClick={() => toggleGrn(grn.id)}
                     >
                         <div className="flex items-center gap-4 w-full md:w-auto">
-                            <div className="bg-blue-50 p-2 rounded-full text-blue-600">
+                            <div className="bg-accent-soft p-2 rounded-full text-accent">
                                 <MapPin size={20} />
                             </div>
                             <div>
@@ -530,7 +530,7 @@ const PurchaseDetailsPage = () => {
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {grn.items.map((item, idx) => (
-                                                <tr key={idx} className="hover:bg-blue-50/30">
+                                                <tr key={idx} className="hover:bg-accent-soft/30">
                                                     <td className="p-3 pl-6 text-slate-600">{idx + 1}</td>
                                                     <td className="p-3"><span className="font-medium text-slate-700">{item.itemName}</span>{item.altName && <span className="block text-xs text-slate-600">{item.altName}</span>}</td>
                                                     <td className="p-3 text-slate-500 font-mono text-xs">{item.barcode}</td>
@@ -541,7 +541,7 @@ const PurchaseDetailsPage = () => {
                                                             {item.qty}
                                                         </span>
                                                         {Number(item.freeQty) > 0 && (
-                                                            <span className="ml-1 bg-cyan-100 px-2 py-1 rounded text-xs font-bold text-cyan-700">
+                                                            <span className="ml-1 bg-info-soft px-2 py-1 rounded text-xs font-bold text-info">
                                                                 +{item.freeQty} free
                                                             </span>
                                                         )}
@@ -574,13 +574,13 @@ const PurchaseDetailsPage = () => {
             {existingReturns.map((ret) => (
               <div
                 key={ret.id}
-                className="rounded-2xl border border-blue-200 bg-blue-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                className="rounded-2xl border border-slate-200 bg-accent-soft p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
               >
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <RotateCcw size={14} className="text-blue-500" />
-                    <span className="font-mono font-bold text-blue-700 text-sm">{ret.debitNoteNo}</span>
-                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-200 text-blue-800">
+                    <RotateCcw size={14} className="text-accent" />
+                    <span className="font-mono font-bold text-accent text-sm">{ret.debitNoteNo}</span>
+                    <span className="px-2 py-0.5 rounded text-xs font-semibold bg-slate-200 text-slate-800">
                       {ret.grnNo}
                     </span>
                   </div>
@@ -591,7 +591,7 @@ const PurchaseDetailsPage = () => {
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
                     <div className="text-xs text-slate-600 uppercase font-semibold">Returned</div>
-                    <div className="font-bold text-red-600 text-base">
+                    <div className="font-bold text-danger text-base">
                       -{Number(ret.totalReturnAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} LKR
                     </div>
                   </div>
@@ -612,7 +612,7 @@ const PurchaseDetailsPage = () => {
             <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Invoice Due</span>
-                <span className="font-bold text-red-600">{formatCurrency(purchase.dueAmount || 0)}</span>
+                <span className="font-bold text-danger">{formatCurrency(purchase.dueAmount || 0)}</span>
               </div>
               <div className="mt-1 flex justify-between">
                 <span className="text-slate-500">Supplier</span>
@@ -627,7 +627,7 @@ const PurchaseDetailsPage = () => {
               max={purchase.dueAmount || 0}
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
-              className="mb-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-sm outline-none transition focus:ring-2 focus:ring-emerald-500"
+              className="mb-4 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-right text-sm outline-none transition focus:ring-2 focus:ring-success"
               autoFocus
             />
 
@@ -641,7 +641,7 @@ const PurchaseDetailsPage = () => {
               }}
               options={paymentMethodOptions}
               className="mb-4"
-              buttonClassName="py-2 focus:ring-emerald-100"
+              buttonClassName="py-2 focus:ring-success"
             />
 
             <label className="mb-1 block text-xs font-semibold uppercase text-slate-600">Cash Source</label>
@@ -653,7 +653,7 @@ const PurchaseDetailsPage = () => {
               }}
               options={cashSourceOptions}
               className="mb-4"
-              buttonClassName="py-2 focus:ring-emerald-100"
+              buttonClassName="py-2 focus:ring-success"
             />
 
             {paymentCashSource === "CASH_DRAWER" && purchaseBranchOptions.length > 1 && (
@@ -666,7 +666,7 @@ const PurchaseDetailsPage = () => {
                   valueKey="value"
                   labelKey="label"
                   className="mb-4"
-                  buttonClassName="py-2 focus:ring-emerald-100"
+                  buttonClassName="py-2 focus:ring-success"
                   placeholder="Select branch"
                 />
               </>
@@ -677,7 +677,7 @@ const PurchaseDetailsPage = () => {
               rows="2"
               value={paymentNote}
               onChange={(e) => setPaymentNote(e.target.value)}
-              className="mb-6 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-emerald-500"
+              className="mb-6 w-full resize-none rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-success"
               placeholder="Optional note"
             />
 
@@ -690,7 +690,7 @@ const PurchaseDetailsPage = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                className="bg-success text-white hover:bg-success"
                 onClick={executeSupplierPayment}
                 disabled={paymentLoading}
               >

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import { Download, Loader2, Percent, Trash2, Upload, WandSparkles, X } from "lucide-react";
+import { Download, Loader2, Percent, Search, Trash2, Upload, WandSparkles, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 import Button from "../../../components/common/Button";
@@ -54,6 +54,7 @@ const ItemPriceTable = ({
   const [bulkCategoryId, setBulkCategoryId] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
   const [activeGroup, setActiveGroup] = useState(ALL_GROUP);
+  const [itemQuery, setItemQuery] = useState("");
 
   /**
    * The lines, grouped by the category each item belongs to.
@@ -84,9 +85,29 @@ const ItemPriceTable = ({
   const currentGroup = activeGroup !== ALL_GROUP && !groupNames.includes(activeGroup)
     ? ALL_GROUP
     : activeGroup;
-  const shownLines = currentGroup === ALL_GROUP
-    ? lines
-    : (groups.find((group) => group.name === currentGroup)?.lines ?? []);
+  const searchTerm = itemQuery.trim().toLowerCase();
+
+  /**
+   * A campaign with hundreds of items is searchable from the edit screen itself.
+   *
+   * <p>This filters the lines already loaded into the campaign; it is not the add-item search.
+   * Searching spans every category tab so a match cannot be hidden behind the tab that happens
+   * to be open, and the stored item name, alternate name and barcode are all matched.
+   */
+  const matchingLines = useMemo(() => {
+    if (!searchTerm) return lines;
+    return lines.filter((line) => {
+      const item = itemsById.get(Number(line.id));
+      return [item?.name, item?.altName, item?.barcode]
+        .some((value) => String(value ?? "").toLowerCase().includes(searchTerm));
+    });
+  }, [lines, itemsById, searchTerm]);
+
+  const shownLines = searchTerm
+    ? matchingLines
+    : currentGroup === ALL_GROUP
+      ? lines
+      : (groups.find((group) => group.name === currentGroup)?.lines ?? []);
 
   const removeGroup = (name) => {
     const group = groups.find((entry) => entry.name === name);
@@ -225,12 +246,33 @@ const ItemPriceTable = ({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 p-4">
+        <div className="min-w-0">
           <h3 className="text-sm font-bold text-slate-800">Items &amp; prices ({lines.length})</h3>
           <p className="text-xs text-slate-500">Leave an offer price blank to use the promotion&apos;s own discount.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[210px] flex-1 sm:flex-none">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={itemQuery}
+              onChange={(event) => setItemQuery(event.target.value)}
+              placeholder="Find an item in this campaign"
+              aria-label="Find an item in this campaign"
+              className="h-9 w-full rounded-lg border border-slate-300 py-1.5 pl-9 pr-9 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 sm:w-64"
+            />
+            {itemQuery ? (
+              <button
+                type="button"
+                onClick={() => setItemQuery("")}
+                aria-label="Clear campaign item search"
+                className="absolute right-2 top-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X size={14} />
+              </button>
+            ) : null}
+          </div>
           <Button size="sm" variant="secondary" onClick={exportCsv} disabled={!lines.length}>
             <Download size={14} className="mr-1" /> Export
           </Button>
@@ -240,6 +282,17 @@ const ItemPriceTable = ({
           <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={importCsv} className="hidden" />
         </div>
       </div>
+
+      {searchTerm ? (
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs">
+          <span className="font-semibold text-slate-600">
+            Showing {matchingLines.length} of {lines.length} item{lines.length === 1 ? "" : "s"}
+          </span>
+          <button type="button" onClick={() => setItemQuery("")} className="font-semibold text-accent hover:underline">
+            Clear search
+          </button>
+        </div>
+      ) : null}
 
       <div className="space-y-2 border-b border-slate-200 p-4">
         <ItemSearchPicker
@@ -284,7 +337,7 @@ const ItemPriceTable = ({
         time. The X clears that whole category, the counterpart of the bulk add that put it
         there, and the reason adding a category by mistake is not expensive.
       */}
-      {groups.length > 1 ? (
+      {groups.length > 1 && !searchTerm ? (
         <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 px-4 py-2">
           <button
             type="button"
@@ -302,7 +355,7 @@ const ItemPriceTable = ({
               key={group.name}
               className={`inline-flex items-center rounded-full text-xs font-semibold transition-colors ${
                 currentGroup === group.name
-                  ? "bg-blue-600 text-white"
+                  ? "bg-accent text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
@@ -331,16 +384,25 @@ const ItemPriceTable = ({
         <div className="px-4 py-12 text-center text-sm text-slate-500">
           No items yet. Search above to add the first one.
         </div>
+      ) : searchTerm && matchingLines.length === 0 ? (
+        <div className="px-4 py-12 text-center">
+          <p className="text-sm font-semibold text-slate-700">No item in this campaign matches “{itemQuery.trim()}”.</p>
+          <button type="button" onClick={() => setItemQuery("")} className="mt-2 text-sm font-semibold text-accent hover:underline">
+            Clear search to show all {lines.length} items
+          </button>
+        </div>
       ) : (
         <>
           <div className="app-table-wrap">
-            <table className="app-table min-w-[760px]">
+            <table className="app-table min-w-[900px]">
               <thead className="app-table-head">
                 <tr>
                   <th className="app-table-head-cell">Item</th>
+                  <th className="app-table-head-cell">Category</th>
                   <th className="app-table-head-cell text-right">Normal</th>
                   <th className="app-table-head-cell text-right">Offer price</th>
                   <th className="app-table-head-cell text-right">% off</th>
+                  <th className="app-table-head-cell text-right">Saving</th>
                   <th className="app-table-head-cell text-center">Margin</th>
                   <th className="app-table-head-cell" />
                 </tr>
@@ -349,14 +411,23 @@ const ItemPriceTable = ({
                 {shownLines.map((line, index) => {
                   const item = itemsById.get(Number(line.id));
                   const check = checkByItemId.get(Number(line.id));
+                  const normal = normalPriceOf(line);
+                  const saving = line.offerPrice === "" || line.offerPrice == null
+                    ? null
+                    : normal - Number(line.offerPrice);
                   return (
                     <tr key={line.id}>
                       <td className="app-table-cell">
                         <div className="font-medium text-slate-800">{item?.name || `Item ${line.id}`}</div>
                         {item?.barcode && <div className="text-xs text-slate-500">{item.barcode}</div>}
                       </td>
+                      <td className="app-table-cell text-xs text-slate-500">
+                        {(singleCategoryMode
+                          ? item?.subCategoryName || item?.categoryName
+                          : item?.categoryName) || "Uncategorised"}
+                      </td>
                       <td className="app-table-cell text-right text-slate-600">
-                        <span className="whitespace-nowrap">{formatCurrency(normalPriceOf(line))}</span>
+                        <span className="whitespace-nowrap">{formatCurrency(normal)}</span>
                         {/*
                           Two batches of one item are two prices, and the promotion means
                           something different against each. Only shown when they actually
@@ -365,7 +436,7 @@ const ItemPriceTable = ({
                         {check?.minBatchPrice != null && check?.maxBatchPrice != null
                           && Number(check.minBatchPrice) !== Number(check.maxBatchPrice) ? (
                           <div
-                            className="max-w-full break-words text-xs text-amber-600"
+                            className="max-w-full break-words text-xs text-warning"
                             title={`${check.batchCount} batches in stock, priced ${formatCurrency(check.minBatchPrice)} to ${formatCurrency(check.maxBatchPrice)}. The margin is judged on the worst of them.`}
                           >
                             batches {formatCurrency(check.minBatchPrice)}–{formatCurrency(check.maxBatchPrice)}
@@ -405,6 +476,15 @@ const ItemPriceTable = ({
                           className="box-border w-20 max-w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm"
                         />
                       </td>
+                      <td className="app-table-cell text-right">
+                        {saving == null ? (
+                          <span className="text-xs text-slate-400">—</span>
+                        ) : (
+                          <span className="whitespace-nowrap tabular-nums text-slate-600">
+                            {formatCurrency(Math.max(0, saving))}
+                          </span>
+                        )}
+                      </td>
                       <td className="app-table-cell text-center">
                         <MarginBadge
                           status={check?.status}
@@ -417,7 +497,7 @@ const ItemPriceTable = ({
                           type="button"
                           onClick={() => onRemove(line.id)}
                           aria-label={`Remove ${item?.name || line.id}`}
-                          className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                          className="rounded-lg p-2 text-slate-400 hover:bg-danger-soft hover:text-danger"
                         >
                           <Trash2 size={15} />
                         </button>

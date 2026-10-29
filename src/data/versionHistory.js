@@ -1,6 +1,69 @@
-export const APP_VERSION = "2.6.2";
+export const APP_VERSION = "2.6.3";
 
 export const VERSION_HISTORY = [
+  {
+    version: "2.6.3",
+    title: "A Shift You Can Count, in a Calmer Interface",
+    releaseDate: "2026-10-29",
+    summary:
+      "Shift close is rebuilt around what actually left the drawer — every payment method itemised, every expense and cash drop visible, and a denomination count that adds up to the cash in front of you. The whole app moves to one neutral ink theme in light and dark, stock gains an expiry filter and an Expiry Management report, categories get a management page, and the purchase form becomes editable row by row.",
+    highlights: [
+      "Closing a shift is one two-column page: sales by payment method on the left with each sale underneath, drawer movements and Expected Cash on the right, and a cash count you fill in denomination by denomination.",
+      "Payment methods are now managed in Settings rather than hardcoded — add, rename, deactivate, and control whether a method counts as drawer cash, records credit, or needs a reference number.",
+      "The whole system uses one neutral ink palette. Light and dark are the same design with the same tokens, the sidebar is near-black in both, and charts follow the theme instead of pasting blue.",
+      "Stock Inventory can filter by expiry and a new Expiry Management report shows expired and expiring batches with the cost sitting in them.",
+      "Product categories have their own management screen: rename, re-parent, and delete — with the items still using a category listed before you delete it.",
+      "New Purchase is edited line by line: change cost, selling price, quantity, free quantity, unit and expiry in place, and the totals follow immediately.",
+      "The purchase form no longer scrolls sideways, the item picker reflows by panel width, and the date picker stays inside the window.",
+      "The POS cart keeps the scan-and-type rhythm: add an item, type a quantity, press Enter, scan the next one — no reaching for the search box.",
+    ],
+    sections: [
+      {
+        label: "Added",
+        items: [
+          "Database-backed payment methods, managed under Configuration. Each method has a display name, a category, a reference-number policy (none, optional or required, with its own label), whether it counts towards Expected Cash, whether it records a deferred sale, an icon, and an active switch. Behaviour follows the flags, never the name, so renaming a method leaves history intact. Tenant databases seed Cash, Card, Bank Transfer and Credit. Checkout, credit settlement, purchases and customer payments all render the configured list, cached for offline use.",
+          "Cash denomination counting. Cash Denominations is a new settings page that chooses which notes and coins the shop counts; the close dialog captures a quantity per denomination and the shift profile shows the breakdown with its total.",
+          "A per-method payment summary on the shift. Each shift now reports counts, totals and percentages per payment method, with each method expanding to the sales that made it up — invoice, time, amount and the saved reference under its configured label. Legacy codes that predate configuration still appear, humanised, rather than being dropped.",
+          "A printed shift report that mirrors the close dialog: per-method blocks listing each sale, itemised expenses, drawer purchases and cash drops with totals, the counted cash and the difference, for both open and closed shifts.",
+          "A shift profile page laid out for reconciliation: four summary cards (total sales, expected drawer cash, counted cash, variance), then cash reconciliation beside sales by payment method beside the cash count, the cashier and timeline strip underneath, and Sales in This Shift full width above Purchases, Expenses and Cash Drops.",
+          "Stock expiry filtering and an Expiry Management report. Stock Inventory gains an Expiry Status filter — Expired, Expiring Soon, Not Expired, Missing Expiry — that combines with search, category and stock status, and can be deep-linked. The report lists batch-level rows with days past or remaining, quantity, batch cost and value, supplier and GRN reference, plus totals for expired and upcoming exposure, and exports to Excel with the same filters.",
+          "An expiry alert window setting on App Configuration: how many months ahead counts as expiring soon, one, two, three, six or twelve. One value drives both the inventory filter and the report.",
+          "Category management. Add, rename and re-parent main categories and sub-categories, with a per-row item count and the list of items that still use a row, so a delete that the server would refuse is explained instead of failing silently.",
+          "Campaign price table columns for category and saving, so a campaign can be reviewed by product group as well as by item.",
+        ],
+      },
+      {
+        label: "Improved",
+        items: [
+          "The close-shift dialog was rebuilt from the ground up and is now a wide two-column page instead of a narrow modal. Sales by payment method carries the total prominently, with a dark totals row and per-method drill-down; Other Summary holds itemised expenses, drawer purchases and cash drops, each expandable even when empty, above Expected Cash and the cash count. It stacks to one column on small screens, with a stable header and footer.",
+          "Every payment method, expense, purchase and cash drop shows the records behind its total, so a cashier can trace the drawer figure to the transactions that made it instead of trusting one number.",
+          "Cashiers can open and read their own shift in full — orders, expenses, purchases and the payment summary — which the close dialog previously could not do without an admin.",
+          "The whole interface moved to a single neutral ink design system. Colour is now a set of semantic tokens rather than a blue-plus-rainbow palette: neutral surfaces and a near-black accent in light mode, one set of success, warning, danger and info tokens that hold their meaning in both themes, and matching chart colours. The sidebar is near-black in both themes with a white active pill, navigation uses a purpose-drawn line-art icon set, and Login is a split screen with a dark brand panel beside the auth panel.",
+          "Add Item is a two-column form on desktop with the image and status rail on the right, and one continuous sheet on mobile from General through Image, Pricing, Optional and Status. The three pricing fields sit side by side down to 370px and wrap only below that.",
+          "Bulk Add Items is a composer with a live queue beside it on wide screens; below that the queue collapses to a single button with a count badge that opens the full queue, and it opens automatically after a mobile add.",
+          "The purchase form is editable row by row: a pencil turns cost, selling price, quantity, free quantity, unit and expiry into inputs, one row at a time, with Save and Cancel and totals updating as you go. Expiry is a first-class column and the branch selector is hidden for single-branch shops.",
+          "The purchase table no longer overflows: fixed column widths, a name column that clamps to three lines, and the inline editor taking its own row. The item picker reflows by the panel's width rather than the window's, and on phones the table scrolls horizontally instead of squeezing columns unreadably.",
+          "On phones the POS cart is a full-screen page opened from a bottom bar that shows item count, total and Checkout, matching the final-purchase screen; the resizable side cart stays on desktop.",
+          "Scanning at the till now flows: adding an item focuses the quantity box with the value selected, Enter returns focus to search, and a scan that accidentally lands in the quantity box is detected by its keystroke speed, the quantity restored, and the code replayed into search.",
+          "Batch selection is keyboard-driven: Up and Down walk the available batches with wrap-around, disabled rows are skipped, focus opens on the first available batch, and Enter takes the focused one.",
+          "The date picker now stays inside the window, flipping above the field or narrowing vertically when there is no room below, instead of painting past the viewport edge.",
+          "The campaign builder shows one step at a time through a tab bar rather than six stacked accordions, with an offer summary strip kept on screen and the readiness checklist linking straight to the step that owns each gap. This is what gives the price table the width it needs.",
+          "The Promotions campaign list and Campaign History are server-paginated with search and branch filters applied in the query, so a large catalogue no longer loads whole lists into the browser.",
+          "A stock expiry filter can be reached by link, so an alert can point straight at expiring stock.",
+        ],
+      },
+      {
+        label: "Fixed",
+        items: [
+          "The dashboard no longer disappears when the daily chart request fails. Chart data is only accepted as an array, an empty or malformed response renders nothing rather than crashing, and a negative measured width can no longer throw.",
+          "A cart line no longer overlaps its own pricing between roughly 360 and 500px of cart width. The line wraps into two whole areas, prices and chips above and controls below, while the stepper stays with its unit and the tag stays with delete.",
+          "The receipt now prints the cash the customer handed over as Paid and the change the server calculated as Balance, instead of showing the applied amount.",
+          "Expired stock can no longer hide behind an absent expiry date: a batch with no date is reported as Missing Expiry rather than treated as safe.",
+          "Category deletes are refused on the server while items still point at the category, and the screen lists those items instead of showing a bare conflict.",
+        ],
+      },
+    ],
+  },
   {
     version: "2.6.2",
     title: "Shift Cash You Can Trust",

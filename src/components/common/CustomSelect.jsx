@@ -114,10 +114,10 @@ const CustomSelect = ({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((open) => !open)}
-        className={`flex w-full items-center justify-between rounded-lg border bg-white px-2.5 py-2 text-left shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-100 ${
+        className={`flex w-full items-center justify-between rounded-lg border bg-white px-2.5 py-2 text-left shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent ${
           disabled
             ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-70"
-            : "border-slate-300 hover:border-blue-400"
+            : "border-slate-300 hover:border-border-strong"
         } ${buttonClassName}`}
       >
         <span className={`truncate text-xs ${selectedOption ? "font-medium text-slate-700" : "text-slate-600"}`}>
@@ -147,11 +147,11 @@ const CustomSelect = ({
                       type="button"
                       onClick={() => handleSelect(option.value)}
                       className={`custom-select-option flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors hover:bg-slate-50 ${
-                        isSelected ? "bg-blue-50/50 font-bold text-blue-700" : "font-medium text-slate-700"
+                        isSelected ? "bg-accent-soft/50 font-bold text-accent" : "font-medium text-slate-700"
                       } ${optionClassName}`}
                     >
                       <span className="truncate">{option.label}</span>
-                      {isSelected ? <Check size={14} className="shrink-0 text-blue-600" /> : null}
+                      {isSelected ? <Check size={14} className="shrink-0 text-accent" /> : null}
                     </button>
                   );
                 })

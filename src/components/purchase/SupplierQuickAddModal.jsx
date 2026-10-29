@@ -79,7 +79,7 @@ const SupplierQuickAddModal = ({ isOpen, onClose, onCreated }) => {
 
         <div className="page-section-enter mt-4 flex justify-end gap-2" style={{ animationDelay: "180ms" }}>
           <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
-          <Button onClick={handleSave} disabled={loading} className="bg-blue-600">
+          <Button onClick={handleSave} disabled={loading} className="bg-accent">
             {loading ? "Saving..." : "Save Supplier"}
           </Button>
         </div>

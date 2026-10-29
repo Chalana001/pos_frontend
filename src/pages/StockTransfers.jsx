@@ -146,12 +146,12 @@ const StockTransfers = () => {
 
   const getStatusBadge = (statusValue) => {
     if (statusValue === "IN_TRANSIT") {
-      return "bg-amber-100 text-amber-800";
+      return "bg-warning-soft text-warning";
     }
     if (statusValue === "COMPLETED") {
-      return "bg-emerald-100 text-emerald-800";
+      return "bg-success-soft text-success";
     }
-    return "bg-red-100 text-red-800";
+    return "bg-danger-soft text-danger";
   };
 
   const outgoingColumns = useMemo(
@@ -299,7 +299,7 @@ const StockTransfers = () => {
           type="button"
           onClick={() => setActiveTab("outgoing")}
           className={`profile-tab-chip px-4 py-2 font-medium transition-colors ${
-            activeTab === "outgoing" ? "border-b-2 border-blue-600 text-blue-600" : "text-slate-600 hover:text-slate-800"
+            activeTab === "outgoing" ? "border-b-2 border-accent text-accent" : "text-slate-600 hover:text-slate-800"
           }`}
           style={{ animationDelay: "110ms" }}
         >
@@ -310,7 +310,7 @@ const StockTransfers = () => {
           type="button"
           onClick={() => setActiveTab("incoming")}
           className={`profile-tab-chip px-4 py-2 font-medium transition-colors ${
-            activeTab === "incoming" ? "border-b-2 border-blue-600 text-blue-600" : "text-slate-600 hover:text-slate-800"
+            activeTab === "incoming" ? "border-b-2 border-accent text-accent" : "text-slate-600 hover:text-slate-800"
           }`}
           style={{ animationDelay: "150ms" }}
         >
@@ -333,7 +333,7 @@ const StockTransfers = () => {
                 }}
                 placeholder="Search transfer no, item, barcode, or note..."
                 ref={searchRef}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
 

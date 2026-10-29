@@ -7,6 +7,88 @@ import CustomSelect from "../../components/common/CustomSelect";
 import LoyaltyPanel from "./LoyaltyPanel";
 import PromotionWhyModal, { WhyButton, explainableDecisions } from "./PromotionWhyModal";
 
+/** A scanner sends keys far faster than a person can type a quantity. */
+const SCANNER_KEY_GAP_MS = 30;
+/** Two fast keys can be a slip; three in a row is a label. */
+const SCANNER_MIN_KEYS = 3;
+
+/**
+ * The quantity box, with a guard for a scan that arrives while it holds focus.
+ *
+ * <p>The POS now focuses this box as soon as an item lands, so the next thing typed
+ * is the quantity. That is the loop cashiers want. It also means a scan made without
+ * pressing Enter first would be typed in here and saved as a quantity, which is how a
+ * 13-digit barcode once became a quantity on an unlimited-stock line. A barcode
+ * arrives as three or more keystrokes tens of milliseconds apart, so that burst is
+ * recognised, the quantity is put back to what it was, and the scanned characters are
+ * handed to the item search instead.
+ *
+ * <p>Enter keeps its meaning: commit the quantity and hand focus back to the search
+ * box, ready for the next scan.
+ */
+const QuantityInput = ({ qty, onChange, focusSearch, onScanToSearch }) => {
+  const burstRef = useRef({ last: 0, count: 0, chars: "", original: null });
+
+  const resetBurst = () => {
+    burstRef.current = { last: 0, count: 0, chars: "", original: null };
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter") {
+      resetBurst();
+      // Commit the value, then hand the keyboard back to the search box. Leaving the
+      // blur alone and letting onBlur do it raced the re-render that follows the
+      // quantity commit, which parked focus on <body> and broke the scan loop.
+      event.preventDefault();
+      event.currentTarget.blur();
+      requestAnimationFrame(() => focusSearch?.());
+      return;
+    }
+
+    // Only printable characters can be part of a barcode.
+    if (event.key.length !== 1) {
+      resetBurst();
+      return;
+    }
+
+    const burst = burstRef.current;
+    const now = performance.now();
+    if (burst.original === null) burst.original = qty;
+    burst.count = now - burst.last < SCANNER_KEY_GAP_MS ? burst.count + 1 : 1;
+    burst.last = now;
+    burst.chars += event.key;
+
+    if (burst.count < SCANNER_MIN_KEYS) return;
+
+    // A scan, not a quantity. Reject this key so it is not committed, restore the
+    // quantity the cashier actually had, and replay the label into the search box.
+    event.preventDefault();
+    const captured = burst.chars;
+    const original = burst.original;
+    resetBurst();
+    onChange(original);
+    onScanToSearch?.(captured);
+  };
+
+  return (
+    <input aria-label="Quantity"
+      // type="text" with a numeric inputMode, not type="number": a number input cannot
+      // select its contents, so typing a quantity would append to the default ("1"
+      // then "5" became 15) and the whole scan-type-scan loop breaks. Text still gets
+      // the numeric keypad on a tablet through inputMode, and the value is parsed on
+      // the way out just as before.
+      type="text"
+      inputMode="decimal"
+      value={qty === 0 ? "" : qty}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={focusSearch}
+      onKeyDown={handleKeyDown}
+      className="w-9 rounded bg-transparent px-0.5 text-center text-[13px] font-bold outline-none transition-all focus:bg-white focus-visible:ring-2 focus-visible:ring-accent"
+      title="Click to edit quantity"
+    />
+  );
+};
+
 const Cart = ({
   items,
   customer,
@@ -37,6 +119,7 @@ const Cart = ({
   loyaltyDiscount = 0,
   onLoyaltyValueChange,
   focusSearch,
+  onScanToSearch,
   cartSummary,
   footerActions,
   sideAction,
@@ -56,6 +139,11 @@ const Cart = ({
   // The row whose discount panel is open, so a click elsewhere can be told apart
   // from a click inside it.
   const editingRowRef = useRef(null);
+  // Its own snapshot: the scroll effect above owns previousItemsRef, and reading that
+  // one here would see the value it has already advanced to. Null means "first paint,
+  // nothing to react to yet" - an empty array is a real state the first add must
+  // compare against, or the very first item of a sale would never get focus.
+  const focusPreviousRef = useRef(null);
 
   // Follow the row that just changed.
   //
@@ -86,6 +174,44 @@ const Cart = ({
     // Honour the app's own animation preference rather than jumping regardless.
     const still = document.documentElement.dataset.animationLevel === "off";
     row.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
+  }, [cartItems]);
+
+  /**
+   * Select the quantity of a line that was just added or increased.
+   *
+   * <p>The loop a cashier actually works in is scan, type the quantity, scan again. That
+   * loop only closes if the quantity is already focused and selected the moment the item
+   * lands, so the first digit typed replaces the default instead of appending to it.
+   *
+   * <p>`select()` rather than `setSelectionRange(0, len)` because it also works for an
+   * `<input type="number">`, which ignores selection ranges in some engines. Falls back
+   * to a plain focus when selection is unavailable.
+   */
+  useEffect(() => {
+    const previous = focusPreviousRef.current;
+    focusPreviousRef.current = cartItems;
+    // First paint after mount: there is no "before" to compare with.
+    if (previous === null) return;
+    if (cartItems.length < previous.length) return;
+
+    // A brand-new line takes focus; otherwise the line whose quantity went up.
+    const target = cartItems.length > previous.length
+      ? cartItems.length - 1
+      : cartItems.findIndex((item, i) => previous[i] && item.qty > previous[i].qty);
+    if (target < 0) return;
+
+    const inputs = listRef.current?.querySelectorAll('input[aria-label="Quantity"]');
+    const input = inputs?.[target];
+    if (!input) return;
+
+    input.focus({ preventScroll: true });
+    // Select on the next frame: React commits the new row and its value, and the
+    // browser parks the caret at the end of the text, which would undo a selection
+    // made here immediately. Waiting a frame means the digits a cashier types next
+    // replace the default instead of appending to it.
+    requestAnimationFrame(() => {
+      input.select();
+    });
   }, [cartItems]);
   const getMeasuredUnitOptions = (item) => {
     const defaultUnit = String(item?.defaultUnit || item?.qtyUnit || "").toUpperCase();
@@ -261,7 +387,7 @@ const Cart = ({
       />
       <div className="page-section-enter flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-3 py-2.5" style={{ animationDelay: "120ms" }}>
         <div className="flex items-center gap-2">
-          <div className="bg-blue-600 text-white p-2 rounded-lg">
+          <div className="bg-accent text-white p-2 rounded-lg">
             <Receipt size={18} />
           </div>
           <div>
@@ -272,7 +398,7 @@ const Cart = ({
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700">
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-accent">
             {cartItems.length} Items
           </span>
           <button
@@ -282,8 +408,8 @@ const Cart = ({
             title={customer ? `Change customer: ${customer.name}` : "Add customer (F4)"}
             className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border transition-all ${customer ? "max-w-[150px] px-2" : "w-9"} ${
               customer
-                ? "border-blue-100 bg-blue-50 text-blue-700 hover:border-blue-200 hover:text-blue-800"
-                : "border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:text-blue-600"
+                ? "border-slate-200 bg-accent-soft text-accent hover:border-slate-200 hover:text-slate-800"
+                : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-accent"
             }`}
           >
             {customer ? <UserRoundCheck size={15} className="shrink-0" /> : <UserPlus size={15} />}
@@ -295,7 +421,7 @@ const Cart = ({
             disabled={cartItems.length === 0}
             aria-label="Clear current cart"
             title="Clear current cart"
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-white px-2.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-danger-border bg-white px-2.5 text-xs font-semibold text-danger transition hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Trash2 size={14} />
             <span>Clear all</span>
@@ -321,7 +447,7 @@ const Cart = ({
                 key={index}
                 ref={editingIndex === index ? editingRowRef : null}
                 style={{ animationDelay: `${220 + index * 38}ms` }}
-                className="sales-cart-item sales-panel-hover relative group overflow-visible rounded-xl border border-slate-100 bg-white shadow-sm hover:border-blue-200 transition-all"
+                className="sales-cart-item sales-panel-hover relative group overflow-visible rounded-xl border border-slate-100 bg-white shadow-sm hover:border-slate-200 transition-all"
               >
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 p-2">
                   {/* The minimum is what makes the controls wrap before the name does: without
@@ -349,7 +475,7 @@ const Cart = ({
                             type="number"
                             min="0"
                             step="0.01"
-                            className="w-20 rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 text-right text-xs font-bold text-purple-600 outline-none focus:ring-1 focus:ring-purple-500"
+                            className="w-20 rounded border border-info-border bg-info-soft px-1.5 py-0.5 text-right text-xs font-bold text-info outline-none focus:ring-1 focus:ring-accent"
                             value={item.unitPrice === 0 ? "" : item.unitPrice}
                             onChange={(e) => onUpdatePrice(index, e.target.value)}
                             onBlur={focusSearch}
@@ -365,7 +491,7 @@ const Cart = ({
                         if (!price) return null;
                         return (
                           <>
-                            <span className={`text-xs font-medium ${price.discounted ? "text-emerald-700" : "text-slate-600"}`}>
+                            <span className={`text-xs font-medium ${price.discounted ? "text-success" : "text-slate-600"}`}>
                               1 {price.unit} = {formatCurrency(price.livePrice)}
                             </span>
                             {price.discounted && (
@@ -383,11 +509,11 @@ const Cart = ({
                     {/* The money and what came off it stay together: the total is the figure a
                         discount chip is talking about. */}
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[13px] font-bold text-blue-600">
+                      <span className="text-[13px] font-bold text-accent">
                         {formatCurrency(calculateItemTotal(item))}
                       </span>
                       {(item.effectiveDiscountValue ?? item.discountValue) > 0 && (
-                        <span className="shrink-0 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
+                        <span className="shrink-0 text-xs bg-warning-soft text-warning px-1.5 py-0.5 rounded font-bold">
                           {(item.effectiveDiscountType || item.discountType) === DISCOUNT_TYPES.PERCENT
                             ? `-${item.effectiveDiscountValue ?? item.discountValue}%`
                             // A fixed figure is shown for the whole line. The engine's
@@ -405,7 +531,7 @@ const Cart = ({
                           saves the line it used to take underneath. */}
                       {item.promotionApplied && (
                         <span
-                          className="inline-flex max-w-[168px] items-center rounded bg-emerald-100 py-0.5 pl-1.5 pr-0.5 text-xs font-bold text-emerald-700"
+                          className="inline-flex max-w-[168px] items-center rounded bg-success-soft py-0.5 pl-1.5 pr-0.5 text-xs font-bold text-success"
                           title={item.promotionName || "Promotion applied"}
                         >
                           <span className="min-w-0 truncate">{item.promotionName || "Promo"}</span>
@@ -414,7 +540,7 @@ const Cart = ({
                             aria-label="Remove offer"
                             title="Remove offer"
                             onClick={() => onRemovePromotion?.(index)}
-                            className="relative ml-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-emerald-700 before:absolute before:-inset-y-2 before:-inset-x-1.5 before:content-[''] hover:bg-emerald-200 hover:text-emerald-900"
+                            className="relative ml-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-success before:absolute before:-inset-y-2 before:-inset-x-1.5 before:content-[''] hover:bg-success-soft hover:text-success"
                           >
                             <X size={10} />
                           </button>
@@ -457,18 +583,11 @@ const Cart = ({
                           <Minus size={14} />
                         </button>
 
-                        <input aria-label="Quantity"
-                          type="number"
-                          value={item.qty === 0 ? "" : item.qty}
-                          onChange={(e) => handleManualQtyChange(index, e.target.value)}
-                          onBlur={focusSearch}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.currentTarget.blur();
-                            }
-                          }}
-                          className="w-9 rounded bg-transparent px-0.5 text-center text-[13px] font-bold outline-none transition-all focus:bg-white focus-visible:ring-2 focus-visible:ring-blue-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                          title="Click to edit quantity"
+                        <QuantityInput
+                          qty={item.qty}
+                          onChange={(value) => handleManualQtyChange(index, value)}
+                          focusSearch={focusSearch}
+                          onScanToSearch={onScanToSearch}
                         />
 
                         <button
@@ -506,12 +625,12 @@ const Cart = ({
                     <div className="flex shrink-0 flex-nowrap items-center gap-1">
                       <button aria-label="Add Discount"
                         onClick={() => setEditingIndex(editingIndex === index ? null : index)}
-                        className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition-all ${editingIndex === index ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-blue-600'}`}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition-all ${editingIndex === index ? 'bg-accent text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:text-accent'}`}
                         title="Add Discount"
                       >
                         <Tag size={14} />
                       </button>
-                      <button onClick={() => onRemoveItem(index)} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-slate-50 text-slate-600 transition-all hover:bg-red-50 hover:text-red-500" title="Remove Item">
+                      <button onClick={() => onRemoveItem(index)} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-slate-50 text-slate-600 transition-all hover:bg-danger-soft hover:text-danger" title="Remove Item">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -525,8 +644,8 @@ const Cart = ({
                       <button onClick={() => setEditingIndex(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-md text-slate-600 hover:text-slate-900"><X size={14} /></button>
                     </div>
                     {(item.promotionApplied || item.promotionExcluded) && (
-                      <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-emerald-50 px-2.5 py-1.5">
-                        <span className="min-w-0 truncate text-xs font-bold text-emerald-700">
+                      <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-success-soft px-2.5 py-1.5">
+                        <span className="min-w-0 truncate text-xs font-bold text-success">
                           {item.promotionExcluded
                             ? "Offers off this line"
                             : (item.promotionName || "Promotion applied")}
@@ -535,7 +654,7 @@ const Cart = ({
                           <button
                             type="button"
                             onClick={() => onRestorePromotion?.(index)}
-                            className="inline-flex h-11 shrink-0 items-center rounded-md px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                            className="inline-flex h-11 shrink-0 items-center rounded-md px-3 text-xs font-bold text-success hover:bg-success-soft"
                           >
                             Restore offer
                           </button>
@@ -543,7 +662,7 @@ const Cart = ({
                           <button
                             type="button"
                             onClick={() => onRemovePromotion?.(index)}
-                            className="inline-flex h-11 shrink-0 items-center rounded-md px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                            className="inline-flex h-11 shrink-0 items-center rounded-md px-3 text-xs font-bold text-success hover:bg-success-soft"
                           >
                             Remove offer
                           </button>
@@ -569,7 +688,7 @@ const Cart = ({
                         onKeyDown={handleKeyDown}
                         onChange={(e) => onInlineDiscount(index, item.discountType === DISCOUNT_TYPES.NONE ? DISCOUNT_TYPES.PERCENT : item.discountType, e.target.value)}
                         placeholder="0.00"
-                        className="flex-1 text-sm font-bold border border-slate-200 rounded-lg bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 shadow-inner"
+                        className="flex-1 text-sm font-bold border border-slate-200 rounded-lg bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-accent shadow-inner"
                       />
                     </div>
                     <p className="text-xs text-slate-600 mt-2 italic">Press Enter to apply</p>
@@ -594,7 +713,7 @@ const Cart = ({
             </div>
           ) : null}
           {promotionSavings > 0.004 ? (
-            <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-700">
+            <div className="flex items-center justify-between rounded-lg bg-success-soft px-2.5 py-1.5 text-xs text-success">
               <span className="min-w-0 truncate font-bold">Item offers</span>
               <span className="shrink-0 font-black">-{formatCurrency(promotionSavings)}</span>
             </div>
@@ -611,11 +730,11 @@ const Cart = ({
                 if (e.key === 'Enter') e.currentTarget.blur();
               }}
               placeholder="0.00"
-              className="w-24 text-right font-bold text-slate-800 bg-white border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-24 text-right font-bold text-slate-800 bg-white border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-accent outline-none"
             />
           </div>
           {billPromotion?.billPromotionApplied ? (
-            <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-700">
+            <div className="flex items-center justify-between rounded-lg bg-success-soft px-2.5 py-1.5 text-xs text-success">
               <span className="min-w-0 truncate font-bold">{billPromotion.billPromotionName || "Bill promotion"}</span>
               <span className="shrink-0 font-black">-{formatCurrency(billPromotion.billPromotionDiscountAmount || 0)}</span>
             </div>
@@ -646,14 +765,14 @@ const Cart = ({
                   }}
                   placeholder="None"
                   maxLength={40}
-                  className={`w-32 text-right font-mono font-bold uppercase bg-white border rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 outline-none ${
-                    codeStatus && !codeStatus.valid ? "border-red-300 text-red-700" : "border-slate-200 text-slate-800"
+                  className={`w-32 text-right font-mono font-bold uppercase bg-white border rounded px-2 py-1 focus:ring-2 focus:ring-accent outline-none ${
+                    codeStatus && !codeStatus.valid ? "border-danger-border text-danger" : "border-slate-200 text-slate-800"
                   }`}
                 />
               </div>
               {codeStatus && promotionCode ? (
                 <div className={`rounded-lg px-2.5 py-1.5 text-xs ${
-                  codeStatus.valid ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                  codeStatus.valid ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
                 }`}>
                   {codeStatus.valid
                     ? `Code applied: ${codeStatus.promotionName || codeStatus.code}`
@@ -677,7 +796,7 @@ const Cart = ({
         </div>
 
         {pointsDiscount > 0 ? (
-          <div className="flex items-center justify-between rounded-lg bg-violet-50 px-2.5 py-1.5 text-xs text-violet-800">
+          <div className="flex items-center justify-between rounded-lg bg-info-soft px-2.5 py-1.5 text-xs text-info">
             <span className="font-bold">Points</span>
             <span className="font-black">-{formatCurrency(pointsDiscount)}</span>
           </div>
@@ -685,7 +804,7 @@ const Cart = ({
 
         <div className="pt-2.5 border-t border-slate-200 flex justify-between items-end">
           <span className="font-bold text-slate-800">Total</span>
-          <span className="text-2xl font-black text-blue-600">
+          <span className="text-2xl font-black text-accent">
             {formatCurrency(computedTotal)}
           </span>
         </div>
@@ -704,7 +823,7 @@ const Cart = ({
           <Button
             onClick={onCheckout}
             disabled={cartItems.length === 0 || loading}
-            className={`flex-1 h-[50px] ${queueMode ? "bg-amber-500 hover:bg-amber-600 shadow-amber-200" : "bg-blue-600 hover:bg-blue-700 shadow-blue-200"} text-white rounded-xl font-bold text-base shadow-md flex items-center justify-center gap-2 transition-all active:scale-95`}
+            className={`flex-1 h-[50px] ${queueMode ? "bg-warning hover:bg-warning shadow-amber-200" : "bg-accent hover:bg-accent shadow-slate-200"} text-white rounded-xl font-bold text-base shadow-md flex items-center justify-center gap-2 transition-all active:scale-95`}
           >
             {loading ? "Processing..." : checkoutLabel}
           </Button>

@@ -3,10 +3,10 @@ import { CircleDollarSign, Receipt, ShoppingBag, TrendingUp } from "lucide-react
 import { formatCurrency } from "../../../utils/formatters";
 
 const METRICS = [
-  { key: "given", label: "Discount given", icon: CircleDollarSign, tone: "text-amber-700 bg-amber-50" },
-  { key: "used", label: "Redemptions", icon: Receipt, tone: "text-violet-700 bg-violet-50" },
-  { key: "revenue", label: "Revenue on those bills", icon: TrendingUp, tone: "text-emerald-700 bg-emerald-50" },
-  { key: "average", label: "Average per redemption", icon: ShoppingBag, tone: "text-blue-700 bg-blue-50" },
+  { key: "given", label: "Discount given", icon: CircleDollarSign, tone: "text-warning bg-warning-soft" },
+  { key: "used", label: "Redemptions", icon: Receipt, tone: "text-info bg-info-soft" },
+  { key: "revenue", label: "Revenue on those bills", icon: TrendingUp, tone: "text-success bg-success-soft" },
+  { key: "average", label: "Average per redemption", icon: ShoppingBag, tone: "text-accent bg-accent-soft" },
 ];
 
 const HistoryTotalsStrip = ({ totals, loading }) => {

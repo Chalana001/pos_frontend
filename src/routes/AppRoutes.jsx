@@ -29,6 +29,7 @@ const WarrantyDetailsPage = lazy(() => import('../pages/WarrantyDetailsPage'));
 const WarrantySettingsPage = lazy(() => import('../pages/WarrantySettingsPage'));
 const ItemsPage = lazy(() => import('../pages/ItemsPage'));
 const ItemFormPage = lazy(() => import('../pages/ItemFormPage'));
+const CategoryManagementPage = lazy(() => import('../pages/CategoryManagementPage'));
 const BulkAddItems = lazy(() => import('../pages/BulkAddItems'));
 const ItemExcelImportPage = lazy(() => import('../pages/ItemExcelImportPage'));
 const BarcodePrintPage = lazy(() => import('../pages/BarcodePrintPage'));
@@ -61,7 +62,9 @@ const Reports = lazy(() => import('../pages/Reports'));
 const ProcurementPlanningPage = lazy(() => import('../pages/ProcurementPlanningPage'));
 const Branches = lazy(() => import('../pages/Branches'));
 const ReceiptSettingsPage = lazy(() => import('../pages/ReceiptSettingsPage'));
+const PaymentMethodsSettingsPage = lazy(() => import('../pages/PaymentMethodsSettingsPage'));
 const AppConfigurationPage = lazy(() => import('../pages/AppConfigurationPage'));
+const CashDenominationsSettingsPage = lazy(() => import('../pages/CashDenominationsSettingsPage'));
 const DiningTablesPage = lazy(() => import('../pages/DiningTablesPage'));
 const Users = lazy(() => import('../pages/Users'));
 const SubscriptionPage = lazy(() => import('../pages/SubscriptionPage'));
@@ -154,6 +157,7 @@ const AppRoutes = () => {
         <Route path="warranties/:id" element={<ProtectedRoute permission="VIEW_SALES" requiresOnline>{withSuspense(<WarrantyDetailsPage />)}</ProtectedRoute>} />
 
         <Route path="items" element={<ProtectedRoute permission="VIEW_ITEMS" requiresOnline>{withSuspense(<ItemsPage />)}</ProtectedRoute>} />
+        <Route path="items/categories" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline>{withSuspense(<CategoryManagementPage />)}</ProtectedRoute>} />
         <Route path="items/new" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline>{withSuspense(<ItemFormPage mode="create" />)}</ProtectedRoute>} />
         <Route path="items/:id/edit" element={<ProtectedRoute permission="MANAGE_ITEMS" requiresOnline>{withSuspense(<ItemFormPage mode="edit" />)}</ProtectedRoute>} />
         <Route path="items/bulk-add" element={<ProtectedRoute permission="MANAGE_ITEMS" feature="BULK_ITEMS" requiresOnline>{withSuspense(<BulkAddItems />)}</ProtectedRoute>} />
@@ -217,10 +221,12 @@ const AppRoutes = () => {
         <Route path="reports/suppliers" element={<ProtectedRoute permission="VIEW_REPORTS" feature="ADVANCED_REPORTS" requiresOnline>{withSuspense(<Reports mode="supplier" />)}</ProtectedRoute>} />
         <Route path="reports/returns" element={<ProtectedRoute permission="VIEW_REPORTS" feature="RETURNS_REPORTS" requiresOnline>{withSuspense(<Reports mode="returns" />)}</ProtectedRoute>} />
         <Route path="app-configuration" element={<ProtectedRoute permission="MANAGE_APP_CONFIGURATION" requiresOnline>{withSuspense(<AppConfigurationPage />)}</ProtectedRoute>} />
+        <Route path="settings/cash-denominations" element={<ProtectedRoute permission="MANAGE_APP_CONFIGURATION" requiresOnline>{withSuspense(<CashDenominationsSettingsPage />)}</ProtectedRoute>} />
         <Route path="branches" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<Branches />)}</ProtectedRoute>} />
         <Route path="dining-tables" element={<ProtectedRoute permission="MANAGE_BRANCHES" feature="DINING_TABLES" requiresOnline>{withSuspense(<DiningTablesPage />)}</ProtectedRoute>} />
         <Route path="receipt-settings" element={<ProtectedRoute permission="MANAGE_BRANCHES" requiresOnline>{withSuspense(<ReceiptSettingsPage />)}</ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute permission="MANAGE_USERS" feature="USER_MANAGEMENT" requiresOnline>{withSuspense(<Users />)}</ProtectedRoute>} />
+        <Route path="settings/payment-methods" element={<ProtectedRoute permission="MANAGE_PAYMENT_METHODS" requiresOnline>{withSuspense(<PaymentMethodsSettingsPage />)}</ProtectedRoute>} />
         <Route path="version-history" element={withSuspense(<VersionHistoryPage />)} />
       </Route>
 

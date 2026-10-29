@@ -332,7 +332,7 @@ const AppConfigurationPage = () => {
                         checked={!!form[role.key]}
                         disabled={disabled}
                         onChange={(event) => updateField(role.key, event.target.checked)}
-                        className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                       />
                     </label>
                   );
@@ -367,7 +367,7 @@ const AppConfigurationPage = () => {
                     checked={!!form[feature.key]}
                     disabled={disabled}
                     onChange={(event) => updateField(feature.key, event.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                   />
                 </label>
               );
@@ -379,6 +379,14 @@ const AppConfigurationPage = () => {
               onChange={(event) => updateField('quickSaleHeldBillsMax', Number(event.target.value))}
               className="rounded border border-slate-300 px-2 py-1">
               {[1, 2, 3, 4, 5].map((max) => <option key={max} value={max}>{max}</option>)}
+            </select>
+          </label>
+          <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
+            Expiry alert window (months ahead counts as expiring soon)
+            <select value={form.expiryAlertMonths ?? 2}
+              onChange={(event) => updateField('expiryAlertMonths', Number(event.target.value))}
+              className="rounded border border-slate-300 px-2 py-1">
+              {[1, 2, 3, 6, 12].map((months) => <option key={months} value={months}>{months}</option>)}
             </select>
           </label>
 
@@ -397,7 +405,7 @@ const AppConfigurationPage = () => {
                 type="checkbox"
                 checked={!!form.kotEnabled}
                 onChange={(event) => updateField('kotEnabled', event.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
               />
             </div>
           </div>
@@ -417,7 +425,7 @@ const AppConfigurationPage = () => {
                 type="checkbox"
                 checked={form.printReceiptAfterCheckout !== false}
                 onChange={(event) => updateField('printReceiptAfterCheckout', event.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
               />
             </div>
           </div>
@@ -437,7 +445,7 @@ const AppConfigurationPage = () => {
                 type="checkbox"
                 checked={!!form.warrantyEnabled}
                 onChange={(event) => updateField('warrantyEnabled', event.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
               />
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -459,7 +467,7 @@ const AppConfigurationPage = () => {
                       checked={!!form[role.key]}
                       disabled={disabled}
                       onChange={(event) => updateField(role.key, event.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
                     />
                   </label>
                 );
@@ -472,7 +480,7 @@ const AppConfigurationPage = () => {
           <div className="space-y-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-4">
               <div className="mb-3 flex gap-3">
-                <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
+                <div className="rounded-lg bg-accent-soft p-2 text-accent">
                   <SunMoon size={18} />
                 </div>
                 <div>
@@ -496,7 +504,7 @@ const AppConfigurationPage = () => {
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
               <div className="mb-3 flex gap-3">
-                <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
+                <div className="rounded-lg bg-accent-soft p-2 text-accent">
                   <Activity size={18} />
                 </div>
                 <div>
@@ -523,7 +531,7 @@ const AppConfigurationPage = () => {
                   key={link.path}
                   type="button"
                   onClick={() => navigate(link.path)}
-                  className="flex w-full items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:border-blue-200 hover:bg-blue-50/40"
+                  className="flex w-full items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-4 text-left transition hover:border-slate-200 hover:bg-accent-soft/40"
                 >
                   <div className="rounded-lg bg-slate-100 p-2 text-slate-600">
                     <Icon size={18} />

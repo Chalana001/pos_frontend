@@ -154,7 +154,7 @@ const PurchaseListPage = () => {
                 type="text"
                 placeholder="Search invoice, supplier, or GRN..."
                 ref={searchRef}
-                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-[42px] w-full rounded-xl border border-slate-300 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -261,13 +261,13 @@ const PurchaseListPage = () => {
                     return (
                       <tr
                         key={purchase.purchaseId}
-                        className={`cursor-pointer transition-colors ${isCanceled ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-slate-50"}`}
+                        className={`cursor-pointer transition-colors ${isCanceled ? "bg-danger-soft/30 hover:bg-danger-soft/50" : "hover:bg-slate-50"}`}
                         onClick={() => navigate(`/purchases/${purchase.purchaseId}`)}
                       >
                         <td className={`px-6 py-4 whitespace-nowrap ${isCanceled ? "text-slate-600" : "text-slate-600"}`}>
                           {formatDateTime(purchase.createdAt)}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap font-semibold ${isCanceled ? "text-red-400 line-through" : "text-slate-800"}`}>
+                        <td className={`px-6 py-4 whitespace-nowrap font-semibold ${isCanceled ? "text-danger line-through" : "text-slate-800"}`}>
                           {purchase.invoiceNo}
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap font-medium ${isCanceled ? "text-slate-600" : "text-slate-700"}`}>
@@ -277,8 +277,8 @@ const PurchaseListPage = () => {
                           <span
                             className={`rounded-full border px-2 py-1 text-xs font-bold uppercase tracking-wider ${
                               isCanceled
-                                ? "border-red-200 bg-red-100 text-red-700"
-                                : "border-emerald-200 bg-emerald-100 text-emerald-700"
+                                ? "border-danger-border bg-danger-soft text-danger"
+                                : "border-success-border bg-success-soft text-success"
                             }`}
                           >
                             {isCanceled ? "Canceled" : "Completed"}
@@ -290,7 +290,7 @@ const PurchaseListPage = () => {
                         <td className={`px-6 py-4 whitespace-nowrap text-right font-bold ${isCanceled ? "text-slate-600 line-through" : "text-slate-800"}`}>
                           {formatCurrency(purchase.grandTotal || 0)}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-right font-semibold ${isCanceled ? "text-slate-600 line-through" : "text-emerald-700"}`}>
+                        <td className={`px-6 py-4 whitespace-nowrap text-right font-semibold ${isCanceled ? "text-slate-600 line-through" : "text-success"}`}>
                           {formatCurrency(purchase.paidAmount || 0)}
                         </td>
                         <td className={`px-6 py-4 whitespace-nowrap text-xs font-semibold ${isCanceled ? "text-slate-600" : "text-slate-600"}`}>
@@ -300,7 +300,7 @@ const PurchaseListPage = () => {
                           isCanceled
                             ? "text-slate-600 line-through"
                             : Number(purchase.dueAmount || 0) > 0
-                              ? "text-red-600"
+                              ? "text-danger"
                               : "text-slate-600"
                         }`}>
                           {formatCurrency(purchase.dueAmount || 0)}

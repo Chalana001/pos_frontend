@@ -218,7 +218,7 @@ const PromotionHistoryPage = () => {
                   onClick={() => { setTab(entry.key); setPage(0); setPageSize(entry.key === "REDEMPTIONS" ? 100 : 25); }}
                   aria-pressed={tab === entry.key}
                   className={`rounded-md px-4 py-1.5 text-xs font-bold ${
-                    tab === entry.key ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                    tab === entry.key ? "bg-accent text-white" : "text-slate-600 hover:bg-slate-100"
                   }`}
                 >
                   {entry.label}
@@ -233,7 +233,7 @@ const PromotionHistoryPage = () => {
                 aria-label="Search campaign history"
                 type="text"
                 placeholder="Search campaigns..."
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 value={search}
                 onChange={(event) => { setSearch(event.target.value); setPage(0); }}
               />
@@ -313,7 +313,7 @@ const PromotionHistoryPage = () => {
                 ) : campaigns.map((campaign) => (
                   <tr
                     key={campaign.id}
-                    className="cursor-pointer transition-colors hover:bg-blue-50/40"
+                    className="cursor-pointer transition-colors hover:bg-accent-soft/40"
                     onClick={() => setSelectedCampaign(campaign)}
                   >
                     <td className="app-table-cell">
@@ -377,7 +377,7 @@ const PromotionHistoryPage = () => {
                     <td className="app-table-cell text-slate-600">{branchNameById.get(Number(row.branchId)) || row.branchId || "-"}</td>
                     <td className="app-table-cell"><div className="text-slate-800">{row.promotionName || "-"}</div><div className="text-xs text-slate-500">{row.level === "BILL" ? "Whole bill" : "Line"}</div></td>
                     <td className="app-table-cell text-slate-600">{row.itemName || "-"}</td>
-                    <td className="app-table-cell text-right font-semibold text-emerald-700">{formatCurrency(row.discountAmount)}</td>
+                    <td className="app-table-cell text-right font-semibold text-success">{formatCurrency(row.discountAmount)}</td>
                     <td className="app-table-cell text-right text-slate-600">{formatCurrency(row.orderTotal)}</td>
                   </tr>
                 ))}

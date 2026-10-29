@@ -269,7 +269,7 @@ const BarcodePrintPage = () => {
                 type="number"
                 min="1"
                 max="500"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 value={recentLimit}
                 onChange={(e) => setRecentLimit(Number(e.target.value))}
                 placeholder="Enter limit (e.g. 50)"
@@ -295,7 +295,7 @@ const BarcodePrintPage = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
               <input aria-label="Search by name or barcode..."
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 placeholder="Search by name or barcode..."
                 ref={searchRef}
                 value={searchQuery}
@@ -315,7 +315,7 @@ const BarcodePrintPage = () => {
                     <button 
                       onClick={() => handleAddItem(item)}
                       aria-label={`Add ${item.name} to the print list`}
-                      className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md ml-2 flex-shrink-0"
+                      className="p-1.5 text-accent hover:bg-slate-100 rounded-md ml-2 flex-shrink-0"
                     >
                       <Plus size={18} />
                     </button>
@@ -331,7 +331,7 @@ const BarcodePrintPage = () => {
           <Card className="sales-panel-enter" style={{ animationDelay: "230ms" }}>
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
               <h3 className="text-sm font-medium text-slate-600">Print Queue</h3>
-              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+              <span className="bg-slate-100 text-slate-800 text-xs px-2 py-1 rounded-full font-medium">
                 {printList.length} Items
               </span>
             </div>
@@ -348,7 +348,7 @@ const BarcodePrintPage = () => {
             ) : (
               <div className="custom-scrollbar max-h-[500px] overflow-y-auto space-y-3 pr-2">
                 {printList.map((item) => (
-                  <div key={item.id} style={{ animationDelay: `${150 + printList.indexOf(item) * 35}ms` }} className="sales-cart-item sales-panel-hover flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 p-3 transition-colors hover:border-blue-300 sm:flex-nowrap">
+                  <div key={item.id} style={{ animationDelay: `${150 + printList.indexOf(item) * 35}ms` }} className="sales-cart-item sales-panel-hover flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 p-3 transition-colors hover:border-slate-300 sm:flex-nowrap">
                     
                     {/* Item Details */}
                     <div className="flex-1 min-w-0">
@@ -374,7 +374,7 @@ const BarcodePrintPage = () => {
                       {/* Delete Button */}
                       <button aria-label="Remove" 
                         onClick={() => removeItem(item.id)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                        className="p-2 text-danger hover:bg-danger-soft rounded-md transition-colors"
                         title="Remove"
                       >
                         <Trash2 size={18} />

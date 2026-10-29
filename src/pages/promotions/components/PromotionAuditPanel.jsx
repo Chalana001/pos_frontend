@@ -17,13 +17,13 @@ const LABELS = {
 };
 
 const TONES = {
-  APPROVED: "text-emerald-700",
-  ACTIVATED: "text-emerald-700",
-  RESUMED: "text-emerald-700",
-  REJECTED: "text-red-700",
-  PAUSED: "text-amber-700",
+  APPROVED: "text-success",
+  ACTIVATED: "text-success",
+  RESUMED: "text-success",
+  REJECTED: "text-danger",
+  PAUSED: "text-warning",
   ARCHIVED: "text-slate-500",
-  SUBMITTED: "text-violet-700",
+  SUBMITTED: "text-info",
 };
 
 /** Who did what to this promotion, newest first. */

@@ -23,7 +23,7 @@ import { formatCurrency, shortCurrency } from "../../utils/formatters";
 import { MONEY, axisProps, gridProps, tooltipProps, LINE_WIDTH } from "../../utils/chartTheme";
 import { ChartEmptyState, PremiumChartCard, SummaryMetric } from "./ReportPrimitives";
 
-const netTone = (value) => (Number(value || 0) < 0 ? "text-red-700" : "text-slate-900");
+const netTone = (value) => (Number(value || 0) < 0 ? "text-danger" : "text-slate-900");
 
 export default function CashFlowReportView({ data: reportData }) {
   const data = reportData || {};
@@ -69,13 +69,13 @@ export default function CashFlowReportView({ data: reportData }) {
                 ),
               },
               { header: "Drops", render: (row) => row.dropCount },
-              { header: "Amount", render: (row) => <span className="font-bold text-blue-600">{formatCurrency(row.amount)}</span> },
+              { header: "Amount", render: (row) => <span className="font-bold text-accent">{formatCurrency(row.amount)}</span> },
               {
                 header: "% of Total",
                 render: (row) => (
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(row.percentageOfTotal, 100)}%` }} />
+                      <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(row.percentageOfTotal, 100)}%` }} />
                     </div>
                     <span className="text-xs font-semibold text-slate-600">{row.percentageOfTotal.toFixed(1)}%</span>
                   </div>
@@ -117,7 +117,7 @@ export default function CashFlowReportView({ data: reportData }) {
               <div key={movement.name} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div>
                   <p className="font-bold text-slate-900">{movement.name}</p>
-                  <p className={`text-xs font-semibold ${movement.type === "inflow" ? "text-emerald-700" : "text-red-700"}`}>
+                  <p className={`text-xs font-semibold ${movement.type === "inflow" ? "text-success" : "text-danger"}`}>
                     {movement.type === "inflow" ? "Cash in" : "Cash out"}
                   </p>
                 </div>
@@ -136,11 +136,11 @@ export default function CashFlowReportView({ data: reportData }) {
               <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                 <div>
                   <p className="text-slate-500">In</p>
-                  <p className="mt-1 font-bold text-emerald-700">{formatCurrency(row.inflows)}</p>
+                  <p className="mt-1 font-bold text-success">{formatCurrency(row.inflows)}</p>
                 </div>
                 <div>
                   <p className="text-slate-500">Out</p>
-                  <p className="mt-1 font-bold text-red-700">{formatCurrency(row.outflows)}</p>
+                  <p className="mt-1 font-bold text-danger">{formatCurrency(row.outflows)}</p>
                 </div>
                 <div>
                   <p className="text-slate-500">Net</p>
@@ -155,8 +155,8 @@ export default function CashFlowReportView({ data: reportData }) {
           <Table
             columns={[
               { header: "Date", accessor: "date" },
-              { header: "Inflows", render: (row) => <span className="font-bold text-emerald-700">{formatCurrency(row.inflows)}</span> },
-              { header: "Outflows", render: (row) => <span className="font-bold text-red-700">{formatCurrency(row.outflows)}</span> },
+              { header: "Inflows", render: (row) => <span className="font-bold text-success">{formatCurrency(row.inflows)}</span> },
+              { header: "Outflows", render: (row) => <span className="font-bold text-danger">{formatCurrency(row.outflows)}</span> },
               { header: "Net Movement", render: (row) => <span className={`font-black ${netTone(row.netMovement)}`}>{formatCurrency(row.netMovement)}</span> },
             ]}
             data={visibleDaily}

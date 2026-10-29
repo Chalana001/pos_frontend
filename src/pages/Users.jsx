@@ -226,9 +226,9 @@ const Users = () => {
             render: (u) => (
                 <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${u.role === "ADMIN"
-                        ? "bg-purple-100 text-purple-800"
+                        ? "bg-info-soft text-info"
                         : u.role === "MANAGER"
-                            ? "bg-blue-100 text-blue-800"
+                            ? "bg-slate-100 text-slate-800"
                             : "bg-slate-100 text-slate-800"
                         }`}
                 >
@@ -248,7 +248,7 @@ const Users = () => {
             header: "Status",
             render: (u) => (
                 <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${u.enabled ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${u.enabled ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
                         }`}
                 >
                     {u.enabled ? "Enabled" : "Disabled"}
@@ -314,8 +314,8 @@ const Users = () => {
             <div className="page-enter space-y-6">
                 <h1 className="text-3xl font-bold text-slate-800">User Management</h1>
                 <Card className="ops-alert-card" style={{ animationDelay: "70ms" }}>
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p className="text-sm text-amber-800">
+                    <div className="p-4 bg-warning-soft border border-warning-border rounded-lg">
+                        <p className="text-sm text-warning">
                             ⚠️ Only ADMIN can access this page.
                         </p>
                     </div>
@@ -342,7 +342,7 @@ const Users = () => {
                         <input aria-label="Search by username..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                             placeholder="Search by username..."
                         />
                     </div>

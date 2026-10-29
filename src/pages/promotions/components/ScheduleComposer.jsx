@@ -70,7 +70,7 @@ const ScheduleComposer = ({ startAt, endAt, daysOfWeek, startTime, endTime, onCh
               key={preset.key}
               type="button"
               onClick={() => applyPreset(preset.key)}
-              className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+              className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:text-accent"
             >
               {preset.label}
             </button>
@@ -113,7 +113,7 @@ const ScheduleComposer = ({ startAt, endAt, daysOfWeek, startTime, endTime, onCh
                   aria-pressed={on}
                   onClick={() => toggleDay(day.bit)}
                   className={`rounded-md px-3 py-1.5 text-xs font-bold ${
-                    on ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    on ? "bg-accent text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >
                   {day.label}
@@ -125,21 +125,21 @@ const ScheduleComposer = ({ startAt, endAt, daysOfWeek, startTime, endTime, onCh
             <button
               type="button"
               onClick={() => onChange({ daysOfWeek: everyDay ? 0 : 127 })}
-              className={`rounded-full px-3 py-1 text-xs font-bold ${everyDay ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-100"}`}
+              className={`rounded-full px-3 py-1 text-xs font-bold ${everyDay ? "bg-accent-soft text-accent" : "text-slate-500 hover:bg-slate-100"}`}
             >
               All
             </button>
             <button
               type="button"
               onClick={() => onChange({ daysOfWeek: weekdays ? 0 : 31 })}
-              className={`rounded-full px-3 py-1 text-xs font-bold ${weekdays ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-100"}`}
+              className={`rounded-full px-3 py-1 text-xs font-bold ${weekdays ? "bg-accent-soft text-accent" : "text-slate-500 hover:bg-slate-100"}`}
             >
               Weekdays
             </button>
             <button
               type="button"
               onClick={() => onChange({ daysOfWeek: weekend ? 0 : 96 })}
-              className={`rounded-full px-3 py-1 text-xs font-bold ${weekend ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-100"}`}
+              className={`rounded-full px-3 py-1 text-xs font-bold ${weekend ? "bg-accent-soft text-accent" : "text-slate-500 hover:bg-slate-100"}`}
             >
               Weekends
             </button>
