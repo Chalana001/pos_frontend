@@ -38,15 +38,6 @@ const SalesDetailsPage = () => {
   const navigate = useNavigate();
   
   const { user } = useAuth();
-  // Settlement (credit-collection) methods, backend-driven. Credit itself is
-  // excluded server-side: a deferred method cannot settle a balance.
-  const { methods: settlementMethods } = usePaymentMethods();
-  const paymentMethodOptions = settlementMethods
-    .filter((m) => !m.allowsCredit)
-    .map((m) => ({ value: m.code, label: m.displayName }));
-  const selectedSettlement = settlementMethods.find((m) => m.code === paymentMethod) || null;
-  const settlementNeedsReference = selectedSettlement?.referencePolicy === "REQUIRED";
-  const settlementReferenceLabel = selectedSettlement?.referenceLabel || "Reference";
 
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,6 +55,16 @@ const SalesDetailsPage = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   const [existingReturns, setExistingReturns] = useState([]);
+
+  // Settlement (credit-collection) methods, backend-driven. Credit itself is
+  // excluded server-side: a deferred method cannot settle a balance.
+  const { methods: settlementMethods } = usePaymentMethods();
+  const paymentMethodOptions = settlementMethods
+    .filter((m) => !m.allowsCredit)
+    .map((m) => ({ value: m.code, label: m.displayName }));
+  const selectedSettlement = settlementMethods.find((m) => m.code === paymentMethod) || null;
+  const settlementNeedsReference = selectedSettlement?.referencePolicy === "REQUIRED";
+  const settlementReferenceLabel = selectedSettlement?.referenceLabel || "Reference";
 
   const printRef = useRef(null);
   const invoicePrintRef = useRef(null);
