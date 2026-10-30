@@ -1694,9 +1694,13 @@ const POS = () => {
         return;
       }
 
-      // Only a typed search gets the nearest name match. A scan either matched
-      // a barcode exactly above or was handed to the server.
-      itemToAdd = matches[0];
+      // Enter is deliberately not a "choose the first search result" shortcut.
+      // A barcode scanner can send a malformed/partial label that happens to match
+      // several item names or barcodes; adding matches[0] would silently sell the
+      // wrong item. Search results remain clickable, while Enter only adds an exact
+      // barcode or a successfully decoded scale barcode.
+      toast.error(matches.length > 0 ? "Select the item from the search results." : "Item not found.");
+      return;
     }
 
     const stockQty = getSellableStockBaseQty(itemToAdd);

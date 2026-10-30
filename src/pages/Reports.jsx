@@ -361,7 +361,7 @@ const Reports = ({ mode = "basic" }) => {
     setPageData(emptyPage);
     setStockHealthSummary(null);
     setForecastSummary(null);
-    setExpiredStockOptions((current) => ({ ...current, page: 0 }));
+    setExpiredStockOptions((current) => current.page === 0 ? current : { ...current, page: 0 });
     resetPage();
   }, [defaultTab]);
 
@@ -527,7 +527,7 @@ const Reports = ({ mode = "basic" }) => {
       setInventorySummary(null);
       setStockHealthSummary(null);
       setForecastSummary(null);
-      setExpiredStockOptions((current) => ({ ...current, page: 0 }));
+      setExpiredStockOptions((current) => current.page === 0 ? current : { ...current, page: 0 });
       setSalesSummary(null);
       setSalesTrend({ data: [], type: "DAILY" });
       setReturnsData({ summary: null, topSaleItems: [], topPurchaseItems: [], reasons: [], trend: [] });
@@ -707,7 +707,17 @@ const Reports = ({ mode = "basic" }) => {
     }, 250);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, dateRange.from, dateRange.to, filterVersion, selectedBranchId, page, expiredStockOptions]);
+  }, [
+    activeTab,
+    dateRange.from,
+    dateRange.to,
+    filterVersion,
+    selectedBranchId,
+    page,
+    expiredStockOptions.expiryStatus,
+    expiredStockOptions.includeZeroQuantity,
+    expiredStockOptions.page,
+  ]);
 
   useEffect(() => {
     setPageInput(String(page + 1));
@@ -1067,12 +1077,24 @@ const Reports = ({ mode = "basic" }) => {
             {mode === "basic" ? "Quick chart overview for business direction." : mode === "cashFlow" ? "Cash-only business inflows, outflows, and daily movement." : mode === "profitLoss" ? "Canonical revenue, cost, margin, and operating profit statement." : mode === "creditAging" ? "Current outstanding customer credit grouped by invoice age and collection priority." : mode === "supplierPayables" ? "Current supplier obligations grouped by purchase age and payment priority." : mode === "stockMovement" ? "Opening, inflow, outflow, processing, and closing stock reconciliation." : mode === "stockTransfers" ? "Branch transfer counts, movement quantities, and transfer drill-downs." : mode === "stockHealth" ? "Current stock coverage, reorder suggestions, and expiry risk." : mode === "expiredStock" ? "Batch-level expired and expiring stock with cost exposure and supplier references." : mode === "forecast" ? "Confidence-labelled demand projections and practical reorder planning." : mode === "grnPurchases" ? "Received goods value, supplier returns, and linked purchase payment status." : mode === "customerBehavior" ? "New, returning, repeat, value, and inactivity behavior for registered customers." : mode === "performanceComparison" ? "Sales, orders, discounts, returns, refunds, and expenses by cashier and branch." : mode === "commercialIntelligence" ? "Bill-promotion usage, return impact, and warranty status intelligence." : mode === "exceptions" ? "Current and period-based business risks requiring owner or manager attention." : "Detailed paginated report data with Excel export."}
           </p>
         </div>
-        {!(["creditAging", "supplierPayables", "stockHealth", "expiredStock"].includes(mode)) && <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {hasActiveReportData && !isPagedTab && (
+            <>
+              <Button variant="outline" size="sm" onClick={exportChartAsImage} disabled={!!exporting}>
+                <PieIcon size={16} className="mr-2" /> {exporting === "image" ? "Saving..." : "Save Image"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportToPDF} disabled={!!exporting}>
+                <Download size={16} className="mr-2" /> {exporting === "pdf" ? "Preparing..." : "Download PDF"}
+              </Button>
+            </>
+          )}
+          {!(["creditAging", "supplierPayables", "stockHealth", "expiredStock"].includes(mode)) && <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
           <Calendar size={16} className="text-slate-500" />
           {activeDateLabel}
           <span className="text-slate-600">|</span>
           <span className="font-medium text-slate-500">{datePreset === "allTime" ? "All records" : `${dateRange.from} to ${dateRange.to}`}</span>
         </div>}
+        </div>
       </div>
 
       <Card className="admin-panel-card p-4">
@@ -1206,19 +1228,10 @@ const Reports = ({ mode = "basic" }) => {
                   Updating…
                 </span>
               )}
-              {isPagedTab ? (
+              {isPagedTab && (
                 <Button variant="outline" size="sm" onClick={handleExcelExport}>
                   <Download size={16} className="mr-2" /> Export Excel
                 </Button>
-              ) : (
-                <>
-                  <Button variant="outline" size="sm" onClick={exportChartAsImage} disabled={!!exporting}>
-                    <PieIcon size={16} className="mr-2" /> {exporting === "image" ? "Saving..." : "Save Image"}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={exportToPDF} disabled={!!exporting}>
-                    <Download size={16} className="mr-2" /> {exporting === "pdf" ? "Preparing..." : "Download PDF"}
-                  </Button>
-                </>
               )}
             </div>
 

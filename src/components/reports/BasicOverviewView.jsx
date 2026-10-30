@@ -92,11 +92,11 @@ export default function BasicOverviewView({
   return (
     <div className="space-y-6">
       {ownerSummary && (
-        <Card className="admin-panel-card dashboard-premium-card surface-inverted overflow-hidden p-5 text-white shadow-[0_20px_60px_rgb(15_23_42/0.18)]">
+        <Card className="admin-panel-card dashboard-premium-card overflow-hidden border-slate-200/80 bg-white p-5 shadow-[0_16px_44px_rgb(15_23_42/0.06)]">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-300">Owner Command Center</p>
-              <h2 className="mt-1 text-xl font-black">Current period versus previous period</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Owner Command Center</p>
+              <h2 className="mt-1 text-xl font-black text-slate-900">Current period versus previous period</h2>
             </div>
             <p className="text-xs font-semibold text-slate-600">
               Compared to {ownerSummary.comparisonPeriod.from} to {ownerSummary.comparisonPeriod.to}
