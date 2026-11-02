@@ -1627,7 +1627,10 @@ const POS = () => {
 
       const matches = decoded.ok ? [] : selectItems(query);
 
-      if (matches.length === 0) {
+      // A partial text match is not an exact barcode match. When online, ask the
+      // server for the exact barcode before asking the cashier to choose from the
+      // fuzzy search results; the POS catalogue may still be loading or stale.
+      if (matches.length === 0 || (canUseServer && effectiveBranchId)) {
         // A label that looks like this branch's scale layout but failed to split is
         // never a text search: showing the split failure (E1/E2/E4, E3 when a check
         // digit is configured) with the scanned text tells a truncated scan apart
@@ -1660,6 +1663,10 @@ const POS = () => {
               console.error(error);
             }
             const serverMessage = getApiErrorMessage(error, scaleNotFoundMessage(decoded));
+            if (status === 404 && matches.length > 0) {
+              toast.error("Select the item from the search results.");
+              return;
+            }
             // The server distinguishes "nothing matched this at all" from "the scale
             // label read fine, the catalogue is what is wrong", and which of the two it
             // is decides whether the shop looks at the item or at the scale settings.
