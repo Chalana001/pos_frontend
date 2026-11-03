@@ -1,6 +1,29 @@
-export const APP_VERSION = "2.6.3";
+export const APP_VERSION = "2.6.4";
 
 export const VERSION_HISTORY = [
+  {
+    version: "2.6.4",
+    title: "More Reliable Stock Balances",
+    releaseDate: "2026-11-04",
+    summary:
+      "Stock ledger updates are more reliable under concurrent sales, and purchases handle negative batches more clearly. Measured item quantities also stay precise in the POS cart.",
+    highlights: [
+      "Purchases can offset negative stock while preserving the remaining quantity as new stock, with safer reversal handling when a purchase is cancelled.",
+      "Concurrent stock changes are serialized per branch and item, and a migration reconciles negative stock batches.",
+      "Measured item quantities can be entered as decimals in the POS cart, with clearer negative stock balances in purchase and batch screens.",
+    ],
+    sections: [
+      {
+        label: "Improved",
+        items: [
+          "Stock ledger changes are serialized per branch and item to keep concurrent sales and inventory updates consistent.",
+          "Purchases can cover negative stock batches and add only the remaining quantity to stock. Purchase cancellation tracks and reverses the exact stock changes.",
+          "Negative batch balances are visible in stock and purchase screens, including cases where the net item balance is not negative.",
+          "Measured quantities accept decimal values in the POS cart without losing the value while typing.",
+        ],
+      },
+    ],
+  },
   {
     version: "2.6.3",
     title: "A Shift You Can Count, in a Calmer Interface",
