@@ -6,6 +6,7 @@ import useUnsavedWork from "../hooks/useUnsavedWork";
 import Button from "../components/common/Button";
 import SupplierQuickAddModal from "../components/purchase/SupplierQuickAddModal";
 import Modal from "../components/common/Modal";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import CustomSelect from "../components/common/CustomSelect";
 import SearchSelect from "../components/common/SearchSelect";
 import DatePicker from "../components/common/DatePicker";
@@ -21,12 +22,9 @@ import { ItemType } from "../utils/constants";
 import { formatCurrency, formatDate, getLocalDateString } from "../utils/formatters";
 import { useSearchOnType } from "../hooks/useSearchOnType";
 import usePaymentMethods from "../hooks/usePaymentMethods";
-import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
   formatDisplayStockQuantity,
-  formatStockQuantity,
-  getDisplayStockQuantity,
-  getPrimaryStockUnit,
+  hasNegativeStockBalance,
   isMeasuredStockItem,
 } from "../utils/stockQuantity";
 
@@ -232,17 +230,7 @@ const PurchaseFormPage = () => {
     toast.success("Draft restored");
   };
 
-  const formatStockQty = (item) => {
-    if (item.batches && item.batches.length > 0) {
-      const totalDisplayQty = item.batches.reduce(
-        (sum, batch) => sum + getDisplayStockQuantity(batch, 0, item),
-        0
-      );
-      return `${formatStockQuantity(totalDisplayQty)} ${getPrimaryStockUnit(item, item.defaultUnit || "PCS")}`;
-    }
-
-    return formatDisplayStockQuantity(item);
-  };
+  const formatStockQty = (item) => formatDisplayStockQuantity(item);
 
   useEffect(() => {
     loadInitialData();
@@ -307,7 +295,6 @@ const PurchaseFormPage = () => {
               // Only carried where the original line mapped to exactly one stock batch;
               // the server leaves it out rather than guess. Re-check before saving.
               expiryDate: line.expiryDate || null,
-              zeroNegativeStock: false,
               lineTotal: calculateMeasuredLineTotal(
                 Number(line.qty || 0),
                 line.qtyUnit,
@@ -538,7 +525,7 @@ const PurchaseFormPage = () => {
   };
 
   const selectItem = (item) => {
-    if (Number(item.availableQty) < 0) {
+    if (hasNegativeStockBalance(item)) {
       setPendingNegativeStockItem(item);
       return;
     }
@@ -1056,7 +1043,7 @@ const PurchaseFormPage = () => {
                             <div className="truncate text-xs text-slate-500">{item.barcode}</div>
                           </div>
                           <div className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold ${
-                            Number(item.availableQty) < 0 ? "bg-danger-soft text-danger" : "bg-slate-100 text-slate-600"
+                            hasNegativeStockBalance(item) ? "bg-danger-soft text-danger" : "bg-slate-100 text-slate-600"
                           }`}>
                             Stock: {formatStockQty(item)}
                           </div>
@@ -1076,10 +1063,10 @@ const PurchaseFormPage = () => {
                         <div className="truncate text-xs text-slate-600">{selectedItem.altName}</div>
                       )}
                       <div className="truncate text-xs text-slate-500">{selectedItem.barcode}</div>
-                      {Number(selectedItem.availableQty) < 0 && (
+                      {hasNegativeStockBalance(selectedItem) && (
                         <div className="mt-0.5 text-xs font-semibold text-danger">
                           Current stock: {formatDisplayStockQuantity(selectedItem)}
-                          {selectedItem.zeroNegativeStock ? " (will be adjusted to 0)" : ""}
+                            {selectedItem.zeroNegativeStock ? " (will be adjusted to 0)" : " (will offset the new purchase)"}
                         </div>
                       )}
                     </div>
@@ -1487,10 +1474,11 @@ const PurchaseFormPage = () => {
             <span className="font-bold text-danger">{formatDisplayStockQuantity(pendingNegativeStockItem)}</span> stock.
           </>
         ) : null}
-        detail="Do you want to adjust this back to 0 before adding the new purchase quantity? If you choose No, the purchased quantity will simply be added on top of the current negative stock."
-        cancelLabel="No, just add on top"
-        confirmLabel="Yes, adjust to 0 first"
+        detail="Yes will correct the negative stock to 0 and add the full purchase quantity. No will use the new purchase to cover the negative stock and add only the remaining quantity."
+        cancelLabel="No, offset negative"
+        confirmLabel="Yes, add full quantity"
       />
+
     </div>
   );
 };

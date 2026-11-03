@@ -111,8 +111,14 @@ const getPerSmallUnitPrice = (configuredPrice, measuredItem = false) => {
   return measuredItem ? numeric / STOCK_BASE_UNITS_PER_UNIT : numeric;
 };
 
-const formatStockDisplay = (item, batch = null) =>
-  formatDisplayStockQuantity(batch || item, 0, item);
+const formatStockDisplay = (item, batch = null) => {
+  if (batch && item?.hasNegativeStock) {
+    return `${formatDisplayStockQuantity(batch, 0, item)} batch (${formatDisplayStockQuantity(item, 0, item)} net)`;
+  }
+  return batch
+    ? formatDisplayStockQuantity(batch, 0, item)
+    : formatDisplayStockQuantity(item, 0, item);
+};
 
 const getApiErrorMessage = (error, fallback = "Failed") =>
   error?.response?.data?.message || error?.response?.data?.detail || fallback;

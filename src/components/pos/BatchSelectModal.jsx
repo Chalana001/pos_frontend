@@ -74,6 +74,11 @@ const BatchSelectModal = ({ isOpen, onClose, onSelectBatch, item }) => {
           <h3 className="text-lg font-bold text-slate-800">Select Batch</h3>
           <p className="text-sm text-slate-500 font-medium line-clamp-1">{item.name}</p>
           {item.altName && <p className="text-xs text-slate-600">{item.altName}</p>}
+          {item.hasNegativeStock && (
+            <p className="mt-2 rounded-lg border border-danger-border bg-danger-soft px-3 py-2 text-xs font-semibold text-danger">
+              {`Net stock: ${formatDisplayStockQuantity(item)}. Batch quantities below are the actual ledger balances.`}
+            </p>
+          )}
         </div>
 
         <div

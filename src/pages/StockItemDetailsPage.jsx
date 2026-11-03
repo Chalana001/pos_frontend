@@ -363,7 +363,9 @@ const StockItemDetailsPage = () => {
                     <td className="p-4 font-semibold text-slate-800">{batch.batchCode || `Batch #${batch.batchId}`}</td>
                     <td className="p-4 text-slate-600">{batch.branchName || `Branch #${batch.branchId}`}</td>
                     <td className="p-4">
-                      <span className="rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success">
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        Number(batch.qty || 0) < 0 ? "bg-danger-soft text-danger" : "bg-success-soft text-success"
+                      }`}>
                         {formatDisplayStockQuantity(batch, 0, itemDetails)}
                       </span>
                     </td>

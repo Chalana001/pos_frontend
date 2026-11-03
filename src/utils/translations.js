@@ -1055,6 +1055,14 @@ const exactTranslations = {
     Restore: 'ප්‍රතිස්ථාපනය කරන්න',
     Discard: 'ඉවත ලන්න',
 
+    // Negative stock purchase flow.
+    '(will be adjusted to 0)': '(0 දක්වා සකසනු ලැබේ)',
+    '(will offset the new purchase)': '(නව මිලදී ගැනීමෙන් පියවනු ලැබේ)',
+    'Yes will correct the negative stock to 0 and add the full purchase quantity. No will use the new purchase to cover the negative stock and add only the remaining quantity.':
+      'ඔව් තෝරූ විට ඍණ තොගය 0 දක්වා සකසා සම්පූර්ණ මිලදී ගැනීමේ ප්‍රමාණය එක් කරයි. නැත තෝරූ විට ඍණ තොගය පියවීමට නව මිලදී ගැනීම භාවිත කර ඉතිරි ප්‍රමාණය පමණක් එක් කරයි.',
+    'No, offset negative': 'නැත, ඍණ තොගය පියවන්න',
+    'Yes, add full quantity': 'ඔව්, සම්පූර්ණ ප්‍රමාණය එක් කරන්න',
+
   },
 };
 
@@ -1222,7 +1230,15 @@ const patternTranslations = {
     },
     {
       regex: /^Quiet (\d+)\+ days$/,
-      translate: ([, days]) => `දින ${days}+ ක් නිශ්ශබ්ද`,
+      translate: ([, days]) => `දින ${days}+ නිශ්ශබ්ද`,
+    },
+    {
+      regex: /^Net stock: (.+)\. Batch quantities below are the actual ledger balances\.$/,
+      translate: ([, qty]) => `ශුද්ධ තොගය: ${qty}. පහත කාණ්ඩ ප්‍රමාණ යනු සැබෑ ලේඛන ශේෂයන් වේ.`,
+    },
+    {
+      regex: /^(.+) batch \((.+) net\)$/,
+      translate: ([, batchQty, netQty]) => `${batchQty} කාණ්ඩය (${netQty} ශුද්ධ)`,
     },
   ],
 };

@@ -406,7 +406,9 @@ const StockProcessingPage = () => {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
                 <div className="font-semibold text-slate-800">{selectedSource.name}</div>
                 <div className="mt-1 text-slate-500">{selectedSource.barcode || "No barcode"}</div>
-                <div className="mt-3 rounded-lg bg-white px-3 py-2 font-semibold text-success">
+                <div className={`mt-3 rounded-lg bg-white px-3 py-2 font-semibold ${
+                  Number(selectedSource.availableQty || 0) < 0 ? "text-danger" : "text-success"
+                }`}>
                   Available: {formatDisplayStockQuantity(selectedSource)}
                 </div>
               </div>

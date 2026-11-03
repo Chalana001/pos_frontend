@@ -8,6 +8,13 @@ export const isMeasuredStockItem = (item) =>
 export const isBaseScaledStockItem = (item) =>
   item?.itemType === ItemType.NORMAL || isMeasuredStockItem(item);
 
+// The server reports negative stock two ways: the explicit hasNegativeStock
+// flag (true when any batch row is negative even if the net is positive) and
+// the signed net availableQty. Both mean "this item has negative stock";
+// displays and the purchase dialog must react to either.
+export const hasNegativeStockBalance = (item) =>
+  Boolean(item?.hasNegativeStock) || Number(item?.availableQty) < 0;
+
 export const formatStockQuantity = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
