@@ -26,11 +26,30 @@ const SCANNER_MIN_KEYS = 3;
  * <p>Enter keeps its meaning: commit the quantity and hand focus back to the search
  * box, ready for the next scan.
  */
+const quantityText = (qty) => (Number(qty) === 0 ? "" : String(qty));
+
 const QuantityInput = ({ qty, onChange, focusSearch, onScanToSearch }) => {
+  const [draft, setDraft] = useState(() => quantityText(qty));
+  const focusedRef = useRef(false);
   const burstRef = useRef({ last: 0, count: 0, chars: "", original: null });
+
+  useEffect(() => {
+    if (!focusedRef.current) setDraft(quantityText(qty));
+  }, [qty]);
 
   const resetBurst = () => {
     burstRef.current = { last: 0, count: 0, chars: "", original: null };
+  };
+
+  const handleChange = (event) => {
+    const next = event.target.value;
+    setDraft(next);
+    const numeric = Number.parseFloat(next);
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      onChange(numeric);
+    } else if (next === "") {
+      onChange(0);
+    }
   };
 
   const handleKeyDown = (event) => {
@@ -67,6 +86,7 @@ const QuantityInput = ({ qty, onChange, focusSearch, onScanToSearch }) => {
     const original = burst.original;
     resetBurst();
     onChange(original);
+    setDraft(quantityText(original));
     onScanToSearch?.(captured);
   };
 
@@ -75,13 +95,20 @@ const QuantityInput = ({ qty, onChange, focusSearch, onScanToSearch }) => {
       // type="text" with a numeric inputMode, not type="number": a number input cannot
       // select its contents, so typing a quantity would append to the default ("1"
       // then "5" became 15) and the whole scan-type-scan loop breaks. Text still gets
-      // the numeric keypad on a tablet through inputMode, and the value is parsed on
-      // the way out just as before.
+      // the numeric keypad on a tablet through inputMode. The draft stays as typed so
+      // "1." is not rewritten to "1" before the cashier can enter "5".
       type="text"
       inputMode="decimal"
-      value={qty === 0 ? "" : qty}
-      onChange={(e) => onChange(e.target.value)}
-      onBlur={focusSearch}
+      value={draft}
+      onChange={handleChange}
+      onFocus={() => { focusedRef.current = true; }}
+      onBlur={() => {
+        focusedRef.current = false;
+        // Every valid edit was committed as it was typed. Re-display the cart's current
+        // value so a stock rejection cannot leave a quantity on screen that was refused.
+        setDraft(quantityText(qty));
+        focusSearch();
+      }}
       onKeyDown={handleKeyDown}
       className="w-9 rounded bg-transparent px-0.5 text-center text-[13px] font-bold outline-none transition-all focus:bg-white focus-visible:ring-2 focus-visible:ring-accent"
       title="Click to edit quantity"

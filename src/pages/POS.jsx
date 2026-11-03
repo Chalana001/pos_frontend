@@ -1738,7 +1738,7 @@ const POS = () => {
     const item = cartItems[index];
     const unlimitedStockItem = isUnlimitedStockItem(item);
 
-    const finalQty = item.weightItem && (item.qtyUnit === "KG" || item.qtyUnit === "L")
+    const finalQty = isMeasuredStockItem(item) && (item.qtyUnit === "KG" || item.qtyUnit === "L")
       ? Math.round(newQty * 1000) / 1000
       : Math.round(newQty);
 
