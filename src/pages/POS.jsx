@@ -36,7 +36,7 @@ import { PRINT_TEMPLATE_TYPES } from "../utils/receiptSettings";
 import PanelResizeHandle from "../components/common/PanelResizeHandle";
 import ErrorBoundary from "../components/common/ErrorBoundary";
 import { BRAND_NAME_UPPER } from "../utils/branding";
-import { describeScaleBarcode, resolveScaleSale } from "../utils/scaleBarcode";
+import { describeScaleBarcode, parseScalePrefixes, resolveScaleSale } from "../utils/scaleBarcode";
 import { getConfigurableFeatureAvailability, hasPlanFeature } from "../utils/subscriptionFeatures";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import {
@@ -1642,7 +1642,19 @@ const POS = () => {
         // digit is configured) with the scanned text tells a truncated scan apart
         // from a wrong scale layout. E5 (decoding OFF / bad config) still falls
         // through to the server so a normal barcode is never blocked by scale code.
-        const isScaleDecodeFailure = !decoded.ok && ["E1", "E2", "E3", "E4"].includes(decoded?.code);
+        const prefixLength = Number(configuration?.scaleBarcodePrefixLength) || 0;
+        const configuredPrefixes = parseScalePrefixes(configuration?.scaleBarcodePrefix);
+        const scanPrefix = query.slice(0, prefixLength).toUpperCase();
+        const expectedScaleLength = prefixLength
+          + (Number(configuration?.scaleBarcodeItemCodeLength) || 0)
+          + (Number(configuration?.scaleBarcodeValueLength) || 0)
+          + (configuration?.scaleBarcodeHasCheckDigit ? 1 : 0);
+        const hasScalePrefix = prefixLength > 0 && configuredPrefixes.length > 0
+          ? configuredPrefixes.some((prefix) => prefix.slice(0, prefixLength).startsWith(scanPrefix))
+          : query.length === expectedScaleLength;
+        const isScaleDecodeFailure = !decoded.ok
+          && ["E1", "E2", "E3", "E4"].includes(decoded?.code)
+          && hasScalePrefix;
         if (isScaleDecodeFailure) {
           logScanDebug(decoded.code, { query, reason: decoded.reason });
           toast.error(scaleDecodeErrorMessage(decoded, query));
